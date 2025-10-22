@@ -33,41 +33,10 @@ export class ArgentinaMapComponent implements OnInit, OnDestroy {
       maxZoom: 18
     });
 
-    // OPCIÓN 1: OpenStreetMap estándar (muestra todas las rutas, idioma mixto)
-    // L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    //   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    //   maxZoom: 18
-    // }).addTo(this.map);
-
-    // OPCIÓN 2: CartoDB Positron (mapa MUY limpio, mínimo detalle de rutas) ⭐ RECOMENDADO
-    // L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    //   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    //   maxZoom: 19
-    // }).addTo(this.map);
-
-    // OPCIÓN 3: CartoDB Voyager (equilibrio entre detalle y limpieza)
-    // L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    //   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    //   maxZoom: 19
-    // }).addTo(this.map);
-
-    // OPCIÓN 4: CartoDB Dark Matter (tema oscuro, mapa limpio)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    L.tileLayer('https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png', {
+      attribution: '<a href="http://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> | <a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="http://www.osm.org/copyright" target="_blank">OpenStreetMap</a>',
       maxZoom: 19
     }).addTo(this.map);
-
-    // OPCIÓN 5: Esri World Street Map (mejor etiquetado internacional, incluye español)
-    // L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-    //   attribution: 'Tiles &copy; Esri',
-    //   maxZoom: 18
-    // }).addTo(this.map);
-
-    // OPCIÓN 6: Stadia Alidade Smooth (muy limpio, sin rutas detalladas)
-    // L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png', {
-    //   attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
-    //   maxZoom: 20
-    // }).addTo(this.map);
   }
 }
 
