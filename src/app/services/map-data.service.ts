@@ -20,7 +20,7 @@ export interface Point<T = EmaData> {
   providedIn: 'root',
 })
 export class MapDataService {
-  private readonly BACKEND_URL = 'http://localhost:8000';
+  private readonly BACKEND_URL = 'http://localhost:8080';
 
   constructor(private http: HttpClient) {}
 

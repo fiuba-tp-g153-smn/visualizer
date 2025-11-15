@@ -1,15 +1,15 @@
 import { Component, OnInit, OnDestroy, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { MapDataService, Point, EmaData } from '../../services/map-data.service';
+import { MapDataService, Point, EmaData } from '../services/map-data.service';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-argentina-map',
   standalone: true,
-  templateUrl: './argentina-map.component.html',
-  styleUrl: './argentina-map.component.scss',
+  templateUrl: './argentina-map.html',
+  styleUrl: './argentina-map.scss',
 })
-export class ArgentinaMapComponent implements OnInit, OnDestroy {
+export class ArgentinaMap implements OnInit, OnDestroy {
   private map: any = null;
   private platformId = inject(PLATFORM_ID);
   private pointsLayer: any = null;

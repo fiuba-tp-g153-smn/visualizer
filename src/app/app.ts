@@ -1,10 +1,10 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { ArgentinaMapComponent } from './components/argentina-map/argentina-map.component';
+import { ArgentinaMap } from './argentina-map/argentina-map';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ArgentinaMapComponent],
+  imports: [RouterOutlet, ArgentinaMap],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
