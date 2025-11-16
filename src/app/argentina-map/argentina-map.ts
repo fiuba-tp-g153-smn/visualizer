@@ -43,7 +43,11 @@ export class ArgentinaMap implements OnInit, OnDestroy {
       zoom: 12,
       minZoom: 2,
       maxZoom: 18,
+      zoomControl: false, // Disable default zoom control
     });
+
+    // Add zoom control in bottom left position
+    L.control.zoom({ position: 'bottomleft' }).addTo(this.map);
 
     L.tileLayer(
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',

@@ -1,0 +1,14 @@
+<mat-card class="layer-list-container">
+  <mat-list>
+    @for (layer of layers; track layer.title) {
+      <mat-list-item class="layer-item">
+        <div class="layer-content">
+          <h3 class="layer-title">{{ layer.title }}</h3>
+          @if (layer.description) {
+            <p class="layer-description">{{ layer.description }}</p>
+          }
+        </div>
+      </mat-list-item>
+    }
+  </mat-list>
+</mat-card>
