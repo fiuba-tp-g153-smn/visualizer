@@ -1,0 +1,11 @@
+services:
+  visualizator:
+    build:
+      context: .
+      args:
+        - DATA_SERVICE_URL=${DATA_SERVICE_URL}
+    ports:
+      - "${APP_HOST_PORT}:4000"
+    environment:
+      - NODE_ENV=production
+      - DATA_SERVICE_URL=${DATA_SERVICE_URL}
