@@ -20,13 +20,15 @@ export class MapViewer implements OnInit, OnDestroy {
   private activeLayers = new Map<string, any>(); // Mapa de ID de capa -> Leaflet layer
   private currentTileLayer: any = null; // Referencia al tile layer actual
   private subscriptions: Subscription = new Subscription();
+  private isBrowser = isPlatformBrowser(this.platformId);
 
   constructor(private mapDataService: MapDataService) {
     // Efecto para escuchar cambios en las capas
-    if (isPlatformBrowser(this.platformId)) {
+    if (this.isBrowser) {
       effect(() => {
         const groups = this.layerService.getLayerGroups();
-        if (this.map) {
+        // Ensure groups is an array before processing
+        if (this.map && Array.isArray(groups)) {
           this.updateMapLayers(groups);
         }
       });
@@ -42,7 +44,7 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    if (isPlatformBrowser(this.platformId)) {
+    if (this.isBrowser) {
       this.initMap();
     }
   }
@@ -55,7 +57,9 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private async initMap(): Promise<void> {
-    const L = await import('leaflet');
+    if (!this.isBrowser) return;
+    
+    const L = await import('leaflet').then((m) => m.default || m);
 
     this.map = L.map('map', {
       center: [-34.6037, -58.3816], // Starting point: CABA
@@ -86,9 +90,9 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private async changeTileProvider(provider: any): Promise<void> {
-    if (!this.map) return;
+    if (!this.map || !this.isBrowser) return;
 
-    const L = await import('leaflet');
+    const L = await import('leaflet').then((m) => m.default || m);
 
     // Remover el tile layer actual
     if (this.currentTileLayer) {
@@ -105,20 +109,22 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private async updateMapLayers(groups: any[]): Promise<void> {
-    if (!this.map) return;
+    if (!this.map || !this.isBrowser || !Array.isArray(groups)) return;
 
-    const L = await import('leaflet');
+    const L = await import('leaflet').then((m) => m.default || m);
 
     // Iterar sobre todos los grupos y capas
     groups.forEach((group) => {
-      group.layers.forEach((layer: Layer) => {
-        this.processLayer(layer, L);
+      if (Array.isArray(group.layers)) {
+        group.layers.forEach((layer: Layer) => {
+          this.processLayer(layer, L);
 
-        // Procesar subcapas si existen
-        if (layer.sublayers) {
-          layer.sublayers.forEach((sublayer) => this.processLayer(sublayer, L));
-        }
-      });
+          // Procesar subcapas si existen
+          if (layer.sublayers && Array.isArray(layer.sublayers)) {
+            layer.sublayers.forEach((sublayer) => this.processLayer(sublayer, L));
+          }
+        });
+      }
     });
   }
 
@@ -163,6 +169,8 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private createMockPointLayer(layer: Layer, L: any): any {
+    if (!this.map || !this.isBrowser) return null;
+    
     // Crear un layer group con puntos de ejemplo
     const layerGroup = L.layerGroup();
     const center = this.map.getCenter();
@@ -189,6 +197,8 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private createMockRasterLayer(layer: Layer, L: any): any {
+    if (!this.map || !this.isBrowser) return null;
+    
     // Mock: Crear un rectángulo con gradiente para simular imagen raster
     const bounds = this.map.getBounds();
     const ne = bounds.getNorthEast();
@@ -213,6 +223,8 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private createMockVectorLayer(layer: Layer, L: any): any {
+    if (!this.map || !this.isBrowser) return null;
+    
     // Mock: Crear flechas para simular campo vectorial
     const layerGroup = L.layerGroup();
     const center = this.map.getCenter();
@@ -293,6 +305,9 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private loadPointsBasedOnBounds(): void {
+    // Ensure we only run this in browser environment
+    if (!this.map || !this.isBrowser) return;
+    
     const bounds = this.map.getBounds();
     const params = {
       north: bounds.getNorth(),
@@ -309,7 +324,9 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private async addPointsToMap(points: Point<EmaData>[]): Promise<void> {
-    const L = await import('leaflet');
+    if (!this.map || !this.isBrowser || !Array.isArray(points)) return;
+    
+    const L = await import('leaflet').then((m) => m.default || m);
 
     if (this.pointsLayer) {
       this.map.removeLayer(this.pointsLayer);

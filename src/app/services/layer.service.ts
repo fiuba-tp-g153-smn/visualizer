@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 export enum LayerType {
   POINT = 'point', // Capas con elementos puntuales (estaciones, aeropuertos, etc.)
@@ -46,11 +47,30 @@ export interface LayerGroup {
   providedIn: 'root',
 })
 export class LayerService {
+  private platformId = inject(PLATFORM_ID);
+  
   // Estado reactivo de los grupos de capas
-  private layerGroups = signal<LayerGroup[]>(this.initializeLayerGroups());
+  private layerGroups = signal<LayerGroup[]>([]);
 
   // Métodos para acceder al estado
   getLayerGroups = this.layerGroups.asReadonly();
+
+  constructor() {
+    // Initialize with empty array first, then populate
+    this.initializeLayerService();
+  }
+
+  private initializeLayerService(): void {
+    // Only initialize data in browser environment or if not SSR
+    if (typeof window !== 'undefined' || !this.isServerSide()) {
+      const initialData = this.initializeLayerGroups();
+      this.layerGroups.set(initialData);
+    }
+  }
+
+  private isServerSide(): boolean {
+    return !isPlatformBrowser(this.platformId);
+  }
 
   private initializeLayerGroups(): LayerGroup[] {
     return [
@@ -364,7 +384,11 @@ export class LayerService {
 
   // Métodos para manipular las capas
   toggleLayerVisibility(layerId: string): void {
+    const currentGroups = this.layerGroups();
+    if (!Array.isArray(currentGroups)) return;
+    
     this.layerGroups.update((groups) => {
+      if (!Array.isArray(groups)) return groups;
       return groups.map((group) => ({
         ...group,
         layers: this.toggleLayerInArray(group.layers, layerId),
@@ -373,6 +397,8 @@ export class LayerService {
   }
 
   private toggleLayerInArray(layers: Layer[], targetId: string): Layer[] {
+    if (!Array.isArray(layers)) return [];
+    
     return layers.map((layer) => {
       if (layer.id === targetId) {
         return { ...layer, visible: !layer.visible };
@@ -388,7 +414,11 @@ export class LayerService {
   }
 
   setLayerOpacity(layerId: string, opacity: number): void {
+    const currentGroups = this.layerGroups();
+    if (!Array.isArray(currentGroups)) return;
+    
     this.layerGroups.update((groups) => {
+      if (!Array.isArray(groups)) return groups;
       return groups.map((group) => ({
         ...group,
         layers: this.setOpacityInArray(group.layers, layerId, opacity),
@@ -397,6 +427,8 @@ export class LayerService {
   }
 
   private setOpacityInArray(layers: Layer[], targetId: string, opacity: number): Layer[] {
+    if (!Array.isArray(layers)) return [];
+    
     return layers.map((layer) => {
       if (layer.id === targetId) {
         return { ...layer, opacity: Math.max(0, Math.min(100, opacity)) };
@@ -412,7 +444,11 @@ export class LayerService {
   }
 
   toggleGroupExpansion(groupId: string): void {
+    const currentGroups = this.layerGroups();
+    if (!Array.isArray(currentGroups)) return;
+    
     this.layerGroups.update((groups) => {
+      if (!Array.isArray(groups)) return groups;
       return groups.map((group) =>
         group.id === groupId ? { ...group, expanded: !group.expanded } : group
       );
@@ -420,12 +456,17 @@ export class LayerService {
   }
 
   getActiveLayersCount(): number {
-    return this.layerGroups().reduce((count, group) => {
+    const currentGroups = this.layerGroups();
+    if (!Array.isArray(currentGroups)) return 0;
+    
+    return currentGroups.reduce((count, group) => {
       return count + this.countActiveLayers(group.layers);
     }, 0);
   }
 
   private countActiveLayers(layers: Layer[]): number {
+    if (!Array.isArray(layers)) return 0;
+    
     return layers.reduce((count, layer) => {
       let layerCount = layer.visible ? 1 : 0;
       if (layer.sublayers) {
