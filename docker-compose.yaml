@@ -1,5 +1,7 @@
 services:
   visualizator:
+    container_name: visualizator-container
+    image: visualizator
     build:
       context: .
       args:
