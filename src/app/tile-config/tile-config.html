@@ -1,0 +1,83 @@
+<div class="tile-config-container">
+  <div class="config-header">
+    <h2>Mapa base</h2>
+    <p class="config-description">
+      Selecciona el proveedor de tiles para el mapa base
+    </p>
+  </div>
+
+  <div class="current-selection">
+    @if (getSelectedProvider(); as selected) {
+      <mat-card class="selected-provider-card">
+        <mat-card-content>
+          <div class="selected-info">
+            <mat-icon class="selected-icon">check_circle</mat-icon>
+            <div class="selected-text">
+              <span class="selected-label">Actualmente seleccionado:</span>
+              <span class="selected-name">{{ selected.name }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+  <mat-radio-group 
+    [(ngModel)]="selectedProviderId"
+    (change)="onProviderChange($event.value)"
+    class="provider-group">
+    
+    @for (category of categories; track category) {
+      <div class="category-section">
+        <div class="category-header">
+          <mat-icon class="category-icon">{{ getCategoryIcon(category) }}</mat-icon>
+          <h3 class="category-title">{{ getCategoryName(category) }}</h3>
+        </div>
+
+        <div class="providers-list">
+          @for (provider of groupedProviders[category]; track provider.id) {
+            <mat-card 
+              class="provider-card"
+              [class.provider-selected]="selectedProviderId() === provider.id"
+              (click)="onProviderChange(provider.id)">
+              <mat-card-content>
+                <div class="provider-content">
+                  <mat-radio-button 
+                    [value]="provider.id"
+                    color="primary">
+                  </mat-radio-button>
+                  
+                  <div class="provider-info">
+                    <div class="provider-header">
+                      <span class="provider-name">{{ provider.name }}</span>
+                      <span class="provider-zoom">
+                        <mat-icon class="zoom-icon">zoom_in</mat-icon>
+                        Max: {{ provider.maxZoom }}
+                      </span>
+                    </div>
+                    <p class="provider-description">{{ provider.description }}</p>
+                    <span class="provider-attribution">{{ provider.attribution }}</span>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      </div>
+    }
+  </mat-radio-group>
+
+  <div class="config-footer">
+    <mat-card class="info-card">
+      <mat-card-content>
+        <div class="info-content">
+          <mat-icon class="info-icon">info_outline</mat-icon>
+          <p class="info-text">
+            El mapa base es la capa inferior sobre la cual se superponen todas las demás capas de datos.
+            Los cambios se aplican inmediatamente.
+          </p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

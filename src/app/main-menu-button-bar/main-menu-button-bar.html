@@ -1,6 +1,19 @@
 <mat-card class="main-menu-container">
-  <app-menu-button text-hover="Menú de capas" (click)="layerMenuClick.emit()">layers</app-menu-button>
-  <app-menu-button text-hover="Crear polígono">polyline</app-menu-button>
-  <app-menu-button text-hover="Crear alerta">warning</app-menu-button>
-  <app-menu-button text-hover="Ayuda">help</app-menu-button>
+  <app-menu-button 
+    text-hover="Capas del mapa" 
+    (click)="layersClick.emit()">
+    layers
+  </app-menu-button>
+  
+  <app-menu-button 
+    text-hover="Herramienta de polígonos" 
+    (click)="polygonsClick.emit()">
+    polyline
+  </app-menu-button>
+  
+  <app-menu-button 
+    text-hover="Configurar mapa base" 
+    (click)="tilesClick.emit()">
+    map
+  </app-menu-button>
 </mat-card>

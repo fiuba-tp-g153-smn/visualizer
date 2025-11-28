@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { ArgentinaMap } from './argentina-map/argentina-map';
+import { MapViewer } from './map-viewer/map-viewer';
 import { MainMenu } from './main-menu/main-menu';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ArgentinaMap, MainMenu],
+  imports: [RouterOutlet, MapViewer, MainMenu],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrl: './app.scss',
 })
-export class App {
-}
+export class App {}
