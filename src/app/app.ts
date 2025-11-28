@@ -2,10 +2,13 @@ import { Component, signal, inject, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { ArgentinaMap } from './argentina-map/argentina-map';
+import { MainMenu } from './main-menu/main-menu';
+
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ArgentinaMap, MainMenu],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

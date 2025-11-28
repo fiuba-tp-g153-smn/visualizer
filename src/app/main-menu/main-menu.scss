@@ -1,0 +1,27 @@
+:host {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.main-menu-wrapper {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.layer-list-wrapper {
+  position: relative;
+  z-index: 1001;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999;
+  background-color: transparent;
+}
