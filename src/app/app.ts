@@ -1,16 +1,16 @@
 import { Component, signal, inject, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { isPlatformBrowser, isPlatformServer } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { ArgentinaMap } from './argentina-map/argentina-map';
+import { HttpClient } from '@angular/common/http';;
+import { MapViewer } from './map-viewer/map-viewer';
 import { MainMenu } from './main-menu/main-menu';
 
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, ArgentinaMap, MainMenu],
+  imports: [RouterOutlet, MapViewer, MainMenu],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrl: './app.scss',
 })
 export class App {
   private platformId = inject(PLATFORM_ID);

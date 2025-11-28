@@ -1,0 +1,112 @@
+<div class="polygon-tool-container">
+  <div class="tool-header">
+    <h2>Herramienta de polígonos</h2>
+    <p class="tool-description">
+      Dibuja polígonos sobre el mapa para definir áreas de interés
+    </p>
+  </div>
+
+  <div class="drawing-controls">
+    @if (!isDrawing()) {
+      <button 
+        mat-raised-button 
+        color="primary"
+        (click)="startDrawing()"
+        class="draw-button">
+        <mat-icon>polyline</mat-icon>
+        Dibujar polígono
+      </button>
+    } @else {
+      <button 
+        mat-raised-button 
+        color="warn"
+        (click)="stopDrawing()"
+        class="stop-button">
+        <mat-icon>stop</mat-icon>
+        Cancelar dibujo
+      </button>
+      <div class="drawing-hint">
+        <mat-icon>info</mat-icon>
+        <span>Haz clic en el mapa para agregar puntos. Doble clic para finalizar.</span>
+      </div>
+    }
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="polygons-section">
+    <div class="section-header">
+      <h3>Polígonos dibujados ({{ polygons().length }})</h3>
+      @if (polygons().length > 0) {
+        <button 
+          mat-button 
+          color="warn"
+          (click)="clearAllPolygons()"
+          class="clear-all-button">
+          <mat-icon>delete_sweep</mat-icon>
+          Limpiar todo
+        </button>
+      }
+    </div>
+
+    @if (polygons().length === 0) {
+      <div class="empty-state">
+        <mat-icon class="empty-icon">layers_clear</mat-icon>
+        <p>No hay polígonos dibujados</p>
+        <span class="empty-hint">Usa el botón de arriba para comenzar a dibujar</span>
+      </div>
+    } @else {
+      <mat-list class="polygon-list">
+        @for (polygon of polygons(); track polygon.id) {
+          <mat-list-item class="polygon-item">
+            <div class="polygon-content">
+              <div class="polygon-header">
+                <div class="polygon-info">
+                  <div 
+                    class="polygon-color-indicator" 
+                    [style.background-color]="polygon.color">
+                  </div>
+                  <span class="polygon-name">{{ polygon.name }}</span>
+                </div>
+                <button 
+                  mat-icon-button 
+                  color="warn"
+                  (click)="deletePolygon(polygon.id)"
+                  matTooltip="Eliminar polígono">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+
+              <div class="polygon-details">
+                <mat-chip class="detail-chip">
+                  <mat-icon>straighten</mat-icon>
+                  {{ formatArea(polygon.area) }}
+                </mat-chip>
+                <mat-chip class="detail-chip">
+                  <mat-icon>location_on</mat-icon>
+                  {{ polygon.coordinates.length }} puntos
+                </mat-chip>
+                <mat-chip class="detail-chip">
+                  <mat-icon>schedule</mat-icon>
+                  {{ polygon.createdAt.toLocaleTimeString() }}
+                </mat-chip>
+              </div>
+            </div>
+          </mat-list-item>
+          <mat-divider></mat-divider>
+        }
+      </mat-list>
+
+      <div class="export-section">
+        <button 
+          mat-stroked-button 
+          color="primary"
+          (click)="exportPolygons()"
+          class="export-button">
+          <mat-icon>download</mat-icon>
+          Exportar como GeoJSON
+        </button>
+      </div>
+    }
+  </div>
+</div>

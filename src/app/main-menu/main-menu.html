@@ -1,13 +1,35 @@
 <div class="main-menu-wrapper">
-  <app-main-menu-button-bar (layerMenuClick)="toggleLayerList()" />
+  <app-main-menu-button-bar 
+    (layersClick)="openPanel('layers')"
+    (polygonsClick)="openPanel('polygons')"
+    (tilesClick)="openPanel('tiles')" />
 
-  @if (isLayerListVisible()) {
-    <div class="layer-list-wrapper" (click)="$event.stopPropagation()">
-      <app-layer-list />
+  @if (activePanel()) {
+    <div class="menu-panel">
+      <div class="menu-header">
+        <h2>{{ getPanelTitle() }}</h2>
+        <button 
+          mat-icon-button 
+          (click)="closePanel()"
+          class="close-button"
+          aria-label="Cerrar menú">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="panel-content">
+        @switch (activePanel()) {
+          @case ('layers') {
+            <app-layer-list />
+          }
+          @case ('polygons') {
+            <app-polygon-tool />
+          }
+          @case ('tiles') {
+            <app-tile-config (tileProviderChanged)="onTileProviderChanged($event)" />
+          }
+        }
+      </div>
     </div>
   }
 </div>
-
-@if (isLayerListVisible()) {
-  <div class="overlay" (click)="closeLayerList()"></div>
-}
