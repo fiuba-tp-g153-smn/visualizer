@@ -28,10 +28,16 @@ export class TileConfig {
   tileProviderChanged = output<TileProvider>();
 
   constructor() {
-    // Set initial provider
-    const initialProvider = this.tileProviders.find((p) => p.id === 'argenmap');
-    if (initialProvider) {
-      this.tileService.setProvider(initialProvider);
+    // Sincronizar con el estado actual del TileService
+    const currentId = this.tileService.getCurrentProviderId();
+    this.selectedProviderId.set(currentId);
+
+    // Solo inicializar si el TileService no tiene provider
+    if (!this.tileService.hasProvider()) {
+      const initialProvider = this.tileProviders.find((p) => p.id === currentId);
+      if (initialProvider) {
+        this.tileService.initializeIfNeeded(initialProvider);
+      }
     }
   }
 
@@ -94,9 +100,9 @@ export class TileConfig {
       id: 'argenmap',
       name: 'ArgenMAP (IGN)',
       description: 'Mapa oficial del Instituto Geográfico Nacional de Argentina',
-      url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/caratula_tms@EPSG:3857@png/{z}/{x}/{-y}.png',
-      attribution: '© Instituto Geográfico Nacional',
-      maxZoom: 18,
+      url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',
+      attribution: '© Instituto Geográfico Nacional + OpenStreetMap',
+      maxZoom: 19,
       category: 'standard',
     },
     {

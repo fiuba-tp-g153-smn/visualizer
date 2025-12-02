@@ -1,21 +1,31 @@
-
 // Include theming for Angular Material with `mat.theme()`.
 // This Sass mixin will define CSS variables that are used for styling Angular Material
 // components according to the Material 3 design spec.
 // Learn more about theming and how to use it for your application's
 // custom components at https://material.angular.dev/guide/theming
 @use '@angular/material' as mat;
-@use './theme-colors';
+@use 'theme-colors' as theme-colors;
 
 html {
-  @include mat.theme((
-    color: (
-      primary: theme-colors.$primary-palette,
-      tertiary: theme-colors.$tertiary-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
+  // Colores SMN disponibles globalmente
+  --smn-yellow: #fcb426;
+  --smn-yellow-light: #fdc94d;
+  --smn-yellow-dark: #d99a1f;
+  --smn-blue: #1191d0;
+  --smn-blue-light: #4bb0e0;
+  --smn-blue-dark: #0c6a99;
+  --smn-dark: #1d1d1e;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: theme-colors.$primary-palette,
+        tertiary: theme-colors.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
 }
 
 // // Paleta de colores unificada para la aplicación
@@ -79,10 +89,17 @@ body {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
 }
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}

@@ -435,6 +435,23 @@ export class LayerService {
     }, 0);
   }
 
+  clearAllLayers(): void {
+    this.layerGroups.update((groups) => {
+      return groups.map((group) => ({
+        ...group,
+        layers: this.setAllLayersInvisible(group.layers),
+      }));
+    });
+  }
+
+  private setAllLayersInvisible(layers: Layer[]): Layer[] {
+    return layers.map((layer) => ({
+      ...layer,
+      visible: false,
+      sublayers: layer.sublayers ? this.setAllLayersInvisible(layer.sublayers) : undefined,
+    }));
+  }
+
   // Mock: En el futuro, este método cargaría datos reales de un backend
   async loadLayerData(layerId: string): Promise<any> {
     console.log(`Loading data for layer: ${layerId}`);
