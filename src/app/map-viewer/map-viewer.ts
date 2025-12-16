@@ -551,9 +551,16 @@ export class MapViewer implements OnInit, OnDestroy {
     // Formatear leadTime con 3 dígitos (006, 012, 024, 048, 072)
     const leadTimeStr = leadTime.toString().padStart(3, '0');
 
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const metadataDate = `${yyyy}${mm}${dd}`;
+    console.log('📅 Usando fecha de metadatos WRF:', metadataDate);
+
     // Intentar cargar el JSON de metadatos primero para obtener bounds exactos
     try {
-      const response = await fetch(`/wrf/${prefix}_20251215_12_${leadTimeStr}.json`);
+      const response = await fetch(`/wrf/${prefix}_${metadataDate}_12_${leadTimeStr}.json`);
       if (response.ok) {
         const metadata = await response.json();
         if (metadata.bounds) {
@@ -566,7 +573,17 @@ export class MapViewer implements OnInit, OnDestroy {
     }
 
     // Cargar la imagen
-    const imageUrl = `/wrf/${prefix}_20251215_12_${leadTimeStr}.png`;
+    const imageUrl = `/wrf/${prefix}_${metadataDate}_12_${leadTimeStr}.png`;
+
+    try {
+      const imgResponse = await fetch(imageUrl, { method: 'GET' });
+      if (!imgResponse.ok) {
+        return;
+      }
+    } catch (e) {
+      console.log('Imagen WRF no encontrada:', imageUrl);
+      return;
+    }
 
     const imageOverlay = this.L.imageOverlay(imageUrl, wrfBounds, {
       opacity: layer.opacity / 100,

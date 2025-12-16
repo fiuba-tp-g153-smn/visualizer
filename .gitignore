@@ -41,3 +41,8 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+
+# WRF generated files
+/public/wrf/*.png
+/public/wrf/*.json
