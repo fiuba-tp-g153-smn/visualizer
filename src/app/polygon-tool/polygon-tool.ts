@@ -1,4 +1,12 @@
-import { Component, inject, signal, OnInit, OnDestroy, ViewChildren, QueryList } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  ViewChildren,
+  QueryList,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -57,7 +65,8 @@ export class PolygonTool implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Escuchar selección de polígono desde el mapa
-    this.uiService.onOpenPolygonPanel()
+    this.uiService
+      .onOpenPolygonPanel()
       .pipe(takeUntil(this.destroy$))
       .subscribe((polygonId) => {
         console.log('📍 Opening polygon panel for:', polygonId);
@@ -65,7 +74,8 @@ export class PolygonTool implements OnInit, OnDestroy {
       });
 
     // Escuchar cierre del panel para finalizar acciones en curso
-    this.uiService.onPanelClosed()
+    this.uiService
+      .onPanelClosed()
       .pipe(takeUntil(this.destroy$))
       .subscribe((panelType) => {
         console.log('🚪 Panel closed event received:', panelType);
@@ -83,7 +93,7 @@ export class PolygonTool implements OnInit, OnDestroy {
 
   private expandPolygonPanel(polygonId: string): void {
     const polygonsList = this.polygons();
-    const index = polygonsList.findIndex(p => p.id === polygonId);
+    const index = polygonsList.findIndex((p) => p.id === polygonId);
     if (index !== -1 && this.expansionPanels) {
       const panels = this.expansionPanels.toArray();
       if (panels[index]) {
@@ -96,9 +106,9 @@ export class PolygonTool implements OnInit, OnDestroy {
     console.log('🔧 finalizeAllActions called', {
       isDrawing: this.isDrawing(),
       editingPolygonId: this.editingPolygonId(),
-      editingNameId: this.editingNameId()
+      editingNameId: this.editingNameId(),
     });
-    
+
     // Cancelar dibujo si está activo
     if (this.isDrawing()) {
       console.log('  - Stopping drawing');

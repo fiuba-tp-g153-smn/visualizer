@@ -35,7 +35,7 @@ export class UiService {
     console.log('🔒 UiService.closePanel() called, currentPanel:', currentPanel);
     this._activePanel.set(null);
     this._selectedPolygonId.set(null);
-    
+
     // Emitir evento de cierre para que los componentes finalicen acciones
     if (currentPanel) {
       console.log('📤 Emitting panelClosed$ event for:', currentPanel);
