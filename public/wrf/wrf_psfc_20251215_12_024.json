@@ -1,0 +1,24 @@
+{
+  "product": "surface_pressure",
+  "variable": "PSFC",
+  "units": "hPa",
+  "init_date": "2025-12-15T12:00:00",
+  "valid_time": "2025-12-16 12:00:00",
+  "lead_time_hours": 24,
+  "bounds": {
+    "north": -11.645957946777344,
+    "south": -56.853172302246094,
+    "east": -35.669189453125,
+    "west": -94.330810546875
+  },
+  "value_range": {
+    "min": 482.7444152832031,
+    "max": 1029.794921875
+  },
+  "colorbar": {
+    "min": 980,
+    "max": 1040,
+    "label": "Presi\u00f3n (hPa)"
+  },
+  "image_file": "output/images/wrf_psfc_20251215_12_024.png"
+}

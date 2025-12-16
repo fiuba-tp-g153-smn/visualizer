@@ -1,9 +1,16 @@
 import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MapDataService } from '../services/map-data.service';
-import { LayerService, Layer, LayerType, LayerCategory } from '../services/layer.service';
+import {
+  LayerService,
+  Layer,
+  LayerType,
+  LayerCategory,
+  ActiveLayer,
+} from '../services/layer.service';
 import { TileService } from '../services/tile.service';
-import { PolygonService, DrawingMode } from '../services/polygon.service';
+import { PolygonService, DrawnPolygon } from '../services/polygon.service';
+import { UiService } from '../services/ui.service';
 import { Subject } from 'rxjs';
 import { debounceTime, takeUntil } from 'rxjs/operators';
 import {
@@ -32,6 +39,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private tileService = inject(TileService);
   private mapDataService = inject(MapDataService);
   private polygonService = inject(PolygonService);
+  private uiService = inject(UiService);
 
   // Capas activas en el mapa (id -> leaflet layer)
   private activeLayers = new Map<string, any>();
@@ -42,12 +50,18 @@ export class MapViewer implements OnInit, OnDestroy {
   private drawControl: any = null;
   private currentDrawHandler: any = null;
 
+  // Referencia global a Leaflet Draw
+  private LDraw: any = null;
+
   // Control de suscripciones y eventos
   private destroy$ = new Subject<void>();
   private mapMove$ = new Subject<BoundingBox>();
 
   // Flag para evitar recargas innecesarias del tile layer
   private lastTileProviderId: string | null = null;
+
+  // Almacena el último forecastHour usado por cada capa WRF
+  private lastForecastHours = new Map<string, number>();
 
   constructor() {
     // Efecto para escuchar cambios en las capas
@@ -78,6 +92,14 @@ export class MapViewer implements OnInit, OnDestroy {
           }
         }
       });
+
+      // Efecto para escuchar cambios en el orden de las capas activas
+      effect(() => {
+        const activeLayers = this.layerService.activeLayers();
+        if (this.map && this.L) {
+          this.updateLayerZIndexes(activeLayers);
+        }
+      });
     }
   }
 
@@ -103,12 +125,17 @@ export class MapViewer implements OnInit, OnDestroy {
 
   private async initMap(): Promise<void> {
     // Cargar Leaflet y Leaflet Draw
-    this.L = await import('leaflet');
-    await import('leaflet-draw');
+    const leaflet = await import('leaflet');
+    this.L = leaflet.default || leaflet;
+
+    // Importar leaflet-draw (extiende L automáticamente)
+    const leafletDraw = await import('leaflet-draw');
+    // leaflet-draw extiende el objeto global L, así que usamos window.L o this.L.Draw
+    this.LDraw = (window as any).L?.Draw || this.L.Draw || leafletDraw;
 
     this.map = this.L.map('map', {
-      center: [-34.6037, -58.3816], // CABA
-      zoom: 10,
+      center: [-40.0, -64.0], // Centro de Argentina
+      zoom: 4,
       minZoom: 2,
       maxZoom: 18,
       zoomControl: false,
@@ -184,14 +211,47 @@ export class MapViewer implements OnInit, OnDestroy {
     if (!this.map || !this.L) return;
 
     groups.forEach((group) => {
-      group.layers.forEach((layer: Layer) => {
-        this.processLayer(layer);
-
-        // Procesar subcapas
-        if (layer.sublayers) {
-          layer.sublayers.forEach((sublayer) => this.processLayer(sublayer));
-        }
+      group.subgroups.forEach((subgroup: any) => {
+        subgroup.layers.forEach((layer: Layer) => {
+          this.processLayer(layer);
+        });
       });
+    });
+  }
+
+  // Actualizar z-index de las capas según el orden en activeLayers
+  private updateLayerZIndexes(activeLayers: ActiveLayer[]): void {
+    if (!this.map || !this.L) return;
+
+    // El z-index base para capas de overlay es 400 en Leaflet
+    const baseZIndex = 400;
+
+    activeLayers.forEach((activeLayer, index) => {
+      const leafletLayer = this.activeLayers.get(activeLayer.id);
+      if (leafletLayer) {
+        // El primero en la lista tiene mayor z-index (está adelante)
+        const zIndex = baseZIndex + (activeLayers.length - index);
+
+        // Diferentes tipos de capas tienen diferentes métodos para setear z-index
+        if (leafletLayer.setZIndex) {
+          leafletLayer.setZIndex(zIndex);
+        } else if (leafletLayer.eachLayer) {
+          // Para LayerGroups, aplicar a cada capa interna
+          leafletLayer.eachLayer((sublayer: any) => {
+            if (sublayer.setZIndex) {
+              sublayer.setZIndex(zIndex);
+            } else if (sublayer._icon) {
+              // Para markers
+              sublayer._icon.style.zIndex = zIndex;
+            }
+          });
+        }
+
+        // Para image overlays (raster layers)
+        if (leafletLayer._image) {
+          leafletLayer._image.style.zIndex = zIndex;
+        }
+      }
     });
   }
 
@@ -199,9 +259,25 @@ export class MapViewer implements OnInit, OnDestroy {
     const existingLayer = this.activeLayers.get(layer.id);
 
     if (layer.visible) {
-      if (!existingLayer) {
+      // Verificar si cambió el forecast hour para capas WRF
+      const isWrfLayer = layer.id.startsWith('wrf_');
+      const currentForecastHour = layer.selectedForecastHour;
+      const lastForecastHour = this.lastForecastHours.get(layer.id);
+      const forecastChanged = isWrfLayer && currentForecastHour !== lastForecastHour;
+
+      if (!existingLayer || forecastChanged) {
+        // Si cambió el forecast, remover la capa anterior
+        if (existingLayer && forecastChanged) {
+          this.map.removeLayer(existingLayer);
+          this.activeLayers.delete(layer.id);
+          console.log(`🔄 Cambiando plazo de ${layer.name} a +${currentForecastHour}h`);
+        }
         // Crear y cargar datos de la capa
         this.loadAndCreateLayer(layer);
+        // Guardar el forecast hour usado
+        if (isWrfLayer && currentForecastHour) {
+          this.lastForecastHours.set(layer.id, currentForecastHour);
+        }
       } else {
         // Actualizar opacidad si cambió
         this.updateLayerOpacity(existingLayer, layer);
@@ -210,6 +286,7 @@ export class MapViewer implements OnInit, OnDestroy {
       if (existingLayer) {
         this.map.removeLayer(existingLayer);
         this.activeLayers.delete(layer.id);
+        this.lastForecastHours.delete(layer.id);
         console.log(`❌ Capa desactivada: ${layer.name}`);
       }
     }
@@ -325,6 +402,18 @@ export class MapViewer implements OnInit, OnDestroy {
   // ==========================================================================
 
   private async loadRasterLayer(layer: Layer): Promise<void> {
+    // Caso especial: ECMWF Precipitation (datos locales)
+    if (layer.id === 'ecmwf_precipitation') {
+      this.loadEcmwfPrecipitationLayer(layer);
+      return;
+    }
+
+    // Caso especial: Capas WRF-SMN (datos locales)
+    if (layer.id.startsWith('wrf_')) {
+      this.loadWrfLayer(layer);
+      return;
+    }
+
     // Determinar endpoint según categoría y capa
     let dataObservable;
 
@@ -394,6 +483,116 @@ export class MapViewer implements OnInit, OnDestroy {
     rectangle.addTo(this.map);
     this.activeLayers.set(layer.id, rectangle);
     console.log(`⚠️ Capa raster placeholder: ${layer.name}`);
+  }
+
+  /**
+   * Carga la capa de precipitación ECMWF desde archivos locales
+   */
+  private loadEcmwfPrecipitationLayer(layer: Layer): void {
+    // Bounds de Argentina (desde overlay_bounds.json)
+    const imageBounds: [[number, number], [number, number]] = [
+      [-55.0, -74.0], // [south, west]
+      [-21.0, -53.0], // [north, east]
+    ];
+
+    const imageOverlay = this.L.imageOverlay('/precipitation_overlay.png', imageBounds, {
+      opacity: layer.opacity / 100,
+      interactive: true,
+    });
+
+    imageOverlay.bindPopup(
+      `<strong>${layer.name}</strong><br>
+       <small>Pronóstico ECMWF Open Data</small><br>
+       <small>Precipitación Total 24h</small><br>
+       <small>Región: Argentina</small>`
+    );
+
+    imageOverlay.addTo(this.map);
+    this.activeLayers.set(layer.id, imageOverlay);
+    console.log('🌧️ Capa ECMWF Precipitation cargada con datos reales');
+  }
+
+  /**
+   * Carga capas WRF-SMN desde archivos locales
+   * Soporta múltiples plazos de pronóstico
+   */
+  private loadWrfLayer(layer: Layer): void {
+    // Mapeo de IDs a prefijos de archivo
+    const layerPrefixMap: Record<string, string> = {
+      wrf_precipitation: 'wrf_pp',
+      wrf_wind: 'wrf_wind',
+      wrf_temperature: 'wrf_t2m',
+      wrf_pressure: 'wrf_psfc',
+    };
+
+    const prefix = layerPrefixMap[layer.id];
+    if (!prefix) {
+      this.createPlaceholderRasterLayer(layer);
+      return;
+    }
+
+    // Obtener el plazo seleccionado (por defecto 24h)
+    const leadTime = layer.selectedForecastHour || 24;
+
+    // Buscar y cargar la imagen
+    this.findAndLoadWrfImage(layer, prefix, leadTime);
+  }
+
+  /**
+   * Busca y carga la imagen WRF más reciente
+   */
+  private async findAndLoadWrfImage(layer: Layer, prefix: string, leadTime: number): Promise<void> {
+    // WRF bounds (dominio completo del modelo)
+    const wrfBounds: [[number, number], [number, number]] = [
+      [-56.85, -94.33], // [south, west]
+      [-11.65, -35.67], // [north, east]
+    ];
+
+    // Formatear leadTime con 3 dígitos (006, 012, 024, 048, 072)
+    const leadTimeStr = leadTime.toString().padStart(3, '0');
+
+    // Intentar cargar el JSON de metadatos primero para obtener bounds exactos
+    try {
+      const response = await fetch(`/wrf/${prefix}_20251215_12_${leadTimeStr}.json`);
+      if (response.ok) {
+        const metadata = await response.json();
+        if (metadata.bounds) {
+          wrfBounds[0] = [metadata.bounds.south, metadata.bounds.west];
+          wrfBounds[1] = [metadata.bounds.north, metadata.bounds.east];
+        }
+      }
+    } catch (e) {
+      console.log('Usando bounds por defecto para WRF');
+    }
+
+    // Cargar la imagen
+    const imageUrl = `/wrf/${prefix}_20251215_12_${leadTimeStr}.png`;
+
+    const imageOverlay = this.L.imageOverlay(imageUrl, wrfBounds, {
+      opacity: layer.opacity / 100,
+      interactive: true,
+    });
+
+    // Información según el tipo de capa
+    const layerInfo: Record<string, { emoji: string; unit: string; description: string }> = {
+      wrf_precipitation: { emoji: '🌧️', unit: 'mm', description: 'Precipitación acumulada' },
+      wrf_wind: { emoji: '💨', unit: 'km/h', description: 'Magnitud del viento a 10m' },
+      wrf_temperature: { emoji: '🌡️', unit: '°C', description: 'Temperatura a 2m' },
+      wrf_pressure: { emoji: '📊', unit: 'hPa', description: 'Presión en superficie' },
+    };
+
+    const info = layerInfo[layer.id] || { emoji: '📍', unit: '', description: '' };
+
+    imageOverlay.bindPopup(
+      `<strong>${info.emoji} ${layer.name}</strong><br>
+       <small>${info.description}</small><br>
+       <small>Pronóstico +${leadTime}h</small><br>
+       <small>Modelo: WRF-SMN 4km</small>`
+    );
+
+    imageOverlay.addTo(this.map);
+    this.activeLayers.set(layer.id, imageOverlay);
+    console.log(`${info.emoji} Capa ${layer.name} cargada (+${leadTime}h)`);
   }
 
   // ==========================================================================
@@ -503,25 +702,11 @@ export class MapViewer implements OnInit, OnDestroy {
 
     // Recargar capas de puntos activas
     this.activeLayers.forEach((_, layerId) => {
-      const groups = this.layerService.getLayerGroups();
-      for (const group of groups) {
-        const layer = this.findLayerById(group.layers, layerId);
-        if (layer && layer.visible && layer.type === LayerType.POINT) {
-          this.loadPointLayer(layer, currentBounds);
-        }
+      const layer = this.layerService.getLayerById(layerId);
+      if (layer && layer.visible && layer.type === LayerType.POINT) {
+        this.loadPointLayer(layer, currentBounds);
       }
     });
-  }
-
-  private findLayerById(layers: Layer[], id: string): Layer | undefined {
-    for (const layer of layers) {
-      if (layer.id === id) return layer;
-      if (layer.sublayers) {
-        const found = this.findLayerById(layer.sublayers, id);
-        if (found) return found;
-      }
-    }
-    return undefined;
   }
 
   private getMapBounds(): BoundingBox {
@@ -589,26 +774,65 @@ export class MapViewer implements OnInit, OnDestroy {
       .subscribe(() => {
         this.clearAllPolygonsFromMap();
       });
+
+    // Escuchar zoom a polígono
+    this.polygonService
+      .onZoomToPolygon()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((polygonId) => {
+        this.zoomToPolygonOnMap(polygonId);
+      });
+
+    // Escuchar inicio de edición de vértices
+    this.polygonService
+      .onEditingStarted()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((polygonId) => {
+        this.enablePolygonEditing(polygonId);
+      });
+
+    // Escuchar fin de edición de vértices
+    this.polygonService
+      .onEditingStopped()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.disablePolygonEditing();
+      });
+
+    // Escuchar cambios de color/propiedades
+    this.polygonService
+      .onPolygonUpdated()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((polygon) => {
+        this.updatePolygonFromService(polygon);
+      });
   }
 
   private async initDrawnItems(): Promise<void> {
     if (!this.drawnItems) {
-      this.drawnItems = this.L.featureGroup().addTo(this.map);
+      // Crear pane para polígonos con z-index alto (siempre encima de las capas)
+      if (!this.map.getPane('polygonsPane')) {
+        this.map.createPane('polygonsPane');
+        this.map.getPane('polygonsPane')!.style.zIndex = '650';
+      }
+      this.drawnItems = this.L.featureGroup([], { pane: 'polygonsPane' }).addTo(this.map);
     }
   }
 
   private enableDrawing(): void {
-    if (!this.map || !this.L) return;
+    if (!this.map || !this.L || !this.LDraw) {
+      console.error('Map, Leaflet or Leaflet Draw not initialized');
+      return;
+    }
 
     this.initDrawnItems();
 
     // Cancelar cualquier dibujo previo
     this.disableDrawing();
 
-    const mode = this.polygonService.getDrawingMode();
-    const color = SMN_COLORS[this.polygonService.getPolygons().length % SMN_COLORS.length];
+    const color = SMN_COLORS[this.polygonService.polygons().length % SMN_COLORS.length];
 
-    // Crear handler de dibujo según el modo
+    // Crear handler de dibujo para polígono
     const drawOptions = {
       shapeOptions: {
         color: color,
@@ -618,66 +842,56 @@ export class MapViewer implements OnInit, OnDestroy {
       },
     };
 
-    switch (mode) {
-      case 'polygon':
-        this.currentDrawHandler = new this.L.Draw.Polygon(this.map, drawOptions);
-        break;
-      case 'rectangle':
-        this.currentDrawHandler = new this.L.Draw.Rectangle(this.map, drawOptions);
-        break;
-      case 'circle':
-        this.currentDrawHandler = new this.L.Draw.Circle(this.map, drawOptions);
-        break;
-      default:
-        return;
-    }
+    try {
+      this.currentDrawHandler = new this.LDraw.Polygon(this.map, drawOptions);
+      this.currentDrawHandler.enable();
 
-    this.currentDrawHandler.enable();
+      // Escuchar evento de creación
+      const drawCreatedEvent = this.LDraw.Event?.CREATED || 'draw:created';
+      this.map.once(drawCreatedEvent, (e: any) => {
+        const layer = e.layer;
+        this.drawnItems.addLayer(layer);
 
-    // Escuchar evento de creación
-    this.map.once(this.L.Draw.Event.CREATED, (e: any) => {
-      const layer = e.layer;
-      this.drawnItems.addLayer(layer);
+        // Obtener coordenadas
+        const coordinates = layer.getLatLngs()[0].map((latlng: any) => [latlng.lat, latlng.lng]);
 
-      // Obtener coordenadas
-      let coordinates: [number, number][];
-      if (e.layerType === 'circle') {
-        // Para círculos, crear un polígono aproximado
-        const center = layer.getLatLng();
-        const radius = layer.getRadius();
-        coordinates = this.circleToPolygon(center, radius);
-      } else {
-        coordinates = layer.getLatLngs()[0].map((latlng: any) => [latlng.lat, latlng.lng]);
-      }
+        // Calcular área
+        const area = this.calculateArea(coordinates);
 
-      // Calcular área
-      const area = this.calculateArea(coordinates);
+        // Crear polígono
+        const polygonCount = this.polygonService.polygons().length + 1;
+        const polygon = this.polygonService.addPolygon({
+          name: `Polígono ${polygonCount}`,
+          coordinates,
+          area,
+          color,
+        });
 
-      // Guardar el ID del layer para poder eliminarlo después
-      const polygonCount = this.polygonService.getPolygons().length + 1;
+        // Asociar el ID del polígono con el layer
+        (layer as any).polygonId = polygon.id;
 
-      const polygon = this.polygonService.addPolygon({
-        name: `Polígono ${polygonCount}`,
-        coordinates,
-        area,
-        color,
+        // Agregar popup
+        layer.bindPopup(`<strong>${polygon.name}</strong><br>Área: ${this.formatArea(area)}`);
+
+        // Click handler para abrir el panel de polígonos
+        layer.on('click', () => {
+          this.uiService.openPolygonPanelWithSelection(polygon.id);
+        });
+
+        console.log(`🎨 Polygon created: ${polygon.name}`);
       });
 
-      // Asociar el ID del polígono con el layer
-      (layer as any).polygonId = polygon.id;
+      // Escuchar cancelación
+      const drawStopEvent = this.LDraw.Event?.DRAWSTOP || 'draw:drawstop';
+      this.map.once(drawStopEvent, () => {
+        this.polygonService.stopDrawing();
+      });
 
-      // Agregar popup
-      layer.bindPopup(`<strong>${polygon.name}</strong><br>Área: ${this.formatArea(area)}`);
-
-      console.log(`🎨 Polygon created: ${polygon.name}`);
-    });
-
-    // Escuchar cancelación
-    this.map.once(this.L.Draw.Event.DRAWSTOP, () => {
+      console.log('🎨 Drawing enabled');
+    } catch (error) {
+      console.error('Error enabling drawing:', error);
       this.polygonService.stopDrawing();
-    });
-
-    console.log(`🎨 Drawing enabled: ${mode}`);
+    }
   }
 
   private disableDrawing(): void {
@@ -703,46 +917,141 @@ export class MapViewer implements OnInit, OnDestroy {
     }
   }
 
-  private circleToPolygon(center: any, radius: number, points: number = 32): [number, number][] {
-    const coordinates: [number, number][] = [];
-    for (let i = 0; i < points; i++) {
-      const angle = (i / points) * 2 * Math.PI;
-      const lat = center.lat + (radius / 111320) * Math.cos(angle);
-      const lng =
-        center.lng + (radius / (111320 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(angle);
-      coordinates.push([lat, lng]);
-    }
-    coordinates.push(coordinates[0]); // Cerrar el polígono
-    return coordinates;
-  }
-
   private calculateArea(coordinates: [number, number][]): number {
-    // Fórmula de Shoelace para calcular área en m²
+    // Fórmula geodésica para calcular área en m² (aproximación esférica)
     if (coordinates.length < 3) return 0;
+
+    const toRadians = (deg: number) => (deg * Math.PI) / 180;
+    const EARTH_RADIUS = 6371000; // Radio de la Tierra en metros
 
     let area = 0;
     const n = coordinates.length;
 
-    for (let i = 0; i < n - 1; i++) {
+    // Usar fórmula de área esférica (Girard's theorem simplificado)
+    for (let i = 0; i < n; i++) {
       const [lat1, lng1] = coordinates[i];
-      const [lat2, lng2] = coordinates[i + 1];
+      const [lat2, lng2] = coordinates[(i + 1) % n]; // Cerrar el polígono
 
-      // Convertir a metros aproximadamente
-      const x1 = lng1 * 111320 * Math.cos((lat1 * Math.PI) / 180);
-      const y1 = lat1 * 110540;
-      const x2 = lng2 * 111320 * Math.cos((lat2 * Math.PI) / 180);
-      const y2 = lat2 * 110540;
+      const phi1 = toRadians(lat1);
+      const phi2 = toRadians(lat2);
+      const deltaLambda = toRadians(lng2 - lng1);
 
-      area += x1 * y2 - x2 * y1;
+      area += deltaLambda * (2 + Math.sin(phi1) + Math.sin(phi2));
     }
 
-    return Math.abs(area / 2);
+    area = (area * EARTH_RADIUS * EARTH_RADIUS) / 2;
+
+    return Math.abs(area);
   }
 
   private formatArea(area: number): string {
-    if (area > 1000000) {
+    if (area > 10000) {
       return `${(area / 1000000).toFixed(2)} km²`;
     }
-    return `${area.toFixed(2)} m²`;
+    return `${Math.round(area)} m²`;
+  }
+
+  private zoomToPolygonOnMap(polygonId: string): void {
+    if (!this.drawnItems || !this.map) return;
+
+    this.drawnItems.eachLayer((layer: any) => {
+      if (layer.polygonId === polygonId) {
+        if (layer.getBounds) {
+          this.map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+        }
+      }
+    });
+  }
+
+  private enablePolygonEditing(polygonId: string): void {
+    if (!this.drawnItems || !this.map) return;
+
+    this.drawnItems.eachLayer((layer: any) => {
+      if (layer.polygonId === polygonId && layer.editing) {
+        layer.editing.enable();
+
+        // Highlight del polígono en edición
+        layer.setStyle({
+          weight: 3,
+          dashArray: '5, 10',
+        });
+
+        console.log('✏️ Polygon editing enabled:', polygonId);
+      }
+    });
+
+    // Escuchar cambios en los vértices
+    this.map.on('draw:editvertex', this.onVertexEdited.bind(this));
+  }
+
+  private disablePolygonEditing(): void {
+    if (!this.drawnItems || !this.map) return;
+
+    // Guardar cambios y deshabilitar edición
+    this.drawnItems.eachLayer((layer: any) => {
+      if (layer.editing && layer.editing.enabled()) {
+        // Obtener nuevas coordenadas
+        const coordinates = layer.getLatLngs()[0].map((latlng: any) => [latlng.lat, latlng.lng]);
+        const area = this.calculateArea(coordinates);
+
+        // Actualizar en el servicio
+        if (layer.polygonId) {
+          this.polygonService.updatePolygon(layer.polygonId, coordinates, area);
+
+          // Actualizar popup
+          const polygon = this.polygonService.polygons().find((p) => p.id === layer.polygonId);
+          if (polygon) {
+            layer.setPopupContent(
+              `<strong>${polygon.name}</strong><br>Área: ${this.formatArea(area)}`
+            );
+          }
+        }
+
+        layer.editing.disable();
+
+        // Restaurar estilo normal
+        layer.setStyle({
+          weight: 2,
+          dashArray: null,
+        });
+      }
+    });
+
+    // Remover listener
+    this.map.off('draw:editvertex');
+
+    console.log('✏️ Polygon editing disabled');
+  }
+
+  private onVertexEdited(e: any): void {
+    // Se llama cada vez que se mueve un vértice
+    // Los cambios finales se guardan en disablePolygonEditing
+  }
+
+  private updatePolygonFromService(polygon: DrawnPolygon): void {
+    if (!this.drawnItems) return;
+
+    this.drawnItems.eachLayer((layer: any) => {
+      if (layer.polygonId === polygon.id) {
+        // Actualizar popup con nombre actualizado
+        const area = polygon.area || 0;
+        layer.bindPopup(`<strong>${polygon.name}</strong><br>Área: ${this.formatArea(area)}`);
+
+        // Actualizar visibilidad y estilo
+        if (polygon.visible) {
+          layer.setStyle({
+            color: polygon.color,
+            fillColor: polygon.color,
+            fillOpacity: (polygon.opacity / 100) * 0.5,
+            opacity: polygon.opacity / 100,
+          });
+          if (!this.map.hasLayer(layer)) {
+            this.drawnItems.addLayer(layer);
+          }
+        } else {
+          layer.setStyle({ opacity: 0, fillOpacity: 0 });
+        }
+      }
+    });
   }
 }

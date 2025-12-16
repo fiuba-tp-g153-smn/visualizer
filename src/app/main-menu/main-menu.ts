@@ -1,12 +1,11 @@
-import { Component, signal, output } from '@angular/core';
+import { Component, inject, output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MainMenuButtonBar } from '../main-menu-button-bar/main-menu-button-bar';
 import { LayerList } from '../layer-list/layer-list';
 import { PolygonTool } from '../polygon-tool/polygon-tool';
 import { TileConfig, type TileProvider } from '../tile-config/tile-config';
-
-export type PanelType = 'layers' | 'polygons' | 'tiles' | null;
+import { UiService, type PanelType } from '../services/ui.service';
 
 @Component({
   selector: 'app-main-menu',
@@ -15,16 +14,17 @@ export type PanelType = 'layers' | 'polygons' | 'tiles' | null;
   styleUrl: './main-menu.scss',
 })
 export class MainMenu {
-  activePanel = signal<PanelType>(null);
+  private uiService = inject(UiService);
+
+  activePanel = this.uiService.activePanel;
   tileProviderChanged = output<TileProvider>();
 
   openPanel(panel: PanelType) {
-    // Si el panel ya está activo, lo cerramos; si no, lo abrimos
-    this.activePanel.set(this.activePanel() === panel ? null : panel);
+    this.uiService.togglePanel(panel);
   }
 
   closePanel() {
-    this.activePanel.set(null);
+    this.uiService.closePanel();
   }
 
   getPanelTitle(): string {

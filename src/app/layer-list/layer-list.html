@@ -1,168 +1,313 @@
 <div class="layer-list-container">
-  <!-- Barra de herramientas -->
-  <div class="layer-toolbar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Buscar capas</mat-label>
-      <input
-        matInput
-        type="text"
-        [value]="searchQuery()"
-        (input)="onSearchChange($event)"
-        placeholder="Nombre o descripción..."
-      />
-      @if (searchQuery()) {
-      <button matSuffix mat-icon-button (click)="clearSearch()" aria-label="Limpiar búsqueda">
-        <mat-icon>close</mat-icon>
-      </button>
-      } @else {
-      <mat-icon matSuffix>search</mat-icon>
-      }
-    </mat-form-field>
+  <!-- Tabs -->
+  <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="layer-tabs" animationDuration="200ms">
+    <!-- TAB 1: Capas disponibles -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>layers</mat-icon>
+        <span>Disponibles</span>
+      </ng-template>
 
-    @if (activeLayersCount() > 0) {
-    <button
-      mat-stroked-button
-      color="warn"
-      class="clear-all-btn"
-      (click)="clearAllLayers()"
-      matTooltip="Desactivar todas las capas"
-    >
-      <mat-icon>layers_clear</mat-icon>
-      <span class="btn-text">Limpiar ({{ activeLayersCount() }})</span>
-    </button>
-    }
-  </div>
-
-  <!-- Lista de capas -->
-  <div class="layers-content">
-    <mat-accordion multi>
-      @for (group of filteredGroups(); track group.id) {
-      <mat-expansion-panel [expanded]="group.expanded || !!searchQuery()">
-        <mat-expansion-panel-header>
-          <mat-panel-title>
-            @if (group.icon) {
-            <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
+      <div class="tab-content">
+        <!-- Barra de herramientas -->
+        <div class="layer-toolbar">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Buscar capas</mat-label>
+            <input
+              matInput
+              type="text"
+              [value]="searchQuery()"
+              (input)="onSearchChange($event)"
+              placeholder="Nombre o descripción..."
+            />
+            @if (searchQuery()) {
+            <button matSuffix mat-icon-button (click)="clearSearch()" aria-label="Limpiar búsqueda">
+              <mat-icon>close</mat-icon>
+            </button>
+            } @else {
+            <mat-icon matSuffix>search</mat-icon>
             }
-            <span class="group-name">{{ group.name }}</span>
-          </mat-panel-title>
-        </mat-expansion-panel-header>
+          </mat-form-field>
+        </div>
 
-        <!-- Descripción del grupo visible solo al expandir -->
-        @if (group.description) {
-        <p class="group-description">{{ group.description }}</p>
-        }
+        <!-- Lista de capas con 3 niveles -->
+        <div class="layers-content">
+          <mat-accordion multi class="main-accordion">
+            <!-- NIVEL 1: Grupos principales -->
+            @for (group of filteredGroups(); track group.id) {
+            <mat-expansion-panel [expanded]="group.expanded || !!searchQuery()" class="group-panel">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  @if (group.icon) {
+                  <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
+                  }
+                  <span class="group-name">{{ group.name }}</span>
+                  @if (getActiveLayersInGroup(group) > 0) {
+                  <span class="active-badge">{{ getActiveLayersInGroup(group) }}</span>
+                  }
+                </mat-panel-title>
+              </mat-expansion-panel-header>
 
-        <div class="layers-container">
-          @for (layer of group.layers; track layer.id) {
-          <div class="layer-item" [class.layer-active]="layer.visible">
-            <div class="layer-header">
-              <!-- Solo mostrar checkbox si NO tiene sublayers -->
-              @if (!hasSublayers(layer)) {
-              <mat-checkbox
-                [checked]="layer.visible"
-                (change)="onLayerVisibilityChange(layer.id)"
-                color="primary"
-              >
-                <div class="layer-info">
-                  <mat-icon class="layer-type-icon">{{ getLayerIcon(layer) }}</mat-icon>
-                  <span class="layer-name">{{ layer.name }}</span>
-                </div>
-              </mat-checkbox>
-              } @else {
-              <!-- Para capas con sublayers, solo mostrar el nombre sin checkbox -->
-              <div class="layer-info parent-layer">
-                <mat-icon class="layer-type-icon">{{ getLayerIcon(layer) }}</mat-icon>
-                <span class="layer-name">{{ layer.name }}</span>
-              </div>
-              } @if (layer.description) {
-              <mat-icon
-                class="info-icon"
-                [matTooltip]="layer.description"
-                matTooltipPosition="right"
-              >
-                info_outline
-              </mat-icon>
+              @if (group.description) {
+              <p class="group-description">{{ group.description }}</p>
               }
-            </div>
 
-            @if (layer.visible && !hasSublayers(layer)) {
-            <div class="layer-controls">
-              <div class="opacity-control">
-                <mat-icon class="control-icon">opacity</mat-icon>
-                <mat-slider
-                  class="opacity-slider"
-                  min="0"
-                  max="100"
-                  step="5"
-                  [displayWith]="formatOpacity"
+              <!-- NIVEL 2: Subgrupos -->
+              <mat-accordion multi class="subgroup-accordion">
+                @for (subgroup of group.subgroups; track subgroup.id) {
+                <mat-expansion-panel
+                  [expanded]="subgroup.expanded || !!searchQuery()"
+                  class="subgroup-panel"
                 >
-                  <input
-                    matSliderThumb
-                    [(ngModel)]="layer.opacity"
-                    (ngModelChange)="onOpacityChange(layer.id, layer.opacity)"
-                  />
-                </mat-slider>
-                <span class="opacity-value">{{ layer.opacity }}%</span>
-              </div>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      @if (subgroup.icon) {
+                      <mat-icon class="subgroup-icon">{{ subgroup.icon }}</mat-icon>
+                      }
+                      <span class="subgroup-name">{{ subgroup.name }}</span>
+                      @if (getActiveLayersInSubgroup(subgroup) > 0) {
+                      <span class="active-badge small">{{
+                        getActiveLayersInSubgroup(subgroup)
+                      }}</span>
+                      }
+                    </mat-panel-title>
+                  </mat-expansion-panel-header>
 
-              @if (layer.metadata) {
-              <div class="layer-metadata">
-                @if (layer.metadata.frequency) {
-                <span class="metadata-item">
-                  <mat-icon class="metadata-icon">schedule</mat-icon>
-                  {{ layer.metadata.frequency }}
-                </span>
-                } @if (layer.metadata.animationFrames) {
-                <span class="metadata-item">
-                  <mat-icon class="metadata-icon">movie</mat-icon>
-                  {{ layer.metadata.animationFrames }} frames
-                </span>
-                }
-              </div>
-              }
-            </div>
-            } @if (hasSublayers(layer)) {
-            <div class="sublayers-container">
-              @for (sublayer of layer.sublayers; track sublayer.id) {
-              <div class="sublayer-item" [class.sublayer-active]="sublayer.visible">
-                <mat-checkbox
-                  [checked]="sublayer.visible"
-                  (change)="onLayerVisibilityChange(sublayer.id)"
-                  color="primary"
-                  class="sublayer-checkbox"
-                >
-                  <span class="sublayer-name">{{ sublayer.name }}</span>
-                </mat-checkbox>
+                  @if (subgroup.description) {
+                  <p class="subgroup-description">{{ subgroup.description }}</p>
+                  }
 
-                @if (sublayer.visible) {
-                <div class="sublayer-controls">
-                  <mat-slider class="opacity-slider-mini" min="0" max="100" step="10">
-                    <input
-                      matSliderThumb
-                      [(ngModel)]="sublayer.opacity"
-                      (ngModelChange)="onOpacityChange(sublayer.id, sublayer.opacity)"
-                    />
-                  </mat-slider>
-                  <span class="opacity-value-mini">{{ sublayer.opacity }}%</span>
-                </div>
+                  <!-- NIVEL 3: Capas -->
+                  <div class="layers-container">
+                    @for (layer of subgroup.layers; track layer.id) {
+                    <div class="layer-item" [class.layer-active]="layer.visible">
+                      <div class="layer-header">
+                        <mat-checkbox
+                          [checked]="layer.visible"
+                          (change)="onLayerVisibilityChange(layer.id)"
+                          color="primary"
+                        >
+                          <div class="layer-info">
+                            <mat-icon class="layer-type-icon">{{ getLayerIcon(layer) }}</mat-icon>
+                            <span class="layer-name">{{ layer.name }}</span>
+                          </div>
+                        </mat-checkbox>
+                        @if (layer.description) {
+                        <mat-icon
+                          class="info-icon"
+                          [matTooltip]="layer.description"
+                          matTooltipPosition="right"
+                        >
+                          info_outline
+                        </mat-icon>
+                        }
+                      </div>
+
+                      @if (layer.visible) {
+                      <div class="layer-controls">
+                        <div class="opacity-control">
+                          <mat-icon class="control-icon">opacity</mat-icon>
+                          <mat-slider
+                            class="opacity-slider"
+                            min="0"
+                            max="100"
+                            step="5"
+                            [displayWith]="formatOpacity"
+                          >
+                            <input
+                              matSliderThumb
+                              [(ngModel)]="layer.opacity"
+                              (ngModelChange)="onOpacityChange(layer.id, layer.opacity)"
+                            />
+                          </mat-slider>
+                          <span class="opacity-value">{{ layer.opacity }}%</span>
+                        </div>
+
+                        @if (hasForecastHours(layer)) {
+                        <div class="forecast-hour-control">
+                          <mat-icon class="control-icon">schedule</mat-icon>
+                          <mat-form-field appearance="outline" class="forecast-select">
+                            <mat-label>Plazo</mat-label>
+                            <mat-select
+                              [value]="layer.selectedForecastHour"
+                              (selectionChange)="onForecastHourChange(layer.id, $event.value)"
+                            >
+                              @for (hour of layer.metadata?.forecastHours; track hour) {
+                              <mat-option [value]="hour">+{{ hour }}h</mat-option>
+                              }
+                            </mat-select>
+                          </mat-form-field>
+                        </div>
+                        }
+                      </div>
+                      }
+                    </div>
+                    }
+                  </div>
+                </mat-expansion-panel>
                 }
-              </div>
-              }
-            </div>
+              </mat-accordion>
+            </mat-expansion-panel>
             }
+          </mat-accordion>
+
+          @if (filteredGroups().length === 0 && searchQuery()) {
+          <div class="no-results">
+            <mat-icon>search_off</mat-icon>
+            <p>No se encontraron capas</p>
+            <span>Intenta con otro término de búsqueda</span>
           </div>
           }
         </div>
-      </mat-expansion-panel>
-      }
-    </mat-accordion>
 
-    @if (filteredGroups().length === 0 && searchQuery()) {
-    <div class="no-results">
-      <mat-icon>search_off</mat-icon>
-      <p>No se encontraron capas</p>
-      <span>Intenta con otro término de búsqueda</span>
-    </div>
-    }
-  </div>
+        <!-- Botón limpiar abajo -->
+        @if (activeLayersCount() > 0) {
+        <div class="bottom-action">
+          <button mat-stroked-button color="warn" (click)="clearAllLayers()">
+            <mat-icon>layers_clear</mat-icon>
+            Limpiar ({{ activeLayersCount() }})
+          </button>
+        </div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- TAB 2: Capas activas -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>tune</mat-icon>
+        <span>Activas</span>
+        @if (activeLayersCount() > 0) {
+        <span class="tab-badge">{{ activeLayersCount() }}</span>
+        }
+      </ng-template>
+
+      <div class="tab-content active-layers-tab">
+        @if (activeLayers().length === 0) {
+        <div class="empty-state">
+          <mat-icon>layers_clear</mat-icon>
+          <p>No hay capas activas</p>
+          <span>Activa capas en la pestaña "Disponibles"</span>
+        </div>
+        } @else {
+
+        <!-- Lista de capas activas -->
+        <div class="active-layers-list">
+          <mat-accordion>
+            @for (layer of activeLayers(); track layer.id; let i = $index) {
+            <div class="active-layer-item">
+              <!-- Flechas de orden -->
+              <div class="order-controls">
+                <button
+                  mat-icon-button
+                  (click)="moveLayerUp(layer.id)"
+                  [disabled]="isFirstLayer(layer)"
+                  matTooltip="Mover arriba"
+                >
+                  <mat-icon>keyboard_arrow_up</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  (click)="moveLayerDown(layer.id)"
+                  [disabled]="isLastLayer(layer)"
+                  matTooltip="Mover abajo"
+                >
+                  <mat-icon>keyboard_arrow_down</mat-icon>
+                </button>
+              </div>
+
+              <!-- Panel de la capa -->
+              <mat-expansion-panel class="layer-panel">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    <mat-icon class="layer-type-icon">{{ getLayerIcon(layer) }}</mat-icon>
+                    <span class="layer-name">{{ layer.name }}</span>
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+
+                <!-- Controles de la capa -->
+                <div class="layer-controls-panel">
+                  <!-- Categoría -->
+                  <div class="layer-category">{{ layer.groupName }} / {{ layer.subgroupName }}</div>
+
+                  <!-- Opacidad -->
+                  <div class="control-row">
+                    <mat-icon>opacity</mat-icon>
+                    <span class="control-label">Opacidad</span>
+                    <mat-slider
+                      class="opacity-slider"
+                      min="0"
+                      max="100"
+                      step="5"
+                      [displayWith]="formatOpacity"
+                    >
+                      <input
+                        matSliderThumb
+                        [(ngModel)]="layer.opacity"
+                        (ngModelChange)="onOpacityChange(layer.id, layer.opacity)"
+                      />
+                    </mat-slider>
+                    <span class="opacity-value">{{ layer.opacity }}%</span>
+                  </div>
+
+                  <!-- Plazo de pronóstico -->
+                  @if (hasForecastHours(layer)) {
+                  <div class="control-row">
+                    <mat-icon>schedule</mat-icon>
+                    <span class="control-label">Plazo</span>
+                    <mat-form-field appearance="outline" class="forecast-select">
+                      <mat-select
+                        [value]="layer.selectedForecastHour"
+                        (selectionChange)="onForecastHourChange(layer.id, $event.value)"
+                      >
+                        @for (hour of layer.metadata?.forecastHours; track hour) {
+                        <mat-option [value]="hour">+{{ hour }}h</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  }
+
+                  <!-- Acciones -->
+                  <div class="layer-actions">
+                    <button mat-stroked-button color="warn" (click)="deactivateLayer(layer.id)">
+                      <mat-icon>visibility_off</mat-icon>
+                      Desactivar
+                    </button>
+                  </div>
+                </div>
+              </mat-expansion-panel>
+            </div>
+            }
+          </mat-accordion>
+        </div>
+
+        <!-- Control de tiempo global (abajo) -->
+        @if (hasTemporalLayers()) {
+        <div class="time-control-section">
+          <div class="time-control-bar">
+            <button mat-icon-button (click)="rewindTime()" matTooltip="Retroceder">
+              <mat-icon>skip_previous</mat-icon>
+            </button>
+            <button
+              mat-mini-fab
+              color="primary"
+              class="play-btn"
+              (click)="togglePlay()"
+              [matTooltip]="isPlaying() ? 'Pausar' : 'Reproducir'"
+            >
+              <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+            </button>
+            <button mat-icon-button (click)="advanceTime()" matTooltip="Avanzar">
+              <mat-icon>skip_next</mat-icon>
+            </button>
+            <span class="current-time">
+              @if (getCurrentGlobalHour() !== null) { +{{ getCurrentGlobalHour() }}h } @else { -- }
+            </span>
+          </div>
+        </div>
+        } }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>

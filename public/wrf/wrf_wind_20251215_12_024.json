@@ -1,0 +1,24 @@
+{
+  "product": "wind_magnitude",
+  "variable": "magViento10",
+  "units": "km/h",
+  "init_date": "2025-12-15T12:00:00",
+  "valid_time": "2025-12-16 12:00:00",
+  "lead_time_hours": 24,
+  "bounds": {
+    "north": -11.645957946777344,
+    "south": -56.853172302246094,
+    "east": -35.669189453125,
+    "west": -94.330810546875
+  },
+  "value_range": {
+    "min": 0.0,
+    "max": 102.14532470703125
+  },
+  "colorbar": {
+    "min": 0,
+    "max": 100,
+    "label": "Viento (km/h)"
+  },
+  "image_file": "output/images/wrf_wind_20251215_12_024.png"
+}

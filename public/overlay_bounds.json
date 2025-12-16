@@ -1,0 +1,11 @@
+{
+  "bounds": {
+    "north": -21.0,
+    "south": -55.0,
+    "east": -53.0,
+    "west": -74.0
+  },
+  "forecast_datetime": "2025-12-14 12:00:00",
+  "parameter": "Total Precipitation (mm)",
+  "step": "24h"
+}

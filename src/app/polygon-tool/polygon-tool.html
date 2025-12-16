@@ -1,112 +1,173 @@
 <div class="polygon-tool-container">
+  <!-- Header -->
   <div class="tool-header">
-    <h2>Herramienta de polígonos</h2>
-    <p class="tool-description">
-      Dibuja polígonos sobre el mapa para definir áreas de interés
-    </p>
+    <h2><mat-icon>draw</mat-icon> Polígonos</h2>
   </div>
 
-  <div class="drawing-controls">
+  <!-- Botón de dibujar -->
+  <div class="drawing-section">
     @if (!isDrawing()) {
-      <button 
-        mat-raised-button 
-        color="primary"
-        (click)="startDrawing()"
-        class="draw-button">
-        <mat-icon>polyline</mat-icon>
-        Dibujar polígono
-      </button>
+    <button mat-raised-button color="primary" (click)="startDrawing()" class="draw-btn">
+      <mat-icon>add</mat-icon>
+      Dibujar polígono
+    </button>
     } @else {
-      <button 
-        mat-raised-button 
-        color="warn"
-        (click)="stopDrawing()"
-        class="stop-button">
-        <mat-icon>stop</mat-icon>
-        Cancelar dibujo
+    <div class="drawing-active">
+      <span class="drawing-indicator">
+        <span class="pulse"></span>
+        Dibujando...
+      </span>
+      <button mat-stroked-button color="warn" (click)="stopDrawing()">
+        <mat-icon>close</mat-icon>
+        Cancelar
       </button>
-      <div class="drawing-hint">
-        <mat-icon>info</mat-icon>
-        <span>Haz clic en el mapa para agregar puntos. Doble clic para finalizar.</span>
-      </div>
+    </div>
+    <div class="hints">
+      <p class="hint"><mat-icon>mouse</mat-icon> Clic para agregar puntos</p>
+      <p class="hint"><mat-icon>done_all</mat-icon> Doble clic para finalizar</p>
+    </div>
     }
   </div>
 
   <mat-divider></mat-divider>
 
+  <!-- Lista de polígonos -->
   <div class="polygons-section">
     <div class="section-header">
-      <h3>Polígonos dibujados ({{ polygons().length }})</h3>
+      <span>Polígonos ({{ polygons().length }})</span>
       @if (polygons().length > 0) {
-        <button 
-          mat-button 
-          color="warn"
-          (click)="clearAllPolygons()"
-          class="clear-all-button">
-          <mat-icon>delete_sweep</mat-icon>
-          Limpiar todo
-        </button>
+      <button mat-icon-button color="warn" (click)="clearAll()" matTooltip="Eliminar todos">
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
       }
     </div>
 
     @if (polygons().length === 0) {
-      <div class="empty-state">
-        <mat-icon class="empty-icon">layers_clear</mat-icon>
-        <p>No hay polígonos dibujados</p>
-        <span class="empty-hint">Usa el botón de arriba para comenzar a dibujar</span>
-      </div>
+    <div class="empty-state">
+      <mat-icon>layers_clear</mat-icon>
+      <p>No hay polígonos</p>
+    </div>
     } @else {
-      <mat-list class="polygon-list">
-        @for (polygon of polygons(); track polygon.id) {
-          <mat-list-item class="polygon-item">
-            <div class="polygon-content">
-              <div class="polygon-header">
-                <div class="polygon-info">
-                  <div 
-                    class="polygon-color-indicator" 
-                    [style.background-color]="polygon.color">
-                  </div>
-                  <span class="polygon-name">{{ polygon.name }}</span>
-                </div>
-                <button 
-                  mat-icon-button 
-                  color="warn"
-                  (click)="deletePolygon(polygon.id)"
-                  matTooltip="Eliminar polígono">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </div>
+    <mat-accordion>
+      @for (polygon of polygons(); track polygon.id) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <span
+              class="color-dot"
+              [style.background]="polygon.color"
+              [class.hidden-dot]="!polygon.visible"
+            ></span>
+            <span class="polygon-name" [class.hidden-polygon]="!polygon.visible">{{
+              polygon.name
+            }}</span>
+          </mat-panel-title>
+        </mat-expansion-panel-header>
 
-              <div class="polygon-details">
-                <mat-chip class="detail-chip">
-                  <mat-icon>straighten</mat-icon>
-                  {{ formatArea(polygon.area) }}
-                </mat-chip>
-                <mat-chip class="detail-chip">
-                  <mat-icon>location_on</mat-icon>
-                  {{ polygon.coordinates.length }} puntos
-                </mat-chip>
-                <mat-chip class="detail-chip">
-                  <mat-icon>schedule</mat-icon>
-                  {{ polygon.createdAt.toLocaleTimeString() }}
-                </mat-chip>
-              </div>
+        <!-- Contenido desplegable -->
+        <div class="polygon-details">
+          <div class="detail-row">
+            <mat-icon>straighten</mat-icon>
+            <span>Área: {{ formatArea(polygon.area) }}</span>
+          </div>
+          <div class="detail-row">
+            <mat-icon>location_on</mat-icon>
+            <span>Puntos: {{ polygon.coordinates.length }}</span>
+          </div>
+          <div class="detail-row">
+            <mat-icon>schedule</mat-icon>
+            <span>Creado: {{ polygon.createdAt | date : 'short' }}</span>
+          </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="polygon-actions">
+          @if (editingNameId() === polygon.id) {
+          <!-- Modo edición de nombre -->
+          <div class="rename-row">
+            <input
+              type="text"
+              class="rename-input"
+              [value]="tempName()"
+              (input)="tempName.set($any($event.target).value)"
+              (keydown)="onRenameKey($event, polygon.id)"
+              autofocus
+            />
+            <button
+              mat-icon-button
+              color="primary"
+              (click)="saveRename(polygon.id)"
+              matTooltip="Guardar"
+            >
+              <mat-icon>check</mat-icon>
+            </button>
+            <button mat-icon-button (click)="cancelRename()" matTooltip="Cancelar">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          } @else {
+          <!-- Acciones normales -->
+          <div class="actions-row">
+            @if (isEditingPoints(polygon.id)) {
+            <button
+              mat-icon-button
+              color="primary"
+              (click)="stopEditPoints()"
+              matTooltip="Guardar puntos"
+            >
+              <mat-icon>check</mat-icon>
+            </button>
+            } @else {
+            <button
+              mat-icon-button
+              (click)="startEditPoints(polygon.id)"
+              matTooltip="Editar puntos"
+            >
+              <mat-icon>edit_location_alt</mat-icon>
+            </button>
+            }
+            <button mat-icon-button (click)="startRename(polygon)" matTooltip="Renombrar">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button (click)="zoomTo(polygon.id)" matTooltip="Centrar en mapa">
+              <mat-icon>center_focus_strong</mat-icon>
+            </button>
+            <button
+              mat-icon-button
+              (click)="toggleVisibility(polygon.id)"
+              [matTooltip]="polygon.visible ? 'Ocultar' : 'Mostrar'"
+            >
+              <mat-icon>{{ polygon.visible ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="delete(polygon.id)" matTooltip="Eliminar">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+          }
+
+          <div class="color-row">
+            <span class="color-label">Color:</span>
+            <div class="color-picker">
+              @for (color of availableColors; track color) {
+              <button
+                class="color-option"
+                [style.background]="color"
+                [class.selected]="polygon.color === color"
+                (click)="changeColor(polygon.id, color)"
+              ></button>
+              }
             </div>
-          </mat-list-item>
-          <mat-divider></mat-divider>
-        }
-      </mat-list>
+          </div>
+        </div>
+      </mat-expansion-panel>
+      }
+    </mat-accordion>
 
-      <div class="export-section">
-        <button 
-          mat-stroked-button 
-          color="primary"
-          (click)="exportPolygons()"
-          class="export-button">
-          <mat-icon>download</mat-icon>
-          Exportar como GeoJSON
-        </button>
-      </div>
+    <!-- Exportar -->
+    <button mat-stroked-button (click)="export()" class="export-btn">
+      <mat-icon>download</mat-icon>
+      Exportar GeoJSON
+    </button>
     }
   </div>
 </div>

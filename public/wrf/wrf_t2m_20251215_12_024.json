@@ -1,0 +1,24 @@
+{
+  "product": "temperature",
+  "variable": "T2",
+  "units": "\u00b0C",
+  "init_date": "2025-12-15T12:00:00",
+  "valid_time": "2025-12-16 12:00:00",
+  "lead_time_hours": 24,
+  "bounds": {
+    "north": -11.645957946777344,
+    "south": -56.853172302246094,
+    "east": -35.669189453125,
+    "west": -94.330810546875
+  },
+  "value_range": {
+    "min": -17.06207275390625,
+    "max": 32.737213134765625
+  },
+  "colorbar": {
+    "min": -10,
+    "max": 45,
+    "label": "Temperatura (\u00b0C)"
+  },
+  "image_file": "output/images/wrf_t2m_20251215_12_024.png"
+}
