@@ -103,13 +103,46 @@ LayerGroup (ej: "Satélite")
 
 **Commits:**
 
-- Pendiente
+- `refactor: Update models for tile-based satellite layers (ch2, ch9, ch13)`
+
+---
+
+### FASE 4 COMPLETADA: Servicio de Capas (LayerService)
+
+**Objetivo:** Servicio para gestionar capas de satélite ABI (3 canales)
+
+#### Decisiones de diseño - Fase 4
+
+- ✅ **Estructura modular escalable:**
+  - `config/layers/satellite-abi.layers.ts` → Define los 3 canales
+  - `config/layer-definitions.ts` → Combina todos los grupos
+- ✅ **LayerService con signals:**
+  - `layerGroups` → estructura completa
+  - `activeLayers` → computed que filtra visibles y ordena por zIndex
+- ✅ **Métodos implementados:**
+  - `toggleLayer(id)` → activa/desactiva
+  - `setOpacity(id, opacity)` → cambia transparencia (0-100 con clamping)
+  - `moveLayerUp(id)` → sube en el stack (para flechas UI)
+  - `moveLayerDown(id)` → baja en el stack
+  - `setLayerOrder([ids])` → reordenamiento completo (para drag & drop)
+- ✅ **Testing:** 39 tests pasando (LayerService + TileService)
+
+**Resultado:**
+
+- 3 canales ABI (ch2, ch9, ch13) definidos y gestionables
+- zIndex automático al activar capas
+- API lista para UI con flechas o drag & drop
+
+**Commits:**
+
+- `feat: Implement LayerService with modular layer definitions (Phase 4)`
+- `test: Add unit tests for LayerService and TileService (39 tests passing)`
 
 ---
 
 ## PRÓXIMA FASE
 
-### FASE 4 EN PROGRESO: Servicio de Capas (LayerService)
+### FASE 5: Renderizado de Capas en el Mapa
 
 **Objetivo:** Servicio para gestionar capas de satélite ABI (3 canales)
 
@@ -117,13 +150,15 @@ LayerGroup (ej: "Satélite")
 
 - Solo 1 grupo: "Satélite"
 - Solo 1 subgrupo: "ABI"  
-- Solo 3 capas: Canal 13 (IR), Canal 8 (Vapor de agua), Canal 2 (Visible)
+- Solo 3 capas: ch2 (Visible), ch9 (Vapor de agua), ch13 (Infrarrojo)
 
 **Por implementar:**
 
-- Signal `layerGroups` con estructura hardcodeada
-- Computed `activeLayers` → filtra visibles y ordena por zIndex
-- Métodos básicos: `toggleLayer(id)`, `setOpacity(id, opacity)`
+- Crear servicio para consultar tiles del backend
+- Effect en MapViewer que escuche `activeLayers()`
+- Renderizar tiles con `L.tileLayer()` usando `urlTemplate`
+- Aplicar opacity y zIndex de cada capa
+- Agregar/quitar layers del mapa reactivamente
 
 ---
 
