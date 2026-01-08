@@ -10,6 +10,7 @@ export enum LayerType {
 export enum LayerCategory {
   SATELLITE_ABI = 'satellite_abi',
   SATELLITE_GLM = 'satellite_glm',
+  SATELLITE_TILES = 'satellite_tiles', // Productos satelitales pre-procesados (tiles XYZ)
   RADAR = 'radar',
   EMAS = 'emas',
   CONVENTIONAL_STATIONS = 'conventional_stations',
@@ -178,6 +179,29 @@ export class LayerService {
                   animationFrames: 24,
                 },
               },
+            ],
+          },
+          {
+            id: 'satellite_tiles',
+            name: 'Productos Satelitales',
+            description: 'Tiles pre-procesados (ASH RGB, True Color, etc.)',
+            icon: 'layers',
+            expanded: false,
+            layers: [
+              {
+                id: 'tile_ash_rgb',
+                name: 'ASH RGB',
+                description: 'Composite RGB para detección de cenizas volcánicas',
+                type: LayerType.RASTER,
+                category: LayerCategory.SATELLITE_TILES,
+                visible: false,
+                opacity: 75,
+                metadata: {
+                  frequency: 'Variable',
+                  updateInterval: 'Manual',
+                },
+              },
+              // Más productos de tiles se pueden agregar dinámicamente
             ],
           },
           {

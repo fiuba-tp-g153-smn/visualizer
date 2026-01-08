@@ -110,6 +110,72 @@ export interface RasterAnimationData {
 }
 
 // =============================================================================
+// TILES XYZ (Satelitales pre-procesados con gdal2tiles)
+// =============================================================================
+
+export interface TileLayerData {
+  id: string;
+  name: string;
+  productName: string; // Nombre del producto en el tile server
+  urlTemplate: string; // Template: 'http://localhost:5000/tiles/{product}/{z}/{x}/{y}.webp'
+  minZoom: number;
+  maxZoom: number;
+  opacity?: number;
+  attribution?: string;
+  metadata?: {
+    fecha?: string;
+    producto?: string;
+    tipo?: 'ash_rgb' | 'true_color' | 'ir' | 'wv' | 'other';
+    satelite?: string; // ej: 'GOES-16', 'Himawari-8'
+  };
+}
+
+export interface TileProduct {
+  name: string; // Nombre único del producto
+  path: string; // Path en el servidor
+  tile_format: string; // 'webp' | 'png'
+  zoom_levels: number[]; // Niveles de zoom disponibles
+}
+
+export interface TileProductsResponse {
+  products: TileProduct[];
+  tile_url_template: string;
+}
+
+// =============================================================================
+// TILES XYZ (Satelitales pre-procesados con gdal2tiles)
+// =============================================================================
+
+export interface TileLayerData {
+  id: string;
+  name: string;
+  productName: string; // Nombre del producto en el tile server
+  urlTemplate: string; // Template: 'http://localhost:5000/tiles/{product}/{z}/{x}/{y}.webp'
+  minZoom: number;
+  maxZoom: number;
+  opacity?: number;
+  attribution?: string;
+  metadata?: {
+    fecha?: string;
+    producto?: string;
+    tipo?: 'ash_rgb' | 'true_color' | 'ir' | 'wv' | 'other';
+    satelite?: string; // ej: 'GOES-16', 'Himawari-8'
+  };
+}
+
+export interface TileProduct {
+  name: string; // Nombre único del producto
+  path: string; // Path en el servidor
+  tile_format: string; // 'webp' | 'png'
+  zoom_levels: number[]; // Niveles de zoom disponibles
+}
+
+export interface TileProductsResponse {
+  products: TileProduct[];
+  tile_url_template: string;
+}
+
+// =============================================================================
 // RESPUESTAS DEL BACKEND
 // =============================================================================
 

@@ -11,6 +11,7 @@ import { environment } from '../../environments/environment';
 export class ApiConfigService {
   // URL base del backend - se puede cambiar según el ambiente
   private readonly baseUrl = environment.apiUrl ?? 'http://localhost:8080';
+  private readonly tileServerUrl = environment.tileServerUrl ?? 'http://localhost:5000';
 
   // ==========================================================================
   // ENDPOINTS
@@ -42,6 +43,12 @@ export class ApiConfigService {
     vectors: {
       wind: 'vectors/wind',
     },
+
+    // Tiles XYZ (productos satelitales pre-procesados)
+    tiles: {
+      products: 'products', // Lista de productos disponibles
+      satellite: 'tiles', // Base para tiles satelitales
+    },
   } as const;
 
   // ==========================================================================
@@ -50,6 +57,10 @@ export class ApiConfigService {
 
   getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  getTileServerUrl(): string {
+    return this.tileServerUrl;
   }
 
   /**
@@ -84,5 +95,20 @@ export class ApiConfigService {
     }
   ): string {
     return this.buildUrl(endpoint, options as Record<string, string>);
+  }
+
+  /**
+   * Construye URL template para tiles XYZ
+   * Formato: http://localhost:5000/tiles/{productName}/{z}/{x}/{y}.webp
+   */
+  buildTileUrl(productName: string, extension: string = 'webp'): string {
+    return `${this.tileServerUrl}/tiles/${productName}/{z}/{x}/{y}.${extension}`;
+  }
+
+  /**
+   * Construye URL para listar productos de tiles disponibles
+   */
+  getTileProductsUrl(): string {
+    return `${this.tileServerUrl}/products`;
   }
 }

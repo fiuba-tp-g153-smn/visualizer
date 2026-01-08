@@ -9,6 +9,7 @@ import {
   ActiveLayer,
 } from '../services/layer.service';
 import { TileService } from '../services/tile.service';
+import { SatelliteTilesService } from '../services/satellite-tiles.service';
 import { PolygonService, DrawnPolygon } from '../services/polygon.service';
 import { UiService } from '../services/ui.service';
 import { Subject } from 'rxjs';
@@ -37,6 +38,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private platformId = inject(PLATFORM_ID);
   private layerService = inject(LayerService);
   private tileService = inject(TileService);
+  private satelliteTilesService = inject(SatelliteTilesService);
   private mapDataService = inject(MapDataService);
   private polygonService = inject(PolygonService);
   private uiService = inject(UiService);
@@ -428,6 +430,10 @@ export class MapViewer implements OnInit, OnDestroy {
           producto: layer.id,
         });
         break;
+      case LayerCategory.SATELLITE_TILES:
+        // Cargar tiles satelitales (ASH RGB, etc.)
+        this.loadSatelliteTileLayer(layer);
+        return;
       case LayerCategory.RADAR:
         const radarId = layer.id.replace('radar_', '');
         dataObservable = this.mapDataService.getRadarImage(radarId);
@@ -483,6 +489,55 @@ export class MapViewer implements OnInit, OnDestroy {
     rectangle.addTo(this.map);
     this.activeLayers.set(layer.id, rectangle);
     console.log(`⚠️ Capa raster placeholder: ${layer.name}`);
+  }
+
+  /**
+   * Carga tiles satelitales XYZ (ASH RGB, True Color, etc.)
+   */
+  private loadSatelliteTileLayer(layer: Layer): void {
+    this.satelliteTilesService
+      .getAvailableProducts()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((products) => {
+        if (products.length === 0) {
+          console.warn('⚠️ No hay productos de tiles disponibles');
+          this.createPlaceholderRasterLayer(layer);
+          return;
+        }
+
+        // Buscar el producto correspondiente
+        // Por ahora, usamos el primer producto ASH RGB disponible
+        const ashRgbProduct = products.find((p) => p.name.includes('ash_rgb'));
+
+        if (!ashRgbProduct) {
+          console.warn('⚠️ No se encontró producto ASH RGB');
+          this.createPlaceholderRasterLayer(layer);
+          return;
+        }
+
+        // Crear la configuración del tile layer
+        const tileLayerData = this.satelliteTilesService.createAshRgbLayer(ashRgbProduct);
+
+        // Crear el tile layer de Leaflet
+        const tileLayer = this.L.tileLayer(tileLayerData.urlTemplate, {
+          minNativeZoom: tileLayerData.minZoom, // Zoom mínimo donde existen tiles reales
+          maxNativeZoom: tileLayerData.maxZoom, // Zoom máximo donde existen tiles reales
+          minZoom: 0, // Permitir ver el layer en cualquier zoom
+          maxZoom: 18, // Permitir hacer zoom hasta 18, escalando tiles
+          opacity: layer.opacity / 100,
+          attribution: tileLayerData.attribution,
+          tms: true, // gdal2tiles usa TMS (y invertido)
+          bounds: [
+            [-55.0, -74.0], // Sur-oeste de Argentina
+            [-21.0, -53.0], // Norte-este de Argentina
+          ],
+          noWrap: true, // No repetir el mapa horizontalmente
+        });
+
+        tileLayer.addTo(this.map);
+        this.activeLayers.set(layer.id, tileLayer);
+        console.log(`✅ Tile layer cargado: ${layer.name} (${ashRgbProduct.name})`);
+      });
   }
 
   /**
