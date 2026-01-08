@@ -1,0 +1,23 @@
+<div class="notification-container">
+  @for (notification of notificationService.notifications(); track notification.id) {
+  <div
+    class="notification"
+    [class.info]="notification.type === NotificationType.INFO"
+    [class.warning]="notification.type === NotificationType.WARNING"
+    [class.error]="notification.type === NotificationType.ERROR"
+    [class.success]="notification.type === NotificationType.SUCCESS"
+  >
+    <div class="notification-content">
+      <span class="notification-icon">{{ getIcon(notification.type) }}</span>
+      <span class="notification-message">{{ notification.message }}</span>
+    </div>
+    <button
+      class="notification-close"
+      (click)="notificationService.dismiss(notification.id)"
+      aria-label="Cerrar notificación"
+    >
+      ✕
+    </button>
+  </div>
+  }
+</div>

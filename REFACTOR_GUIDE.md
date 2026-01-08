@@ -107,58 +107,92 @@ LayerGroup (ej: "Satélite")
 
 ---
 
-### FASE 4 COMPLETADA: Servicio de Capas (LayerService)
+### FASE 5 COMPLETADA: Integración MapViewer + Sistema de Notificaciones
 
-**Objetivo:** Servicio para gestionar capas de satélite ABI (3 canales)
+**Objetivo:** Renderizar capas en el mapa y notificar errores al usuario
 
-#### Decisiones de diseño - Fase 4
+#### Decisiones de diseño - Fase 5
 
-- ✅ **Estructura modular escalable:**
-  - `config/layers/satellite-abi.layers.ts` → Define los 3 canales
-  - `config/layer-definitions.ts` → Combina todos los grupos
-- ✅ **LayerService con signals:**
-  - `layerGroups` → estructura completa
-  - `activeLayers` → computed que filtra visibles y ordena por zIndex
-- ✅ **Métodos implementados:**
-  - `toggleLayer(id)` → activa/desactiva
-  - `setOpacity(id, opacity)` → cambia transparencia (0-100 con clamping)
-  - `moveLayerUp(id)` → sube en el stack (para flechas UI)
-  - `moveLayerDown(id)` → baja en el stack
-  - `setLayerOrder([ids])` → reordenamiento completo (para drag & drop)
-- ✅ **Testing:** 39 tests pasando (LayerService + TileService)
+- ✅ **Configuración sin repetición:**
+  - `config/layers/satellite-abi.layers.ts` → UI + estado (opacity: 80 una sola vez con spread)
+  - `config/layer-tiles/satellite-abi.tiles.ts` → Función `createAbiTileLayer(id, opacity)`
+  - `config/backend.config.ts` → Variables de entorno (baseUrl, useMockTiles)
+- ✅ **LayerRendererService simplificado:**
+  - Switch simple por categoría
+  - Llama a `createAbiTileLayer()` directamente (sin factories ni mapas innecesarios)
+  - Adjunta error handlers solo si NO está en modo mock
+- ✅ **Sistema de notificaciones en UI:**
+  - `NotificationService` con signals (error, warning, info, success)
+  - `NotificationPanelComponent` tipo toast en esquina superior derecha
+  - Auto-cierre configurable (errores NO se cierran solos)
+  - **Sin fallback automático:** Si backend falla, se muestra mensaje visible al usuario
+- ✅ **MapViewer con 2 effects reactivos:**
+  - Effect 1: Escucha `tileService.currentProvider()` → Cambia mapa base
+  - Effect 2: Escucha `layerService.activeLayers()` → Sincroniza overlays
+  - Método `syncLayers()` mantiene Map<string, L.TileLayer> para agregar/quitar/actualizar
+- ✅ **Testing:** 50 tests pasando (LayerService + TileService + NotificationService)
+
+**Variables de entorno:**
+
+```typescript
+// src/environments/environment.ts
+export const environment = {
+  backend: {
+    baseUrl: 'http://localhost:5000',
+    useMockTiles: true,  // false para usar backend real
+  },
+  tiles: {
+    format: 'webp',
+  },
+};
+```
 
 **Resultado:**
 
-- 3 canales ABI (ch2, ch9, ch13) definidos y gestionables
-- zIndex automático al activar capas
-- API lista para UI con flechas o drag & drop
+- Capas ABI se renderizan en el mapa con tiles z/x/y
+- Opacidad y zIndex dinámicos
+- Si backend falla (5+ tiles), notificación visible: "Capa no disponible temporalmente"
+- Mock con CartoDB para desarrollo sin backend
+- Arquitectura escalable para agregar WRF, ECMWF
 
 **Commits:**
 
-- `feat: Implement LayerService with modular layer definitions (Phase 4)`
-- `test: Add unit tests for LayerService and TileService (39 tests passing)`
+- `feat: Add MapViewer integration with LayerRendererService (Phase 5)`
+- `feat: Add notification system for tile loading errors`
+- `refactor: Simplify tile configuration without factory pattern overkill`
 
 ---
 
 ## PRÓXIMA FASE
 
-### FASE 5: Renderizado de Capas en el Mapa
+### FASE 6: Componentes de UI
 
-**Objetivo:** Servicio para gestionar capas de satélite ABI (3 canales)
-
-**Alcance limitado:**
-
-- Solo 1 grupo: "Satélite"
-- Solo 1 subgrupo: "ABI"  
-- Solo 3 capas: ch2 (Visible), ch9 (Vapor de agua), ch13 (Infrarrojo)
+**Objetivo:** Crear controles visuales para el mapa
 
 **Por implementar:**
 
-- Crear servicio para consultar tiles del backend
-- Effect en MapViewer que escuche `activeLayers()`
-- Renderizar tiles con `L.tileLayer()` usando `urlTemplate`
-- Aplicar opacity y zIndex de cada capa
-- Agregar/quitar layers del mapa reactivamente
+- MainMenu component con botones principales
+- LayerList component para activar/desactivar capas
+- Control de opacidad (slider)
+- Botones para reordenar capas (flechas arriba/abajo)
+- Integrar en app.html
+
+**Testing en consola (mientras tanto):**
+
+```javascript
+// Cambiar mapa base
+tileService.setProvider("osm")
+tileService.setProvider("satellite")
+
+// Gestionar capas
+layerService.toggleLayer("abi-ch2")
+layerService.setOpacity("abi-ch13", 50)
+layerService.moveLayerUp("abi-ch13")
+
+// Probar notificaciones
+notificationService.error("Test error", "abi-ch2")
+notificationService.dismissAll()
+```
 
 ---
 

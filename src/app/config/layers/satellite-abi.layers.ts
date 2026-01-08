@@ -1,7 +1,17 @@
 import { LayerSubgroup, LayerType, LayerCategory } from '../../models';
 
 /**
+ * Valores por defecto para capas ABI
+ * Sin repetir el mismo número en cada capa
+ */
+const ABI_DEFAULTS = {
+  visible: false,
+  opacity: 80,
+} as const;
+
+/**
  * Definición de capas satelitales ABI (GOES-16)
+ * Solo información de UI y estado inicial
  */
 export const ABI_SUBGROUP: LayerSubgroup = {
   id: 'abi',
@@ -15,8 +25,7 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       description: 'Banda visible (0.64 μm)',
       type: LayerType.RASTER,
       category: LayerCategory.SATELLITE_ABI,
-      visible: false,
-      opacity: 80,
+      ...ABI_DEFAULTS, // opacity: 80, visible: false
     },
     {
       id: 'abi-ch9',
@@ -24,8 +33,7 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       description: 'Banda de vapor de agua (6.9 μm)',
       type: LayerType.RASTER,
       category: LayerCategory.SATELLITE_ABI,
-      visible: false,
-      opacity: 80,
+      ...ABI_DEFAULTS,
     },
     {
       id: 'abi-ch13',
@@ -33,8 +41,9 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       description: 'Banda infrarroja (10.3 μm)',
       type: LayerType.RASTER,
       category: LayerCategory.SATELLITE_ABI,
-      visible: false,
-      opacity: 80,
+      ...ABI_DEFAULTS,
     },
   ],
 };
+
+

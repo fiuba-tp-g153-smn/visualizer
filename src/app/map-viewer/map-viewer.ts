@@ -4,6 +4,7 @@ import * as L from 'leaflet';
 import { MAP_CONFIG } from '../config/map.config';
 import { TileService } from '../services/tile.service';
 import { LayerService } from '../services/layer.service';
+import { LayerRendererService } from '../services/layer-renderer.service';
 import { TileProvider } from '../config/tile-providers.config';
 import { Layer } from '../models';
 
@@ -18,6 +19,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private platformId = inject(PLATFORM_ID);
   private tileService = inject(TileService);
   private layerService = inject(LayerService);
+  private layerRendererService = inject(LayerRendererService);
 
   private currentTileLayer: L.TileLayer | null = null;
   private activeLayers = new Map<string, L.TileLayer>();
@@ -119,31 +121,11 @@ export class MapViewer implements OnInit, OnDestroy {
         existingLayer.setZIndex(layer.zIndex ?? 0);
       } else {
         // Crear nueva capa
-        const tileLayer = this.createSatelliteTileLayer(layer);
+        const tileLayer = this.layerRendererService.createTileLayer(layer);
         tileLayer.addTo(this.map);
         this.activeLayers.set(layer.id, tileLayer);
         console.log(`✅ Capa agregada: ${layer.name}`);
       }
     }
-  }
-
-  /**
-   * Crea un tile layer para satélite ABI
-   * TODO: reemplazar con URL real del backend
-   */
-  private createSatelliteTileLayer(layer: Layer): L.TileLayer {
-    // Mock: usar diferentes tile servers como placeholder para cada canal
-    const mockUrls: Record<string, string> = {
-      'abi-ch2': 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', // Claro
-      'abi-ch9': 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', // Voyager
-      'abi-ch13': 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', // Oscuro
-    };
-
-    const urlTemplate = mockUrls[layer.id] || mockUrls['abi-ch2'];
-
-    return L.tileLayer(urlTemplate, {
-      opacity: layer.opacity / 100,
-      attribution: `Mock: ${layer.name}`,
-    });
   }
 }
