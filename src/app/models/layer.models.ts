@@ -7,7 +7,7 @@ export enum LayerType {
 }
 
 export enum LayerCategory {
-  SATELLITE_ABI = 'satellite_abi', // GOES ABI
+  SATELLITE_ABI = 'satellite_abi', // GOES ABI (canales individuales: ch13, ch8, ch2)
 }
 
 export interface Layer {

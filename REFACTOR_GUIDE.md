@@ -92,6 +92,15 @@ LayerGroup (ej: "Satélite")
 - `models/layer.models.ts` → Estructura de capas del visualizador
 - `models/index.ts` → Barrel export
 
+**Decisión arquitectónica importante:**
+
+⚠️ **Cambio:** Los satélites ABI se consumirán en formato **tiles z/x/y** (como ash_rgb en el old) en lugar de overlays estáticos.
+
+- Reemplazado `RasterImageData` por `TileLayerData` con `urlTemplate`
+- Formato: `http://localhost:5000/tiles/{product}/{z}/{x}/{y}.webp`
+- Solo 3 canales ABI: ch2, ch9, ch13
+- Los datos vienen del backend como tiles pre-procesados con gdal2tiles
+
 **Commits:**
 
 - Pendiente
