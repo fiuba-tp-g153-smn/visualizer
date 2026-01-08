@@ -1,8 +1,126 @@
 # Guía de Pasos para la Reconstrucción del Visualizador de Mapas
 
-## 🛠️ **PLAN PASO A PASO - RECONSTRUCCIÓN DESDE CERO**
+## SCOPE INICIAL
 
-### **FASE 1: Setup Inicial y Mapa Básico**
+**Decisión:** Arrancar solo con **satélite ABI (3 canales)** para probar el flujo completo antes de agregar más features.
+
+---
+
+## FASES COMPLETADAS
+
+### FASE 1 COMPLETADA: Setup Inicial y Mapa Básico
+
+**Objetivo:** Tener un mapa funcional vacío
+
+#### Decisiones de diseño - Fase 1
+
+- ✅ Usar **Sass (SCSS)** para estilos (variables, anidación, mixins)
+- ✅ Separar configuración en archivos dedicados:
+  - `map.config.ts` → Config del mapa (centro, zoom, bounds)
+  - `tile-providers.config.ts` → Catálogo de tile providers
+- ✅ Assets del SMN (logos, favicon) en `/public`
+- ✅ Import estático de Leaflet (`import * as L from 'leaflet'`) en lugar de dinámico
+
+**Resultado:**
+
+- Mapa funcionando con ArgenMAP por defecto
+- Centro en Argentina (-40, -64), zoom 4
+- 5 tile providers disponibles (ArgenMAP, OSM, Satélite, CartoDB, CartoDB Dark)
+
+**Commits:**
+
+- `feat: Clean refactor - Phase 1 complete`
+- `feat: Add SMN branding assets`
+- `fix: Replace Angular favicon with SMN icon`
+
+---
+
+### FASE 2 COMPLETADA: Servicios Base y Arquitectura
+
+**Objetivo:** Servicio reactivo para gestionar tile providers
+
+#### Decisiones de diseño - Fase 2
+
+- ✅ Usar **Signals** (no RxJS) para estado reactivo
+- ✅ Pattern: `private _signal + public readonly signal`
+  - `_currentProvider` privado (WritableSignal)
+  - `currentProvider` público con `.asReadonly()` (inmutable desde afuera)
+- ✅ **Effect** en MapViewer para escuchar cambios automáticamente
+- ✅ Eliminar `any` types, usar tipos correctos de Leaflet:
+  - `L.Map`, `L.TileLayer`
+  - Usar `!` (definite assignment) en lugar de `| null` donde garantizamos inicialización
+
+**Resultado:**
+
+- TileService con signal reactivo
+- Cambiar mapa base desde consola: `tileService.setProvider("osm")`
+- Mapa se actualiza automáticamente sin necesidad de llamadas manuales
+
+**Commits:**
+
+- `refactor: Remove 'any' types and use proper Leaflet types`
+
+---
+
+### FASE 3 COMPLETADA: Sistema de Capas (Modelos)
+
+**Objetivo:** Definir tipos para el sistema de capas (SOLO ABI por ahora)
+
+#### Decisiones de diseño - Fase 3
+
+- ✅ **Scope reducido:** Solo `LayerType.RASTER` y `LayerCategory.SATELLITE_ABI`
+- ✅ Eliminar `ActiveLayer` interface
+  - Usar `zIndex?: number` opcional en `Layer` directamente
+  - Computed en servicio filtrará capas visibles
+  - No duplicar data (single source of truth)
+- ✅ Modelos mínimos:
+  - `Coordinates`, `BoundingBox` (tipos base)
+  - `RasterImageData` (para imágenes satelitales)
+  - `Layer`, `LayerSubgroup`, `LayerGroup` (estructura jerárquica)
+
+**Estructura:**
+
+```text
+LayerGroup (ej: "Satélite")
+  └─ LayerSubgroup (ej: "ABI")
+      └─ Layer (ej: "Canal 13", "Canal 8", "Canal 2")
+```
+
+**Archivos:**
+
+- `models/map-data.models.ts` → Datos que vienen del backend
+- `models/layer.models.ts` → Estructura de capas del visualizador
+- `models/index.ts` → Barrel export
+
+**Commits:**
+
+- Pendiente
+
+---
+
+## PRÓXIMA FASE
+
+### FASE 4 EN PROGRESO: Servicio de Capas (LayerService)
+
+**Objetivo:** Servicio para gestionar capas de satélite ABI (3 canales)
+
+**Alcance limitado:**
+
+- Solo 1 grupo: "Satélite"
+- Solo 1 subgrupo: "ABI"  
+- Solo 3 capas: Canal 13 (IR), Canal 8 (Vapor de agua), Canal 2 (Visible)
+
+**Por implementar:**
+
+- Signal `layerGroups` con estructura hardcodeada
+- Computed `activeLayers` → filtra visibles y ordena por zIndex
+- Métodos básicos: `toggleLayer(id)`, `setOpacity(id, opacity)`
+
+---
+
+## PLAN PASO A PASO - RECONSTRUCCIÓN DESDE CERO
+
+### FASE 1: Setup Inicial y Mapa Básico
 
 **Objetivo:** Tener un mapa funcional vacío
 
