@@ -1,0 +1,22 @@
+<div class="main-menu-wrapper">
+  <button class="menu-toggle" (click)="toggleMenu()" title="Abrir/Cerrar menú">
+    {{ menuOpen ? '✕' : '☰' }}
+  </button>
+
+  @if (menuOpen) {
+  <div class="menu-panel">
+    <h3>Mapa Base</h3>
+
+    <ul class="tile-provider-list">
+      @for (provider of tileService.getAvailableProviders(); track provider.id) {
+      <li
+        [class.active]="tileService.currentProvider().id === provider.id"
+        (click)="tileService.setProvider(provider.id)"
+      >
+        {{ provider.name }}
+      </li>
+      }
+    </ul>
+  </div>
+  }
+</div>

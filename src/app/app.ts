@@ -4,10 +4,12 @@ import { TileService } from './services/tile.service';
 import { LayerService } from './services/layer.service';
 import { NotificationPanelComponent } from './components/notification-panel/notification-panel';
 import { NotificationService } from './services/notification.service';
+import { MainMenuComponent } from './components/main-menu/main-menu';
+import { LayerListComponent } from './components/layer-list/layer-list';
 
 @Component({
   selector: 'app-root',
-  imports: [MapViewer, NotificationPanelComponent],
+  imports: [MapViewer, NotificationPanelComponent, MainMenuComponent, LayerListComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

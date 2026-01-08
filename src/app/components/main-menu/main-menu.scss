@@ -1,0 +1,87 @@
+:host {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.main-menu-wrapper {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.menu-toggle {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.menu-panel {
+  position: relative;
+  z-index: 1001;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out;
+  max-width: 420px;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.menu-panel h3 {
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 18px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #1976d2 0%, #0c6a99 100%);
+  color: white;
+  border-bottom: 3px solid #ffcc00;
+}
+
+.tile-provider-list {
+  list-style: none;
+  padding: 12px;
+  margin: 0;
+}
+
+.tile-provider-list li {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.tile-provider-list li:hover {
+  background-color: #f5f5f5;
+}
+
+.tile-provider-list li.active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  font-weight: 500;
+}
