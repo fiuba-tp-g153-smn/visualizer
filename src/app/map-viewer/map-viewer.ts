@@ -3,7 +3,9 @@ import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../config/map.config';
 import { TileService } from '../services/tile.service';
+import { LayerService } from '../services/layer.service';
 import { TileProvider } from '../config/tile-providers.config';
+import { Layer } from '../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -15,17 +17,26 @@ export class MapViewer implements OnInit, OnDestroy {
   private map: L.Map | null = null;
   private platformId = inject(PLATFORM_ID);
   private tileService = inject(TileService);
+  private layerService = inject(LayerService);
 
-  // Referencia al tile layer actual para poder cambiarlo
   private currentTileLayer: L.TileLayer | null = null;
+  private activeLayers = new Map<string, L.TileLayer>();
 
   constructor() {
-    // Effect para escuchar cambios en el tile provider (reactivo)
     if (isPlatformBrowser(this.platformId)) {
+      // Effect: cambiar mapa base
       effect(() => {
         const provider = this.tileService.currentProvider();
         if (this.map) {
           this.changeTileProvider(provider);
+        }
+      });
+
+      // Effect: sincronizar capas satelitales
+      effect(() => {
+        const layers = this.layerService.activeLayers();
+        if (this.map) {
+          this.syncLayers(layers);
         }
       });
     }
@@ -67,23 +78,72 @@ export class MapViewer implements OnInit, OnDestroy {
     console.log(`🗺️ Tiles: ${initialProvider.name}`);
   }
 
-  /**
-   * Cambia el proveedor de tiles del mapa
-   */
   private changeTileProvider(provider: TileProvider): void {
     if (!this.map) return;
 
-    // Remover el tile layer anterior si existe
     if (this.currentTileLayer) {
       this.map.removeLayer(this.currentTileLayer);
     }
 
-    // Crear y agregar el nuevo tile layer
     this.currentTileLayer = L.tileLayer(provider.url, {
       attribution: provider.attribution,
       maxZoom: provider.maxZoom,
     }).addTo(this.map);
 
     console.log('✅ Tile provider actualizado:', provider.name);
+  }
+
+  /**
+   * Sincroniza las capas activas con el mapa
+   */
+  private syncLayers(layers: Layer[]): void {
+    if (!this.map) return;
+
+    const activeIds = new Set(layers.map((l) => l.id));
+
+    // Remover capas que ya no están activas
+    for (const [id, tileLayer] of this.activeLayers) {
+      if (!activeIds.has(id)) {
+        this.map.removeLayer(tileLayer);
+        this.activeLayers.delete(id);
+      }
+    }
+
+    // Agregar/actualizar capas activas
+    for (const layer of layers) {
+      const existingLayer = this.activeLayers.get(layer.id);
+
+      if (existingLayer) {
+        // Actualizar opacidad y zIndex
+        existingLayer.setOpacity(layer.opacity / 100);
+        existingLayer.setZIndex(layer.zIndex ?? 0);
+      } else {
+        // Crear nueva capa
+        const tileLayer = this.createSatelliteTileLayer(layer);
+        tileLayer.addTo(this.map);
+        this.activeLayers.set(layer.id, tileLayer);
+        console.log(`✅ Capa agregada: ${layer.name}`);
+      }
+    }
+  }
+
+  /**
+   * Crea un tile layer para satélite ABI
+   * TODO: reemplazar con URL real del backend
+   */
+  private createSatelliteTileLayer(layer: Layer): L.TileLayer {
+    // Mock: usar diferentes tile servers como placeholder para cada canal
+    const mockUrls: Record<string, string> = {
+      'abi-ch2': 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', // Claro
+      'abi-ch9': 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', // Voyager
+      'abi-ch13': 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', // Oscuro
+    };
+
+    const urlTemplate = mockUrls[layer.id] || mockUrls['abi-ch2'];
+
+    return L.tileLayer(urlTemplate, {
+      opacity: layer.opacity / 100,
+      attribution: `Mock: ${layer.name}`,
+    });
   }
 }

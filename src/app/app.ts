@@ -24,6 +24,7 @@ export class App {
     console.log('   tileService.setProvider("argenmap")');
     console.log('');
     console.log('💡 Prueba gestionar capas:');
+    console.log('   layerService.toggleLayer("abi-ch2")');
     console.log('   layerService.toggleLayer("abi-ch13")');
     console.log('   layerService.setOpacity("abi-ch13", 50)');
     console.log('   layerService.moveLayerUp("abi-ch13")');
