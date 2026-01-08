@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MapViewer } from './map-viewer/map-viewer';
+import { TileService } from './services/tile.service';
 
 @Component({
   selector: 'app-root',
@@ -8,5 +9,15 @@ import { MapViewer } from './map-viewer/map-viewer';
   styleUrl: './app.scss',
 })
 export class App {
-  protected readonly title = signal('visualizator-clean');
+  private tileService = inject(TileService);
+
+  ngOnInit() {
+    // Exponer el servicio en la consola para testing
+    (window as any).tileService = this.tileService;
+    console.log('💡 Prueba cambiar el mapa base desde la consola:');
+    console.log('   tileService.setProvider("osm")');
+    console.log('   tileService.setProvider("satellite")');
+    console.log('   tileService.setProvider("cartoDB")');
+    console.log('   tileService.setProvider("argenmap")');
+  }
 }
