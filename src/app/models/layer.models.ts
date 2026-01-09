@@ -3,13 +3,16 @@
  */
 
 export enum LayerType {
-  RASTER = 'raster', // Imágenes satelitales
+  RASTER = 'raster', // Imágenes satelitales, tiles, overlays
 }
 
 export enum LayerCategory {
-  SATELLITE_ABI = 'satellite_abi', // GOES ABI (canales individuales: ch13, ch8, ch2)
+  SATELLITE_ABI = 'satellite_abi', // GOES ABI (canales individuales)
 }
 
+/**
+ * Capa individual
+ */
 export interface Layer {
   id: string;
   name: string;
@@ -21,7 +24,9 @@ export interface Layer {
   zIndex?: number; // Solo para capas visibles, define orden de renderizado
 }
 
-// Subgrupo: contiene capas
+/**
+ * Subgrupo: contiene capas
+ */
 export interface LayerSubgroup {
   id: string;
   name: string;
@@ -30,7 +35,9 @@ export interface LayerSubgroup {
   expanded: boolean;
 }
 
-// Grupo principal: contiene subgrupos
+/**
+ * Grupo principal: contiene subgrupos
+ */
 export interface LayerGroup {
   id: string;
   name: string;

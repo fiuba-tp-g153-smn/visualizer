@@ -69,41 +69,39 @@
 #### Decisiones de diseño - Fase 3
 
 - ✅ **Scope reducido:** Solo `LayerType.RASTER` y `LayerCategory.SATELLITE_ABI`
-- ✅ Eliminar `ActiveLayer` interface
-  - Usar `zIndex?: number` opcional en `Layer` directamente
-  - Computed en servicio filtrará capas visibles
-  - No duplicar data (single source of truth)
-- ✅ Modelos mínimos:
-  - `Coordinates`, `BoundingBox` (tipos base)
-  - `RasterImageData` (para imágenes satelitales)
-  - `Layer`, `LayerSubgroup`, `LayerGroup` (estructura jerárquica)
+- ✅ **Modelos minimalistas:** Solo lo que realmente se usa
+  - **layer.models.ts:** `Layer`, `LayerSubgroup`, `LayerGroup`, `LayerType`, `LayerCategory`, `TileProvider`
+  - **map-data.models.ts:** `Coordinates`, `BoundingBox` (tipos base para futuro)
+  - **index.ts:** Barrel export
+- ✅ **TileProvider movido a models** desde config (mejor organización)
+- ✅ Eliminar tipos no utilizados (TileLayerData, TileProduct, etc.)
+  - Se agregarán cuando sean necesarios para WRF, EMAs, etc.
 
 **Estructura:**
 
 ```text
 LayerGroup (ej: "Satélite")
   └─ LayerSubgroup (ej: "ABI")
-      └─ Layer (ej: "Canal 13", "Canal 8", "Canal 2")
+      └─ Layer (ej: "Canal 2")
 ```
 
 **Archivos:**
 
-- `models/map-data.models.ts` → Datos que vienen del backend
-- `models/layer.models.ts` → Estructura de capas del visualizador
+- `models/map-data.models.ts` → Datos que vienen del backend (mínimo por ahora)
+- `models/layer.models.ts` → Estructura de capas + TileProvider
 - `models/index.ts` → Barrel export
 
 **Decisión arquitectónica importante:**
 
-⚠️ **Cambio:** Los satélites ABI se consumirán en formato **tiles z/x/y** (como ash_rgb en el old) en lugar de overlays estáticos.
+⚠️ **Tiles z/x/y** en lugar de overlays estáticos
 
-- Reemplazado `RasterImageData` por `TileLayerData` con `urlTemplate`
 - Formato: `http://localhost:5000/tiles/{product}/{z}/{x}/{y}.webp`
 - Solo 3 canales ABI: ch2, ch9, ch13
 - Los datos vienen del backend como tiles pre-procesados con gdal2tiles
 
 **Commits:**
 
-- `refactor: Update models for tile-based satellite layers (ch2, ch9, ch13)`
+- `refactor: Simplify models and move TileProvider to layer.models`
 
 ---
 
@@ -113,13 +111,15 @@ LayerGroup (ej: "Satélite")
 
 #### Decisiones de diseño - Fase 5
 
-- ✅ **Configuración sin repetición:**
+- ✅ **Configuración simplificada:**
   - `config/layers/satellite-abi.layers.ts` → UI + estado (opacity: 80 una sola vez con spread)
-  - `config/layer-tiles/satellite-abi.tiles.ts` → Función `createAbiTileLayer(id, opacity)`
+  - `config/layer-tiles/satellite-abi.tiles.ts` → Función `getAbiTileConfig()` retorna URL + opciones
   - `config/backend.config.ts` → Variables de entorno (baseUrl, useMockTiles)
-- ✅ **LayerRendererService simplificado:**
+  - Eliminado `tile-config.types.ts` (opciones directamente en satellite-abi.tiles.ts)
+- ✅ **LayerRendererService mejorado:**
   - Switch simple por categoría
-  - Llama a `createAbiTileLayer()` directamente (sin factories ni mapas innecesarios)
+  - Métodos privados para crear tiles por tipo (`createAbiTileLayer()`, etc.)
+  - **Método `setOpacity()`** para actualizar opacidad de layers existentes
   - Adjunta error handlers solo si NO está en modo mock
 - ✅ **Sistema de notificaciones en UI:**
   - `NotificationService` con signals (error, warning, info, success)
@@ -129,7 +129,7 @@ LayerGroup (ej: "Satélite")
 - ✅ **MapViewer con 2 effects reactivos:**
   - Effect 1: Escucha `tileService.currentProvider()` → Cambia mapa base
   - Effect 2: Escucha `layerService.activeLayers()` → Sincroniza overlays
-  - Método `syncLayers()` mantiene Map<string, L.TileLayer> para agregar/quitar/actualizar
+  - Método `syncLayers()` usa `layerRendererService.setOpacity()` para actualizar
 - ✅ **Testing:** 50 tests pasando (LayerService + TileService + NotificationService)
 
 **Variables de entorno:**
@@ -150,7 +150,7 @@ export const environment = {
 **Resultado:**
 
 - Capas ABI se renderizan en el mapa con tiles z/x/y
-- Opacidad y zIndex dinámicos
+- Opacidad y zIndex dinámicos (gestionados por servicio)
 - Si backend falla (5+ tiles), notificación visible: "Capa no disponible temporalmente"
 - Mock con CartoDB para desarrollo sin backend
 - Arquitectura escalable para agregar WRF, ECMWF
@@ -159,7 +159,124 @@ export const environment = {
 
 - `feat: Add MapViewer integration with LayerRendererService (Phase 5)`
 - `feat: Add notification system for tile loading errors`
-- `refactor: Simplify tile configuration without factory pattern overkill`
+- `refactor: Simplify tile configuration and add setOpacity to service`
+
+---
+
+## ARQUITECTURA ACTUAL (Post-Simplificación)
+
+### Estructura de Carpetas
+
+```text
+visualizator/src/app/
+├── models/
+│   ├── layer.models.ts          # Layer, LayerSubgroup, LayerGroup
+│   ├── tile-provider.model.ts   # TileProvider (mapas base)
+│   ├── map-data.models.ts       # Coordinates, BoundingBox (mínimo)
+│   ├── notification.model.ts    # Notification, NotificationType
+│   └── index.ts                 # Barrel exports
+├── config/
+│   ├── backend.config.ts        # URLs y modo mock
+│   ├── map.config.ts            # Centro, zoom, bounds
+│   ├── tile-providers.config.ts # Mapas base (ArgenMAP, OSM, etc.)
+│   ├── layer-definitions.ts     # Grupos y subgrupos (estructura inicial)
+│   ├── layers/
+│   │   └── satellite-abi.layers.ts  # Definición de capas ABI
+│   └── layer-tiles/
+│       └── satellite-abi.tiles.ts   # Config de tiles ABI (URLs, opciones)
+├── services/
+│   ├── tile.service.ts          # Gestión de mapa base
+│   ├── layer.service.ts         # Estado y lógica de capas
+│   ├── layer-renderer.service.ts # Factory: Layer → L.TileLayer
+│   └── notification.service.ts  # Sistema de notificaciones
+└── map-viewer/
+    └── map-viewer.ts            # Componente principal del mapa
+```
+
+### Flujo de Datos
+
+```text
+1. Usuario activa capa en UI (futuro LayerList)
+   ↓
+2. layerService.toggleLayer(id)
+   ↓
+3. layerService.activeLayers() (computed signal) → Filtra visibles
+   ↓
+4. MapViewer effect detecta cambio
+   ↓
+5. syncLayers() llama a layerRendererService.createTileLayer()
+   ↓
+6. layerRendererService switch por category → createAbiTileLayer()
+   ↓
+7. getAbiTileConfig() retorna URL + opciones
+   ↓
+8. L.tileLayer() se crea y se agrega al mapa
+   ↓
+9. Si cambia opacidad/zIndex: MapViewer llama directamente a Leaflet
+   (existingLayer.setOpacity(), existingLayer.setZIndex())
+```   ↓
+8. L.tileLayer() se crea y se agrega al mapa
+   ↓
+9. Si cambia opacidad: layerRendererService.setOpacity(layer, newValue)
+```
+
+### Principios de Diseño
+
+- ✅ **Minimalismo:** Solo código que se usa actualmente
+- ✅ **Separación de responsabilidades:**
+  - **Config:** Valores estáticos (URLs, opciones)
+  - **LayerService:** Estado y lógica de negocio de capas
+  - **LayerRendererService:** Factory pattern (Layer → L.TileLayer)
+  - **MapViewer:** Coordinación entre servicios y Leaflet (llamadas directas)
+- ✅ **No over-engineering:** Llamadas directas a Leaflet cuando no hay lógica adicional
+- ✅ **Escalabilidad:** Agregar nuevo tipo de capa = nuevo case + método privado
+- ✅ **Signals everywhere:** Estado reactivo sin RxJS
+
+### Cómo Agregar Nuevas Capas
+
+**Ejemplo: Agregar WRF:**
+
+1. **Agregar enum:**
+
+   ```typescript
+   // models/layer.models.ts
+   export enum LayerCategory {
+     SATELLITE_ABI = 'satellite_abi',
+     WRF = 'wrf',  // ← NUEVO
+   }
+   ```
+
+2. **Crear config de tiles:**
+
+   ```typescript
+   // config/layer-tiles/wrf.tiles.ts
+   export function getWrfTileConfig(layerId: string): {
+     url: string;
+     options: L.TileLayerOptions;
+   } {
+     // Lógica específica de WRF
+   }
+   ```
+
+3. **Agregar case en LayerRendererService:**
+
+   ```typescript
+   case LayerCategory.WRF:
+     tileLayer = this.createWrfTileLayer(layer.id, layer.opacity);
+     break;
+
+   private createWrfTileLayer(layerId: string, opacity: number): L.TileLayer {
+     const { url, options } = getWrfTileConfig(layerId);
+     return L.tileLayer(url, { ...options, opacity: opacity / 100 });
+   }
+   ```
+
+4. **Definir capas en config:**
+
+   ```typescript
+   // config/layers/wrf.layers.ts
+   export const WRF_SUBGROUP: LayerSubgroup = { /* ... */ };
+   ```
 
 ---
 

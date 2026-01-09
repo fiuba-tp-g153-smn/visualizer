@@ -1,10 +1,25 @@
 import { buildTileUrl, BACKEND_CONFIG } from '../backend.config';
-import { SATELLITE_TILE_OPTIONS } from './tile-config.types';
 import * as L from 'leaflet';
 
 /**
- * Configuración de tiles para canales ABI
+ * Configuración de tiles satelitales ABI
  */
+
+/**
+ * Opciones comunes para tiles satelitales procesados con gdal2tiles
+ */
+const SATELLITE_TILE_OPTIONS: L.TileLayerOptions = {
+  minNativeZoom: 4,
+  maxNativeZoom: 8,
+  minZoom: 0,
+  maxZoom: 18,
+  tms: true, // gdal2tiles usa TMS
+  bounds: [
+    [-55.0, -74.0], // Sur-oeste Argentina
+    [-21.0, -53.0], // Norte-este Argentina
+  ],
+  noWrap: true,
+};
 
 /**
  * URLs mock usando CartoDB con diferentes estilos para testing
@@ -16,19 +31,17 @@ const MOCK_URLS: Record<string, string> = {
 };
 
 /**
- * Crea un tile layer para un canal ABI
- * @param layerId ID del canal (ej: 'abi-ch2')
- * @param opacity Opacidad 0-100
+ * Obtiene URL y opciones para un tile layer ABI
  */
-export function createAbiTileLayer(layerId: string, opacity: number): L.TileLayer {
-  const urlTemplate = BACKEND_CONFIG.useMockTiles ? MOCK_URLS[layerId] : buildTileUrl(layerId);
+export function getAbiTileConfig(layerId: string): {
+  url: string;
+  options: L.TileLayerOptions;
+} {
+  const url = BACKEND_CONFIG.useMockTiles ? MOCK_URLS[layerId] : buildTileUrl(layerId);
 
   const options = BACKEND_CONFIG.useMockTiles
     ? { attribution: `Mock: Canal ABI ${layerId}` }
-    : { ...SATELLITE_TILE_OPTIONS, attribution: 'GOES-16 ABI | SMN' };
+    : { ...SATELLITE_TILE_OPTIONS, attribution: 'GOES-19 ABI | SMN' };
 
-  return L.tileLayer(urlTemplate, {
-    ...options,
-    opacity: opacity / 100,
-  });
+  return { url, options };
 }

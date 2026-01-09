@@ -2,14 +2,7 @@
  * Configuración de proveedores de tiles (mapas base)
  */
 
-export interface TileProvider {
-  id: string;
-  name: string;
-  url: string;
-  attribution: string;
-  maxZoom: number;
-  minZoom?: number;
-}
+import { TileProvider } from '../models';
 
 /**
  * Proveedores de tiles disponibles

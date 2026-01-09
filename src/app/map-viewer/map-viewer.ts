@@ -5,8 +5,7 @@ import { MAP_CONFIG } from '../config/map.config';
 import { TileService } from '../services/tile.service';
 import { LayerService } from '../services/layer.service';
 import { LayerRendererService } from '../services/layer-renderer.service';
-import { TileProvider } from '../config/tile-providers.config';
-import { Layer } from '../models';
+import { Layer, TileProvider } from '../models';
 
 @Component({
   selector: 'app-map-viewer',

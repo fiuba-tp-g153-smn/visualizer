@@ -10,7 +10,7 @@ const ABI_DEFAULTS = {
 } as const;
 
 /**
- * Definición de capas satelitales ABI (GOES-16)
+ * Definición de capas satelitales ABI (GOES-19)
  * Solo información de UI y estado inicial
  */
 export const ABI_SUBGROUP: LayerSubgroup = {
@@ -25,7 +25,7 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       description: 'Banda visible (0.64 μm)',
       type: LayerType.RASTER,
       category: LayerCategory.SATELLITE_ABI,
-      ...ABI_DEFAULTS, // opacity: 80, visible: false
+      ...ABI_DEFAULTS,
     },
     {
       id: 'abi-ch9',
@@ -45,5 +45,3 @@ export const ABI_SUBGROUP: LayerSubgroup = {
     },
   ],
 };
-
-

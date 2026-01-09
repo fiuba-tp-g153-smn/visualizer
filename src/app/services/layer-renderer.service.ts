@@ -3,11 +3,11 @@ import * as L from 'leaflet';
 import { Layer, LayerCategory } from '../models';
 import { BACKEND_CONFIG } from '../config/backend.config';
 import { NotificationService } from './notification.service';
-import { createAbiTileLayer } from '../config/layer-tiles/satellite-abi.tiles';
+import { getAbiTileConfig } from '../config/layer-tiles/satellite-abi.tiles';
 
 /**
- * Servicio para crear tile layers según el tipo de capa
- * Reporta errores de carga a través del NotificationService
+ * Servicio para crear tile layers de Leaflet según categoría
+ * Factory pattern: convierte Layer models en L.TileLayers configurados
  */
 @Injectable({
   providedIn: 'root',
@@ -27,7 +27,7 @@ export class LayerRendererService {
 
     switch (layer.category) {
       case LayerCategory.SATELLITE_ABI:
-        tileLayer = createAbiTileLayer(layer.id, layer.opacity);
+        tileLayer = this.createAbiTileLayer(layer.id, layer.opacity);
         break;
       default:
         throw new Error(`Unsupported layer category: ${layer.category}`);
@@ -40,6 +40,27 @@ export class LayerRendererService {
 
     return tileLayer;
   }
+
+  /**
+   * Crea un tile layer para satélite ABI
+   */
+  private createAbiTileLayer(layerId: string, opacity: number): L.TileLayer {
+    const { url, options } = getAbiTileConfig(layerId);
+    return L.tileLayer(url, {
+      ...options,
+      opacity: opacity / 100,
+    });
+  }
+
+  // Para agregar WRF, ECMWF, etc., solo agregar un nuevo case y método privado:
+  // case LayerCategory.WRF:
+  //   tileLayer = this.createWrfTileLayer(layer.id, layer.opacity);
+  //   break;
+  //
+  // private createWrfTileLayer(layerId: string, opacity: number): L.TileLayer {
+  //   const { url, options } = getWrfTileConfig(layerId);
+  //   return L.tileLayer(url, { ...options, opacity: opacity / 100 });
+  // }
 
   /**
    * Adjunta manejadores de error a un tile layer

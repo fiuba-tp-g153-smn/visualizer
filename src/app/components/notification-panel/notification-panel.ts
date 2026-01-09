@@ -20,9 +20,9 @@ export class NotificationPanelComponent {
   getIcon(type: NotificationType): string {
     switch (type) {
       case NotificationType.INFO:
-        return 'ℹ';
+        return 'ℹ️';
       case NotificationType.WARNING:
-        return '⚠';
+        return '⚠️';
       case NotificationType.ERROR:
         return '❌';
       case NotificationType.SUCCESS:
