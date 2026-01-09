@@ -163,6 +163,42 @@ export const environment = {
 
 ---
 
+### FASE 6 COMPLETADA: UI del Menú Principal
+
+**Objetivo:** Crear menú flotante con controles del mapa
+
+#### Decisiones de diseño - Fase 6
+
+- ✅ **UiService:** Estado reactivo del menú (panel activo)
+- ✅ **Menú flotante inspirado en visualizator-old:**
+  - Barra vertical con logo SMN + botones
+  - Panel lateral que se abre/cierra (excluyente)
+  - Animación slide-in suave
+- ✅ **Control de zoom movido a bottomright** (no interfiere con menú)
+- ✅ **Branding SMN:** Logo, colores, gradientes
+- ✅ **LayerList integrado** en panel lateral (no flotante independiente)
+
+**Componentes:**
+
+- `UiService` → Estado del menú (signal)
+- `MainMenuComponent` → Barra de botones + panel lateral
+- `LayerListComponent` → Se muestra dentro del panel
+
+**Resultado:**
+
+- Menú limpio y profesional (estilo SMN)
+- Panel excluyente (solo uno abierto)
+- Zoom no interfiere con controles
+- UX similar al visualizator-old (mejorado)
+
+**Commits:**
+
+- `feat: Add UI service and refactor main menu (Phase 6)`
+- `feat: Move zoom control to bottomright`
+- `refactor: Integrate LayerList into main menu panel`
+
+---
+
 ## ARQUITECTURA ACTUAL (Post-Simplificación)
 
 ### Estructura de Carpetas
@@ -188,7 +224,8 @@ visualizator/src/app/
 │   ├── tile.service.ts          # Gestión de mapa base
 │   ├── layer.service.ts         # Estado y lógica de capas
 │   ├── layer-renderer.service.ts # Factory: Layer → L.TileLayer
-│   └── notification.service.ts  # Sistema de notificaciones
+│   ├── notification.service.ts  # Sistema de notificaciones
+│   └── ui.service.ts            # Estado del menú (panel activo)
 └── map-viewer/
     └── map-viewer.ts            # Componente principal del mapa
 ```

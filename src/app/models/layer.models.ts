@@ -42,6 +42,7 @@ export interface LayerGroup {
   id: string;
   name: string;
   description?: string;
+  icon: string; // Material icon name
   subgroups: LayerSubgroup[];
   expanded: boolean;
 }

@@ -1,5 +1,37 @@
+@use '@angular/material' as mat;
+@use 'theme-colors' as theme-colors;
+
+@include mat.core();
+
+html {
+  color-scheme: light;
+  @include mat.theme(
+    (
+      color: (
+        primary: theme-colors.$primary-palette,
+        tertiary: theme-colors.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+
+  // Sobrescribir tokens específicos con colores SMN exactos
+  @include mat.theme-overrides(
+    (
+      primary: #0090d0,
+      secondary: #fcbf49,
+      tertiary: #242c4f,
+    )
+  );
+}
+
 /* Estilos globales de Leaflet */
 @import 'leaflet/dist/leaflet.css';
+
+/* Fuentes de Material Design */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 /* Reset básico */
 * {
@@ -12,4 +44,5 @@ html,
 body {
   height: 100%;
   overflow: hidden;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
 }

@@ -9,6 +9,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     id: 'satellite',
     name: 'Satélite',
     description: 'Capas satelitales GOES-16',
+    icon: 'satellite_alt',
     expanded: true,
     subgroups: [ABI_SUBGROUP],
   },

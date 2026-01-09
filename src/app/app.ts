@@ -1,15 +1,14 @@
 import { Component, inject } from '@angular/core';
-import { MapViewer } from './map-viewer/map-viewer';
+import { MapViewer } from './components/map-viewer/map-viewer';
 import { TileService } from './services/tile.service';
 import { LayerService } from './services/layer.service';
 import { NotificationPanelComponent } from './components/notification-panel/notification-panel';
 import { NotificationService } from './services/notification.service';
 import { MainMenuComponent } from './components/main-menu/main-menu';
-import { LayerListComponent } from './components/layer-list/layer-list';
 
 @Component({
   selector: 'app-root',
-  imports: [MapViewer, NotificationPanelComponent, MainMenuComponent, LayerListComponent],
+  imports: [MapViewer, NotificationPanelComponent, MainMenuComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

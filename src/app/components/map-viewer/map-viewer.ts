@@ -1,11 +1,11 @@
 import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
-import { MAP_CONFIG } from '../config/map.config';
-import { TileService } from '../services/tile.service';
-import { LayerService } from '../services/layer.service';
-import { LayerRendererService } from '../services/layer-renderer.service';
-import { Layer, TileProvider } from '../models';
+import { MAP_CONFIG } from '../../config/map.config';
+import { TileService } from '../../services/tile.service';
+import { LayerService } from '../../services/layer.service';
+import { LayerRendererService } from '../../services/layer-renderer.service';
+import { Layer, TileProvider } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -62,7 +62,15 @@ export class MapViewer implements OnInit, OnDestroy {
       zoom: MAP_CONFIG.initialZoom,
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
+      zoomControl: false, // Desactivar control por defecto
     });
+
+    // Agregar control de zoom en la esquina inferior derecha
+    L.control
+      .zoom({
+        position: 'bottomright',
+      })
+      .addTo(this.map);
 
     // Obtener el proveedor inicial del servicio
     const initialProvider = this.tileService.getCurrentProvider();

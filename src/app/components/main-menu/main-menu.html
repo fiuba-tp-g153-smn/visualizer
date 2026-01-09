@@ -1,22 +1,40 @@
 <div class="main-menu-wrapper">
-  <button class="menu-toggle" (click)="toggleMenu()" title="Abrir/Cerrar menú">
-    {{ menuOpen ? '✕' : '☰' }}
-  </button>
+  <!-- Barra de botones flotante -->
+  <mat-card class="menu-button-bar">
+    <!-- Logo SMN -->
+    <div class="logo-container">
+      <img src="icono.png" alt="Logo SMN" class="smn-logo" />
+    </div>
 
-  @if (menuOpen) {
+    <div class="menu-divider"></div>
+
+    <!-- Botones de secciones (dinámico) -->
+    @for (section of sections; track section.id) {
+    <button
+      mat-icon-button
+      class="menu-button"
+      [class.active]="activePanel() === section.id"
+      (click)="togglePanel(section.id)"
+      [title]="section.tooltip"
+    >
+      <mat-icon>{{ section.icon }}</mat-icon>
+    </button>
+    }
+  </mat-card>
+
+  <!-- Panel lateral (se abre según botón activo) -->
+  @if (getActiveSection(); as activeSection) {
   <div class="menu-panel">
-    <h3>Mapa Base</h3>
+    <div class="menu-header">
+      <h2>{{ activeSection.title }}</h2>
+      <button mat-icon-button (click)="closePanel()" class="close-button" aria-label="Cerrar menú">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
 
-    <ul class="tile-provider-list">
-      @for (provider of tileService.getAvailableProviders(); track provider.id) {
-      <li
-        [class.active]="tileService.currentProvider().id === provider.id"
-        (click)="tileService.setProvider(provider.id)"
-      >
-        {{ provider.name }}
-      </li>
-      }
-    </ul>
+    <div class="panel-content">
+      <ng-container *ngComponentOutlet="activeSection.component" />
+    </div>
   </div>
   }
 </div>

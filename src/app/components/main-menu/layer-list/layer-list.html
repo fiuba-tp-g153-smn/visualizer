@@ -1,0 +1,145 @@
+<div class="layer-list">
+  <!-- Tabs: Disponibles / Activas -->
+  <mat-tab-group class="layer-tabs">
+    <!-- Tab: Capas Disponibles -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">grid_view</mat-icon>
+        <span>Disponibles</span>
+      </ng-template>
+
+      <!-- Buscador -->
+      <div class="search-container">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput placeholder="Buscar capas" [(ngModel)]="searchText" />
+        </mat-form-field>
+      </div>
+
+      <!-- Lista de grupos -->
+      <div class="layers-content">
+        @for (group of layerService.layerGroups(); track group.id) {
+        <div class="layer-group">
+          <!-- Header del grupo (colapsable) -->
+          <div
+            class="group-header"
+            (click)="toggleGroup(group.id)"
+            [class.expanded]="isGroupExpanded(group.id)"
+          >
+            <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
+            <span class="group-name">{{ group.name }}</span>
+            <mat-icon class="expand-icon">
+              {{ isGroupExpanded(group.id) ? 'expand_more' : 'chevron_right' }}
+            </mat-icon>
+          </div>
+
+          <!-- Contenido del grupo -->
+          @if (isGroupExpanded(group.id)) {
+          <div class="group-content">
+            @for (subgroup of group.subgroups; track subgroup.id) {
+            <div class="subgroup">
+              <h5 class="subgroup-name">{{ subgroup.name }}</h5>
+
+              @for (layer of subgroup.layers; track layer.id) {
+              <div class="layer-item">
+                <label class="layer-checkbox">
+                  <input
+                    type="checkbox"
+                    [checked]="layer.visible"
+                    (change)="layerService.toggleLayer(layer.id)"
+                  />
+                  <span class="layer-name">{{ layer.name }}</span>
+                </label>
+
+                <!-- Controles de orden (solo si visible) -->
+                @if (layer.visible) {
+                <div class="layer-controls">
+                  <button
+                    mat-icon-button
+                    class="control-btn"
+                    (click)="layerService.moveLayerUp(layer.id)"
+                    title="Subir capa"
+                  >
+                    <mat-icon>arrow_drop_up</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    class="control-btn"
+                    (click)="layerService.moveLayerDown(layer.id)"
+                    title="Bajar capa"
+                  >
+                    <mat-icon>arrow_drop_down</mat-icon>
+                  </button>
+                </div>
+                }
+              </div>
+
+              <!-- Control de opacidad (solo si visible) -->
+              @if (layer.visible) {
+              <div class="opacity-control">
+                <span class="opacity-label">Opacidad: {{ layer.opacity }}%</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  class="opacity-slider"
+                  [value]="layer.opacity"
+                  (input)="layerService.setOpacity(layer.id, +$any($event.target).value)"
+                />
+              </div>
+              } }
+            </div>
+            }
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Tab: Capas Activas -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">tune</mat-icon>
+        <span>Activas</span>
+      </ng-template>
+
+      <div class="layers-content">
+        @if (getActiveLayers().length === 0) {
+        <div class="empty-state">
+          <mat-icon>layers_clear</mat-icon>
+          <p>No hay capas activas</p>
+          <span>Activa capas desde la pestaña "Disponibles"</span>
+        </div>
+        } @else { @for (layer of getActiveLayers(); track layer.id) {
+        <div class="active-layer-item">
+          <div class="layer-header">
+            <mat-icon class="layer-icon">layers</mat-icon>
+            <span class="layer-name">{{ layer.name }}</span>
+            <button
+              mat-icon-button
+              (click)="layerService.toggleLayer(layer.id)"
+              title="Ocultar capa"
+              class="remove-btn"
+            >
+              <mat-icon>visibility_off</mat-icon>
+            </button>
+          </div>
+
+          <div class="opacity-control">
+            <span class="opacity-label">Opacidad: {{ layer.opacity }}%</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              class="opacity-slider"
+              [value]="layer.opacity"
+              (input)="layerService.setOpacity(layer.id, +$any($event.target).value)"
+            />
+          </div>
+        </div>
+        } }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

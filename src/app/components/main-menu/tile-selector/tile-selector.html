@@ -1,0 +1,20 @@
+<div class="tile-selector">
+  <div class="tile-grid">
+    @for (provider of providers; track provider.id) {
+    <button
+      mat-button
+      class="tile-card"
+      [class.active]="isActive(provider.id)"
+      (click)="selectProvider(provider.id)"
+    >
+      <div class="tile-preview">
+        <mat-icon class="preview-icon">{{ getProviderIcon(provider.id) }}</mat-icon>
+      </div>
+      <div class="tile-info">
+        <h4 class="tile-name">{{ provider.name }}</h4>
+        <span class="tile-zoom">Zoom: {{ provider.minZoom || 0 }} - {{ provider.maxZoom }}</span>
+      </div>
+    </button>
+    }
+  </div>
+</div>
