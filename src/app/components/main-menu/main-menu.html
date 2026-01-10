@@ -22,7 +22,7 @@
 
   <!-- Panel lateral -->
   @if (getActiveSection(); as activeSection) {
-  <mat-card class="menu-panel" @slideIn>
+  <mat-card class="menu-panel">
     <mat-toolbar class="menu-header">
       <span>{{ activeSection.title }}</span>
       <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú">
