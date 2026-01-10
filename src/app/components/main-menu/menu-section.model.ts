@@ -5,14 +5,7 @@ import { Type } from '@angular/core';
  * Los componentes deben ser standalone de Angular
  */
 export interface MenuPanelComponent {
-  /**
-   * Lifecycle hook opcional - se llama cuando el panel se abre
-   */
   onPanelOpen?(): void;
-
-  /**
-   * Lifecycle hook opcional - se llama cuando el panel se cierra
-   */
   onPanelClose?(): void;
 }
 
