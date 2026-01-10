@@ -3,6 +3,10 @@ import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { trigger, transition, style, animate } from '@angular/animations';
 import { LayerListComponent } from './layer-list/layer-list';
 import { TileSelectorComponent } from './tile-selector/tile-selector';
 import { MenuSection } from './menu-section.model';
@@ -34,9 +38,26 @@ const MENU_SECTIONS: MenuSection[] = [
 @Component({
   selector: 'app-main-menu',
   standalone: true,
-  imports: [CommonModule, NgComponentOutlet, MatIconModule, MatButtonModule, MatCardModule],
+  imports: [
+    CommonModule,
+    NgComponentOutlet,
+    MatIconModule,
+    MatButtonModule,
+    MatCardModule,
+    MatDividerModule,
+    MatToolbarModule,
+    MatTooltipModule,
+  ],
   templateUrl: './main-menu.html',
   styleUrl: './main-menu.scss',
+  animations: [
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateX(-20px)' }),
+        animate('200ms ease-out', style({ opacity: 1, transform: 'translateX(0)' })),
+      ]),
+    ]),
+  ],
 })
 export class MainMenuComponent {
   // Secciones disponibles del menú

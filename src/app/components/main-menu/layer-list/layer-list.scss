@@ -13,13 +13,32 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+
+  // Espaciado en el label del tab
+  ::ng-deep .mat-mdc-tab-label-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .tab-icon {
-  margin-right: 8px;
-  font-size: 20px;
-  width: 20px;
+  font-size: 18px;
+  color: inherit;
+}
+
+.active-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
   height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background-color: var(--mat-sys-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 // Buscador
@@ -37,12 +56,12 @@
 .layers-content {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
-}
-
-// Grupo de capas
-.layer-group {
-  margin-bottom: 4px;
+  overflow-x: visible;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(100vh - 280px);
 }
 
 .group-header {
@@ -52,17 +71,15 @@
   padding: 12px 16px;
   cursor: pointer;
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   user-select: none;
 
   &:hover {
-    background-color: #f5f5f5;
+    background-color: var(--mat-sys-surface-variant);
   }
 
   .group-icon {
     font-size: 24px;
-    width: 24px;
-    height: 24px;
     color: var(--mat-sys-primary);
   }
 
@@ -70,14 +87,12 @@
     flex: 1;
     font-size: 15px;
     font-weight: 500;
-    color: #333333;
+    color: var(--mat-sys-on-surface);
   }
 
   .expand-icon {
     font-size: 24px;
-    width: 24px;
-    height: 24px;
-    color: #666666;
+    color: var(--mat-sys-on-surface-variant);
     transition: transform 0.2s ease;
   }
 
@@ -87,7 +102,7 @@
 }
 
 .group-content {
-  padding-left: 16px;
+  padding: 8px 12px;
   animation: slideDown 0.2s ease-out;
 }
 
@@ -104,130 +119,257 @@
 
 // Subgrupo
 .subgroup {
-  margin-bottom: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  padding: 4px;
+  background-color: white;
+
+  & + .subgroup {
+    margin-top: 4px;
+  }
 }
 
-.subgroup-name {
-  margin: 8px 0 8px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #666666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.subgroup-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  user-select: none;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-variant);
+  }
+
+  .expand-icon {
+    font-size: 18px;
+    color: var(--mat-sys-on-surface-variant);
+    transition: transform 0.2s ease;
+  }
+
+  .subgroup-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mat-sys-on-surface);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .subgroup-info {
+    flex: 1;
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+    font-style: italic;
+  }
+}
+
+.subgroup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+  animation: slideDown 0.2s ease-out;
 }
 
 // Item de capa
 .layer-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  margin: 4px 0 4px 20px;
-  border-radius: 6px;
-  background-color: #f9f9f9;
-  transition: all 0.2s ease;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background-color: transparent;
+  transition: all 0.15s ease;
 
   &:hover {
-    background-color: #f0f0f0;
+    background-color: rgba(0, 0, 0, 0.04);
   }
-}
 
-.layer-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  cursor: pointer;
-  user-select: none;
+  &.active {
+    background-color: rgba(0, 144, 208, 0.08);
+  }
 
-  input[type='checkbox'] {
-    width: 18px;
-    height: 18px;
+  .layer-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
     cursor: pointer;
-    accent-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+
+    mat-icon {
+      font-size: 20px;
+    }
+  }
+
+  &.active .layer-toggle {
+    color: var(--mat-sys-primary);
   }
 
   .layer-name {
-    font-size: 14px;
-    color: #333333;
+    flex: 1;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface);
   }
-}
 
-.layer-controls {
-  display: flex;
-  gap: 0;
-}
+  .info-icon {
+    font-size: 18px;
+    color: var(--mat-sys-on-surface-variant);
+    cursor: help;
+    opacity: 0.5;
 
-.control-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+    &:hover {
+      opacity: 1;
+      color: var(--mat-sys-primary);
+    }
   }
 }
 
 // Control de opacidad
 .opacity-control {
-  padding: 8px 16px 12px 48px;
-  margin: 0 0 4px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 16px 12px 44px;
+  overflow: visible;
 }
 
 .opacity-label {
-  display: block;
   font-size: 12px;
-  color: #666666;
-  margin-bottom: 4px;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .opacity-slider {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 4px;
   border-radius: 2px;
+  background: var(--mat-sys-surface-variant);
   outline: none;
   cursor: pointer;
-  accent-color: var(--mat-sys-primary);
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--mat-sys-primary);
+    cursor: pointer;
+  }
+
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--mat-sys-primary);
+    cursor: pointer;
+    border: none;
+  }
 }
 
 // Tab "Activas"
+.active-layers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .active-layer-item {
-  padding: 12px 16px;
-  margin-bottom: 8px;
+  padding: 12px;
   border-radius: 8px;
-  background-color: #f9f9f9;
+  background-color: var(--mat-sys-surface-container);
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-variant);
+  }
+
+  // Estilo cuando se está arrastrando
+  &.cdk-drag-preview {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background-color: var(--mat-sys-surface);
+    border: 2px solid var(--mat-sys-primary);
+  }
+
+  &.cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  // Placeholder visible - muestra hueco donde se insertará
+  &.cdk-drag-placeholder {
+    background-color: var(--mat-sys-surface-variant);
+    border: 2px dashed var(--mat-sys-primary);
+    opacity: 0.5;
+
+    * {
+      visibility: hidden;
+    }
+  }
+}
+
+// Transición suave cuando se reordena
+.cdk-drop-list-dragging .active-layer-item:not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 .active-layer-item .layer-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+  padding-bottom: 8px;
+
+  .drag-handle {
+    font-size: 18px;
+    color: var(--mat-sys-on-surface-variant);
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
 
   .layer-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+    font-size: 18px;
     color: var(--mat-sys-primary);
   }
 
   .layer-name {
     flex: 1;
-    font-size: 14px;
-    font-weight: 500;
-    color: #333333;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--mat-sys-on-surface);
   }
 
   .remove-btn {
-    width: 32px;
-    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-error);
+    }
 
     mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 18px;
     }
   }
 }
@@ -240,25 +382,22 @@
   justify-content: center;
   padding: 60px 20px;
   text-align: center;
-  color: #666666;
+  gap: 12px;
 
   mat-icon {
-    font-size: 64px;
-    width: 64px;
-    height: 64px;
-    margin-bottom: 16px;
-    opacity: 0.5;
+    font-size: 48px;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.4;
   }
 
   p {
-    margin: 0 0 8px 0;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
-    color: #333333;
+    color: var(--mat-sys-on-surface);
   }
 
   span {
-    font-size: 13px;
-    opacity: 0.7;
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
   }
 }
