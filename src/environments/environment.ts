@@ -4,10 +4,10 @@
 export const environment = {
   production: false,
   backend: {
-    baseUrl: 'http://localhost:5000',
-    useMockTiles: true, // Cambiar a false cuando el backend esté listo
+    baseUrl: $ENV.BACKEND_BASE_URL,
+    useMockTiles: $ENV.USE_MOCK_TILES,
   },
   tiles: {
-    format: 'webp', // webp o png
+    format: $ENV.TILE_FORMAT,
   },
 };

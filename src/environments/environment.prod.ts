@@ -4,10 +4,10 @@
 export const environment = {
   production: true,
   backend: {
-    baseUrl: 'https://api.smn.gob.ar', // URL de producción
-    useMockTiles: false,
+    baseUrl: $ENV.BACKEND_BASE_URL,
+    useMockTiles: $ENV.USE_MOCK_TILES,
   },
   tiles: {
-    format: 'webp',
+    format: $ENV.TILE_FORMAT,
   },
 };
