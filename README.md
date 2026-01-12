@@ -1,5 +1,7 @@
 # Visualizator
 
+<img src="https://uptime.mapasmn.com/api/badge/8/status?style=flat-square" /> <img src="https://uptime.mapasmn.com/api/badge/8/uptime?style=flat-square" /> <img src="https://uptime.mapasmn.com/api/badge/8/ping?style=flat-square" />
+
 Visualizator is a web application built with Angular for visualizing interactive maps with support for multiple layers, tile providers, and satellite imagery. It features a Dockerized development environment with hot-reload capabilities.
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.1.
