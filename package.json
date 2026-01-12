@@ -1,6 +1,6 @@
 {
-  "name": "visualizator-clean",
-  "version": "0.0.0",
+  "name": "visualizator",
+  "version": "0.0.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

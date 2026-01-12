@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "visualizator-clean": {
+    "visualizator": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -73,10 +73,10 @@
           "builder": "@angular-builders/custom-webpack:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "visualizator-clean:build:production"
+              "buildTarget": "visualizator:build:production"
             },
             "development": {
-              "buildTarget": "visualizator-clean:build:development"
+              "buildTarget": "visualizator:build:development"
             }
           },
           "defaultConfiguration": "development"
