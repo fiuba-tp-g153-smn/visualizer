@@ -1,59 +1,33 @@
 # VisualizatorClean
 
+VisualizatorClean is a web application built with Angular for visualizing interactive maps with support for multiple layers, tile providers, and satellite imagery. It features a Dockerized development environment with hot-reload capabilities.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.1.
 
 ## Development server
 
-To start a local development server, run:
+To start a local development server in a Dockerized environment with hot-reload, run:
 
 ```bash
-ng serve
+make up
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+This command builds and starts the application in a Docker container, providing an isolated environment with automatic reloading whenever you modify any of the source files. Once the server is running, open your browser and navigate to `http://localhost:4200/`.
 
-## Code scaffolding
+## Docker Operations
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+The project uses Makefile commands for Docker-based operations:
+
+- `make up`: Start the development environment in Docker with hot-reload.
+- `make down`: Stop and clean up the development containers.
+- `make prod`: Build and run the production version in Docker.
+
+## Environment Setup
+
+To configure environment variables, copy the example file:
 
 ```bash
-ng generate component component-name
+cp .env.example .env
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Edit the `.env` file to set your desired configuration values.
