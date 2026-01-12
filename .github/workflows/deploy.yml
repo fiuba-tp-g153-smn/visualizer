@@ -116,19 +116,19 @@ jobs:
               "finished")
                 echo "✅ Deployment finished successfully!"
                 echo "🏥 Checking application health..."
-                
+
                 HEALTH_TIMEOUT=60
                 HEALTH_ELAPSED=0
                 HEALTH_INTERVAL=3
-                
+
                 while [[ $HEALTH_ELAPSED -lt $HEALTH_TIMEOUT ]]; do
                   APP_STATUS=$(curl -s \
                     --max-time 10 \
                     -H "Authorization: Bearer $COOLIFY_READ_TOKEN" \
                     "$BASE_URL/applications/$APP_UUID" | jq -r '.status // "unknown"')
-                  
+
                   echo "🔍 App status: $APP_STATUS (${HEALTH_ELAPSED}s)"
-                  
+
                   case "$APP_STATUS" in
                     "running"|"healthy"|"running:healthy")
                       END_TIME=$(date +%s)
@@ -147,16 +147,20 @@ jobs:
                       echo "⚠️ Unknown app status: $APP_STATUS"
                       ;;
                   esac
-                  
+
                   sleep $HEALTH_INTERVAL
                   HEALTH_ELAPSED=$((HEALTH_ELAPSED + HEALTH_INTERVAL))
                 done
-                
+
                 echo "⚠️ Health check timeout, but deployment finished successfully"
                 exit 0
                 ;;
               "failed")
                 echo "❌ Deployment failed!"
+                exit 1
+                ;;
+              "cancelled-by-user")
+                echo "❌ Deployment cancelled by user!"
                 exit 1
                 ;;
               "restart_only")
