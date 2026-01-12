@@ -8,25 +8,270 @@
   height: 100%;
 }
 
+.tab-content {
+  padding: 0;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
 // Tabs
 .layer-tabs {
-  flex: 1;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
 
-  // Espaciado en el label del tab
-  ::ng-deep .mat-mdc-tab-label-content {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+.tab-label-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Search
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px; // Reduced vertical padding
+  background-color: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    background: transparent;
+    color: var(--mat-sys-on-surface);
+
+    &::placeholder {
+      color: var(--mat-sys-on-surface-variant);
+    }
   }
 }
 
-.tab-icon {
-  font-size: 18px;
-  color: inherit;
+// Accordion
+.layers-accordion {
+  // Root panel styling (Group)
+  .mat-expansion-panel {
+    border-radius: 0;
+    box-shadow: none;
+    background-color: var(--mat-sys-surface);
+
+    // Tonal separation
+    &:not(.mat-expanded) .mat-expansion-panel-header {
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high);
+      }
+    }
+
+    &.mat-expanded {
+      margin: 0;
+    }
+  }
+
+  // Header styling
+  .mat-expansion-panel-header {
+    padding: 0 16px; // Balanced horizontal padding
+    height: 48px;
+    font-size: 14px;
+    font-weight: 500;
+
+    .mat-expansion-panel-header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+  }
+
+  .mat-expansion-panel-body {
+    padding: 0;
+  }
+
+  // Nested accordion (subgroups)
+  .subgroup-panel {
+    background-color: var(--mat-sys-surface-container-low); // Tonal hierarchy
+
+    // Adjust nesting padding via header
+    .mat-expansion-panel-header {
+      padding-left: 24px; // Reduced padding for subgroup header
+      font-weight: 400; // Lighter weight for hierarchy
+    }
+
+    .mat-expansion-panel-body {
+      padding: 4px 0; // Minimal vertical padding
+    }
+  }
 }
 
+.panel-icon {
+  // Gap manejado por el contenedor
+}
+
+// Layer Items
+.layer-list-container {
+  padding: 0;
+}
+
+.layer-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background-color: var(--mat-sys-surface);
+  transition: background-color 0.2s;
+  border-radius: 0;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  &.active-layer {
+    background-color: var(--mat-sys-surface-variant);
+  }
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  mat-checkbox {
+    flex: 1;
+    font-size: 20px;
+  }
+
+  .info-btn {
+    flex-shrink: 0;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// Opacity Control
+.opacity-control-inline {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 12px;
+
+  .opacity-label {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant);
+    min-width: fit-content;
+  }
+
+  .layer-slider {
+    flex: 1;
+  }
+
+  .opacity-value {
+    font-size: 11px;
+    width: 32px;
+    text-align: right;
+    color: var(--mat-sys-on-surface-variant);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Active Tab
+.active-layers-list {
+  padding: 0;
+}
+
+.active-layer-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px;
+  background-color: var(--mat-sys-surface);
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  // Estilo del placeholder durante el drag
+  &.cdk-drag-placeholder {
+    opacity: 0;
+  }
+
+  &.cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.active-layer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  .drag-handle {
+    cursor: grab;
+    color: var(--mat-sys-on-surface-variant);
+    // font-size: 20px;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  .active-layer-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .remove-btn {
+    color: var(--mat-sys-error);
+  }
+}
+
+// Estilo del preview mientras se arrastra
+.cdk-drag-preview .active-layer-item {
+  box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2), 0 8px 10px 1px rgba(0, 0, 0, 0.14),
+    0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+.cdk-drop-list-dragging .active-layer-item:not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Empty State
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 12px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.4;
+  }
+
+  p {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+    margin: 0;
+  }
+}
+
+// Badge
 .active-count {
   display: inline-flex;
   align-items: center;
@@ -36,368 +281,9 @@
   padding: 0 6px;
   border-radius: 10px;
   background-color: var(--mat-sys-primary);
-  color: white;
+  color: var(--mat-sys-on-primary);
   font-size: 12px;
   font-weight: 500;
-}
-
-// Buscador
-.search-container {
-  padding: 16px 16px 8px 16px;
-  background-color: #f5f5f5;
-}
-
-.search-field {
-  width: 100%;
-  font-size: 14px;
-}
-
-// Contenido de capas
-.layers-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: visible;
-  padding: 8px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: calc(100vh - 280px);
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.15s ease;
-  user-select: none;
-
-  &:hover {
-    background-color: var(--mat-sys-surface-variant);
-  }
-
-  .group-icon {
-    font-size: 24px;
-    color: var(--mat-sys-primary);
-  }
-
-  .group-name {
-    flex: 1;
-    font-size: 15px;
-    font-weight: 500;
-    color: var(--mat-sys-on-surface);
-  }
-
-  .expand-icon {
-    font-size: 24px;
-    color: var(--mat-sys-on-surface-variant);
-    transition: transform 0.2s ease;
-  }
-
-  &.expanded .expand-icon {
-    transform: rotate(0deg);
-  }
-}
-
-.group-content {
-  padding: 8px 12px;
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Subgrupo
-.subgroup {
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 6px;
-  padding: 4px;
-  background-color: white;
-
-  & + .subgroup {
-    margin-top: 4px;
-  }
-}
-
-.subgroup-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.15s ease;
-  user-select: none;
-
-  &:hover {
-    background-color: var(--mat-sys-surface-variant);
-  }
-
-  .expand-icon {
-    font-size: 18px;
-    color: var(--mat-sys-on-surface-variant);
-    transition: transform 0.2s ease;
-  }
-
-  .subgroup-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--mat-sys-on-surface);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .subgroup-info {
-    flex: 1;
-    font-size: 11px;
-    color: var(--mat-sys-on-surface-variant);
-    font-style: italic;
-  }
-}
-
-.subgroup-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-top: 4px;
-  animation: slideDown 0.2s ease-out;
-}
-
-// Item de capa
-.layer-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 4px;
-  background-color: transparent;
-  transition: all 0.15s ease;
-
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.04);
-  }
-
-  &.active {
-    background-color: rgba(0, 144, 208, 0.08);
-  }
-
-  .layer-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--mat-sys-on-surface-variant);
-
-    &:hover {
-      color: var(--mat-sys-primary);
-    }
-
-    mat-icon {
-      font-size: 20px;
-    }
-  }
-
-  &.active .layer-toggle {
-    color: var(--mat-sys-primary);
-  }
-
-  .layer-name {
-    flex: 1;
-    font-size: 13px;
-    color: var(--mat-sys-on-surface);
-  }
-
-  .info-icon {
-    font-size: 18px;
-    color: var(--mat-sys-on-surface-variant);
-    cursor: help;
-    opacity: 0.5;
-
-    &:hover {
-      opacity: 1;
-      color: var(--mat-sys-primary);
-    }
-  }
-}
-
-// Control de opacidad
-.opacity-control {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 16px 12px 44px;
-  overflow: visible;
-}
-
-.opacity-label {
-  font-size: 12px;
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.opacity-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--mat-sys-surface-variant);
-  outline: none;
-  cursor: pointer;
-
-  &::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--mat-sys-primary);
-    cursor: pointer;
-  }
-
-  &::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--mat-sys-primary);
-    cursor: pointer;
-    border: none;
-  }
-}
-
-// Tab "Activas"
-.active-layers-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.active-layer-item {
-  padding: 12px;
-  border-radius: 8px;
-  background-color: var(--mat-sys-surface-container);
-  transition: background-color 0.15s ease;
-
-  &:hover {
-    background-color: var(--mat-sys-surface-variant);
-  }
-
-  // Estilo cuando se está arrastrando
-  &.cdk-drag-preview {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    background-color: var(--mat-sys-surface);
-    border: 2px solid var(--mat-sys-primary);
-  }
-
-  &.cdk-drag-animating {
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-  }
-
-  // Placeholder visible - muestra hueco donde se insertará
-  &.cdk-drag-placeholder {
-    background-color: var(--mat-sys-surface-variant);
-    border: 2px dashed var(--mat-sys-primary);
-    opacity: 0.5;
-
-    * {
-      visibility: hidden;
-    }
-  }
-}
-
-// Transición suave cuando se reordena
-.cdk-drop-list-dragging .active-layer-item:not(.cdk-drag-placeholder) {
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-}
-
-.active-layer-item .layer-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 8px;
-
-  .drag-handle {
-    font-size: 18px;
-    color: var(--mat-sys-on-surface-variant);
-    cursor: grab;
-
-    &:active {
-      cursor: grabbing;
-    }
-  }
-
-  .layer-icon {
-    font-size: 18px;
-    color: var(--mat-sys-primary);
-  }
-
-  .layer-name {
-    flex: 1;
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--mat-sys-on-surface);
-  }
-
-  .remove-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--mat-sys-on-surface-variant);
-
-    &:hover {
-      color: var(--mat-sys-error);
-    }
-
-    mat-icon {
-      font-size: 18px;
-    }
-  }
-}
-
-// Estado vacío
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
-  gap: 12px;
-
-  mat-icon {
-    font-size: 48px;
-    color: var(--mat-sys-on-surface-variant);
-    opacity: 0.4;
-  }
-
-  p {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--mat-sys-on-surface);
-  }
-
-  span {
-    font-size: 12px;
-    color: var(--mat-sys-on-surface-variant);
-  }
+  background-color: var(--mat-sys-primary);
+  color: white;
 }

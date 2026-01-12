@@ -4,10 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSliderModule } from '@angular/material/slider';
+import { MatListModule } from '@angular/material/list';
+import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDividerModule } from '@angular/material/divider';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LayerService } from '../../../services/layer.service';
 import { Layer } from '../../../models';
@@ -25,10 +28,13 @@ import { MenuPanelComponent } from '../menu-section.model';
     MatTabsModule,
     MatIconModule,
     MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatMenuModule,
     MatTooltipModule,
+    MatExpansionModule,
+    MatSliderModule,
+    MatListModule,
+    MatCardModule,
+    MatCheckboxModule,
+    MatDividerModule,
     DragDropModule,
   ],
   templateUrl: './layer-list.html',
@@ -39,37 +45,80 @@ export class LayerListComponent implements MenuPanelComponent {
 
   // Estado local
   searchText = signal('');
-  expandedGroups = signal<Set<string>>(new Set(['satellite'])); // Satélite expandido por defecto
-  expandedSubgroups = signal<Set<string>>(new Set(['satellite-visible', 'satellite-infrared'])); // Algunos subgrupos expandidos por defecto
+
+  /**
+   * Indica si hay búsqueda activa
+   */
+  hasSearch = computed(() => this.searchText().trim().length > 0);
+
+  /**
+   * Normaliza texto removiendo tildes y convirtiendo a minúsculas
+   */
+  private normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
 
   /**
    * Grupos filtrados según el texto de búsqueda
    */
   filteredGroups = computed(() => {
-    const search = this.searchText().toLowerCase().trim();
+    const search = this.normalizeText(this.searchText().trim());
     if (!search) {
-      return this.layerService.layerGroups();
+      return this.layerService.layerGroups().map((group) => ({
+        ...group,
+        _shouldExpandGroup: false,
+        subgroups: group.subgroups.map((sg) => ({ ...sg, _shouldExpandSubgroup: false })),
+      }));
     }
 
     return this.layerService
       .layerGroups()
       .map((group) => {
+        const groupNameMatches = this.normalizeText(group.name).includes(search);
+
         // Filtrar subgrupos y capas
         const filteredSubgroups = group.subgroups
-          .map((subgroup) => ({
-            ...subgroup,
-            layers: subgroup.layers.filter(
-              (layer) =>
-                layer.name.toLowerCase().includes(search) ||
-                subgroup.name.toLowerCase().includes(search) ||
-                group.name.toLowerCase().includes(search)
-            ),
-          }))
+          .map((subgroup) => {
+            const subgroupNameMatches = this.normalizeText(subgroup.name).includes(search);
+            const matchingLayers = subgroup.layers.filter((layer) =>
+              this.normalizeText(layer.name).includes(search)
+            );
+
+            // Incluir todas las capas si coincide el grupo o subgrupo
+            const layers =
+              matchingLayers.length > 0 || subgroupNameMatches || groupNameMatches
+                ? subgroup.layers.filter(
+                    (layer) =>
+                      this.normalizeText(layer.name).includes(search) ||
+                      subgroupNameMatches ||
+                      groupNameMatches
+                  )
+                : [];
+
+            return {
+              ...subgroup,
+              layers,
+              // Expandir subgrupo solo si hay capas específicas que coinciden
+              _shouldExpandSubgroup: matchingLayers.length > 0,
+            };
+          })
           .filter((subgroup) => subgroup.layers.length > 0);
+
+        // Expandir grupo si:
+        // - Alguna capa específica coincide (hay subgrupos que deben expandirse)
+        // - O si el nombre del subgrupo coincide (pero no el grupo en sí)
+        const hasMatchingLayers = filteredSubgroups.some((sg) => sg._shouldExpandSubgroup);
+        const hasMatchingSubgroups = filteredSubgroups.some((sg) =>
+          this.normalizeText(sg.name).includes(search)
+        );
 
         return {
           ...group,
           subgroups: filteredSubgroups,
+          _shouldExpandGroup: hasMatchingLayers || (hasMatchingSubgroups && !groupNameMatches),
         };
       })
       .filter((group) => group.subgroups.length > 0);
@@ -79,47 +128,7 @@ export class LayerListComponent implements MenuPanelComponent {
    * Implementación de MenuPanelComponent
    */
   onPanelOpen(): void {
-    // Hook cuando el panel se abre - por ahora no hace nada
-  }
-
-  /**
-   * Toggle expansión de grupo
-   */
-  toggleGroup(groupId: string): void {
-    const expanded = new Set(this.expandedGroups());
-    if (expanded.has(groupId)) {
-      expanded.delete(groupId);
-    } else {
-      expanded.add(groupId);
-    }
-    this.expandedGroups.set(expanded);
-  }
-
-  /**
-   * Verifica si un grupo está expandido
-   */
-  isGroupExpanded(groupId: string): boolean {
-    return this.expandedGroups().has(groupId);
-  }
-
-  /**
-   * Toggle expansión de subgrupo
-   */
-  toggleSubgroup(subgroupId: string): void {
-    const expanded = new Set(this.expandedSubgroups());
-    if (expanded.has(subgroupId)) {
-      expanded.delete(subgroupId);
-    } else {
-      expanded.add(subgroupId);
-    }
-    this.expandedSubgroups.set(expanded);
-  }
-
-  /**
-   * Verifica si un subgrupo está expandido
-   */
-  isSubgroupExpanded(subgroupId: string): boolean {
-    return this.expandedSubgroups().has(subgroupId);
+    // Hook cuando el panel se abre
   }
 
   /**
@@ -167,5 +176,12 @@ export class LayerListComponent implements MenuPanelComponent {
    */
   removeLayer(layerId: string): void {
     this.layerService.deactivateLayer(layerId);
+  }
+
+  /**
+   * Formatea el valor de opacidad para el slider
+   */
+  formatOpacity(value: number): string {
+    return `${value}%`;
   }
 }
