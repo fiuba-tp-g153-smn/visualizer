@@ -5,6 +5,7 @@ import { LayerService } from './services/layer.service';
 import { NotificationPanelComponent } from './components/notification-panel/notification-panel';
 import { NotificationService } from './services/notification.service';
 import { MainMenuComponent } from './components/main-menu/main-menu';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -18,6 +19,7 @@ export class App {
   private notificationService = inject(NotificationService);
 
   ngOnInit() {
+    console.log('Environment values:', environment);
     // Exponer servicios en la consola para testing
     (window as any).tileService = this.tileService;
     (window as any).layerService = this.layerService;

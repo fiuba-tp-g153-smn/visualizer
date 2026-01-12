@@ -5,7 +5,7 @@ module.exports = {
     new webpack.DefinePlugin({
       $ENV: {
         BACKEND_BASE_URL: JSON.stringify(process.env.BACKEND_BASE_URL),
-        USE_MOCK_TILES: JSON.stringify(process.env.USE_MOCK_TILES),
+        USE_MOCK_TILES: JSON.stringify(process.env.USE_MOCK_TILES) === "true",
         TILE_FORMAT: JSON.stringify(process.env.TILE_FORMAT),
         APP_HOST_PORT: JSON.stringify(process.env.APP_HOST_PORT)
       }
