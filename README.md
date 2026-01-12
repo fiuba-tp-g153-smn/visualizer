@@ -1,4 +1,4 @@
-# Visualizator++++++
+# Visualizator
 
 Visualizator is a web application built with Angular for visualizing interactive maps with support for multiple layers, tile providers, and satellite imagery. It features a Dockerized development environment with hot-reload capabilities.
 
