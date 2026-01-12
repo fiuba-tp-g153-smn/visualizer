@@ -9,4 +9,7 @@ export interface TileProvider {
   attribution: string;
   maxZoom: number;
   minZoom?: number;
+  previewZ?: number;
+  previewX?: number;
+  previewY?: number;
 }

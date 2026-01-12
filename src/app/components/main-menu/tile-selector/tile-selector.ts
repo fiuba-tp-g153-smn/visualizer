@@ -49,21 +49,15 @@ export class TileSelectorComponent implements MenuPanelComponent {
   }
 
   /**
-   * Obtiene el icono según el tipo de mapa
+   * Obtiene la URL de preview del proveedor reemplazando las coordenadas
    */
-  getProviderIcon(providerId: string): string {
-    switch (providerId) {
-      case 'argenmap':
-        return 'map';
-      case 'satellite':
-        return 'satellite_alt';
-      case 'osm':
-        return 'public';
-      case 'cartoDB':
-      case 'cartoDBDark':
-        return 'layers';
-      default:
-        return 'terrain';
-    }
+  getPreviewUrl(provider: TileProvider): string {
+    return provider.url
+      .replace('{s}', 'a')
+      .replace('{z}', String(provider.previewZ || 0))
+      .replace('{x}', String(provider.previewX || 0))
+      .replace('{y}', String(provider.previewY || 0))
+      .replace('{-y}', String(provider.previewY || 0))
+      .replace('{r}', '');
   }
 }

@@ -5,6 +5,24 @@
 import { TileProvider } from '../models';
 
 /**
+ * Configuración de coordenadas para las previews de tiles
+ * Ajustar estos valores para centrar las previews en Argentina
+ */
+export const TILE_PREVIEW_CONFIG = {
+  z: 2,
+  x: 1,
+  y: 2,
+};
+
+/**
+ * Convierte coordenadas Y estándar a coordenadas Y de TMS
+ * En TMS, Y está invertido: tms_y = (2^zoom - 1) - y
+ */
+function getTmsY(y: number, zoom: number): number {
+  return Math.pow(2, zoom) - 1 - y;
+}
+
+/**
  * Proveedores de tiles disponibles
  */
 export const TILE_PROVIDERS: Record<string, TileProvider> = {
@@ -15,6 +33,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '<a href="http://leafletjs.com">Leaflet</a> | <a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">IGN</a>',
     maxZoom: 19,
+    previewZ: TILE_PREVIEW_CONFIG.z,
+    previewX: TILE_PREVIEW_CONFIG.x,
+    previewY: getTmsY(TILE_PREVIEW_CONFIG.y, TILE_PREVIEW_CONFIG.z), // Convierte Y estándar a TMS
   },
 
   osm: {
@@ -24,6 +45,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
+    previewZ: TILE_PREVIEW_CONFIG.z,
+    previewX: TILE_PREVIEW_CONFIG.x,
+    previewY: TILE_PREVIEW_CONFIG.y,
   },
 
   satellite: {
@@ -33,6 +57,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
     maxZoom: 18,
+    previewZ: TILE_PREVIEW_CONFIG.z,
+    previewX: TILE_PREVIEW_CONFIG.x,
+    previewY: TILE_PREVIEW_CONFIG.y,
   },
 
   cartoDB: {
@@ -42,6 +69,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 19,
+    previewZ: TILE_PREVIEW_CONFIG.z,
+    previewX: TILE_PREVIEW_CONFIG.x,
+    previewY: TILE_PREVIEW_CONFIG.y,
   },
 
   cartoDBDark: {
@@ -51,6 +81,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 19,
+    previewZ: TILE_PREVIEW_CONFIG.z,
+    previewX: TILE_PREVIEW_CONFIG.x,
+    previewY: TILE_PREVIEW_CONFIG.y,
   },
 } as const;
 
