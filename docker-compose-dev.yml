@@ -1,0 +1,17 @@
+services:
+  visualizator:
+    container_name: visualizator-container
+    image: visualizator
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${APP_HOST_PORT}:80"
+    environment:
+      - BACKEND_BASE_URL=${BACKEND_BASE_URL}
+      - USE_MOCK_TILES=${USE_MOCK_TILES}
+      - TILE_FORMAT=${TILE_FORMAT}
+      - APP_HOST_PORT=${APP_HOST_PORT}
+    volumes:
+      - .:/app
+      - /app/node_modules
