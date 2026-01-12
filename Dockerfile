@@ -37,5 +37,8 @@ COPY --from=build /app/dist/visualizator /usr/share/nginx/html
 # Expose port 80
 EXPOSE 80
 
+# Healthcheck
+HEALTHCHECK --interval=2s --timeout=10s --retries=3 CMD nc -z localhost 80 || exit 1
+
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
