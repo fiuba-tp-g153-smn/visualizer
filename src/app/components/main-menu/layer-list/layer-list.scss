@@ -109,10 +109,6 @@
   }
 }
 
-.panel-icon {
-  // Gap manejado por el contenedor
-}
-
 // Layer Items
 .layer-list-container {
   padding: 0;
@@ -180,11 +176,6 @@
     color: var(--mat-sys-on-surface-variant);
     font-variant-numeric: tabular-nums;
   }
-}
-
-// Active Tab
-.active-layers-list {
-  padding: 0;
 }
 
 .active-layer-item {
