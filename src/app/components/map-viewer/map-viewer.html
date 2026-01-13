@@ -1,1 +1,11 @@
 <div id="map"></div>
+
+<!-- Controles de zoom personalizados -->
+<div class="zoom-controls">
+  <button mat-icon-button class="zoom-button" (click)="zoomIn()" [disabled]="!canZoomIn()">
+    <mat-icon>add</mat-icon>
+  </button>
+  <button mat-icon-button class="zoom-button" (click)="zoomOut()" [disabled]="!canZoomOut()">
+    <mat-icon>remove</mat-icon>
+  </button>
+</div>
