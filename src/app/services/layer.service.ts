@@ -7,6 +7,7 @@ interface LayerState {
   visible: boolean;
   opacity: number;
   zIndex?: number;
+  timeIndex?: number;
 }
 
 @Injectable({
@@ -38,30 +39,35 @@ export class LayerService {
   // ==========================================================================
 
   private _initializeLayerGroups(): LayerGroup[] {
-    const savedState = this._loadState();
-    if (!savedState) {
-      return LAYER_DEFINITIONS;
-    }
+    // TEMPORALMENTE DESHABILITADO PARA DEBUG
+    // const savedState = this._loadState();
+    // if (!savedState) {
+    //   return LAYER_DEFINITIONS;
+    // }
+    
+    // Usar siempre las definiciones por defecto (sin localStorage)
+    return LAYER_DEFINITIONS;
 
-    // Restaurar estado guardado
-    return LAYER_DEFINITIONS.map((group) => ({
-      ...group,
-      subgroups: group.subgroups.map((subgroup) => ({
-        ...subgroup,
-        layers: subgroup.layers.map((layer) => {
-          const saved = savedState.find((s) => s.id === layer.id);
-          if (saved) {
-            return {
-              ...layer,
-              visible: saved.visible,
-              opacity: saved.opacity,
-              zIndex: saved.zIndex,
-            };
-          }
-          return layer;
-        }),
-      })),
-    }));
+    // CÓDIGO ORIGINAL COMENTADO (restaurar estado guardado):
+    // return LAYER_DEFINITIONS.map((group) => ({
+    //   ...group,
+    //   subgroups: group.subgroups.map((subgroup) => ({
+    //     ...subgroup,
+    //     layers: subgroup.layers.map((layer) => {
+    //       const saved = savedState.find((s) => s.id === layer.id);
+    //       if (saved) {
+    //         return {
+    //           ...layer,
+    //           visible: saved.visible,
+    //           opacity: saved.opacity,
+    //           zIndex: saved.zIndex,
+    //           timeIndex: saved.timeIndex ?? 0,
+    //         };
+    //       }
+    //       return layer;
+    //     }),
+    //   })),
+    // }));
   }
 
   private _saveState(layers: Layer[]): void {
@@ -70,6 +76,7 @@ export class LayerService {
       visible: layer.visible,
       opacity: layer.opacity,
       zIndex: layer.zIndex,
+      timeIndex: layer.timeIndex,
     }));
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
   }
@@ -144,6 +151,16 @@ export class LayerService {
     this._updateLayer(layerId, (layer) => {
       layer.opacity = clampedOpacity;
     });
+  }
+
+  /**
+   * Cambia el índice temporal (tileset) de una capa
+   */
+  setTimeIndex(layerId: string, timeIndex: number): void {
+    this._updateLayer(layerId, (layer) => {
+      layer.timeIndex = timeIndex;
+    });
+    console.log(`⏱️ TimeIndex de ${layerId} cambiado a: ${timeIndex}`);
   }
 
   // ==========================================================================

@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import { Layer, LayerCategory } from '../models';
 import { BACKEND_CONFIG } from '../config/backend.config';
 import { NotificationService } from './notification.service';
+import { ChannelConfigService } from './channel-config.service';
 import { getAbiTileConfig } from '../config/layer-tiles/satellite/abi.tiles';
 
 /**
@@ -14,6 +15,7 @@ import { getAbiTileConfig } from '../config/layer-tiles/satellite/abi.tiles';
 })
 export class LayerRendererService {
   private readonly notificationService = inject(NotificationService);
+  private readonly channelConfigService = inject(ChannelConfigService);
 
   // Track de errores por capa para evitar spam de notificaciones
   private readonly errorTracker = new Map<string, number>();
@@ -23,18 +25,24 @@ export class LayerRendererService {
    * Crea un tile layer de Leaflet según la categoría de la capa
    */
   createTileLayer(layer: Layer): L.TileLayer {
+    console.log(
+      `🛠️ [LayerRenderer] Creando tile layer para:`,
+      layer.id,
+      `timeIndex: ${layer.timeIndex}`
+    );
     let tileLayer: L.TileLayer;
 
     switch (layer.category) {
       case LayerCategory.SATELLITE_ABI:
-        tileLayer = this.createAbiTileLayer(layer.id, layer.opacity);
+        tileLayer = this.createAbiTileLayer(layer.id, layer.opacity, layer.timeIndex ?? 0);
         break;
       default:
         throw new Error(`Unsupported layer category: ${layer.category}`);
     }
 
-    // Solo monitorear errores si NO estamos usando mock
-    if (!BACKEND_CONFIG.useMockTiles) {
+    // Solo monitorear errores si NO estamos usando mock Y NO es un placeholder
+    const isPlaceholder = (tileLayer as any)._isPlaceholder;
+    if (!BACKEND_CONFIG.useMockTiles && !isPlaceholder) {
       this.attachErrorHandlers(tileLayer, layer);
     }
 
@@ -44,12 +52,49 @@ export class LayerRendererService {
   /**
    * Crea un tile layer para satélite ABI
    */
-  private createAbiTileLayer(layerId: string, opacity: number): L.TileLayer {
-    const { url, options } = getAbiTileConfig(layerId);
-    return L.tileLayer(url, {
-      ...options,
-      opacity: opacity / 100,
+  private createAbiTileLayer(layerId: string, opacity: number, timeIndex: number = 0): L.TileLayer {
+    console.log(
+      `🛰️ [ABI] Intentando crear layer para ${layerId}, hasConfig: ${this.channelConfigService.hasConfig(
+        layerId
+      )}`
+    );
+
+    // Si hay configuración dinámica cargada, usarla
+    if (this.channelConfigService.hasConfig(layerId)) {
+      const config = this.channelConfigService.getChannelConfig(layerId);
+      const tileUrl = this.channelConfigService.buildTileUrl(layerId, timeIndex);
+      console.log(`✅ [ABI] Config encontrada para ${layerId}, tileUrl: ${tileUrl}`);
+
+      if (config && tileUrl) {
+        const bounds = config.channel_info.bounding_box;
+        const zoomLevels = config.channel_info.zoom_levels;
+
+        return L.tileLayer(tileUrl, {
+          minNativeZoom: zoomLevels.min,
+          maxNativeZoom: zoomLevels.max,
+          minZoom: 0,
+          maxZoom: 18,
+          tms: true,
+          bounds: [
+            [bounds.miny, bounds.minx],
+            [bounds.maxy, bounds.maxx],
+          ],
+          noWrap: true,
+          attribution: `${config.product} ${config.instrument} ${config.channel} | SMN`,
+          opacity: opacity / 100,
+        });
+      }
+    }
+
+    // Si no hay configuración, crear un layer vacío/placeholder
+    // Esto evita errores de carga mientras se obtiene la configuración del backend
+    console.warn(`⏳ [ABI] NO hay config para ${layerId}, creando placeholder...`);
+    const placeholder = L.tileLayer('about:blank', {
+      opacity: 0,
+      attribution: 'Cargando...',
     });
+    (placeholder as any)._isPlaceholder = true;
+    return placeholder;
   }
 
   // Para agregar WRF, ECMWF, etc., solo agregar un nuevo case y método privado:

@@ -23,6 +23,7 @@ export interface Layer {
   visible: boolean;
   opacity: number; // 0-100
   zIndex?: number; // Solo para capas visibles, define orden de renderizado
+  timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
 }
 
 /**

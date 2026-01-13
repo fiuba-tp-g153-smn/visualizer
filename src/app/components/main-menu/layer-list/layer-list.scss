@@ -178,6 +178,120 @@
   }
 }
 
+// Time Control
+.time-control-inline {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 8px 0 8px;
+  gap: 8px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  .time-control-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    .time-label {
+      font-size: 11px;
+      color: var(--mat-sys-on-surface-variant);
+      min-width: fit-content;
+    }
+
+    .reload-btn {
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      padding: 0;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        line-height: 18px;
+      }
+    }
+  }
+
+  .time-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .time-min,
+    .time-max {
+      font-size: 9px;
+      color: var(--mat-sys-on-surface-variant);
+      font-variant-numeric: tabular-nums;
+      font-family: monospace;
+      white-space: nowrap;
+      min-width: fit-content;
+    }
+
+    .layer-slider {
+      flex: 1;
+    }
+  }
+
+  .time-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    .time-current {
+      font-size: 11px;
+      color: var(--mat-sys-on-surface);
+      font-variant-numeric: tabular-nums;
+      font-family: monospace;
+      font-weight: 500;
+    }
+
+    .play-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .play-btn {
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        padding: 0;
+        color: var(--mat-sys-primary);
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          line-height: 20px;
+        }
+      }
+
+      .speed-input {
+        width: 45px;
+        padding: 2px 4px;
+        border: 1px solid var(--mat-sys-outline-variant);
+        border-radius: 4px;
+        background: var(--mat-sys-surface);
+        color: var(--mat-sys-on-surface);
+        font-size: 11px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+
+        &:focus {
+          outline: none;
+          border-color: var(--mat-sys-primary);
+        }
+      }
+
+      .speed-label {
+        font-size: 10px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+  }
+}
+
 .active-layer-item {
   display: flex;
   flex-direction: column;

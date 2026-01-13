@@ -104,11 +104,17 @@ export class MapViewer implements OnInit, OnDestroy {
   private syncLayers(layers: Layer[]): void {
     if (!this.map) return;
 
+    console.log(
+      `🗺️ [MapViewer] Sincronizando capas:`,
+      layers.map((l) => `${l.id}(idx:${l.timeIndex})`)
+    );
+
     const activeIds = new Set(layers.map((l) => l.id));
 
     // Remover capas que ya no están activas
     for (const [id, tileLayer] of this.activeLayers) {
       if (!activeIds.has(id)) {
+        console.log(`❌ [MapViewer] Removiendo capa: ${id}`);
         this.map.removeLayer(tileLayer);
         this.activeLayers.delete(id);
       }
@@ -117,17 +123,40 @@ export class MapViewer implements OnInit, OnDestroy {
     // Agregar/actualizar capas activas
     for (const layer of layers) {
       const existingLayer = this.activeLayers.get(layer.id);
+      console.log(`🔎 [MapViewer] Procesando ${layer.id}, existingLayer: ${!!existingLayer}, timeIndex: ${layer.timeIndex}`);
 
       if (existingLayer) {
-        // Actualizar opacidad y zIndex
-        existingLayer.setOpacity(layer.opacity / 100);
-        existingLayer.setZIndex(layer.zIndex ?? 0);
+        // Verificar si el timeIndex cambió
+        const currentTimeIndex = (existingLayer as any)._timeIndex ?? 0;
+        const layerTimeIndex = layer.timeIndex ?? 0;
+        const hasTimeIndexChanged = currentTimeIndex !== layerTimeIndex;
+
+        console.log(`🔍 [MapViewer] Verificando ${layer.id}: currentTimeIndex=${currentTimeIndex}, layer.timeIndex=${layerTimeIndex}, changed=${hasTimeIndexChanged}`);
+
+        if (hasTimeIndexChanged) {
+          // Recrear la capa con el nuevo timeIndex
+          console.log(
+            `🔄 [MapViewer] Recreando capa ${layer.name} por cambio de timeIndex: ${currentTimeIndex} -> ${layerTimeIndex}`
+          );
+          this.map.removeLayer(existingLayer);
+          this.activeLayers.delete(layer.id);
+
+          const tileLayer = this.layerRendererService.createTileLayer(layer);
+          (tileLayer as any)._timeIndex = layerTimeIndex; // Guardar para comparación
+          tileLayer.addTo(this.map);
+          this.activeLayers.set(layer.id, tileLayer);
+        } else {
+          // Solo actualizar opacidad y zIndex
+          existingLayer.setOpacity(layer.opacity / 100);
+          existingLayer.setZIndex(layer.zIndex ?? 0);
+        }
       } else {
         // Crear nueva capa
+        console.log(`➕ [MapViewer] Agregando nueva capa: ${layer.name}`);
         const tileLayer = this.layerRendererService.createTileLayer(layer);
+        (tileLayer as any)._timeIndex = layer.timeIndex ?? 0; // Guardar para comparación (default 0 si undefined)
         tileLayer.addTo(this.map);
         this.activeLayers.set(layer.id, tileLayer);
-        console.log(`✅ Capa agregada: ${layer.name}`);
       }
     }
   }
