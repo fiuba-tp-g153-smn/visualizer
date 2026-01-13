@@ -3,7 +3,7 @@ import * as L from 'leaflet';
 import { Layer, LayerCategory } from '../models';
 import { BACKEND_CONFIG } from '../config/backend.config';
 import { NotificationService } from './notification.service';
-import { getAbiTileConfig } from '../config/layer-tiles/satellite-abi.tiles';
+import { getAbiTileConfig } from '../config/layer-tiles/satellite/abi.tiles';
 
 /**
  * Servicio para crear tile layers de Leaflet según categoría

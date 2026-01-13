@@ -1,4 +1,4 @@
-import { buildTileUrl, BACKEND_CONFIG } from '../backend.config';
+import { buildTileUrl, BACKEND_CONFIG } from '../../backend.config';
 import * as L from 'leaflet';
 
 /**

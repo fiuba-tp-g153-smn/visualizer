@@ -2,39 +2,37 @@
   <!-- Barra de botones flotante -->
   <mat-card class="menu-button-bar">
     <!-- Logo SMN -->
-    <div class="logo-container">
-      <img src="icono.png" alt="Logo SMN" class="smn-logo" />
-    </div>
+    <img src="icono.png" alt="Logo SMN" class="smn-logo" />
 
-    <div class="menu-divider"></div>
+    <mat-divider />
 
-    <!-- Botones de secciones (dinámico) -->
+    <!-- Botones de secciones -->
     @for (section of sections; track section.id) {
     <button
       mat-icon-button
-      class="menu-button"
       [class.active]="activePanel() === section.id"
       (click)="togglePanel(section.id)"
-      [title]="section.tooltip"
+      [matTooltip]="section.tooltip"
+      matTooltipPosition="right"
     >
       <mat-icon>{{ section.icon }}</mat-icon>
     </button>
     }
   </mat-card>
 
-  <!-- Panel lateral (se abre según botón activo) -->
+  <!-- Panel lateral -->
   @if (getActiveSection(); as activeSection) {
-  <div class="menu-panel">
-    <div class="menu-header">
-      <h2>{{ activeSection.title }}</h2>
-      <button mat-icon-button (click)="closePanel()" class="close-button" aria-label="Cerrar menú">
+  <mat-card class="menu-panel">
+    <mat-toolbar class="menu-header">
+      <span>{{ activeSection.title }}</span>
+      <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú">
         <mat-icon>close</mat-icon>
       </button>
-    </div>
+    </mat-toolbar>
 
-    <div class="panel-content">
+    <mat-card-content class="panel-content">
       <ng-container *ngComponentOutlet="activeSection.component" />
-    </div>
-  </div>
+    </mat-card-content>
+  </mat-card>
   }
 </div>

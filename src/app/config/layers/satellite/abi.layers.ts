@@ -1,4 +1,4 @@
-import { LayerSubgroup, LayerType, LayerCategory } from '../../models';
+import { LayerSubgroup, LayerType, LayerCategory } from '../../../models';
 
 /**
  * Valores por defecto para capas ABI

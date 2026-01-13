@@ -1,12 +1,20 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, effect } from '@angular/core';
 import { Layer, LayerGroup } from '../models';
 import { LAYER_DEFINITIONS } from '../config/layer-definitions';
+
+interface LayerState {
+  id: string;
+  visible: boolean;
+  opacity: number;
+  zIndex?: number;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class LayerService {
-  private readonly _layerGroups = signal<LayerGroup[]>(LAYER_DEFINITIONS);
+  private readonly STORAGE_KEY = 'smn-active-layers';
+  private readonly _layerGroups = signal<LayerGroup[]>(this._initializeLayerGroups());
 
   public readonly layerGroups = this._layerGroups.asReadonly();
 
@@ -17,9 +25,110 @@ export class LayerService {
       .sort((a: Layer, b: Layer) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
   });
 
+  constructor() {
+    // Persistir estado cuando cambian las capas
+    effect(() => {
+      const layers = this._getAllLayers();
+      this._saveState(layers);
+    });
+  }
+
+  // ==========================================================================
+  // Persistencia
+  // ==========================================================================
+
+  private _initializeLayerGroups(): LayerGroup[] {
+    const savedState = this._loadState();
+    if (!savedState) {
+      return LAYER_DEFINITIONS;
+    }
+
+    // Restaurar estado guardado
+    return LAYER_DEFINITIONS.map((group) => ({
+      ...group,
+      subgroups: group.subgroups.map((subgroup) => ({
+        ...subgroup,
+        layers: subgroup.layers.map((layer) => {
+          const saved = savedState.find((s) => s.id === layer.id);
+          if (saved) {
+            return {
+              ...layer,
+              visible: saved.visible,
+              opacity: saved.opacity,
+              zIndex: saved.zIndex,
+            };
+          }
+          return layer;
+        }),
+      })),
+    }));
+  }
+
+  private _saveState(layers: Layer[]): void {
+    const state: LayerState[] = layers.map((layer) => ({
+      id: layer.id,
+      visible: layer.visible,
+      opacity: layer.opacity,
+      zIndex: layer.zIndex,
+    }));
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+  }
+
+  private _loadState(): LayerState[] | null {
+    try {
+      const saved = localStorage.getItem(this.STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  }
+
   // ==========================================================================
   // Visibilidad y Opacidad
   // ==========================================================================
+
+  /**
+   * Activa una capa (agrega a las activas)
+   */
+  activateLayer(layerId: string): void {
+    this._updateLayer(layerId, (layer) => {
+      if (!layer.visible) {
+        layer.visible = true;
+        layer.zIndex = this._getNextZIndex();
+      }
+    });
+  }
+
+  /**
+   * Desactiva una capa (remueve de las activas)
+   */
+  deactivateLayer(layerId: string): void {
+    this._updateLayer(layerId, (layer) => {
+      layer.visible = false;
+    });
+  }
+
+  /**
+   * Reemplaza todas las capas activas con una nueva capa
+   */
+  replaceAllWithLayer(layerId: string): void {
+    // Primero desactivar todas
+    this._layerGroups.update((groups: LayerGroup[]) => {
+      return groups.map((group) => ({
+        ...group,
+        subgroups: group.subgroups.map((subgroup) => ({
+          ...subgroup,
+          layers: subgroup.layers.map((layer) => ({
+            ...layer,
+            visible: false,
+          })),
+        })),
+      }));
+    });
+
+    // Luego activar la seleccionada
+    this.activateLayer(layerId);
+  }
 
   toggleLayer(layerId: string): void {
     this._updateLayer(layerId, (layer) => {
