@@ -16,7 +16,7 @@ export enum LayerCategory {
  */
 export interface LayerPlaybackConfig {
   isPlaying: boolean; // Si está reproduciéndose automáticamente
-  speed: number; // Velocidad en segundos por frame (0.1-10)
+  speed: number; // Velocidad en segundos por frame (0.4-10)
   maxTimeIndex?: number; // Índice máximo guardado para reiniciar
   minTimeIndex?: number; // Índice mínimo basado en lastImagesCount
   lastImagesCount?: number; // Número de últimas imágenes a mostrar (6, 12, 24, etc.)

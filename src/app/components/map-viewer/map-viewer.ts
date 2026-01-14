@@ -25,6 +25,7 @@ export class MapViewer implements OnInit, OnDestroy {
 
   private currentTileLayer: L.TileLayer | null = null;
   private activeLayers = new Map<string, L.TileLayer>();
+  private pendingTransitions = new Map<string, number>();
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -53,6 +54,8 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.pendingTransitions.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.pendingTransitions.clear();
     if (this.map) {
       this.map.remove();
     }
@@ -97,6 +100,11 @@ export class MapViewer implements OnInit, OnDestroy {
 
     for (const [id, tileLayer] of this.activeLayers) {
       if (!activeIds.has(id)) {
+        const pendingTimeout = this.pendingTransitions.get(id);
+        if (pendingTimeout) {
+          clearTimeout(pendingTimeout);
+          this.pendingTransitions.delete(id);
+        }
         this.map.removeLayer(tileLayer);
         this.activeLayers.delete(id);
       }
@@ -111,13 +119,28 @@ export class MapViewer implements OnInit, OnDestroy {
         const hasTimeIndexChanged = currentTimeIndex !== layerTimeIndex;
 
         if (hasTimeIndexChanged) {
-          this.map.removeLayer(existingLayer);
-          this.activeLayers.delete(layer.id);
+          const pendingTimeout = this.pendingTransitions.get(layer.id);
+          if (pendingTimeout) {
+            clearTimeout(pendingTimeout);
+          }
 
-          const tileLayer = this.layerRendererService.createTileLayer(layer);
-          (tileLayer as any)._timeIndex = layerTimeIndex;
-          tileLayer.addTo(this.map);
-          this.activeLayers.set(layer.id, tileLayer);
+          const newTileLayer = this.layerRendererService.createTileLayer(layer);
+          (newTileLayer as any)._timeIndex = layerTimeIndex;
+          newTileLayer.setOpacity(0);
+          newTileLayer.addTo(this.map);
+
+          const timeoutId = setTimeout(() => {
+            if (this.map && this.map.hasLayer(newTileLayer)) {
+              newTileLayer.setOpacity(layer.opacity / 100);
+            }
+            if (this.map && this.map.hasLayer(existingLayer)) {
+              this.map.removeLayer(existingLayer);
+            }
+            this.activeLayers.set(layer.id, newTileLayer);
+            this.pendingTransitions.delete(layer.id);
+          }, 250);
+
+          this.pendingTransitions.set(layer.id, timeoutId);
         } else {
           existingLayer.setOpacity(layer.opacity / 100);
           if (layer.zIndex !== undefined) {

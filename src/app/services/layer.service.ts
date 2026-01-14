@@ -128,7 +128,7 @@ export class LayerService {
   }
 
   setPlaySpeed(layerId: string, speed: number): void {
-    const clampedSpeed = Math.max(0.1, Math.min(10, speed));
+    const clampedSpeed = Math.max(0.4, Math.min(10, speed));
     const wasPlaying = this.isPlaying(layerId);
 
     this._updateLayer(layerId, (layer) => {
