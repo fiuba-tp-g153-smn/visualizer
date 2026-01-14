@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
-import { Layer, LayerGroup } from '../models';
+import { Layer, LayerGroup, LayerPlaybackConfig } from '../models';
 import { LAYER_DEFINITIONS } from '../config/layer-definitions';
 
 interface LayerState {
@@ -8,6 +8,7 @@ interface LayerState {
   opacity: number;
   zIndex?: number;
   timeIndex?: number;
+  playback?: LayerPlaybackConfig;
 }
 
 @Injectable({
@@ -16,6 +17,9 @@ interface LayerState {
 export class LayerService {
   private readonly STORAGE_KEY = 'smn-active-layers';
   private readonly _layerGroups = signal<LayerGroup[]>(this._initializeLayerGroups());
+
+  // Intervalos de reproducción activos
+  private playIntervals = new Map<string, any>();
 
   public readonly layerGroups = this._layerGroups.asReadonly();
 
@@ -34,40 +38,8 @@ export class LayerService {
     });
   }
 
-  // ==========================================================================
-  // Persistencia
-  // ==========================================================================
-
   private _initializeLayerGroups(): LayerGroup[] {
-    // TEMPORALMENTE DESHABILITADO PARA DEBUG
-    // const savedState = this._loadState();
-    // if (!savedState) {
-    //   return LAYER_DEFINITIONS;
-    // }
-    
-    // Usar siempre las definiciones por defecto (sin localStorage)
     return LAYER_DEFINITIONS;
-
-    // CÓDIGO ORIGINAL COMENTADO (restaurar estado guardado):
-    // return LAYER_DEFINITIONS.map((group) => ({
-    //   ...group,
-    //   subgroups: group.subgroups.map((subgroup) => ({
-    //     ...subgroup,
-    //     layers: subgroup.layers.map((layer) => {
-    //       const saved = savedState.find((s) => s.id === layer.id);
-    //       if (saved) {
-    //         return {
-    //           ...layer,
-    //           visible: saved.visible,
-    //           opacity: saved.opacity,
-    //           zIndex: saved.zIndex,
-    //           timeIndex: saved.timeIndex ?? 0,
-    //         };
-    //       }
-    //       return layer;
-    //     }),
-    //   })),
-    // }));
   }
 
   private _saveState(layers: Layer[]): void {
@@ -77,6 +49,7 @@ export class LayerService {
       opacity: layer.opacity,
       zIndex: layer.zIndex,
       timeIndex: layer.timeIndex,
+      playback: layer.playback,
     }));
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
   }
@@ -90,13 +63,6 @@ export class LayerService {
     }
   }
 
-  // ==========================================================================
-  // Visibilidad y Opacidad
-  // ==========================================================================
-
-  /**
-   * Activa una capa (agrega a las activas)
-   */
   activateLayer(layerId: string): void {
     this._updateLayer(layerId, (layer) => {
       if (!layer.visible) {
@@ -106,20 +72,13 @@ export class LayerService {
     });
   }
 
-  /**
-   * Desactiva una capa (remueve de las activas)
-   */
   deactivateLayer(layerId: string): void {
     this._updateLayer(layerId, (layer) => {
       layer.visible = false;
     });
   }
 
-  /**
-   * Reemplaza todas las capas activas con una nueva capa
-   */
   replaceAllWithLayer(layerId: string): void {
-    // Primero desactivar todas
     this._layerGroups.update((groups: LayerGroup[]) => {
       return groups.map((group) => ({
         ...group,
@@ -133,7 +92,6 @@ export class LayerService {
       }));
     });
 
-    // Luego activar la seleccionada
     this.activateLayer(layerId);
   }
 
@@ -153,19 +111,132 @@ export class LayerService {
     });
   }
 
-  /**
-   * Cambia el índice temporal (tileset) de una capa
-   */
   setTimeIndex(layerId: string, timeIndex: number): void {
     this._updateLayer(layerId, (layer) => {
       layer.timeIndex = timeIndex;
     });
-    console.log(`⏱️ TimeIndex de ${layerId} cambiado a: ${timeIndex}`);
   }
 
-  // ==========================================================================
-  // Reordenamiento (drag & drop / flechas)
-  // ==========================================================================
+  isPlaying(layerId: string): boolean {
+    const layer = this._findLayer(layerId);
+    return layer?.playback?.isPlaying || false;
+  }
+
+  getPlaySpeed(layerId: string): number {
+    const layer = this._findLayer(layerId);
+    return layer?.playback?.speed || 1;
+  }
+
+  setPlaySpeed(layerId: string, speed: number): void {
+    const clampedSpeed = Math.max(0.1, Math.min(10, speed));
+    const wasPlaying = this.isPlaying(layerId);
+
+    this._updateLayer(layerId, (layer) => {
+      if (!layer.playback) {
+        layer.playback = { isPlaying: false, speed: 1 };
+      }
+      layer.playback.speed = clampedSpeed;
+    });
+
+    if (wasPlaying) {
+      const layer = this._findLayer(layerId);
+      const maxTimeIndex = layer?.playback?.maxTimeIndex ?? 0;
+      const lastImagesCount = layer?.playback?.lastImagesCount ?? 24;
+      const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
+      this.stopPlayback(layerId);
+      this.startPlayback(layerId, maxTimeIndex, minTimeIndex);
+    }
+  }
+
+  togglePlayback(layerId: string, maxTimeIndex: number, minTimeIndex: number = 0): void {
+    if (this.isPlaying(layerId)) {
+      this.stopPlayback(layerId);
+    } else {
+      this.startPlayback(layerId, maxTimeIndex, minTimeIndex);
+    }
+  }
+
+  startPlayback(layerId: string, maxTimeIndex: number, minTimeIndex: number = 0): void {
+    this.stopPlayback(layerId);
+
+    this._updateLayer(layerId, (layer) => {
+      layer.playback = {
+        isPlaying: true,
+        speed: layer.playback?.speed || 1,
+        maxTimeIndex,
+        minTimeIndex,
+        lastImagesCount: layer.playback?.lastImagesCount,
+      };
+
+      // Clamp current time index to new range
+      const current = layer.timeIndex ?? maxTimeIndex;
+      layer.timeIndex = Math.max(minTimeIndex, Math.min(current, maxTimeIndex));
+    });
+
+    const speed = this.getPlaySpeed(layerId);
+    const interval = setInterval(() => {
+      const layer = this._findLayer(layerId);
+      if (!layer?.visible || !layer.playback?.isPlaying) {
+        this.stopPlayback(layerId);
+        return;
+      }
+
+      const max = layer.playback.maxTimeIndex ?? maxTimeIndex;
+      const min = layer.playback.minTimeIndex ?? minTimeIndex;
+      const current = layer.timeIndex ?? min;
+
+      this.setTimeIndex(layerId, current >= max ? min : current + 1);
+    }, speed * 1000);
+
+    this.playIntervals.set(layerId, interval);
+  }
+
+  stopPlayback(layerId: string): void {
+    this._updateLayer(layerId, (layer) => {
+      if (layer.playback) {
+        layer.playback.isPlaying = false;
+        layer.playback.maxTimeIndex = undefined;
+      }
+    });
+
+    const interval = this.playIntervals.get(layerId);
+    if (interval) {
+      clearInterval(interval);
+      this.playIntervals.delete(layerId);
+    }
+  }
+
+  stopAllPlayback(): void {
+    this.playIntervals.forEach((interval, layerId) => {
+      clearInterval(interval);
+      this._updateLayer(layerId, (layer) => {
+        if (layer.playback) {
+          layer.playback.isPlaying = false;
+          layer.playback.maxTimeIndex = undefined;
+        }
+      });
+    });
+    this.playIntervals.clear();
+  }
+
+  getLastImagesCount(layerId: string): number {
+    const layer = this._findLayer(layerId);
+    return layer?.playback?.lastImagesCount ?? 24;
+  }
+
+  setLastImagesCount(layerId: string, count: number): void {
+    this._updateLayer(layerId, (layer) => {
+      if (!layer.playback) {
+        layer.playback = {
+          isPlaying: false,
+          speed: 1.0,
+          lastImagesCount: count,
+        };
+      } else {
+        layer.playback.lastImagesCount = count;
+      }
+    });
+  }
 
   moveLayerUp(layerId: string): void {
     const layer = this._findLayer(layerId);
@@ -197,15 +268,11 @@ export class LayerService {
     orderedLayerIds.forEach((layerId: string, index: number) => {
       this._updateLayer(layerId, (layer) => {
         if (layer.visible) {
-          layer.zIndex = index;
+          layer.zIndex = index + 1;
         }
       });
     });
   }
-
-  // ==========================================================================
-  // Métodos privados
-  // ==========================================================================
 
   private _getAllLayers(): Layer[] {
     const layers: Layer[] = [];
@@ -228,7 +295,7 @@ export class LayerService {
         .filter((l: Layer) => l.zIndex !== undefined)
         .map((l: Layer) => l.zIndex!)
     );
-    return maxZIndex + 1;
+    return Math.max(1, maxZIndex + 1);
   }
 
   private _swapZIndex(layerId1: string, layerId2: string): void {
