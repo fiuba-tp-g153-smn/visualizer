@@ -13,5 +13,4 @@ services:
       - APP_HOST_PORT=${APP_HOST_PORT}
     volumes:
       - .:/app
-      - /app/node_modules
     restart: unless-stopped
