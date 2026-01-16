@@ -12,6 +12,17 @@ export enum LayerCategory {
 }
 
 /**
+ * Configuración de reproducción temporal de una capa
+ */
+export interface LayerPlaybackConfig {
+  isPlaying: boolean; // Si está reproduciéndose automáticamente
+  speed: number; // Velocidad en segundos por frame (0.4-10)
+  maxTimeIndex?: number; // Índice máximo guardado para reiniciar
+  minTimeIndex?: number; // Índice mínimo basado en lastImagesCount
+  lastImagesCount?: number; // Número de últimas imágenes a mostrar (6, 12, 24, etc.)
+}
+
+/**
  * Capa individual
  */
 export interface Layer {
@@ -23,6 +34,8 @@ export interface Layer {
   visible: boolean;
   opacity: number; // 0-100
   zIndex?: number; // Solo para capas visibles, define orden de renderizado
+  timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
+  playback?: LayerPlaybackConfig; // Configuración de reproducción
 }
 
 /**
