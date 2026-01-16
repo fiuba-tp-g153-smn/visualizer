@@ -25,6 +25,7 @@ export class MapViewer implements OnInit, OnDestroy {
 
   private currentTileLayer: L.TileLayer | null = null;
   private activeLayers = new Map<string, L.TileLayer>();
+  private pendingTransitions = new Map<string, number>();
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -53,34 +54,29 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.pendingTransitions.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.pendingTransitions.clear();
     if (this.map) {
       this.map.remove();
     }
   }
 
   private async initMap(): Promise<void> {
-    // Crear el mapa con configuración centralizada
     this.map = L.map('map', {
       center: [MAP_CONFIG.initialCenter.lat, MAP_CONFIG.initialCenter.lng],
       zoom: MAP_CONFIG.initialZoom,
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
-      zoomControl: false, // Desactivar control de zoom por defecto
+      zoomControl: false,
     });
 
-    // Obtener el proveedor inicial del servicio
     const initialProvider = this.tileService.getCurrentProvider();
 
-    // Agregar tile layer inicial
     this.currentTileLayer = L.tileLayer(initialProvider.url, {
       attribution: initialProvider.attribution,
       maxZoom: initialProvider.maxZoom,
+      zIndex: 0,
     }).addTo(this.map);
-
-    console.log('🗺️ Mapa inicializado correctamente');
-    console.log(`📍 Centro: ${MAP_CONFIG.initialCenter.lat}, ${MAP_CONFIG.initialCenter.lng}`);
-    console.log(`🔍 Zoom: ${MAP_CONFIG.initialZoom}`);
-    console.log(`🗺️ Tiles: ${initialProvider.name}`);
   }
 
   private changeTileProvider(provider: TileProvider): void {
@@ -93,48 +89,73 @@ export class MapViewer implements OnInit, OnDestroy {
     this.currentTileLayer = L.tileLayer(provider.url, {
       attribution: provider.attribution,
       maxZoom: provider.maxZoom,
+      zIndex: 0,
     }).addTo(this.map);
-
-    console.log('✅ Tile provider actualizado:', provider.name);
   }
 
-  /**
-   * Sincroniza las capas activas con el mapa
-   */
   private syncLayers(layers: Layer[]): void {
     if (!this.map) return;
 
     const activeIds = new Set(layers.map((l) => l.id));
 
-    // Remover capas que ya no están activas
     for (const [id, tileLayer] of this.activeLayers) {
       if (!activeIds.has(id)) {
+        const pendingTimeout = this.pendingTransitions.get(id);
+        if (pendingTimeout) {
+          clearTimeout(pendingTimeout);
+          this.pendingTransitions.delete(id);
+        }
         this.map.removeLayer(tileLayer);
         this.activeLayers.delete(id);
       }
     }
 
-    // Agregar/actualizar capas activas
     for (const layer of layers) {
       const existingLayer = this.activeLayers.get(layer.id);
 
       if (existingLayer) {
-        // Actualizar opacidad y zIndex
-        existingLayer.setOpacity(layer.opacity / 100);
-        existingLayer.setZIndex(layer.zIndex ?? 0);
+        const currentTimeIndex = (existingLayer as any)._timeIndex ?? 0;
+        const layerTimeIndex = layer.timeIndex ?? 0;
+        const hasTimeIndexChanged = currentTimeIndex !== layerTimeIndex;
+
+        if (hasTimeIndexChanged) {
+          const pendingTimeout = this.pendingTransitions.get(layer.id);
+          if (pendingTimeout) {
+            clearTimeout(pendingTimeout);
+          }
+
+          const newTileLayer = this.layerRendererService.createTileLayer(layer);
+          (newTileLayer as any)._timeIndex = layerTimeIndex;
+          newTileLayer.setOpacity(0);
+          newTileLayer.addTo(this.map);
+
+          const timeoutId = setTimeout(() => {
+            if (this.map && this.map.hasLayer(newTileLayer)) {
+              newTileLayer.setOpacity(layer.opacity / 100);
+            }
+            if (this.map && this.map.hasLayer(existingLayer)) {
+              this.map.removeLayer(existingLayer);
+            }
+            this.activeLayers.set(layer.id, newTileLayer);
+            this.pendingTransitions.delete(layer.id);
+          }, 250);
+
+          this.pendingTransitions.set(layer.id, timeoutId);
+        } else {
+          existingLayer.setOpacity(layer.opacity / 100);
+          if (layer.zIndex !== undefined) {
+            existingLayer.setZIndex(layer.zIndex);
+          }
+        }
       } else {
-        // Crear nueva capa
         const tileLayer = this.layerRendererService.createTileLayer(layer);
+        (tileLayer as any)._timeIndex = layer.timeIndex ?? 0;
         tileLayer.addTo(this.map);
         this.activeLayers.set(layer.id, tileLayer);
-        console.log(`✅ Capa agregada: ${layer.name}`);
       }
     }
   }
 
-  /**
-   * Métodos para controles de zoom personalizados
-   */
   zoomIn(): void {
     this.map?.zoomIn();
   }
@@ -151,5 +172,9 @@ export class MapViewer implements OnInit, OnDestroy {
   canZoomOut(): boolean {
     if (!this.map) return false;
     return this.map.getZoom() > this.map.getMinZoom();
+  }
+
+  getCurrentZoom(): number {
+    return this.map?.getZoom() ?? MAP_CONFIG.initialZoom;
   }
 }

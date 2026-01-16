@@ -11,6 +11,8 @@ export const BACKEND_CONFIG = {
   endpoints: {
     tiles: `${BACKEND_BASE_URL}/tiles`,
     products: `${BACKEND_BASE_URL}/products`,
+    channelConfig: (product: string, instrument: string, channel: string) =>
+      `${BACKEND_BASE_URL}/products/${product}/${instrument}/${channel}`,
   },
 } as const;
 

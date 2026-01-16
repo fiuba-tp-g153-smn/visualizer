@@ -11,10 +11,13 @@ import { MatListModule } from '@angular/material/list';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LayerService } from '../../../services/layer.service';
 import { Layer } from '../../../models';
 import { MenuPanelComponent } from '../menu-section.model';
+import { LayerItemComponent } from './layer-item/layer-item';
 
 /**
  * Lista de capas con controles de visibilidad, opacidad y orden
@@ -35,7 +38,10 @@ import { MenuPanelComponent } from '../menu-section.model';
     MatCardModule,
     MatCheckboxModule,
     MatDividerModule,
+    MatInputModule,
+    MatFormFieldModule,
     DragDropModule,
+    LayerItemComponent,
   ],
   templateUrl: './layer-list.html',
   styleUrl: './layer-list.scss',
@@ -148,40 +154,5 @@ export class LayerListComponent implements MenuPanelComponent {
     // Actualizar el orden de los zIndex
     const orderedIds = activeLayers.map((layer) => layer.id);
     this.layerService.setLayerOrder(orderedIds);
-  }
-
-  /**
-   * Verifica si una capa está activa
-   */
-  isLayerActive(layerId: string): boolean {
-    return this.getActiveLayers().some((layer) => layer.id === layerId);
-  }
-
-  /**
-   * Activa una capa (agregar a las activas)
-   */
-  addLayer(layerId: string): void {
-    this.layerService.activateLayer(layerId);
-  }
-
-  /**
-   * Reemplaza todas las capas con una nueva
-   */
-  replaceAllLayers(layerId: string): void {
-    this.layerService.replaceAllWithLayer(layerId);
-  }
-
-  /**
-   * Remueve una capa activa
-   */
-  removeLayer(layerId: string): void {
-    this.layerService.deactivateLayer(layerId);
-  }
-
-  /**
-   * Formatea el valor de opacidad para el slider
-   */
-  formatOpacity(value: number): string {
-    return `${value}%`;
   }
 }
