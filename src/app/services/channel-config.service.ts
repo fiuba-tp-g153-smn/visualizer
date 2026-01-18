@@ -13,6 +13,7 @@ import { NotificationService } from './notification.service';
 })
 export class ChannelConfigService {
   private _configCache = signal<ChannelConfigCache>({});
+  public readonly configCache = this._configCache.asReadonly();
 
   constructor(private http: HttpClient, private notificationService: NotificationService) {}
 
