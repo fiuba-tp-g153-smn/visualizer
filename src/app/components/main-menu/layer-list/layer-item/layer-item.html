@@ -71,7 +71,7 @@
         <input
           matSliderThumb
           [value]="getActiveLayer()?.opacity ?? layer.opacity"
-          (valueChange)="onOpacityChange($event)"
+          (input)="onOpacityChange(+$any($event.target).value)"
         />
       </mat-slider>
       <span class="control-value">{{ getActiveLayer()?.opacity ?? layer.opacity }}%</span>
