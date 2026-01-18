@@ -7,6 +7,7 @@ import { MAP_CONFIG } from '../../config/map.config';
 import { TileService } from '../../services/tile.service';
 import { LayerService } from '../../services/layer.service';
 import { LayerRendererService } from '../../services/layer-renderer.service';
+import { ChannelConfigService } from '../../services/channel-config.service';
 import { Layer, TileProvider } from '../../models';
 
 @Component({
@@ -22,6 +23,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private tileService = inject(TileService);
   private layerService = inject(LayerService);
   private layerRendererService = inject(LayerRendererService);
+  private channelConfigService = inject(ChannelConfigService);
 
   private currentTileLayer: L.TileLayer | null = null;
   private activeLayers = new Map<string, L.TileLayer>();
@@ -38,9 +40,10 @@ export class MapViewer implements OnInit, OnDestroy {
         }
       });
 
-      // Effect: sincronizar capas satelitales
+      // Effect: sincronizar capas satelitales (Reacciona a cambios en capas O en config)
       effect(() => {
         const layers = this.layerService.activeLayers();
+        const configCache = this.channelConfigService.configCache(); // Dependencia para reactividad
         if (this.map) {
           this.syncLayers(layers);
         }
@@ -118,23 +121,37 @@ export class MapViewer implements OnInit, OnDestroy {
       if (existingLayer) {
         const currentTimeIndex = (existingLayer as any)._timeIndex ?? 0;
         const layerTimeIndex = layer.timeIndex ?? 0;
-        const hasTimeIndexChanged = currentTimeIndex !== layerTimeIndex;
+        const isPlaceholder = (existingLayer as any)._isPlaceholder === true;
+        const hasConfig = this.channelConfigService.hasConfig(layer.id);
 
-        if (hasTimeIndexChanged) {
+        // Actualizar si cambió el tiempo O si tenemos un placeholder y llegó la config
+        const shouldUpdate =
+          currentTimeIndex !== layerTimeIndex || (isPlaceholder && hasConfig);
+
+        if (shouldUpdate) {
           // Si ya estamos cargando algo para esta capa, cancelar esa carga anterior
           this.clearPendingTransition(layer.id);
 
           const newTileLayer = this.layerRendererService.createTileLayer(layer);
           (newTileLayer as any)._timeIndex = layerTimeIndex;
           newTileLayer.setOpacity(0);
+
+          if (isPlaceholder && hasConfig) {
+            console.log(
+              `🔄 [MapViewer] Reemplazando placeholder para ${layer.id} con capa real`
+            );
+          }
           newTileLayer.addTo(this.map);
 
           // Guardar referencia
           this.loadingLayers.set(layer.id, newTileLayer);
 
+          console.log(`🔄 [MapViewer] Iniciando transición para ${layer.id} (time: ${layerTimeIndex})`);
+
           // Función para completar la transición
-          const completeTransition = () => {
+          const completeTransition = (source: string) => {
             if (!this.map) return;
+            console.log(`✅ [MapViewer] Completando transición para ${layer.id} (Source: ${source})`);
 
             // 1. Mostrar nueva capa
             if (this.map.hasLayer(newTileLayer)) {
@@ -143,6 +160,7 @@ export class MapViewer implements OnInit, OnDestroy {
 
             // 2. Remover capa vieja
             if (existingLayer && this.map.hasLayer(existingLayer)) {
+              console.log(`🗑️ [MapViewer] Removiendo capa vieja para ${layer.id}`);
               this.map.removeLayer(existingLayer);
             }
 
@@ -153,22 +171,28 @@ export class MapViewer implements OnInit, OnDestroy {
           };
 
           // A: Escuchar evento load (ÉXITO)
+          // IMPORTANTE: Escuchar ANTES de agregar al mapa para no perder eventos si es síncrono (cache)
           newTileLayer.on('load', () => {
+             console.log(`📥 [MapViewer] Evento LOAD disparado para ${layer.id}`);
              // Verificar que esta sea la transición vigente
              if (this.loadingLayers.get(layer.id) === newTileLayer) {
                 // Cancelar timeout de seguridad
                 const timeoutId = this.pendingTransitions.get(layer.id);
                 if (timeoutId) clearTimeout(timeoutId);
-                completeTransition();
+                completeTransition('LOAD_EVENT');
+             } else {
+               console.log(`⚠️ [MapViewer] Evento LOAD ignorado (capa obsoleta) para ${layer.id}`);
              }
           });
+
+          newTileLayer.addTo(this.map);
 
           // B: Timeout de seguridad (FALLBACK) - 8 segundos
           // Si la imagen falla o tarda mucho, forzamos el cambio para no dejar la UI inconsistente eternamente
           const safetyTimeoutId = window.setTimeout(() => {
-             console.warn(`⚠️ [MapViewer] Timeout de carga para capa ${layer.id}, forzando transición.`);
+             console.warn(`⚠️ [MapViewer] Timeout de carga (8s) para capa ${layer.id}, forzando transición.`);
              if (this.loadingLayers.get(layer.id) === newTileLayer) {
-                completeTransition();
+                completeTransition('TIMEOUT');
              }
           }, 8000);
 
