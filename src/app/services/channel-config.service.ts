@@ -109,11 +109,10 @@ export class ChannelConfigService {
 
     // Reemplazar {tileset_id} en el patrón
     let url = `${BACKEND_CONFIG.baseUrl}${pattern.replace('{tileset_id}', tileset.id)}`;
-    
+
     // Agregar tileset_id como parámetro para evitar caché cuando cambia el período
     url += `?t=${tileset.id}`;
 
-    console.log(`🗺️ URL construida para ${layerId} [${tilesetIndex}]: ${url}`);
     return url;
   }
 
