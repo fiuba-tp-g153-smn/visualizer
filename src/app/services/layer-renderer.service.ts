@@ -21,28 +21,75 @@ export class LayerRendererService {
   private readonly errorTracker = new Map<string, number>();
   private readonly MAX_ERRORS_BEFORE_NOTIFY = 5;
 
+  // Tile Layer Pool: cache de instancias de L.TileLayer para reutilización
+  private layerPool = new Map<string, L.TileLayer>();
+
+
   /**
-   * Crea un tile layer de Leaflet según la categoría de la capa
+   * Crea u obtiene un tile layer de Leaflet según la categoría de la capa
    */
   createTileLayer(layer: Layer): L.TileLayer {
+    return this.getTileLayerForTime(layer, layer.timeIndex ?? 0);
+  }
+
+  /**
+   * Obtiene una instancia de TileLayer para un tiempo específico (usando pool)
+   */
+  getTileLayerForTime(layer: Layer, timeIndex: number): L.TileLayer {
+    // 1. Obtener ID del tileset para generar clave única
+    const tilesets = this.channelConfigService.getTilesets(layer.id);
+    let tilesetId = 'default';
+    
+    if (tilesets && tilesets[timeIndex]) {
+      tilesetId = tilesets[timeIndex].id;
+    } else if (layer.category === LayerCategory.SATELLITE_ABI) {
+        // Si es satélite y no hay config aún, es un placeholder temporal
+        tilesetId = `placeholder-${timeIndex}`;
+    }
+
+    const poolKey = `${layer.id}-${tilesetId}`;
+
+    // 2. Verificar pool
+    if (this.layerPool.has(poolKey)) {
+      return this.layerPool.get(poolKey)!;
+    }
+
+    // 3. Crear nueva instancia
     let tileLayer: L.TileLayer;
 
     switch (layer.category) {
       case LayerCategory.SATELLITE_ABI:
-        tileLayer = this.createAbiTileLayer(layer.id, layer.opacity, layer.timeIndex ?? 0);
+        tileLayer = this.createAbiTileLayer(layer.id, layer.opacity, timeIndex);
         break;
       default:
         throw new Error(`Unsupported layer category: ${layer.category}`);
     }
 
-    // Solo monitorear errores si NO estamos usando mock Y NO es un placeholder
+    // 4. Configurar errores (solo una vez)
     const isPlaceholder = (tileLayer as any)._isPlaceholder;
     if (!BACKEND_CONFIG.useMockTiles && !isPlaceholder) {
       this.attachErrorHandlers(tileLayer, layer);
     }
 
+    // 5. Guardar en pool y retornar
+    this.layerPool.set(poolKey, tileLayer);
     return tileLayer;
   }
+
+  /**
+   * Limpia capas antiguas del pool que no están en uso
+   * @param activeKeys Set de claves (layerId-tilesetId) que DEBEN mantenerse
+   */
+  prunePool(activeKeys: Set<string>): void {
+    for (const [key, layer] of this.layerPool) {
+      if (!activeKeys.has(key)) {
+        // Opcional: limpiar listeners si fuera necesario, pero Leaflet lo maneja bien
+        this.layerPool.delete(key);
+      }
+    }
+    // console.log(`Pool size: ${this.layerPool.size} (Active: ${activeKeys.size})`);
+  }
+
 
   /**
    * Crea un tile layer para satélite ABI
