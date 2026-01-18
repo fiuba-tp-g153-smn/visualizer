@@ -76,6 +76,7 @@ export class MapViewer implements OnInit, OnDestroy {
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
       zoomControl: false,
+      fadeAnimation: false, // Desactivar fade para evitar flash en transiciones
     });
 
     const initialProvider = this.tileService.getCurrentProvider();
@@ -129,71 +130,71 @@ export class MapViewer implements OnInit, OnDestroy {
           currentTimeIndex !== layerTimeIndex || (isPlaceholder && hasConfig);
 
         if (shouldUpdate) {
+          // DOUBLE-BUFFERING: Mantener capa vieja visible mientras carga la nueva
           // Si ya estamos cargando algo para esta capa, cancelar esa carga anterior
           this.clearPendingTransition(layer.id);
 
           const newTileLayer = this.layerRendererService.createTileLayer(layer);
           (newTileLayer as any)._timeIndex = layerTimeIndex;
+
+          const targetOpacity = layer.opacity / 100;
+          // CRÍTICO: Nueva capa empieza con opacity 0 (invisible pero cargando)
           newTileLayer.setOpacity(0);
 
-          if (isPlaceholder && hasConfig) {
-            console.log(
-              `🔄 [MapViewer] Reemplazando placeholder para ${layer.id} con capa real`
-            );
-          }
-          newTileLayer.addTo(this.map);
-
-          // Guardar referencia
+          // Guardar referencia a la capa en carga
           this.loadingLayers.set(layer.id, newTileLayer);
 
-          console.log(`🔄 [MapViewer] Iniciando transición para ${layer.id} (time: ${layerTimeIndex})`);
+          // Flag para evitar transiciones duplicadas
+          let transitionCompleted = false;
 
-          // Función para completar la transición
+          // Función para completar la transición con DOBLE requestAnimationFrame
+          // Esto garantiza que el browser haya pintado la nueva capa antes de remover la vieja
           const completeTransition = (source: string) => {
-            if (!this.map) return;
-            console.log(`✅ [MapViewer] Completando transición para ${layer.id} (Source: ${source})`);
+            if (!this.map || transitionCompleted) return;
+            transitionCompleted = true;
 
-            // 1. Mostrar nueva capa
-            if (this.map.hasLayer(newTileLayer)) {
-              newTileLayer.setOpacity(layer.opacity / 100);
-            }
+            // Cancelar timeout de seguridad si existe
+            const timeoutId = this.pendingTransitions.get(layer.id);
+            if (timeoutId) clearTimeout(timeoutId);
 
-            // 2. Remover capa vieja
-            if (existingLayer && this.map.hasLayer(existingLayer)) {
-              console.log(`🗑️ [MapViewer] Removiendo capa vieja para ${layer.id}`);
-              this.map.removeLayer(existingLayer);
-            }
-
-            // 3. Actualizar estado
+            // Actualizar estado
             this.activeLayers.set(layer.id, newTileLayer);
             this.loadingLayers.delete(layer.id);
             this.pendingTransitions.delete(layer.id);
+
+            // PASO 1: En el próximo frame, hacer visible la nueva capa
+            requestAnimationFrame(() => {
+              if (!this.map) return;
+
+              if (this.map.hasLayer(newTileLayer)) {
+                newTileLayer.setOpacity(targetOpacity);
+              }
+
+              // PASO 2: Después de que el browser pinte la nueva capa, remover la vieja
+              requestAnimationFrame(() => {
+                if (existingLayer && this.map?.hasLayer(existingLayer)) {
+                  this.map.removeLayer(existingLayer);
+                }
+              });
+            });
           };
 
-          // A: Escuchar evento load (ÉXITO)
-          // IMPORTANTE: Escuchar ANTES de agregar al mapa para no perder eventos si es síncrono (cache)
+          // Escuchar evento 'load' ANTES de agregar al mapa
           newTileLayer.on('load', () => {
-             console.log(`📥 [MapViewer] Evento LOAD disparado para ${layer.id}`);
-             // Verificar que esta sea la transición vigente
-             if (this.loadingLayers.get(layer.id) === newTileLayer) {
-                // Cancelar timeout de seguridad
-                const timeoutId = this.pendingTransitions.get(layer.id);
-                if (timeoutId) clearTimeout(timeoutId);
-                completeTransition('LOAD_EVENT');
-             } else {
-               console.log(`⚠️ [MapViewer] Evento LOAD ignorado (capa obsoleta) para ${layer.id}`);
-             }
+            // Solo proceder si esta es la transición activa
+            if (this.loadingLayers.get(layer.id) === newTileLayer) {
+              completeTransition('LOAD_EVENT');
+            }
           });
 
+          // Agregar nueva capa al mapa (con opacity 0, capa vieja sigue visible)
           newTileLayer.addTo(this.map);
 
-          // B: Timeout de seguridad (FALLBACK) - 8 segundos
-          // Si la imagen falla o tarda mucho, forzamos el cambio para no dejar la UI inconsistente eternamente
+          // Timeout de seguridad: si load no dispara en 8s, forzar transición
           const safetyTimeoutId = window.setTimeout(() => {
-             console.warn(`⚠️ [MapViewer] Timeout de carga (8s) para capa ${layer.id}, forzando transición.`);
-             if (this.loadingLayers.get(layer.id) === newTileLayer) {
-                completeTransition('TIMEOUT');
-             }
+            if (this.loadingLayers.get(layer.id) === newTileLayer) {
+              completeTransition('TIMEOUT');
+            }
           }, 8000);
 
           this.pendingTransitions.set(layer.id, safetyTimeoutId);

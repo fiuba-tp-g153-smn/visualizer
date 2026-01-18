@@ -29,6 +29,21 @@ html {
 /* Estilos globales de Leaflet */
 @import 'leaflet/dist/leaflet.css';
 
+/* Desactivar TODAS las transiciones de Leaflet para evitar flash */
+.leaflet-tile-pane,
+.leaflet-tile-pane *,
+.leaflet-tile-container,
+.leaflet-tile {
+  transition: none !important;
+  -webkit-transition: none !important;
+}
+
+/* Desactivar fade animation de Leaflet */
+.leaflet-fade-anim .leaflet-tile,
+.leaflet-fade-anim .leaflet-popup {
+  transition: none !important;
+}
+
 html,
 body {
   margin: 0;

@@ -25,11 +25,6 @@ export class LayerRendererService {
    * Crea un tile layer de Leaflet según la categoría de la capa
    */
   createTileLayer(layer: Layer): L.TileLayer {
-    console.log(
-      `🛠️ [LayerRenderer] Creando tile layer para:`,
-      layer.id,
-      `timeIndex: ${layer.timeIndex}`
-    );
     let tileLayer: L.TileLayer;
 
     switch (layer.category) {
@@ -53,17 +48,10 @@ export class LayerRendererService {
    * Crea un tile layer para satélite ABI
    */
   private createAbiTileLayer(layerId: string, opacity: number, timeIndex: number = 0): L.TileLayer {
-    console.log(
-      `🛰️ [ABI] Intentando crear layer para ${layerId}, hasConfig: ${this.channelConfigService.hasConfig(
-        layerId
-      )}`
-    );
-
     // Si hay configuración dinámica cargada, usarla
     if (this.channelConfigService.hasConfig(layerId)) {
       const config = this.channelConfigService.getChannelConfig(layerId);
       const tileUrl = this.channelConfigService.buildTileUrl(layerId, timeIndex);
-      console.log(`✅ [ABI] Config encontrada para ${layerId}, tileUrl: ${tileUrl}`);
 
       if (config && tileUrl) {
         const bounds = config.channel_info.bounding_box;
@@ -88,7 +76,6 @@ export class LayerRendererService {
 
     // Si no hay configuración, crear un layer vacío/placeholder
     // Esto evita errores de carga mientras se obtiene la configuración del backend
-    console.warn(`⏳ [ABI] NO hay config para ${layerId}, creando placeholder...`);
     const placeholder = L.tileLayer('about:blank', {
       opacity: 0,
       attribution: 'Cargando...',
