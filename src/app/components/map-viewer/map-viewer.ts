@@ -8,7 +8,7 @@ import { TileService } from '../../services/tile.service';
 import { LayerService } from '../../services/layer.service';
 import { LayerRendererService } from '../../services/layer-renderer.service';
 import { ChannelConfigService } from '../../services/channel-config.service';
-import { Layer, TileProvider } from '../../models';
+import { Layer, TileProvider, LayerCategory } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -26,9 +26,9 @@ export class MapViewer implements OnInit, OnDestroy {
   private channelConfigService = inject(ChannelConfigService);
 
   private currentTileLayer: L.TileLayer | null = null;
-  private activeLayers = new Map<string, L.TileLayer>();
-  private pendingTransitions = new Map<string, number>();
-  private loadingLayers = new Map<string, L.TileLayer>();
+  // private activeLayers ... replaced by onMapLayers
+  // private pendingTransitions ... removed
+  // private loadingLayers ... removed
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -58,11 +58,9 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.pendingTransitions.forEach((timeoutId) => clearTimeout(timeoutId));
-    this.pendingTransitions.clear();
-    // Limpiar capas en carga
-    this.loadingLayers.forEach((layer) => layer.remove());
-    this.loadingLayers.clear();
+    // Limpiar capas
+    this.onMapLayers.forEach((layer) => layer.remove());
+    this.onMapLayers.clear();
 
     if (this.map) {
       this.map.remove();
@@ -102,137 +100,85 @@ export class MapViewer implements OnInit, OnDestroy {
     }).addTo(this.map);
   }
 
+  private onMapLayers = new Map<string, L.TileLayer>();
+
   private syncLayers(layers: Layer[]): void {
     if (!this.map) return;
 
-    const activeIds = new Set(layers.map((l) => l.id));
-
-    // Cleanup removidas
-    for (const [id, tileLayer] of this.activeLayers) {
-      if (!activeIds.has(id)) {
-        this.clearPendingTransition(id);
-        this.map.removeLayer(tileLayer);
-        this.activeLayers.delete(id);
-      }
-    }
+    const desiredLayersOnMap = new Map<string, L.TileLayer>();
+    const activeKeysForPool = new Set<string>();
 
     for (const layer of layers) {
-      const existingLayer = this.activeLayers.get(layer.id);
+      if (!layer.visible) continue;
 
-      if (existingLayer) {
-        const currentTimeIndex = (existingLayer as any)._timeIndex ?? 0;
-        const layerTimeIndex = layer.timeIndex ?? 0;
-        const isPlaceholder = (existingLayer as any)._isPlaceholder === true;
-        const hasConfig = this.channelConfigService.hasConfig(layer.id);
+      const tilesets = this.channelConfigService.getTilesets(layer.id);
+      const currentTimeIndex = layer.timeIndex ?? 0;
 
-        // Actualizar si cambió el tiempo O si tenemos un placeholder y llegó la config
-        const shouldUpdate =
-          currentTimeIndex !== layerTimeIndex || (isPlaceholder && hasConfig);
+      // Definir ventana de pre-fetching: [T-1, T, T+1]
+      // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T
+      const indicesToLoad = new Set<number>([currentTimeIndex]);
+      
+      // Agregar vecinos si existen
+      if (tilesets.length > 0) {
+        if (currentTimeIndex < tilesets.length - 1) indicesToLoad.add(currentTimeIndex + 1);
+        if (currentTimeIndex > 0) indicesToLoad.add(currentTimeIndex - 1);
+      }
 
-        if (shouldUpdate) {
-          // DOUBLE-BUFFERING: Mantener capa vieja visible mientras carga la nueva
-          // Si ya estamos cargando algo para esta capa, cancelar esa carga anterior
-          this.clearPendingTransition(layer.id);
-
-          const newTileLayer = this.layerRendererService.createTileLayer(layer);
-          (newTileLayer as any)._timeIndex = layerTimeIndex;
-
-          const targetOpacity = layer.opacity / 100;
-          // CRÍTICO: Nueva capa empieza con opacity 0 (invisible pero cargando)
-          newTileLayer.setOpacity(0);
-
-          // Guardar referencia a la capa en carga
-          this.loadingLayers.set(layer.id, newTileLayer);
-
-          // Flag para evitar transiciones duplicadas
-          let transitionCompleted = false;
-
-          // Función para completar la transición con DOBLE requestAnimationFrame
-          // Esto garantiza que el browser haya pintado la nueva capa antes de remover la vieja
-          const completeTransition = (source: string) => {
-            if (!this.map || transitionCompleted) return;
-            transitionCompleted = true;
-
-            // Cancelar timeout de seguridad si existe
-            const timeoutId = this.pendingTransitions.get(layer.id);
-            if (timeoutId) clearTimeout(timeoutId);
-
-            // Actualizar estado
-            this.activeLayers.set(layer.id, newTileLayer);
-            this.loadingLayers.delete(layer.id);
-            this.pendingTransitions.delete(layer.id);
-
-            // PASO 1: En el próximo frame, hacer visible la nueva capa
-            requestAnimationFrame(() => {
-              if (!this.map) return;
-
-              if (this.map.hasLayer(newTileLayer)) {
-                newTileLayer.setOpacity(targetOpacity);
-              }
-
-              // PASO 2: Después de que el browser pinte la nueva capa, remover la vieja
-              requestAnimationFrame(() => {
-                if (existingLayer && this.map?.hasLayer(existingLayer)) {
-                  this.map.removeLayer(existingLayer);
-                }
-              });
-            });
-          };
-
-          // Escuchar evento 'load' ANTES de agregar al mapa
-          newTileLayer.on('load', () => {
-            // Solo proceder si esta es la transición activa
-            if (this.loadingLayers.get(layer.id) === newTileLayer) {
-              completeTransition('LOAD_EVENT');
-            }
-          });
-
-          // Agregar nueva capa al mapa (con opacity 0, capa vieja sigue visible)
-          newTileLayer.addTo(this.map);
-
-          // Timeout de seguridad: si load no dispara en 8s, forzar transición
-          const safetyTimeoutId = window.setTimeout(() => {
-            if (this.loadingLayers.get(layer.id) === newTileLayer) {
-              completeTransition('TIMEOUT');
-            }
-          }, 8000);
-
-          this.pendingTransitions.set(layer.id, safetyTimeoutId);
-
-        } else {
-          // Solo actualizar propiedades visuales si es la misma capa/tiempo
-          existingLayer.setOpacity(layer.opacity / 100);
-          if (layer.zIndex !== undefined) {
-            existingLayer.setZIndex(layer.zIndex);
-          }
+      for (const tIndex of indicesToLoad) {
+        // Obtener ID del tileset para la clave única (duplicando lógica simple para consistencia)
+        let tilesetId = 'default';
+        if (tilesets && tilesets[tIndex]) {
+          tilesetId = tilesets[tIndex].id;
+        } else if (layer.category === LayerCategory.SATELLITE_ABI) {
+             tilesetId = `placeholder-${tIndex}`;
         }
-      } else {
-        // Primera vez que se agrega la capa
-        const tileLayer = this.layerRendererService.createTileLayer(layer);
-        (tileLayer as any)._timeIndex = layer.timeIndex ?? 0;
-        tileLayer.addTo(this.map);
-        this.activeLayers.set(layer.id, tileLayer);
+        
+        const uniqueKey = `${layer.id}-${tilesetId}`;
+        activeKeysForPool.add(uniqueKey);
+
+        // Obtener instancia del pool
+        const tileLayer = this.layerRendererService.getTileLayerForTime(layer, tIndex);
+        desiredLayersOnMap.set(uniqueKey, tileLayer);
+
+        // Configurar estado visual
+        const isTarget = tIndex === currentTimeIndex;
+        
+        // Z-Index: Mantener orden relativo de capas.
+        // Capas ocultas (prefetch) van al fondo para no interferir eventos aunque tengan opacity 0
+        if (isTarget) {
+            tileLayer.setOpacity(layer.opacity / 100);
+            if (layer.zIndex !== undefined) tileLayer.setZIndex(layer.zIndex);
+        } else {
+            tileLayer.setOpacity(0);
+            tileLayer.setZIndex(0);
+        }
       }
     }
-  }
 
-  private clearPendingTransition(layerId: string): void {
-    // 1. Cancelar timeout
-    const timeoutId = this.pendingTransitions.get(layerId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      this.pendingTransitions.delete(layerId);
-    }
-
-    // 2. Remover capa en carga si existe (para evitar leak)
-    const loadingLayer = this.loadingLayers.get(layerId);
-    if (loadingLayer) {
-      if (this.map && this.map.hasLayer(loadingLayer)) {
-        this.map.removeLayer(loadingLayer);
+    // 1. Remover capas que ya no son deseadas
+    for (const [key, layer] of this.onMapLayers) {
+      if (!desiredLayersOnMap.has(key)) {
+        this.map.removeLayer(layer);
       }
-      this.loadingLayers.delete(layerId);
     }
+
+    // 2. Agregar nuevas capas
+    for (const [key, layer] of desiredLayersOnMap) {
+      if (!this.onMapLayers.has(key)) {
+        layer.addTo(this.map!);
+      }
+    }
+
+    // Actualizar estado local
+    this.onMapLayers = desiredLayersOnMap;
+
+    // 3. Limpiar pool global de capas que ya no usamos
+    // Importante: No limpiamos inmediatamente si saltamos lejos, para dar chance al GC natural o LRU futuro.
+    // Pero por diseño actual, "prune" es explícito.
+    this.layerRendererService.prunePool(activeKeysForPool);
   }
+
+  // Métodos antiguos de transición eliminados en favor de pre-fetching simple
 
   zoomIn(): void {
     this.map?.zoomIn();

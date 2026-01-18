@@ -110,8 +110,8 @@ export class ChannelConfigService {
     // Reemplazar {tileset_id} en el patrón
     let url = `${BACKEND_CONFIG.baseUrl}${pattern.replace('{tileset_id}', tileset.id)}`;
 
-    // Agregar tileset_id como parámetro para evitar caché cuando cambia el período
-    url += `?t=${tileset.id}`;
+    // Cache-busting removed: Backend now sends Immutable and ETag headers
+    // url += `?t=${tileset.id}`;
 
     return url;
   }
