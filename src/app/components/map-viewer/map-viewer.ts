@@ -26,6 +26,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private currentTileLayer: L.TileLayer | null = null;
   private activeLayers = new Map<string, L.TileLayer>();
   private pendingTransitions = new Map<string, number>();
+  private loadingLayers = new Map<string, L.TileLayer>();
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -56,6 +57,10 @@ export class MapViewer implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.pendingTransitions.forEach((timeoutId) => clearTimeout(timeoutId));
     this.pendingTransitions.clear();
+    // Limpiar capas en carga
+    this.loadingLayers.forEach((layer) => layer.remove());
+    this.loadingLayers.clear();
+
     if (this.map) {
       this.map.remove();
     }
@@ -98,13 +103,10 @@ export class MapViewer implements OnInit, OnDestroy {
 
     const activeIds = new Set(layers.map((l) => l.id));
 
+    // Cleanup removidas
     for (const [id, tileLayer] of this.activeLayers) {
       if (!activeIds.has(id)) {
-        const pendingTimeout = this.pendingTransitions.get(id);
-        if (pendingTimeout) {
-          clearTimeout(pendingTimeout);
-          this.pendingTransitions.delete(id);
-        }
+        this.clearPendingTransition(id);
         this.map.removeLayer(tileLayer);
         this.activeLayers.delete(id);
       }
@@ -119,40 +121,91 @@ export class MapViewer implements OnInit, OnDestroy {
         const hasTimeIndexChanged = currentTimeIndex !== layerTimeIndex;
 
         if (hasTimeIndexChanged) {
-          const pendingTimeout = this.pendingTransitions.get(layer.id);
-          if (pendingTimeout) {
-            clearTimeout(pendingTimeout);
-          }
+          // Si ya estamos cargando algo para esta capa, cancelar esa carga anterior
+          this.clearPendingTransition(layer.id);
 
           const newTileLayer = this.layerRendererService.createTileLayer(layer);
           (newTileLayer as any)._timeIndex = layerTimeIndex;
           newTileLayer.setOpacity(0);
           newTileLayer.addTo(this.map);
 
-          const timeoutId = setTimeout(() => {
-            if (this.map && this.map.hasLayer(newTileLayer)) {
+          // Guardar referencia
+          this.loadingLayers.set(layer.id, newTileLayer);
+
+          // Función para completar la transición
+          const completeTransition = () => {
+            if (!this.map) return;
+
+            // 1. Mostrar nueva capa
+            if (this.map.hasLayer(newTileLayer)) {
               newTileLayer.setOpacity(layer.opacity / 100);
             }
-            if (this.map && this.map.hasLayer(existingLayer)) {
+
+            // 2. Remover capa vieja
+            if (existingLayer && this.map.hasLayer(existingLayer)) {
               this.map.removeLayer(existingLayer);
             }
-            this.activeLayers.set(layer.id, newTileLayer);
-            this.pendingTransitions.delete(layer.id);
-          }, 250);
 
-          this.pendingTransitions.set(layer.id, timeoutId);
+            // 3. Actualizar estado
+            this.activeLayers.set(layer.id, newTileLayer);
+            this.loadingLayers.delete(layer.id);
+            this.pendingTransitions.delete(layer.id);
+          };
+
+          // A: Escuchar evento load (ÉXITO)
+          newTileLayer.on('load', () => {
+             // Verificar que esta sea la transición vigente
+             if (this.loadingLayers.get(layer.id) === newTileLayer) {
+                // Cancelar timeout de seguridad
+                const timeoutId = this.pendingTransitions.get(layer.id);
+                if (timeoutId) clearTimeout(timeoutId);
+                completeTransition();
+             }
+          });
+
+          // B: Timeout de seguridad (FALLBACK) - 8 segundos
+          // Si la imagen falla o tarda mucho, forzamos el cambio para no dejar la UI inconsistente eternamente
+          const safetyTimeoutId = window.setTimeout(() => {
+             console.warn(`⚠️ [MapViewer] Timeout de carga para capa ${layer.id}, forzando transición.`);
+             if (this.loadingLayers.get(layer.id) === newTileLayer) {
+                completeTransition();
+             }
+          }, 8000);
+
+          this.pendingTransitions.set(layer.id, safetyTimeoutId);
+
         } else {
+          // Solo actualizar propiedades visuales si es la misma capa/tiempo
           existingLayer.setOpacity(layer.opacity / 100);
           if (layer.zIndex !== undefined) {
             existingLayer.setZIndex(layer.zIndex);
           }
         }
       } else {
+        // Primera vez que se agrega la capa
         const tileLayer = this.layerRendererService.createTileLayer(layer);
         (tileLayer as any)._timeIndex = layer.timeIndex ?? 0;
         tileLayer.addTo(this.map);
         this.activeLayers.set(layer.id, tileLayer);
       }
+    }
+  }
+
+  private clearPendingTransition(layerId: string): void {
+    // 1. Cancelar timeout
+    const timeoutId = this.pendingTransitions.get(layerId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this.pendingTransitions.delete(layerId);
+    }
+
+    // 2. Remover capa en carga si existe (para evitar leak)
+    const loadingLayer = this.loadingLayers.get(layerId);
+    if (loadingLayer) {
+      if (this.map && this.map.hasLayer(loadingLayer)) {
+        this.map.removeLayer(loadingLayer);
+      }
+      this.loadingLayers.delete(layerId);
     }
   }
 
