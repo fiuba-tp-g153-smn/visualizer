@@ -12,14 +12,14 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     description: 'Capas satelitales GOES-16',
     icon: 'satellite_alt',
     expanded: true,
-    subgroups: [ABI_SUBGROUP, GLM_SUBGROUP],
+    subgroups: [ABI_SUBGROUP],
   },
-  {
-    id: 'radar',
-    name: 'Radar',
-    description: 'Capas de radar meteorológico',
-    icon: 'waves',
-    expanded: false,
-    subgroups: [],
-  },
+  // {
+  //   id: 'radar',
+  //   name: 'Radar',
+  //   description: 'Capas de radar meteorológico',
+  //   icon: 'waves',
+  //   expanded: false,
+  //   subgroups: [],
+  // },
 ];
