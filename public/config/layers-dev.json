@@ -1,0 +1,31 @@
+[
+  {
+    "id": "satellite",
+    "menuVisible": true,
+    "subgroups": [
+      {
+        "id": "abi",
+        "menuVisible": true,
+        "layers": [
+          { "id": "abi-ch2", "menuVisible": true },
+          { "id": "abi-ch9", "menuVisible": true },
+          { "id": "abi-ch13", "menuVisible": true }
+        ]
+      },
+      {
+        "id": "glm",
+        "menuVisible": true,
+        "layers": [
+          { "id": "glm-ch2", "menuVisible": true },
+          { "id": "glm-ch9", "menuVisible": true },
+          { "id": "glm-ch13", "menuVisible": true }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "radar",
+    "menuVisible": true,
+    "subgroups": []
+  }
+]

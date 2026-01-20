@@ -1,6 +1,7 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Layer, LayerGroup, LayerPlaybackConfig } from '../models';
 import { LAYER_DEFINITIONS } from '../config/layer-definitions';
+import { LayerConfigLoaderService } from './layer-config-loader.service';
 
 interface LayerState {
   id: string;
@@ -16,7 +17,9 @@ interface LayerState {
 })
 export class LayerService {
   private readonly STORAGE_KEY = 'smn-active-layers';
-  private readonly _layerGroups = signal<LayerGroup[]>(this._initializeLayerGroups());
+  private readonly layerConfigLoader = inject(LayerConfigLoaderService);
+  private readonly _layerGroups = signal<LayerGroup[]>(LAYER_DEFINITIONS);
+  private configLoaded = signal(false);
 
   // Intervalos de reproducción activos
   private playIntervals = new Map<string, any>();
@@ -31,6 +34,9 @@ export class LayerService {
   });
 
   constructor() {
+    // Cargar configuración desde JSON
+    this._loadConfiguration();
+
     // Persistir estado cuando cambian las capas
     effect(() => {
       const layers = this._getAllLayers();
@@ -38,8 +44,75 @@ export class LayerService {
     });
   }
 
-  private _initializeLayerGroups(): LayerGroup[] {
-    return LAYER_DEFINITIONS;
+  private async _loadConfiguration(): Promise<void> {
+    try {
+      console.log('[LayerService] Iniciando carga de configuración');
+      const minimalConfig = await this.layerConfigLoader.loadLayerConfig();
+      const mergedConfig = this._mergeConfigWithDefinitions(LAYER_DEFINITIONS, minimalConfig);
+      this._layerGroups.set(mergedConfig);
+      this._mergePersistedState();
+      this.configLoaded.set(true);
+      console.log('[LayerService] Configuración cargada y aplicada');
+    } catch (error) {
+      console.error('[LayerService] Failed to load layer configuration, using defaults:', error);
+      this.configLoaded.set(true);
+    }
+  }
+
+  private _mergeConfigWithDefinitions(
+    definitions: LayerGroup[],
+    minimalConfig: any[]
+  ): LayerGroup[] {
+    return definitions.map((group) => {
+      const groupConfig = minimalConfig.find((g) => g.id === group.id);
+      return {
+        ...group,
+        menuVisible: groupConfig?.menuVisible !== undefined ? groupConfig.menuVisible : true,
+        subgroups: group.subgroups.map((subgroup) => {
+          const subgroupConfig = groupConfig?.subgroups?.find((sg: any) => sg.id === subgroup.id);
+          return {
+            ...subgroup,
+            menuVisible: subgroupConfig?.menuVisible !== undefined ? subgroupConfig.menuVisible : true,
+            layers: subgroup.layers.map((layer) => {
+              const layerConfig = subgroupConfig?.layers?.find((l: any) => l.id === layer.id);
+              return {
+                ...layer,
+                menuVisible: layerConfig?.menuVisible !== undefined ? layerConfig.menuVisible : true,
+              };
+            }),
+          };
+        }),
+      };
+    });
+  }
+
+  private _mergePersistedState(): void {
+    const savedState = this._loadState();
+    if (!savedState) return;
+
+    this._layerGroups.update((groups: LayerGroup[]) => {
+      return groups.map((group) => ({
+        ...group,
+        subgroups: group.subgroups.map((subgroup) => ({
+          ...subgroup,
+          layers: subgroup.layers.map((layer) => {
+            const savedLayerState = savedState.find((s) => s.id === layer.id);
+            if (savedLayerState) {
+              // Aplicar solo el estado de reproducción, no menuVisible
+              return {
+                ...layer,
+                visible: savedLayerState.visible,
+                opacity: savedLayerState.opacity,
+                zIndex: savedLayerState.zIndex,
+                timeIndex: savedLayerState.timeIndex,
+                playback: savedLayerState.playback,
+              };
+            }
+            return layer;
+          }),
+        })),
+      }));
+    });
   }
 
   private _saveState(layers: Layer[]): void {

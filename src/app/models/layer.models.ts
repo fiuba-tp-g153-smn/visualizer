@@ -33,6 +33,7 @@ export interface Layer {
   category: LayerCategory;
   visible: boolean;
   opacity: number; // 0-100
+  menuVisible?: boolean; // Si la capa es visible en el menú (por defecto true)
   zIndex?: number; // Solo para capas visibles, define orden de renderizado
   timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
   playback?: LayerPlaybackConfig; // Configuración de reproducción
@@ -45,6 +46,7 @@ export interface LayerSubgroup {
   id: string;
   name: string;
   description?: string;
+  menuVisible?: boolean; // Visibilidad del subgrupo en el menú
   layers: Layer[];
   expanded: boolean;
 }
@@ -57,6 +59,7 @@ export interface LayerGroup {
   name: string;
   description?: string;
   icon: string; // Material icon name
+  menuVisible?: boolean; // Visibilidad del grupo en el menú
   subgroups: LayerSubgroup[];
   expanded: boolean;
 }

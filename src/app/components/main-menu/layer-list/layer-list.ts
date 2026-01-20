@@ -68,35 +68,59 @@ export class LayerListComponent implements MenuPanelComponent {
   }
 
   /**
-   * Grupos filtrados según el texto de búsqueda
+   * Grupos filtrados según el texto de búsqueda y menuVisible
    */
   filteredGroups = computed(() => {
     const search = this.normalizeText(this.searchText().trim());
+    const groups = this.layerService.layerGroups();
+
     if (!search) {
-      return this.layerService.layerGroups().map((group) => ({
+      const result = groups
+        .filter((group) => group.menuVisible !== false)
+        .map((group) => ({
         ...group,
         _shouldExpandGroup: false,
-        subgroups: group.subgroups.map((sg) => ({ ...sg, _shouldExpandSubgroup: false })),
+        subgroups: group.subgroups
+          .filter((sg) => sg.menuVisible !== false)
+          .map((sg) => ({
+          ...sg,
+          _shouldExpandSubgroup: false,
+          layers: sg.layers.filter((layer) => layer.menuVisible !== false),
+          })),
       }));
+
+      // Debug: log las capas filtradas
+      console.log('[LayerList] Capas visibles sin búsqueda:', {
+        grupos: result.map(g => ({
+          name: g.name,
+          capas: g.subgroups.flatMap(sg => sg.layers.map(l => ({ id: l.id, name: l.name, menuVisible: l.menuVisible })))
+        }))
+      });
+
+      return result;
     }
 
     return this.layerService
       .layerGroups()
+      .filter((group) => group.menuVisible !== false)
       .map((group) => {
         const groupNameMatches = this.normalizeText(group.name).includes(search);
 
         // Filtrar subgrupos y capas
         const filteredSubgroups = group.subgroups
+          .filter((subgroup) => subgroup.menuVisible !== false)
           .map((subgroup) => {
             const subgroupNameMatches = this.normalizeText(subgroup.name).includes(search);
-            const matchingLayers = subgroup.layers.filter((layer) =>
+            // Filtrar capas que sean menuVisible y coincidan con la búsqueda
+            const visibleLayers = subgroup.layers.filter((layer) => layer.menuVisible !== false);
+            const matchingLayers = visibleLayers.filter((layer) =>
               this.normalizeText(layer.name).includes(search)
             );
 
             // Incluir todas las capas si coincide el grupo o subgrupo
             const layers =
               matchingLayers.length > 0 || subgroupNameMatches || groupNameMatches
-                ? subgroup.layers.filter(
+                ? visibleLayers.filter(
                     (layer) =>
                       this.normalizeText(layer.name).includes(search) ||
                       subgroupNameMatches ||
