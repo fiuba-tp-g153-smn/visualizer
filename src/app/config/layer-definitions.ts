@@ -1,4 +1,5 @@
 import { LayerGroup } from '../models';
+import { environment } from '../../environments/environment';
 import { ABI_SUBGROUP } from './layers/satellite/abi.layers';
 import { GLM_SUBGROUP } from './layers/satellite/glm.layers';
 
@@ -22,4 +23,4 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     expanded: false,
     subgroups: [],
   },
-];
+].filter((group) => !environment.ui.disabledLayers.includes(group.id));

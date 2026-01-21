@@ -1,4 +1,11 @@
-<div class="layer-list">
+<div class="layer-list" [class.disabled-state]="!hasAvailableLayers()">
+  @if (!hasAvailableLayers()) {
+  <div class="empty-state-container">
+    <mat-icon class="empty-icon">layers_clear</mat-icon>
+    <h3>Sin capas disponibles</h3>
+    <p>No hay capas configuradas para visualizar.</p>
+  </div>
+  } @else {
   <mat-tab-group class="layer-tabs" animationDuration="0ms">
     <!-- Tab: Capas Disponibles -->
     <mat-tab>
@@ -101,4 +108,5 @@
       </div>
     </mat-tab>
   </mat-tab-group>
+  }
 </div>

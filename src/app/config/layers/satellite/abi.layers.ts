@@ -1,4 +1,5 @@
 import { LayerSubgroup, LayerType, LayerCategory } from '../../../models';
+import { environment } from '../../../../environments/environment';
 
 /**
  * Valores por defecto para capas ABI
@@ -43,5 +44,5 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       category: LayerCategory.SATELLITE_ABI,
       ...ABI_DEFAULTS,
     },
-  ],
+  ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
 };

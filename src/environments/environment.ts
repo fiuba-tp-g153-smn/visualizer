@@ -10,4 +10,7 @@ export const environment = {
   tiles: {
     format: $ENV.TILE_FORMAT,
   },
+  ui: {
+    disabledLayers: [] as string[],
+  },
 };
