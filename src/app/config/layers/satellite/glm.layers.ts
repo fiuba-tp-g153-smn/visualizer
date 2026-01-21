@@ -1,4 +1,5 @@
 import { LayerSubgroup, LayerType, LayerCategory } from '../../../models';
+import { environment } from '../../../../environments/environment';
 
 const GLM_DEFAULTS = {
   visible: false,
@@ -35,5 +36,5 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       category: LayerCategory.SATELLITE_GLM,
       ...GLM_DEFAULTS,
     },
-  ],
+  ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
 };

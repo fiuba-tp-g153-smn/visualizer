@@ -10,4 +10,7 @@ export const environment = {
   tiles: {
     format: $ENV.TILE_FORMAT,
   },
+  ui: {
+    disabledLayers: ['abi-ch2', 'abi-ch9', 'radar', 'glm-ch2', 'glm-ch9', 'glm-ch13'],
+  },
 };

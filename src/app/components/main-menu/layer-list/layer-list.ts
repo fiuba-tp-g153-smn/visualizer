@@ -58,6 +58,15 @@ export class LayerListComponent implements MenuPanelComponent {
   hasSearch = computed(() => this.searchText().trim().length > 0);
 
   /**
+   * Indica si hay capas disponibles para mostrar
+   */
+  hasAvailableLayers = computed(() => {
+    return this.layerService.layerGroups().some((group) => {
+      return group.subgroups.some((subgroup) => subgroup.layers.length > 0);
+    });
+  });
+
+  /**
    * Normaliza texto removiendo tildes y convirtiendo a minúsculas
    */
   private normalizeText(text: string): string {
@@ -72,54 +81,47 @@ export class LayerListComponent implements MenuPanelComponent {
    */
   filteredGroups = computed(() => {
     const search = this.normalizeText(this.searchText().trim());
-    if (!search) {
-      return this.layerService.layerGroups().map((group) => ({
-        ...group,
-        _shouldExpandGroup: false,
-        subgroups: group.subgroups.map((sg) => ({ ...sg, _shouldExpandSubgroup: false })),
-      }));
-    }
 
-    return this.layerService
-      .layerGroups()
+    // 1. Obtener grupos base
+    const baseGroups = this.layerService.layerGroups();
+
+    // 2. Procesar grupos (filtrar vacíos y aplicar búsqueda si existe)
+    return baseGroups
       .map((group) => {
-        const groupNameMatches = this.normalizeText(group.name).includes(search);
+        // Si hay búsqueda, filtrar por nombre
+        const groupNameMatches = search ? this.normalizeText(group.name).includes(search) : true;
 
-        // Filtrar subgrupos y capas
+        // Filtrar subgrupos
         const filteredSubgroups = group.subgroups
           .map((subgroup) => {
-            const subgroupNameMatches = this.normalizeText(subgroup.name).includes(search);
-            const matchingLayers = subgroup.layers.filter((layer) =>
-              this.normalizeText(layer.name).includes(search)
-            );
+            const subgroupNameMatches = search
+              ? this.normalizeText(subgroup.name).includes(search)
+              : true;
 
-            // Incluir todas las capas si coincide el grupo o subgrupo
-            const layers =
-              matchingLayers.length > 0 || subgroupNameMatches || groupNameMatches
-                ? subgroup.layers.filter(
-                    (layer) =>
-                      this.normalizeText(layer.name).includes(search) ||
-                      subgroupNameMatches ||
-                      groupNameMatches
-                  )
-                : [];
+            // Filtrar capas del subgrupo
+            const layers = subgroup.layers.filter((layer) => {
+              if (!search) return true;
+              return (
+                this.normalizeText(layer.name).includes(search) ||
+                subgroupNameMatches ||
+                groupNameMatches
+              );
+            });
 
+            // Retornar subgrupo procesado
             return {
               ...subgroup,
               layers,
-              // Expandir subgrupo solo si hay capas específicas que coinciden
-              _shouldExpandSubgroup: matchingLayers.length > 0,
+              _shouldExpandSubgroup: search ? layers.length > 0 && layers.length < subgroup.layers.length : false,
             };
           })
-          .filter((subgroup) => subgroup.layers.length > 0);
+          .filter((subgroup) => subgroup.layers.length > 0); // Ocultar subgrupos vacíos
 
-        // Expandir grupo si:
-        // - Alguna capa específica coincide (hay subgrupos que deben expandirse)
-        // - O si el nombre del subgrupo coincide (pero no el grupo en sí)
+        // Determinar expansión del grupo
         const hasMatchingLayers = filteredSubgroups.some((sg) => sg._shouldExpandSubgroup);
-        const hasMatchingSubgroups = filteredSubgroups.some((sg) =>
-          this.normalizeText(sg.name).includes(search)
-        );
+        const hasMatchingSubgroups =
+          search &&
+          filteredSubgroups.some((sg) => this.normalizeText(sg.name).includes(search));
 
         return {
           ...group,
@@ -127,7 +129,7 @@ export class LayerListComponent implements MenuPanelComponent {
           _shouldExpandGroup: hasMatchingLayers || (hasMatchingSubgroups && !groupNameMatches),
         };
       })
-      .filter((group) => group.subgroups.length > 0);
+      .filter((group) => group.subgroups.length > 0); // Ocultar grupos vacíos
   });
 
   /**
