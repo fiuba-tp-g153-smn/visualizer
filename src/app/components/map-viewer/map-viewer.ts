@@ -51,6 +51,8 @@ export class MapViewer implements OnInit, OnDestroy {
     }
   }
 
+  currentZoom: number = MAP_CONFIG.initialZoom;
+
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       this.initMap();
@@ -75,6 +77,11 @@ export class MapViewer implements OnInit, OnDestroy {
       maxZoom: MAP_CONFIG.maxZoom,
       zoomControl: false,
       fadeAnimation: false, // Desactivar fade para evitar flash en transiciones
+    });
+
+    // Update zoom level on map events
+    this.map.on('zoom', () => {
+        this.currentZoom = this.map?.getZoom() ?? MAP_CONFIG.initialZoom;
     });
 
     const initialProvider = this.tileService.getCurrentProvider();
@@ -198,7 +205,7 @@ export class MapViewer implements OnInit, OnDestroy {
     return this.map.getZoom() > this.map.getMinZoom();
   }
 
-  getCurrentZoom(): number {
-    return this.map?.getZoom() ?? MAP_CONFIG.initialZoom;
+  getCurrentZoom(): number { // Deprecated but keeping for template safety if needed, though we will update template
+    return this.currentZoom; 
   }
 }
