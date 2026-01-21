@@ -104,15 +104,17 @@ export class LayerRendererService {
         const bounds = config.channel_info.bounding_box;
         const zoomLevels = config.channel_info.zoom_levels;
 
+        // Buffer de seguridad para evitar clipping de tiles en los bordes al hacer zoom
+        const buffer = 5.0; 
+
         return L.tileLayer(tileUrl, {
           minNativeZoom: zoomLevels.min,
           maxNativeZoom: zoomLevels.max,
           minZoom: 0,
           maxZoom: 18,
-          tms: true,
           bounds: [
-            [bounds.miny, bounds.minx],
-            [bounds.maxy, bounds.maxx],
+            [bounds.miny - buffer, bounds.minx - buffer],
+            [bounds.maxy + buffer, bounds.maxx + buffer],
           ],
           noWrap: true,
           attribution: `${config.product} ${config.instrument} ${config.channel} | SMN`,
