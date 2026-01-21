@@ -19,22 +19,22 @@ export const ABI_SUBGROUP: LayerSubgroup = {
   description: 'Advanced Baseline Imager',
   expanded: true,
   layers: [
-    // {
-    //   id: 'abi-ch2',
-    //   name: 'Canal 2 (Visible)',
-    //   description: 'Banda visible (0.64 μm)',
-    //   type: LayerType.RASTER,
-    //   category: LayerCategory.SATELLITE_ABI,
-    //   ...ABI_DEFAULTS,
-    // },
-    // {
-    //   id: 'abi-ch9',
-    //   name: 'Canal 9 (Vapor de agua)',
-    //   description: 'Banda de vapor de agua (6.9 μm)',
-    //   type: LayerType.RASTER,
-    //   category: LayerCategory.SATELLITE_ABI,
-    //   ...ABI_DEFAULTS,
-    // },
+    {
+      id: 'abi-ch2',
+      name: 'Canal 2 (Visible)',
+      description: 'Banda visible (0.64 μm)',
+      type: LayerType.RASTER,
+      category: LayerCategory.SATELLITE_ABI,
+      ...ABI_DEFAULTS,
+    },
+    {
+      id: 'abi-ch9',
+      name: 'Canal 9 (Vapor de agua)',
+      description: 'Banda de vapor de agua (6.9 μm)',
+      type: LayerType.RASTER,
+      category: LayerCategory.SATELLITE_ABI,
+      ...ABI_DEFAULTS,
+    },
     {
       id: 'abi-ch13',
       name: 'Canal 13 (Infrarrojo)',
