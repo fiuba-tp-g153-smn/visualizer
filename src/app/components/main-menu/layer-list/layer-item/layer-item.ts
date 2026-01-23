@@ -98,7 +98,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   lastImagesCount = computed(() => this.layerService.getLastImagesCount(this.layer.id));
 
   // Opciones disponibles para el selector de últimas imágenes
-  lastImagesOptions = [6, 12, 24];
+  lastImagesOptions = [1, 6, 12, 24];
 
   /**
    * Obtiene la capa actualizada desde el servicio (single source of truth)
@@ -130,9 +130,26 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * Obtiene el índice mínimo basado en lastImagesCount
+   * Verifica si hay múltiples períodos (más de 1)
+   */
+  hasMultiplePeriods = computed(() => {
+    return this.maxTimeIndex() > 0;
+  });
+
+  /**
+   * Obtiene el índice mínimo para el slider (limitado por el máximo del dropdown)
    */
   minTimeIndex = computed(() => {
+    const max = this.maxTimeIndex();
+    const maxSelectableCount = Math.max(...this.lastImagesOptions); // 24
+    const effectiveCount = Math.min(max + 1, maxSelectableCount);
+    return Math.max(0, max - effectiveCount + 1);
+  });
+
+  /**
+   * Obtiene el índice mínimo para reproducción (basado en la selección del usuario)
+   */
+  playbackMinTimeIndex = computed(() => {
     const max = this.maxTimeIndex();
     const count = this.lastImagesCount();
     return Math.max(0, max - count + 1);
@@ -197,7 +214,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.isLoadingConfig.set(true);
 
     console.log(
-      `📡 [LayerItem] Cargando config para ${this.layer.id}: ${product}/${instrument}/${channel}`
+      `📡 [LayerItem] Cargando config para ${this.layer.id}: ${product}/${instrument}/${channel}`,
     );
 
     this.channelConfigService
@@ -206,7 +223,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         next: (config) => {
           this.isLoadingConfig.set(false);
           console.log(
-            `✅ [LayerItem] Config cargada para ${this.layer.id}, tilesets: ${config.tilesets.length}`
+            `✅ [LayerItem] Config cargada para ${this.layer.id}, tilesets: ${config.tilesets.length}`,
           );
         },
         error: (err) => {
@@ -404,7 +421,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Alterna play/pause
    */
   togglePlayback(): void {
-    this.layerService.togglePlayback(this.layer.id, this.maxTimeIndex(), this.minTimeIndex());
+    this.layerService.togglePlayback(
+      this.layer.id,
+      this.maxTimeIndex(),
+      this.playbackMinTimeIndex(),
+    );
   }
 
   /**
@@ -420,19 +441,24 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   onLastImagesCountChange(count: number): void {
     const wasPlaying = this.isPlaying();
 
-    // Si estaba reproduciendo, detener primero
-    if (wasPlaying) {
-      this.layerService.stopPlayback(this.layer.id);
-    }
-
     // Actualizar el contador
     this.layerService.setLastImagesCount(this.layer.id, count);
 
-    // Si estaba reproduciendo, reiniciar con el nuevo rango
+    // Si cambió a 1, detener reproducción inmediatamente
+    if (count === 1 && wasPlaying) {
+      this.layerService.stopPlayback(this.layer.id);
+      return;
+    }
+
+    // Si estaba reproduciendo, reiniciar con el nuevo rango (sin detener)
     if (wasPlaying) {
       // Usar setTimeout para asegurar que los computed signals se actualicen
       setTimeout(() => {
-        this.layerService.startPlayback(this.layer.id, this.maxTimeIndex(), this.minTimeIndex());
+        this.layerService.startPlayback(
+          this.layer.id,
+          this.maxTimeIndex(),
+          this.playbackMinTimeIndex(),
+        );
       }, 0);
     }
   }
