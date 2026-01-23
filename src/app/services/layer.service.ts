@@ -141,7 +141,7 @@ export class LayerService {
     if (wasPlaying) {
       const layer = this._findLayer(layerId);
       const maxTimeIndex = layer?.playback?.maxTimeIndex ?? 0;
-      const lastImagesCount = layer?.playback?.lastImagesCount ?? 24;
+      const lastImagesCount = layer?.playback?.lastImagesCount ?? 1;
       const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
       this.stopPlayback(layerId);
       this.startPlayback(layerId, maxTimeIndex, minTimeIndex);
@@ -221,7 +221,7 @@ export class LayerService {
 
   getLastImagesCount(layerId: string): number {
     const layer = this._findLayer(layerId);
-    return layer?.playback?.lastImagesCount ?? 24;
+    return layer?.playback?.lastImagesCount ?? 1;
   }
 
   setLastImagesCount(layerId: string, count: number): void {
@@ -293,7 +293,7 @@ export class LayerService {
       0,
       ...this._getAllLayers()
         .filter((l: Layer) => l.zIndex !== undefined)
-        .map((l: Layer) => l.zIndex!)
+        .map((l: Layer) => l.zIndex!),
     );
     return Math.max(1, maxZIndex + 1);
   }
