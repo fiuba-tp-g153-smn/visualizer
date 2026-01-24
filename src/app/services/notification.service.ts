@@ -23,7 +23,7 @@ export class NotificationService {
       layerId?: string;
       autoClose?: boolean;
       duration?: number;
-    }
+    },
   ): void {
     const notification: Notification = {
       id: `${Date.now()}-${Math.random()}`,
