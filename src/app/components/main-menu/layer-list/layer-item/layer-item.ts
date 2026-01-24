@@ -184,10 +184,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnDestroy(): void {
-    // Detener reproducción si está activa
-    if (this.isPlaying()) {
-      this.layerService.stopPlayback(this.layer.id);
-    }
+    // Don't stop playback on destroy - let it continue in the background
+    // The layer service will manage playback lifecycle independently
   }
 
   /**
