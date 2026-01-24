@@ -22,7 +22,7 @@ export class LayerReloadService {
   private readonly channelConfigService = inject(ChannelConfigService);
   private readonly notificationService = inject(NotificationService);
 
-  private readonly AUTO_REFRESH_INTERVAL_MS = 60 * 1000; // 1 minute
+  private readonly AUTO_REFRESH_INTERVAL_MS = 10 * 1000; // 10 seconds
   private refreshStates = new Map<string, RefreshState>();
 
   /**
@@ -121,6 +121,90 @@ export class LayerReloadService {
   }
 
   /**
+   * Performs refresh and comparison logic (used by both auto and manual refresh)
+   */
+  private performRefreshAndCompare(layerId: string, showNoChanges: boolean = false): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const parts = layerId.split('-');
+      if (parts.length < 2) {
+        reject(new Error('Invalid layer ID'));
+        return;
+      }
+
+      const instrument = parts[0];
+      const channelNumber = parts[1];
+      const channel = `ch-${channelNumber.replace('ch', '')}`;
+      const product = 'goes-19';
+
+      // Get max selectable periods for this layer
+      const maxSelectable = this.getMaxSelectablePeriods(layerId);
+
+      // Get current tilesets before refresh (only last N periods we care about)
+      const beforeAllTilesets = this.channelConfigService.getTilesets(layerId);
+      const beforeTilesets = beforeAllTilesets.slice(-maxSelectable);
+
+      // Reload configuration
+      this.channelConfigService
+        .reloadChannelConfig(layerId, product, instrument, channel)
+        .subscribe({
+          next: () => {
+            // Compare with new tilesets (only last N periods we care about)
+            const afterAllTilesets = this.channelConfigService.getTilesets(layerId);
+            const afterTilesets = afterAllTilesets.slice(-maxSelectable);
+
+            // Check for actual differences in tileset IDs
+            const beforeIds = new Set(beforeTilesets.map((t) => t.id));
+            const afterIds = new Set(afterTilesets.map((t) => t.id));
+
+            const added = afterTilesets.filter((t) => !beforeIds.has(t.id));
+            const removed = beforeTilesets.filter((t) => !afterIds.has(t.id));
+
+            const layerName = this.getLayerDisplayName(layerId);
+
+            if (added.length > 0 || removed.length > 0) {
+              let message: string;
+
+              if (added.length > 0 && removed.length === 0) {
+                // Only additions
+                message =
+                  added.length === 1
+                    ? `1 período agregado para ${layerName}`
+                    : `${added.length} períodos agregados para ${layerName}`;
+              } else if (removed.length > 0 && added.length === 0) {
+                // Only removals
+                message =
+                  removed.length === 1
+                    ? `1 período eliminado para ${layerName}`
+                    : `${removed.length} períodos eliminados para ${layerName}`;
+              } else if (added.length === removed.length) {
+                // Same number of additions and removals - periods modified
+                message =
+                  added.length === 1
+                    ? `1 período modificado para ${layerName}`
+                    : `${added.length} períodos modificados para ${layerName}`;
+              } else {
+                // Different numbers - show both
+                message = `${added.length} períodos agregados, ${removed.length} eliminados para ${layerName}`;
+              }
+
+              this.notificationService.show(NotificationType.INFO, message);
+            } else if (showNoChanges) {
+              // No changes and caller wants notification
+              this.notificationService.show(
+                NotificationType.INFO,
+                `No hay cambios para ${layerName}`,
+              );
+            }
+
+            resolve();
+          },
+          error: (err) => {
+            reject(err);
+          },
+        });
+    });
+  }
+  /**
    * Performs the actual refresh check
    */
   private async performAutoRefresh(layerId: string): Promise<void> {
@@ -129,71 +213,15 @@ export class LayerReloadService {
       return; // Skip if manual refresh is in progress
     }
 
-    // Get current tilesets before refresh
-    const beforeTilesets = this.channelConfigService.getTilesets(layerId);
-    const beforeCount = beforeTilesets.length;
-
-    // Parse layer details
-    const parts = layerId.split('-');
-    if (parts.length < 2) return;
-
-    const instrument = parts[0];
-    const channelNumber = parts[1];
-    const channel = `ch-${channelNumber.replace('ch', '')}`;
-    const product = 'goes-19';
-
-    // Reload configuration
-    this.channelConfigService.reloadChannelConfig(layerId, product, instrument, channel).subscribe({
-      next: () => {
-        // Compare with new tilesets
-        const afterTilesets = this.channelConfigService.getTilesets(layerId);
-        const afterCount = afterTilesets.length;
-
-        const diff = afterCount - beforeCount;
-        const layerName = this.getLayerDisplayName(layerId);
-
-        if (diff !== 0) {
-          let message: string;
-
-          if (diff > 0) {
-            // Periods added
-            const maxSelectable = this.getMaxSelectablePeriods(layerId);
-            const displayDiff =
-              Math.min(afterCount, maxSelectable) - Math.min(beforeCount, maxSelectable);
-            if (displayDiff > 0) {
-              message =
-                displayDiff === 1
-                  ? `1 período agregado para ${layerName}`
-                  : `${displayDiff} períodos agregados para ${layerName}`;
-            } else {
-              // All new periods are beyond the max selectable, don't notify
-
-              if (state) {
-                state.lastRefreshTime = Date.now();
-              }
-              return;
-            }
-          } else {
-            // Periods removed
-            const removed = Math.abs(diff);
-            message =
-              removed === 1
-                ? `1 período eliminado para ${layerName}`
-                : `${removed} períodos eliminados para ${layerName}`;
-          }
-
-          this.notificationService.show(NotificationType.INFO, message);
-        }
-
-        // Update last refresh time
-        if (state) {
-          state.lastRefreshTime = Date.now();
-        }
-      },
-      error: (err) => {
-        console.error(`❌ [LayerReload] Error refreshing ${layerId}:`, err);
-      },
-    });
+    try {
+      await this.performRefreshAndCompare(layerId, false);
+      // Update last refresh time
+      if (state) {
+        state.lastRefreshTime = Date.now();
+      }
+    } catch (err) {
+      // Silently handle errors in auto-refresh
+    }
   }
 
   /**
@@ -255,42 +283,7 @@ export class LayerReloadService {
     layerId: string,
     showNoChangesNotification = false,
   ): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const parts = layerId.split('-');
-      if (parts.length < 2) {
-        reject(new Error('Invalid layer ID'));
-        return;
-      }
-
-      const instrument = parts[0];
-      const channelNumber = parts[1];
-      const channel = `ch-${channelNumber.replace('ch', '')}`;
-      const product = 'goes-19';
-
-      // Get current count before refresh for comparison
-      const beforeCount = this.channelConfigService.getTilesets(layerId).length;
-
-      this.channelConfigService
-        .reloadChannelConfig(layerId, product, instrument, channel)
-        .subscribe({
-          next: () => {
-            // Check if there were changes
-            const afterCount = this.channelConfigService.getTilesets(layerId).length;
-            if (showNoChangesNotification && beforeCount === afterCount) {
-              const layerName = this.getLayerDisplayName(layerId);
-              this.notificationService.show(
-                NotificationType.INFO,
-                `No hay cambios para ${layerName}`,
-              );
-            }
-            resolve();
-          },
-          error: (err) => {
-            console.error(`❌ [LayerReload] Manual refresh error for ${layerId}:`, err);
-            reject(err);
-          },
-        });
-    });
+    return this.performRefreshAndCompare(layerId, showNoChangesNotification);
   }
 
   /**
