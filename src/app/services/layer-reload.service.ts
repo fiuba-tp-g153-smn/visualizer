@@ -279,7 +279,7 @@ export class LayerReloadService {
             if (showNoChangesNotification && beforeCount === afterCount) {
               const layerName = this.getLayerDisplayName(layerId);
               this.notificationService.show(
-                NotificationType.ERROR,
+                NotificationType.INFO,
                 `No hay cambios para ${layerName}`,
               );
             }
