@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -51,7 +51,7 @@ export class MapViewer implements OnInit, OnDestroy {
     }
   }
 
-  currentZoom: number = MAP_CONFIG.initialZoom;
+  currentZoom = signal<number>(MAP_CONFIG.initialZoom);
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -77,11 +77,23 @@ export class MapViewer implements OnInit, OnDestroy {
       maxZoom: MAP_CONFIG.maxZoom,
       zoomControl: false,
       fadeAnimation: false, // Desactivar fade para evitar flash en transiciones
+      zoomAnimation: false, // Desactivar animación de zoom para permitir cambios rápidos
     });
 
     // Update zoom level on map events
+    // Use both 'zoom' (immediate during animation) and 'zoomend' (after animation completes)
     this.map.on('zoom', () => {
-        this.currentZoom = this.map?.getZoom() ?? MAP_CONFIG.initialZoom;
+      const newZoom = this.map?.getZoom();
+      if (newZoom !== undefined) {
+        this.currentZoom.set(newZoom);
+      }
+    });
+
+    this.map.on('zoomend', () => {
+      const newZoom = this.map?.getZoom();
+      if (newZoom !== undefined) {
+        this.currentZoom.set(newZoom);
+      }
     });
 
     const initialProvider = this.tileService.getCurrentProvider();
@@ -124,7 +136,7 @@ export class MapViewer implements OnInit, OnDestroy {
       // Definir ventana de pre-fetching: [T-1, T, T+1]
       // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T
       const indicesToLoad = new Set<number>([currentTimeIndex]);
-      
+
       // Agregar vecinos si existen
       if (tilesets.length > 0) {
         if (currentTimeIndex < tilesets.length - 1) indicesToLoad.add(currentTimeIndex + 1);
@@ -137,9 +149,9 @@ export class MapViewer implements OnInit, OnDestroy {
         if (tilesets && tilesets[tIndex]) {
           tilesetId = tilesets[tIndex].id;
         } else if (layer.category === LayerCategory.SATELLITE_ABI) {
-             tilesetId = `placeholder-${tIndex}`;
+          tilesetId = `placeholder-${tIndex}`;
         }
-        
+
         const uniqueKey = `${layer.id}-${tilesetId}`;
         activeKeysForPool.add(uniqueKey);
 
@@ -149,15 +161,15 @@ export class MapViewer implements OnInit, OnDestroy {
 
         // Configurar estado visual
         const isTarget = tIndex === currentTimeIndex;
-        
+
         // Z-Index: Mantener orden relativo de capas.
         // Capas ocultas (prefetch) van al fondo para no interferir eventos aunque tengan opacity 0
         if (isTarget) {
-            tileLayer.setOpacity(layer.opacity / 100);
-            if (layer.zIndex !== undefined) tileLayer.setZIndex(layer.zIndex);
+          tileLayer.setOpacity(layer.opacity / 100);
+          if (layer.zIndex !== undefined) tileLayer.setZIndex(layer.zIndex);
         } else {
-            tileLayer.setOpacity(0);
-            tileLayer.setZIndex(0);
+          tileLayer.setOpacity(0);
+          tileLayer.setZIndex(0);
         }
       }
     }
@@ -188,11 +200,17 @@ export class MapViewer implements OnInit, OnDestroy {
   // Métodos antiguos de transición eliminados en favor de pre-fetching simple
 
   zoomIn(): void {
-    this.map?.zoomIn();
+    if (this.map) {
+      this.map.zoomIn();
+      // The 'zoom' event will update the signal
+    }
   }
 
   zoomOut(): void {
-    this.map?.zoomOut();
+    if (this.map) {
+      this.map.zoomOut();
+      // The 'zoom' event will update the signal
+    }
   }
 
   canZoomIn(): boolean {
@@ -205,7 +223,8 @@ export class MapViewer implements OnInit, OnDestroy {
     return this.map.getZoom() > this.map.getMinZoom();
   }
 
-  getCurrentZoom(): number { // Deprecated but keeping for template safety if needed, though we will update template
-    return this.currentZoom; 
+  getCurrentZoom(): number {
+    // Deprecated but keeping for template safety if needed, though we will update template
+    return this.currentZoom();
   }
 }
