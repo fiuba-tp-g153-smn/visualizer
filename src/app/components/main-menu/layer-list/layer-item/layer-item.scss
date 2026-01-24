@@ -161,7 +161,30 @@
 
         .control-slider {
           flex: 1;
-          min-width: 0; // Allow slider to shrink
+
+          // Customize the discrete value indicator (thumb label)
+          ::ng-deep {
+            .mdc-slider__value-indicator-container {
+              width: fit-content;
+              left: 0;
+              right: 0;
+              transform: none;
+            }
+
+            .mdc-slider__value-indicator {
+              border-radius: 6px;
+              padding: 4px 8px;
+              height: fit-content;
+              width: fit-content;
+              transform-origin: bottom center;
+            }
+
+            .mdc-slider__value-indicator-text {
+              width: fit-content;
+              font-size: 0.7rem;
+              transform: none;
+            }
+          }
         }
 
         .play-btn {
