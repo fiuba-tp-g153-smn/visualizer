@@ -141,7 +141,7 @@
                     (selectionChange)="onLastImagesCountChange($event.value)"
                     panelClass="layer-select-panel"
                   >
-                    @for (option of lastImagesOptions; track option) {
+                    @for (option of lastImagesOptions(); track option) {
                       <mat-option [value]="option">{{ option }}</mat-option>
                     }
                   </mat-select>
