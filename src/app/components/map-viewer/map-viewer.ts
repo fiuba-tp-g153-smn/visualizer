@@ -26,9 +26,6 @@ export class MapViewer implements OnInit, OnDestroy {
   private channelConfigService = inject(ChannelConfigService);
 
   private currentTileLayer: L.TileLayer | null = null;
-  // private activeLayers ... replaced by onMapLayers
-  // private pendingTransitions ... removed
-  // private loadingLayers ... removed
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -43,15 +40,26 @@ export class MapViewer implements OnInit, OnDestroy {
       // Effect: sincronizar capas satelitales (Reacciona a cambios en capas O en config)
       effect(() => {
         const layers = this.layerService.activeLayers();
-        const configCache = this.channelConfigService.configCache(); // Dependencia para reactividad
         if (this.map) {
           this.syncLayers(layers);
+        }
+      });
+
+      // Effect: sincronizar zoom cuando cambia currentZoom signal
+      effect(() => {
+        const targetZoom = this.currentZoom();
+        if (this.map) {
+          const currentMapZoom = Math.round(this.map.getZoom());
+          if (currentMapZoom !== targetZoom) {
+            this.map.setZoom(targetZoom);
+          }
         }
       });
     }
   }
 
   currentZoom = signal<number>(MAP_CONFIG.initialZoom);
+  private ignoreNextMapEvents = false;
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -77,22 +85,29 @@ export class MapViewer implements OnInit, OnDestroy {
       maxZoom: MAP_CONFIG.maxZoom,
       zoomControl: false,
       fadeAnimation: false, // Desactivar fade para evitar flash en transiciones
-      zoomAnimation: false, // Desactivar animación de zoom para permitir cambios rápidos
     });
 
-    // Update zoom level on map events
-    // Use both 'zoom' (immediate during animation) and 'zoomend' (after animation completes)
+    // Update zoom signal from map events (user scrolling or programmatic changes)
     this.map.on('zoom', () => {
-      const newZoom = this.map?.getZoom();
-      if (newZoom !== undefined) {
-        this.currentZoom.set(newZoom);
+      if (this.ignoreNextMapEvents) {
+        return;
+      }
+      const mapZoom = this.map?.getZoom();
+      if (mapZoom !== undefined && mapZoom !== this.currentZoom()) {
+        this.currentZoom.set(mapZoom);
       }
     });
 
     this.map.on('zoomend', () => {
-      const newZoom = this.map?.getZoom();
-      if (newZoom !== undefined) {
-        this.currentZoom.set(newZoom);
+      const mapZoom = this.map?.getZoom();
+      const targetZoom = this.currentZoom();
+
+      // If map reached the target, we're done
+      if (mapZoom !== undefined && Math.round(mapZoom) === targetZoom) {
+        this.ignoreNextMapEvents = false;
+      } else if (mapZoom !== undefined && Math.round(mapZoom) !== targetZoom && this.map) {
+        // Map didn't reach target - trigger another zoom
+        this.ignoreNextMapEvents = false;
       }
     });
 
@@ -201,26 +216,28 @@ export class MapViewer implements OnInit, OnDestroy {
 
   zoomIn(): void {
     if (this.map) {
-      this.map.zoomIn();
-      // The 'zoom' event will update the signal
+      this.ignoreNextMapEvents = true;
+      const newZoom = Math.min(this.currentZoom() + 1, this.map.getMaxZoom());
+      this.currentZoom.set(newZoom);
     }
   }
 
   zoomOut(): void {
     if (this.map) {
-      this.map.zoomOut();
-      // The 'zoom' event will update the signal
+      this.ignoreNextMapEvents = true;
+      const newZoom = Math.max(this.currentZoom() - 1, this.map.getMinZoom());
+      this.currentZoom.set(newZoom);
     }
   }
 
   canZoomIn(): boolean {
     if (!this.map) return false;
-    return this.map.getZoom() < this.map.getMaxZoom();
+    return this.currentZoom() < this.map.getMaxZoom();
   }
 
   canZoomOut(): boolean {
     if (!this.map) return false;
-    return this.map.getZoom() > this.map.getMinZoom();
+    return this.currentZoom() > this.map.getMinZoom();
   }
 
   getCurrentZoom(): number {
