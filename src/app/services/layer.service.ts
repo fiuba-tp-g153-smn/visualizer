@@ -284,6 +284,13 @@ export class LayerService {
     return layers;
   }
 
+  /**
+   * Obtiene una capa por su ID
+   */
+  getLayerById(layerId: string): Layer | undefined {
+    return this._findLayer(layerId);
+  }
+
   private _findLayer(layerId: string): Layer | undefined {
     return this._getAllLayers().find((layer: Layer) => layer.id === layerId);
   }

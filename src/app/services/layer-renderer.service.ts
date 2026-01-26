@@ -5,6 +5,7 @@ import { BACKEND_CONFIG } from '../config/backend.config';
 import { NotificationService } from './notification.service';
 import { ChannelConfigService } from './channel-config.service';
 import { getAbiTileConfig } from '../config/layer-tiles/satellite/abi.tiles';
+import { IGN_WMS_BASE_CONFIG, getIgnWmsLayerName } from '../config/layer-tiles/map/ign-wms.tiles';
 
 /**
  * Servicio para crear tile layers de Leaflet según categoría
@@ -24,7 +25,6 @@ export class LayerRendererService {
   // Tile Layer Pool: cache de instancias de L.TileLayer para reutilización
   private layerPool = new Map<string, L.TileLayer>();
 
-
   /**
    * Crea u obtiene un tile layer de Leaflet según la categoría de la capa
    */
@@ -39,12 +39,12 @@ export class LayerRendererService {
     // 1. Obtener ID del tileset para generar clave única
     const tilesets = this.channelConfigService.getTilesets(layer.id);
     let tilesetId = 'default';
-    
+
     if (tilesets && tilesets[timeIndex]) {
       tilesetId = tilesets[timeIndex].id;
     } else if (layer.category === LayerCategory.SATELLITE_ABI) {
-        // Si es satélite y no hay config aún, es un placeholder temporal
-        tilesetId = `placeholder-${timeIndex}`;
+      // Si es satélite y no hay config aún, es un placeholder temporal
+      tilesetId = `placeholder-${timeIndex}`;
     }
 
     const poolKey = `${layer.id}-${tilesetId}`;
@@ -60,6 +60,9 @@ export class LayerRendererService {
     switch (layer.category) {
       case LayerCategory.SATELLITE_ABI:
         tileLayer = this.createAbiTileLayer(layer.id, layer.opacity, timeIndex);
+        break;
+      case LayerCategory.IGN_WMS:
+        tileLayer = this.createIgnWmsTileLayer(layer.id, layer.opacity);
         break;
       default:
         throw new Error(`Unsupported layer category: ${layer.category}`);
@@ -90,7 +93,6 @@ export class LayerRendererService {
     // console.log(`Pool size: ${this.layerPool.size} (Active: ${activeKeys.size})`);
   }
 
-
   /**
    * Crea un tile layer para satélite ABI
    */
@@ -105,7 +107,7 @@ export class LayerRendererService {
         const zoomLevels = config.channel_info.zoom_levels;
 
         // Buffer de seguridad para evitar clipping de tiles en los bordes al hacer zoom
-        const buffer = 5.0; 
+        const buffer = 5.0;
 
         return L.tileLayer(tileUrl, {
           minNativeZoom: zoomLevels.min,
@@ -133,6 +135,33 @@ export class LayerRendererService {
     return placeholder;
   }
 
+  /**
+   * Crea un tile layer para capas WMS del IGN
+   */
+  private createIgnWmsTileLayer(layerId: string, opacity: number): L.TileLayer {
+    const layerName = getIgnWmsLayerName(layerId);
+
+    if (!layerName) {
+      console.warn(`No WMS layer name configured for layer: ${layerId}`);
+      const placeholder = L.tileLayer('about:blank', {
+        opacity: 0,
+        attribution: 'Configuración no disponible',
+      });
+      (placeholder as any)._isPlaceholder = true;
+      return placeholder;
+    }
+
+    return L.tileLayer.wms(IGN_WMS_BASE_CONFIG.baseUrl, {
+      layers: layerName,
+      format: IGN_WMS_BASE_CONFIG.format,
+      transparent: IGN_WMS_BASE_CONFIG.transparent,
+      version: IGN_WMS_BASE_CONFIG.version,
+      crs: L.CRS.EPSG3857,
+      opacity: opacity / 100,
+      attribution: IGN_WMS_BASE_CONFIG.attribution,
+    });
+  }
+
   // Para agregar WRF, ECMWF, etc., solo agregar un nuevo case y método privado:
   // case LayerCategory.WRF:
   //   tileLayer = this.createWrfTileLayer(layer.id, layer.opacity);
@@ -154,7 +183,7 @@ export class LayerRendererService {
       console.warn(
         `Error cargando tile de ${layer.name}:`,
         error.error,
-        `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`
+        `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`,
       );
 
       // Después de varios errores consecutivos, notificar al usuario
@@ -165,7 +194,7 @@ export class LayerRendererService {
         if (currentErrors === 0) {
           this.notificationService.error(
             `La capa "${layer.name}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
-            layer.id
+            layer.id,
           );
         }
 
