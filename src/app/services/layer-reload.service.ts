@@ -29,15 +29,9 @@ export class LayerReloadService {
    * Gets the maximum selectable periods for a layer from the layer configuration
    */
   private getMaxSelectablePeriods(layerId: string): number {
-    // Find the layer in all layer groups
-    const layerGroups = this.layerService.layerGroups();
-    for (const group of layerGroups) {
-      for (const subgroup of group.subgroups) {
-        const layer = subgroup.layers.find((l) => l.id === layerId);
-        if (layer?.availablePeriods && layer.availablePeriods.length > 0) {
-          return Math.max(...layer.availablePeriods);
-        }
-      }
+    const layer = this.layerService.getLayerById(layerId);
+    if (layer?.availablePeriods && layer.availablePeriods.length > 0) {
+      return Math.max(...layer.availablePeriods);
     }
     // Default to 1 if not configured
     return 1;

@@ -118,12 +118,12 @@ export class LayerService {
   }
 
   isPlaying(layerId: string): boolean {
-    const layer = this._findLayer(layerId);
+    const layer = this.getLayerById(layerId);
     return layer?.playback?.isPlaying || false;
   }
 
   getPlaySpeed(layerId: string): number {
-    const layer = this._findLayer(layerId);
+    const layer = this.getLayerById(layerId);
     return layer?.playback?.speed || 1;
   }
 
@@ -139,7 +139,7 @@ export class LayerService {
     });
 
     if (wasPlaying) {
-      const layer = this._findLayer(layerId);
+      const layer = this.getLayerById(layerId);
       const maxTimeIndex = layer?.playback?.maxTimeIndex ?? 0;
       const lastImagesCount = layer?.playback?.lastImagesCount ?? 1;
       const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
@@ -175,7 +175,7 @@ export class LayerService {
 
     const speed = this.getPlaySpeed(layerId);
     const interval = setInterval(() => {
-      const layer = this._findLayer(layerId);
+      const layer = this.getLayerById(layerId);
       if (!layer?.visible || !layer.playback?.isPlaying) {
         this.stopPlayback(layerId);
         return;
@@ -220,7 +220,7 @@ export class LayerService {
   }
 
   getLastImagesCount(layerId: string): number {
-    const layer = this._findLayer(layerId);
+    const layer = this.getLayerById(layerId);
     return layer?.playback?.lastImagesCount ?? 1;
   }
 
@@ -239,7 +239,7 @@ export class LayerService {
   }
 
   moveLayerUp(layerId: string): void {
-    const layer = this._findLayer(layerId);
+    const layer = this.getLayerById(layerId);
     if (!layer?.visible || layer.zIndex === undefined) return;
 
     const visibleLayers = this.activeLayers();
@@ -252,7 +252,7 @@ export class LayerService {
   }
 
   moveLayerDown(layerId: string): void {
-    const layer = this._findLayer(layerId);
+    const layer = this.getLayerById(layerId);
     if (!layer?.visible || layer.zIndex === undefined) return;
 
     const visibleLayers = this.activeLayers();
@@ -284,7 +284,7 @@ export class LayerService {
     return layers;
   }
 
-  private _findLayer(layerId: string): Layer | undefined {
+  getLayerById(layerId: string): Layer | undefined {
     return this._getAllLayers().find((layer: Layer) => layer.id === layerId);
   }
 
@@ -299,8 +299,8 @@ export class LayerService {
   }
 
   private _swapZIndex(layerId1: string, layerId2: string): void {
-    const layer1 = this._findLayer(layerId1);
-    const layer2 = this._findLayer(layerId2);
+    const layer1 = this.getLayerById(layerId1);
+    const layer2 = this.getLayerById(layerId2);
 
     if (!layer1?.zIndex || !layer2?.zIndex) return;
 
