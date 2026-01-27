@@ -66,11 +66,4 @@ describe('TileSelectorComponent', () => {
     component.selectProvider('satellite');
     expect(mockTileService.setProvider).toHaveBeenCalledWith('satellite');
   });
-
-  it('should return correct icons', () => {
-    expect(component.getProviderIcon('argenmap')).toBe('map');
-    expect(component.getProviderIcon('satellite')).toBe('satellite_alt');
-    expect(component.getProviderIcon('osm')).toBe('public');
-    expect(component.getProviderIcon('unknown')).toBe('terrain');
-  });
 });

@@ -210,25 +210,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const parts = this.layer.id.split('-');
     if (parts.length < 2) return;
 
-    const instrument = parts[0]; // 'abi'
-    const channelNumber = parts[1]; // 'ch13'
-    const channel = `ch-${channelNumber.replace('ch', '')}`; // 'ch-13'
-    const product = 'goes-19'; // Por defecto
+    const instrument = parts[0];
+    const channelNumber = parts[1];
+    const channel = `ch-${channelNumber.replace('ch', '')}`;
+    const product = 'goes-19';
 
     this.isLoadingConfig.set(true);
-
-    console.log(
-      `📡 [LayerItem] Cargando config para ${this.layer.id}: ${product}/${instrument}/${channel}`,
-    );
 
     this.channelConfigService
       .loadChannelConfig(this.layer.id, product, instrument, channel)
       .subscribe({
         next: (config) => {
           this.isLoadingConfig.set(false);
-          console.log(
-            `✅ [LayerItem] Config cargada para ${this.layer.id}, tilesets: ${config.tilesets.length}`,
-          );
         },
         error: (err) => {
           this.isLoadingConfig.set(false);
