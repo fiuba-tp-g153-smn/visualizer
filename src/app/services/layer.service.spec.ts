@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
 import { LayerService } from './layer.service';
-import { Layer } from '../models';
 
 describe('LayerService', () => {
   let service: LayerService;
@@ -60,10 +59,7 @@ describe('LayerService', () => {
     it('should make layer visible when toggled from hidden', () => {
       service.toggleLayer('abi-ch13');
 
-      const groups = service.layerGroups();
-      const satelliteGroup = groups.find((g) => g.id === 'satellite');
-      const abiSubgroup = satelliteGroup?.subgroups.find((s) => s.id === 'abi');
-      const layer = abiSubgroup?.layers.find((l) => l.id === 'abi-ch13');
+      const layer = service.getLayerById('abi-ch13');
 
       expect(layer?.visible).toBe(true);
     });
@@ -72,10 +68,7 @@ describe('LayerService', () => {
       service.toggleLayer('abi-ch13');
       service.toggleLayer('abi-ch13');
 
-      const groups = service.layerGroups();
-      const satelliteGroup = groups.find((g) => g.id === 'satellite');
-      const abiSubgroup = satelliteGroup?.subgroups.find((s) => s.id === 'abi');
-      const layer = abiSubgroup?.layers.find((l) => l.id === 'abi-ch13');
+      const layer = service.getLayerById('abi-ch13');
 
       expect(layer?.visible).toBe(false);
     });
@@ -83,10 +76,7 @@ describe('LayerService', () => {
     it('should assign zIndex when making layer visible', () => {
       service.toggleLayer('abi-ch13');
 
-      const groups = service.layerGroups();
-      const satelliteGroup = groups.find((g) => g.id === 'satellite');
-      const abiSubgroup = satelliteGroup?.subgroups.find((s) => s.id === 'abi');
-      const layer = abiSubgroup?.layers.find((l) => l.id === 'abi-ch13');
+      const layer = service.getLayerById('abi-ch13');
 
       expect(layer?.zIndex).toBeDefined();
     });
@@ -112,10 +102,7 @@ describe('LayerService', () => {
     it('should set opacity to specified value', () => {
       service.setOpacity('abi-ch13', 50);
 
-      const groups = service.layerGroups();
-      const satelliteGroup = groups.find((g) => g.id === 'satellite');
-      const abiSubgroup = satelliteGroup?.subgroups.find((s) => s.id === 'abi');
-      const layer = abiSubgroup?.layers.find((l) => l.id === 'abi-ch13');
+      const layer = service.getLayerById('abi-ch13');
 
       expect(layer?.opacity).toBe(50);
     });
@@ -123,10 +110,7 @@ describe('LayerService', () => {
     it('should clamp opacity to 0 if value is negative', () => {
       service.setOpacity('abi-ch13', -10);
 
-      const groups = service.layerGroups();
-      const satelliteGroup = groups.find((g) => g.id === 'satellite');
-      const abiSubgroup = satelliteGroup?.subgroups.find((s) => s.id === 'abi');
-      const layer = abiSubgroup?.layers.find((l) => l.id === 'abi-ch13');
+      const layer = service.getLayerById('abi-ch13');
 
       expect(layer?.opacity).toBe(0);
     });
@@ -134,10 +118,7 @@ describe('LayerService', () => {
     it('should clamp opacity to 100 if value exceeds 100', () => {
       service.setOpacity('abi-ch13', 150);
 
-      const groups = service.layerGroups();
-      const satelliteGroup = groups.find((g) => g.id === 'satellite');
-      const abiSubgroup = satelliteGroup?.subgroups.find((s) => s.id === 'abi');
-      const layer = abiSubgroup?.layers.find((l) => l.id === 'abi-ch13');
+      const layer = service.getLayerById('abi-ch13');
 
       expect(layer?.opacity).toBe(100);
     });
@@ -195,7 +176,7 @@ describe('LayerService', () => {
       service.toggleLayer('abi-ch13');
 
       const activeBefore = service.activeLayers();
-      const topLayer = activeBefore[activeBefore.length - 1];
+      const topLayer = activeBefore[0];
       const zIndexBefore = topLayer.zIndex;
 
       service.moveLayerUp(topLayer.id);
@@ -254,7 +235,6 @@ describe('LayerService', () => {
       service.toggleLayer('abi-ch9');
       service.toggleLayer('abi-ch13');
 
-      // Set new order: ch13 (bottom), ch2 (middle), ch9 (top)
       service.setLayerOrder(['abi-ch13', 'abi-ch2', 'abi-ch9']);
 
       const active = service.activeLayers();
@@ -271,17 +251,13 @@ describe('LayerService', () => {
 
       service.setLayerOrder(['abi-ch13', 'abi-ch2', 'abi-ch9']);
 
-      const groups = service.layerGroups();
-      const satelliteGroup = groups.find((g) => g.id === 'satellite');
-      const abiSubgroup = satelliteGroup?.subgroups.find((s) => s.id === 'abi');
+      const ch13 = service.getLayerById('abi-ch13');
+      const ch2 = service.getLayerById('abi-ch2');
+      const ch9 = service.getLayerById('abi-ch9');
 
-      const ch13 = abiSubgroup?.layers.find((l) => l.id === 'abi-ch13');
-      const ch2 = abiSubgroup?.layers.find((l) => l.id === 'abi-ch2');
-      const ch9 = abiSubgroup?.layers.find((l) => l.id === 'abi-ch9');
-
-      expect(ch13?.zIndex).toBe(0);
-      expect(ch2?.zIndex).toBe(1);
-      expect(ch9?.zIndex).toBe(2);
+      expect(ch13?.zIndex).toBe(3);
+      expect(ch2?.zIndex).toBe(2);
+      expect(ch9?.zIndex).toBe(1);
     });
   });
 });
