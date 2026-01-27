@@ -87,7 +87,8 @@ export class LayerReloadService {
     // Show initial available periods (capped at max selectable)
     const maxSelectable = this.getMaxSelectablePeriods(layerId);
     const displayCount = Math.min(initialCount, maxSelectable);
-    const message = `${displayCount} períodos disponibles para ${this.getLayerDisplayName(layerId)}`;
+    const layerName = this.layerService.getLayerDisplayName(layerId);
+    const message = `${displayCount} períodos disponibles para ${layerName}`;
     this.notificationService.show(NotificationType.SUCCESS, message);
 
     // Set up periodic refresh
@@ -153,7 +154,7 @@ export class LayerReloadService {
             const added = afterTilesets.filter((t) => !beforeIds.has(t.id));
             const removed = beforeTilesets.filter((t) => !afterIds.has(t.id));
 
-            const layerName = this.getLayerDisplayName(layerId);
+            const layerName = this.layerService.getLayerDisplayName(layerId);
 
             if (added.length > 0 || removed.length > 0) {
               let message: string;
@@ -278,24 +279,5 @@ export class LayerReloadService {
     showNoChangesNotification = false,
   ): Promise<void> {
     return this.performRefreshAndCompare(layerId, showNoChangesNotification);
-  }
-
-  /**
-   * Gets a human-readable layer display name
-   */
-  private getLayerDisplayName(layerId: string): string {
-    // Simple extraction - could be enhanced to look up from layer definitions
-    const parts = layerId.split('-');
-    if (parts.length >= 2) {
-      return `${parts[0].toUpperCase()} ${parts[1].toUpperCase()}`;
-    }
-    return layerId;
-  }
-
-  /**
-   * Get refresh state for debugging
-   */
-  public getRefreshState(layerId: string): RefreshState | undefined {
-    return this.refreshStates.get(layerId);
   }
 }
