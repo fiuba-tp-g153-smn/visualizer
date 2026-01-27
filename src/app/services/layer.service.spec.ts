@@ -1,6 +1,5 @@
 import { TestBed } from '@angular/core/testing';
 import { LayerService } from './layer.service';
-import { Layer } from '../models';
 
 describe('LayerService', () => {
   let service: LayerService;
