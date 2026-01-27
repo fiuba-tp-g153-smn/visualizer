@@ -289,6 +289,11 @@ export class LayerService {
     return this._getAllLayers().find((layer: Layer) => layer.id === layerId);
   }
 
+  getLayerDisplayName(layerId: string): string {
+    const layer = this.getLayerById(layerId);
+    return layer?.name ?? layerId;
+  }
+
   private _getNextZIndex(): number {
     const maxZIndex = Math.max(
       0,
