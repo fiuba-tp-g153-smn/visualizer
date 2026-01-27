@@ -4,6 +4,7 @@ import { environment } from '../../../../environments/environment';
 const GLM_DEFAULTS = {
   visible: false,
   opacity: 80,
+  availablePeriods: [1, 6, 12, 24], // Períodos disponibles para todas las capas GLM
 } as const;
 
 export const GLM_SUBGROUP: LayerSubgroup = {

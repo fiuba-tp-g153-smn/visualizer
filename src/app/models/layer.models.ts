@@ -36,6 +36,7 @@ export interface Layer {
   zIndex?: number; // Solo para capas visibles, define orden de renderizado
   timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
   playback?: LayerPlaybackConfig; // Configuración de reproducción
+  availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
 }
 
 /**

@@ -18,10 +18,11 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { CdkDrag, CdkDragHandle } from '@angular/cdk/drag-drop';
+import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import { Layer } from '../../../../models';
 import { LayerService } from '../../../../services/layer.service';
 import { ChannelConfigService } from '../../../../services/channel-config.service';
+import { LayerReloadService } from '../../../../services/layer-reload.service';
 
 /**
  * Modo de visualización del componente
@@ -60,6 +61,7 @@ export type LayerItemMode = 'available' | 'active';
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly layerService = inject(LayerService);
   private readonly channelConfigService = inject(ChannelConfigService);
+  private readonly reloadService = inject(LayerReloadService);
 
   /**
    * Capa a renderizar (requerido)
@@ -97,8 +99,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   playSpeed = computed(() => this.layerService.getPlaySpeed(this.layer.id));
   lastImagesCount = computed(() => this.layerService.getLastImagesCount(this.layer.id));
 
-  // Opciones disponibles para el selector de últimas imágenes
-  lastImagesOptions = [6, 12, 24];
+  /**
+   * Obtiene las opciones de períodos disponibles desde la configuración de la capa
+   */
+  lastImagesOptions = computed(() => {
+    return this.layer.availablePeriods ?? [1]; // Fallback a valor por defecto
+  });
 
   /**
    * Obtiene la capa actualizada desde el servicio (single source of truth)
@@ -106,7 +112,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   getActiveLayer = computed(() => {
     return this.layerService.activeLayers().find((l) => l.id === this.layer.id);
   });
-
   /**
    * Indica si la capa está activa (visible en el mapa)
    */
@@ -130,9 +135,27 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * Obtiene el índice mínimo basado en lastImagesCount
+   * Verifica si hay múltiples períodos (más de 1)
+   */
+  hasMultiplePeriods = computed(() => {
+    return this.maxTimeIndex() > 0;
+  });
+
+  /**
+   * Obtiene el índice mínimo para el slider (limitado por el máximo del dropdown)
    */
   minTimeIndex = computed(() => {
+    const max = this.maxTimeIndex();
+    const options = this.lastImagesOptions();
+    const maxSelectableCount = options.length > 0 ? Math.max(...options) : 1;
+    const effectiveCount = Math.min(max + 1, maxSelectableCount);
+    return Math.max(0, max - effectiveCount + 1);
+  });
+
+  /**
+   * Obtiene el índice mínimo para reproducción (basado en la selección del usuario)
+   */
+  playbackMinTimeIndex = computed(() => {
     const max = this.maxTimeIndex();
     const count = this.lastImagesCount();
     return Math.max(0, max - count + 1);
@@ -167,10 +190,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnDestroy(): void {
-    // Detener reproducción si está activa
-    if (this.isPlaying()) {
-      this.layerService.stopPlayback(this.layer.id);
-    }
+    // Don't stop playback on destroy - let it continue in the background
+    // The layer service will manage playback lifecycle independently
   }
 
   /**
@@ -189,24 +210,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const parts = this.layer.id.split('-');
     if (parts.length < 2) return;
 
-    const instrument = parts[0]; // 'abi'
-    const channelNumber = parts[1]; // 'ch13'
-    const channel = `ch-${channelNumber.replace('ch', '')}`; // 'ch-13'
-    const product = 'goes-19'; // Por defecto
+    const instrument = parts[0];
+    const channelNumber = parts[1];
+    const channel = `ch-${channelNumber.replace('ch', '')}`;
+    const product = 'goes-19';
 
     this.isLoadingConfig.set(true);
-
-    console.log(
-      `📡 [LayerItem] Cargando config para ${this.layer.id}: ${product}/${instrument}/${channel}`
-    );
 
     this.channelConfigService
       .loadChannelConfig(this.layer.id, product, instrument, channel)
       .subscribe({
         next: (config) => {
           this.isLoadingConfig.set(false);
-          console.log(
-            `✅ [LayerItem] Config cargada para ${this.layer.id}, tilesets: ${config.tilesets.length}`
           );
         },
         error: (err) => {
@@ -220,24 +235,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Recarga la configuración del canal (actualiza períodos disponibles)
    */
   reloadChannelConfig(): void {
-    const parts = this.layer.id.split('-');
-    if (parts.length < 2) return;
-
-    const instrument = parts[0];
-    const channelNumber = parts[1];
-    const channel = `ch-${channelNumber.replace('ch', '')}`;
-    const product = 'goes-19';
-
-    this.channelConfigService
-      .reloadChannelConfig(this.layer.id, product, instrument, channel)
-      .subscribe({
-        next: () => {
-          console.log(`✅ [LayerItem] Config recargada para ${this.layer.id}`);
-        },
-        error: (err) => {
-          console.error(`❌ [LayerItem] Error recargando ${this.layer.id}:`, err);
-        },
-      });
+    // Use reload service to handle the manual refresh
+    // This coordinates with auto-refresh and resets the timer
+    this.reloadService.manualRefresh(this.layer.id);
   }
 
   // ==========================================================================
@@ -270,7 +270,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private activateLayer(): void {
     // Si necesita config, cargarla primero
     if (this.needsConfig()) {
-      console.log(`⏳ [LayerItem] Cargando config ANTES de activar ${this.layer.id}...`);
       this.loadChannelConfig();
       // La activación se hará después de cargar la config
       setTimeout(() => {
@@ -404,7 +403,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Alterna play/pause
    */
   togglePlayback(): void {
-    this.layerService.togglePlayback(this.layer.id, this.maxTimeIndex(), this.minTimeIndex());
+    this.layerService.togglePlayback(
+      this.layer.id,
+      this.maxTimeIndex(),
+      this.playbackMinTimeIndex(),
+    );
   }
 
   /**
@@ -420,19 +423,24 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   onLastImagesCountChange(count: number): void {
     const wasPlaying = this.isPlaying();
 
-    // Si estaba reproduciendo, detener primero
-    if (wasPlaying) {
-      this.layerService.stopPlayback(this.layer.id);
-    }
-
     // Actualizar el contador
     this.layerService.setLastImagesCount(this.layer.id, count);
 
-    // Si estaba reproduciendo, reiniciar con el nuevo rango
+    // Si cambió a 1, detener reproducción inmediatamente
+    if (count === 1 && wasPlaying) {
+      this.layerService.stopPlayback(this.layer.id);
+      return;
+    }
+
+    // Si estaba reproduciendo, reiniciar con el nuevo rango (sin detener)
     if (wasPlaying) {
       // Usar setTimeout para asegurar que los computed signals se actualicen
       setTimeout(() => {
-        this.layerService.startPlayback(this.layer.id, this.maxTimeIndex(), this.minTimeIndex());
+        this.layerService.startPlayback(
+          this.layer.id,
+          this.maxTimeIndex(),
+          this.playbackMinTimeIndex(),
+        );
       }, 0);
     }
   }
