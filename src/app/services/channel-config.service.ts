@@ -15,7 +15,10 @@ export class ChannelConfigService {
   private _configCache = signal<ChannelConfigCache>({});
   public readonly configCache = this._configCache.asReadonly();
 
-  constructor(private http: HttpClient, private notificationService: NotificationService) {}
+  constructor(
+    private http: HttpClient,
+    private notificationService: NotificationService,
+  ) {}
 
   /**
    * Obtiene la configuración de un canal desde el backend
@@ -28,11 +31,9 @@ export class ChannelConfigService {
     layerId: string,
     product: string,
     instrument: string,
-    channel: string
+    channel: string,
   ): Observable<ChannelConfig> {
     const url = BACKEND_CONFIG.endpoints.channelConfig(product, instrument, channel);
-
-    console.log(`🛰️ Cargando configuración de canal: ${url}`);
 
     return this.http.get<ChannelConfig>(url).pipe(
       tap((config) => {
@@ -52,19 +53,14 @@ export class ChannelConfigService {
         // Guardar en cache
         const cache = this._configCache();
         this._configCache.set({ ...cache, [layerId]: config });
-
-        this.notificationService.success(
-          `Canal ${config.channel} cargado: ${config.tilesets.length} períodos disponibles`
-        );
-        console.log(`✅ Configuración cargada para ${layerId}:`, config);
       }),
       catchError((error) => {
         console.error(`❌ Error cargando configuración de ${layerId}:`, error);
         this.notificationService.error(
-          'Error al cargar canal: no se pudo obtener la configuración del servidor'
+          'Error al cargar canal: no se pudo obtener la configuración del servidor',
         );
         throw error;
-      })
+      }),
     );
   }
 
@@ -75,9 +71,8 @@ export class ChannelConfigService {
     layerId: string,
     product: string,
     instrument: string,
-    channel: string
+    channel: string,
   ): Observable<ChannelConfig> {
-    console.log(`🔄 Recargando configuración de ${layerId}...`);
     return this.loadChannelConfig(layerId, product, instrument, channel);
   }
 

@@ -4,7 +4,7 @@
   <button mat-icon-button class="zoom-button" (click)="zoomIn()" [disabled]="!canZoomIn()">
     <mat-icon>add</mat-icon>
   </button>
-  <div class="zoom-level">{{ currentZoom }}</div>
+  <div class="zoom-level">{{ currentZoom() }}</div>
   <button mat-icon-button class="zoom-button" (click)="zoomOut()" [disabled]="!canZoomOut()">
     <mat-icon>remove</mat-icon>
   </button>

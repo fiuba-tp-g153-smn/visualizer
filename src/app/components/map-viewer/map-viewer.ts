@@ -1,4 +1,13 @@
-import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  PLATFORM_ID,
+  inject,
+  effect,
+  signal,
+  computed,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,9 +35,6 @@ export class MapViewer implements OnInit, OnDestroy {
   private channelConfigService = inject(ChannelConfigService);
 
   private currentTileLayer: L.TileLayer | null = null;
-  // private activeLayers ... replaced by onMapLayers
-  // private pendingTransitions ... removed
-  // private loadingLayers ... removed
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -43,15 +49,34 @@ export class MapViewer implements OnInit, OnDestroy {
       // Effect: sincronizar capas satelitales (Reacciona a cambios en capas O en config)
       effect(() => {
         const layers = this.layerService.activeLayers();
-        const configCache = this.channelConfigService.configCache(); // Dependencia para reactividad
         if (this.map) {
           this.syncLayers(layers);
+        }
+      });
+
+      // Effect: sincronizar zoom cuando cambia currentZoom signal
+      effect(() => {
+        const targetZoom = this.currentZoom();
+        if (this.map) {
+          const currentMapZoom = Math.round(this.map.getZoom());
+          if (currentMapZoom !== targetZoom) {
+            this.map.setZoom(targetZoom);
+          }
         }
       });
     }
   }
 
-  currentZoom: number = MAP_CONFIG.initialZoom;
+  currentZoom = signal<number>(MAP_CONFIG.initialZoom);
+
+  canZoomIn = computed(() => {
+    return this.currentZoom() < MAP_CONFIG.maxZoom;
+  });
+
+  canZoomOut = computed(() => {
+    return this.currentZoom() > MAP_CONFIG.minZoom;
+  });
+  private ignoreNextMapEvents = false;
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -79,9 +104,28 @@ export class MapViewer implements OnInit, OnDestroy {
       fadeAnimation: false, // Desactivar fade para evitar flash en transiciones
     });
 
-    // Update zoom level on map events
+    // Update zoom signal from map events (user scrolling or programmatic changes)
     this.map.on('zoom', () => {
-        this.currentZoom = this.map?.getZoom() ?? MAP_CONFIG.initialZoom;
+      if (this.ignoreNextMapEvents) {
+        return;
+      }
+      const mapZoom = this.map?.getZoom();
+      if (mapZoom !== undefined && mapZoom !== this.currentZoom()) {
+        this.currentZoom.set(mapZoom);
+      }
+    });
+
+    this.map.on('zoomend', () => {
+      const mapZoom = this.map?.getZoom();
+      const targetZoom = this.currentZoom();
+
+      // If map reached the target, we're done
+      if (mapZoom !== undefined && Math.round(mapZoom) === targetZoom) {
+        this.ignoreNextMapEvents = false;
+      } else if (mapZoom !== undefined && Math.round(mapZoom) !== targetZoom && this.map) {
+        // Map didn't reach target - trigger another zoom
+        this.ignoreNextMapEvents = false;
+      }
     });
 
     const initialProvider = this.tileService.getCurrentProvider();
@@ -124,7 +168,7 @@ export class MapViewer implements OnInit, OnDestroy {
       // Definir ventana de pre-fetching: [T-1, T, T+1]
       // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T
       const indicesToLoad = new Set<number>([currentTimeIndex]);
-      
+
       // Agregar vecinos si existen
       if (tilesets.length > 0) {
         if (currentTimeIndex < tilesets.length - 1) indicesToLoad.add(currentTimeIndex + 1);
@@ -137,9 +181,9 @@ export class MapViewer implements OnInit, OnDestroy {
         if (tilesets && tilesets[tIndex]) {
           tilesetId = tilesets[tIndex].id;
         } else if (layer.category === LayerCategory.SATELLITE_ABI) {
-             tilesetId = `placeholder-${tIndex}`;
+          tilesetId = `placeholder-${tIndex}`;
         }
-        
+
         const uniqueKey = `${layer.id}-${tilesetId}`;
         activeKeysForPool.add(uniqueKey);
 
@@ -149,15 +193,15 @@ export class MapViewer implements OnInit, OnDestroy {
 
         // Configurar estado visual
         const isTarget = tIndex === currentTimeIndex;
-        
+
         // Z-Index: Mantener orden relativo de capas.
         // Capas ocultas (prefetch) van al fondo para no interferir eventos aunque tengan opacity 0
         if (isTarget) {
-            tileLayer.setOpacity(layer.opacity / 100);
-            if (layer.zIndex !== undefined) tileLayer.setZIndex(layer.zIndex);
+          tileLayer.setOpacity(layer.opacity / 100);
+          if (layer.zIndex !== undefined) tileLayer.setZIndex(layer.zIndex);
         } else {
-            tileLayer.setOpacity(0);
-            tileLayer.setZIndex(0);
+          tileLayer.setOpacity(0);
+          tileLayer.setZIndex(0);
         }
       }
     }
@@ -188,24 +232,18 @@ export class MapViewer implements OnInit, OnDestroy {
   // Métodos antiguos de transición eliminados en favor de pre-fetching simple
 
   zoomIn(): void {
-    this.map?.zoomIn();
+    if (this.map) {
+      this.ignoreNextMapEvents = true;
+      const newZoom = Math.min(this.currentZoom() + 1, this.map.getMaxZoom());
+      this.currentZoom.set(newZoom);
+    }
   }
 
   zoomOut(): void {
-    this.map?.zoomOut();
-  }
-
-  canZoomIn(): boolean {
-    if (!this.map) return false;
-    return this.map.getZoom() < this.map.getMaxZoom();
-  }
-
-  canZoomOut(): boolean {
-    if (!this.map) return false;
-    return this.map.getZoom() > this.map.getMinZoom();
-  }
-
-  getCurrentZoom(): number { // Deprecated but keeping for template safety if needed, though we will update template
-    return this.currentZoom; 
+    if (this.map) {
+      this.ignoreNextMapEvents = true;
+      const newZoom = Math.max(this.currentZoom() - 1, this.map.getMinZoom());
+      this.currentZoom.set(newZoom);
+    }
   }
 }
