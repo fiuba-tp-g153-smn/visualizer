@@ -11,6 +11,6 @@ export const environment = {
     format: $ENV.TILE_FORMAT,
   },
   ui: {
-    disabledLayers: ['radar', 'glm-ch2', 'glm-ch9', 'glm-ch13'],
+    disabledLayers: ['abi-ch2', 'radar', 'glm-ch2', 'glm-ch9', 'glm-ch13'],
   },
 };
