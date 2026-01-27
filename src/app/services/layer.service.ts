@@ -27,7 +27,7 @@ export class LayerService {
     const allLayers = this._getAllLayers();
     return allLayers
       .filter((layer: Layer) => layer.visible)
-      .sort((a: Layer, b: Layer) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
+      .sort((a: Layer, b: Layer) => (b.zIndex ?? 0) - (a.zIndex ?? 0));
   });
 
   constructor() {
@@ -245,9 +245,9 @@ export class LayerService {
     const visibleLayers = this.activeLayers();
     const currentIndex = visibleLayers.findIndex((l: Layer) => l.id === layerId);
 
-    if (currentIndex < visibleLayers.length - 1) {
-      const nextLayer = visibleLayers[currentIndex + 1];
-      this._swapZIndex(layer.id, nextLayer.id);
+    if (currentIndex > 0) {
+      const prevLayer = visibleLayers[currentIndex - 1];
+      this._swapZIndex(layer.id, prevLayer.id);
     }
   }
 
@@ -258,17 +258,18 @@ export class LayerService {
     const visibleLayers = this.activeLayers();
     const currentIndex = visibleLayers.findIndex((l: Layer) => l.id === layerId);
 
-    if (currentIndex > 0) {
-      const prevLayer = visibleLayers[currentIndex - 1];
-      this._swapZIndex(layer.id, prevLayer.id);
+    if (currentIndex < visibleLayers.length - 1) {
+      const nextLayer = visibleLayers[currentIndex + 1];
+      this._swapZIndex(layer.id, nextLayer.id);
     }
   }
 
   setLayerOrder(orderedLayerIds: string[]): void {
+    const maxZIndex = orderedLayerIds.length;
     orderedLayerIds.forEach((layerId: string, index: number) => {
       this._updateLayer(layerId, (layer) => {
         if (layer.visible) {
-          layer.zIndex = index + 1;
+          layer.zIndex = maxZIndex - index;
         }
       });
     });

@@ -177,7 +177,7 @@ describe('LayerService', () => {
       service.toggleLayer('abi-ch13');
 
       const activeBefore = service.activeLayers();
-      const topLayer = activeBefore[activeBefore.length - 1];
+      const topLayer = activeBefore[0];
       const zIndexBefore = topLayer.zIndex;
 
       service.moveLayerUp(topLayer.id);
@@ -236,7 +236,6 @@ describe('LayerService', () => {
       service.toggleLayer('abi-ch9');
       service.toggleLayer('abi-ch13');
 
-      // Set new order: ch13 (bottom), ch2 (middle), ch9 (top)
       service.setLayerOrder(['abi-ch13', 'abi-ch2', 'abi-ch9']);
 
       const active = service.activeLayers();
@@ -257,9 +256,9 @@ describe('LayerService', () => {
       const ch2 = service.getLayerById('abi-ch2');
       const ch9 = service.getLayerById('abi-ch9');
 
-      expect(ch13?.zIndex).toBe(0);
-      expect(ch2?.zIndex).toBe(1);
-      expect(ch9?.zIndex).toBe(2);
+      expect(ch13?.zIndex).toBe(3);
+      expect(ch2?.zIndex).toBe(2);
+      expect(ch9?.zIndex).toBe(1);
     });
   });
 });
