@@ -1,4 +1,13 @@
-import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  PLATFORM_ID,
+  inject,
+  effect,
+  signal,
+  computed,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -59,6 +68,14 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   currentZoom = signal<number>(MAP_CONFIG.initialZoom);
+
+  canZoomIn = computed(() => {
+    return this.currentZoom() < MAP_CONFIG.maxZoom;
+  });
+
+  canZoomOut = computed(() => {
+    return this.currentZoom() > MAP_CONFIG.minZoom;
+  });
   private ignoreNextMapEvents = false;
 
   ngOnInit(): void {
@@ -228,20 +245,5 @@ export class MapViewer implements OnInit, OnDestroy {
       const newZoom = Math.max(this.currentZoom() - 1, this.map.getMinZoom());
       this.currentZoom.set(newZoom);
     }
-  }
-
-  canZoomIn(): boolean {
-    if (!this.map) return false;
-    return this.currentZoom() < this.map.getMaxZoom();
-  }
-
-  canZoomOut(): boolean {
-    if (!this.map) return false;
-    return this.currentZoom() > this.map.getMinZoom();
-  }
-
-  getCurrentZoom(): number {
-    // Deprecated but keeping for template safety if needed, though we will update template
-    return this.currentZoom();
   }
 }
