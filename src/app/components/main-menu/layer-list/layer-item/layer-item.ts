@@ -222,7 +222,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       .subscribe({
         next: (config) => {
           this.isLoadingConfig.set(false);
-          );
         },
         error: (err) => {
           this.isLoadingConfig.set(false);
