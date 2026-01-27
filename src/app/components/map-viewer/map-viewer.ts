@@ -234,7 +234,7 @@ export class MapViewer implements OnInit, OnDestroy {
   zoomIn(): void {
     if (this.map) {
       this.ignoreNextMapEvents = true;
-      const newZoom = Math.min(this.currentZoom() + 1, this.map.getMaxZoom());
+      const newZoom = Math.min(this.currentZoom() + 1, MAP_CONFIG.maxZoom);
       this.currentZoom.set(newZoom);
     }
   }
@@ -242,7 +242,7 @@ export class MapViewer implements OnInit, OnDestroy {
   zoomOut(): void {
     if (this.map) {
       this.ignoreNextMapEvents = true;
-      const newZoom = Math.max(this.currentZoom() - 1, this.map.getMinZoom());
+      const newZoom = Math.max(this.currentZoom() - 1, MAP_CONFIG.minZoom);
       this.currentZoom.set(newZoom);
     }
   }
