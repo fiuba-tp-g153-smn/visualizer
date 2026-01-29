@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import * as L from 'leaflet';
-import { Layer, LayerCategory } from '../models';
+import { Layer, LayerType, LayerCategory } from '../models';
 import { BACKEND_CONFIG } from '../config/backend.config';
 import { NotificationService } from './notification.service';
 import { ChannelConfigService } from './channel-config.service';
@@ -8,8 +8,9 @@ import { getAbiTileConfig } from '../config/layer-tiles/satellite/abi.tiles';
 import { IGN_WMS_BASE_CONFIG, getIgnWmsLayerName } from '../config/layer-tiles/map/ign-wms.tiles';
 
 /**
- * Servicio para crear tile layers de Leaflet según categoría
+ * Servicio para crear tile layers de Leaflet según tipo de capa
  * Factory pattern: convierte Layer models en L.TileLayers configurados
+ * El renderizado se basa en LayerType (TILE, WMS) y no en la categoría
  */
 @Injectable({
   providedIn: 'root',
@@ -24,13 +25,6 @@ export class LayerRendererService {
 
   // Tile Layer Pool: cache de instancias de L.TileLayer para reutilización
   private layerPool = new Map<string, L.TileLayer>();
-
-  /**
-   * Crea u obtiene un tile layer de Leaflet según la categoría de la capa
-   */
-  createTileLayer(layer: Layer): L.TileLayer {
-    return this.getTileLayerForTime(layer, layer.timeIndex ?? 0);
-  }
 
   /**
    * Obtiene una instancia de TileLayer para un tiempo específico (usando pool)
@@ -54,18 +48,18 @@ export class LayerRendererService {
       return this.layerPool.get(poolKey)!;
     }
 
-    // 3. Crear nueva instancia
+    // 3. Crear nueva instancia según el TIPO de capa (no la categoría)
     let tileLayer: L.TileLayer;
 
-    switch (layer.category) {
-      case LayerCategory.SATELLITE_ABI:
-        tileLayer = this.createAbiTileLayer(layer.id, layer.opacity, timeIndex);
+    switch (layer.type) {
+      case LayerType.TILE:
+        tileLayer = this.createTileLayer(layer, timeIndex);
         break;
-      case LayerCategory.IGN_WMS:
-        tileLayer = this.createIgnWmsTileLayer(layer.id, layer.opacity);
+      case LayerType.WMS:
+        tileLayer = this.createWmsLayer(layer);
         break;
       default:
-        throw new Error(`Unsupported layer category: ${layer.category}`);
+        throw new Error(`Unsupported layer type: ${layer.type}`);
     }
 
     // 4. Configurar errores (solo una vez)
@@ -94,9 +88,40 @@ export class LayerRendererService {
   }
 
   /**
+   * Crea un tile layer estándar (satélites, rasters, etc.)
+   * La categoría determina el comportamiento específico de cada tipo de dato
+   */
+  private createTileLayer(layer: Layer, timeIndex: number = 0): L.TileLayer {
+    // Según la categoría, obtener configuración específica
+    switch (layer.category) {
+      case LayerCategory.SATELLITE_ABI:
+        return this.createSatelliteTileLayer(layer.id, layer.opacity, timeIndex);
+      default:
+        throw new Error(`Unsupported tile layer category: ${layer.category}`);
+    }
+  }
+
+  /**
+   * Crea un tile layer WMS
+   * La categoría determina el comportamiento específico
+   */
+  private createWmsLayer(layer: Layer): L.TileLayer {
+    switch (layer.category) {
+      case LayerCategory.IGN_WMS:
+        return this.createIgnWmsLayer(layer.id, layer.opacity);
+      default:
+        throw new Error(`Unsupported WMS layer category: ${layer.category}`);
+    }
+  }
+
+  /**
    * Crea un tile layer para satélite ABI
    */
-  private createAbiTileLayer(layerId: string, opacity: number, timeIndex: number = 0): L.TileLayer {
+  private createSatelliteTileLayer(
+    layerId: string,
+    opacity: number,
+    timeIndex: number = 0,
+  ): L.TileLayer {
     // Si hay configuración dinámica cargada, usarla
     if (this.channelConfigService.hasConfig(layerId)) {
       const config = this.channelConfigService.getChannelConfig(layerId);
@@ -136,9 +161,9 @@ export class LayerRendererService {
   }
 
   /**
-   * Crea un tile layer para capas WMS del IGN
+   * Crea un tile layer WMS para capas del IGN
    */
-  private createIgnWmsTileLayer(layerId: string, opacity: number): L.TileLayer {
+  private createIgnWmsLayer(layerId: string, opacity: number): L.TileLayer {
     const layerName = getIgnWmsLayerName(layerId);
 
     if (!layerName) {

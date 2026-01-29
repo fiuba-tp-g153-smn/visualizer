@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, Signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -15,7 +15,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LayerService } from '../../../services/layer.service';
-import { Layer } from '../../../models';
+import {
+  Layer,
+  ActiveLayerGroup,
+  ACTIVE_LAYER_GROUP_DEFINITIONS,
+  LayerGroup,
+  LayerSubgroup,
+  ZIndexGroupMetadata,
+} from '../../../models';
 import { MenuPanelComponent } from '../menu-section.model';
 import { LayerItemComponent } from './layer-item/layer-item';
 
@@ -48,6 +55,11 @@ import { LayerItemComponent } from './layer-item/layer-item';
 })
 export class LayerListComponent implements MenuPanelComponent {
   readonly layerService = inject(LayerService);
+
+  // Estado de expansión de grupos de capas activas (dinámico desde definiciones)
+  private groupExpansionState = new Map<ActiveLayerGroup, ReturnType<typeof signal<boolean>>>(
+    Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS).map((def) => [def.id, signal(true)]),
+  );
 
   // Estado local
   searchText = signal('');
@@ -112,7 +124,9 @@ export class LayerListComponent implements MenuPanelComponent {
             return {
               ...subgroup,
               layers,
-              _shouldExpandSubgroup: search ? layers.length > 0 && layers.length < subgroup.layers.length : false,
+              _shouldExpandSubgroup: search
+                ? layers.length > 0 && layers.length < subgroup.layers.length
+                : false,
             };
           })
           .filter((subgroup) => subgroup.layers.length > 0); // Ocultar subgrupos vacíos
@@ -120,8 +134,7 @@ export class LayerListComponent implements MenuPanelComponent {
         // Determinar expansión del grupo
         const hasMatchingLayers = filteredSubgroups.some((sg) => sg._shouldExpandSubgroup);
         const hasMatchingSubgroups =
-          search &&
-          filteredSubgroups.some((sg) => this.normalizeText(sg.name).includes(search));
+          search && filteredSubgroups.some((sg) => this.normalizeText(sg.name).includes(search));
 
         return {
           ...group,
@@ -140,6 +153,49 @@ export class LayerListComponent implements MenuPanelComponent {
   }
 
   /**
+   * Obtiene capas activas organizadas en grupos de z-index con metadata
+   * Ordenadas por rango de z-index (mayor primero = OVERLAY antes que BASE)
+   */
+  activeLayerGroups = computed<ZIndexGroupMetadata[]>(() => {
+    return Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS)
+      .sort((a, b) => b.zIndexRange.min - a.zIndexRange.min)
+      .map((definition) => {
+        const layers = this.getLayersForGroup(definition.id);
+        const expansionSignal = this.groupExpansionState.get(definition.id)!;
+
+        return {
+          id: definition.id,
+          name: definition.name,
+          subtitle: definition.subtitle,
+          description: definition.description,
+          icon: definition.icon,
+          layers,
+          expanded: () => expansionSignal(),
+          setExpanded: (value: boolean) => this.setGroupExpanded(definition.id, value),
+          onDrop: (event: CdkDragDrop<Layer[]>) => this.handleGroupDrop(event, definition.id),
+          clearGroup: (event: Event) => this.handleClearGroup(event, definition.id),
+        };
+      });
+  });
+
+  /**
+   * Obtiene todas las capas de un grupo específico
+   */
+  private getLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
+    return this.layerService.getActiveLayersForGroup(groupId);
+  }
+
+  /**
+   * Establece el estado de expansión de un grupo
+   */
+  private setGroupExpanded(groupId: ActiveLayerGroup, expanded: boolean): void {
+    const signal = this.groupExpansionState.get(groupId);
+    if (signal) {
+      signal.set(expanded);
+    }
+  }
+
+  /**
    * Filtra capas visibles (para tab "Activas")
    */
   getActiveLayers(): Layer[] {
@@ -147,14 +203,46 @@ export class LayerListComponent implements MenuPanelComponent {
   }
 
   /**
-   * Maneja el drop en la lista de capas activas (drag & drop)
+   * Cuenta cuántas capas activas tiene un grupo
    */
-  onLayerDrop(event: CdkDragDrop<Layer[]>): void {
-    const activeLayers = [...this.getActiveLayers()];
-    moveItemInArray(activeLayers, event.previousIndex, event.currentIndex);
+  getActiveLayersCountInGroup(group: LayerGroup): number {
+    let count = 0;
+    for (const subgroup of group.subgroups) {
+      for (const layer of subgroup.layers) {
+        if (layer.visible) count++;
+      }
+    }
+    return count;
+  }
 
-    // Actualizar el orden de los zIndex
-    const orderedIds = activeLayers.map((layer) => layer.id);
+  /**
+   * Cuenta cuántas capas activas tiene un subgrupo
+   */
+  getActiveLayersCountInSubgroup(subgroup: LayerSubgroup): number {
+    return subgroup.layers.filter((layer) => layer.visible).length;
+  }
+
+  /**
+   * Maneja el drop de capas dentro de un grupo (drag & drop)
+   */
+  private handleGroupDrop(event: CdkDragDrop<Layer[]>, groupId: ActiveLayerGroup): void {
+    const groupLayers = this.getLayersForGroup(groupId);
+    const layers = [...groupLayers];
+    moveItemInArray(layers, event.previousIndex, event.currentIndex);
+
+    // Actualizar el orden de los zIndex solo dentro del grupo
+    const orderedIds = layers.map((layer) => layer.id);
     this.layerService.setLayerOrder(orderedIds);
+  }
+
+  /**
+   * Desactiva todas las capas de un grupo
+   */
+  private handleClearGroup(event: Event, groupId: ActiveLayerGroup): void {
+    event.stopPropagation(); // Evitar que se colapse/expanda el panel
+    const groupLayers = this.getLayersForGroup(groupId);
+    groupLayers.forEach((layer) => {
+      this.layerService.deactivateLayer(layer.id);
+    });
   }
 }

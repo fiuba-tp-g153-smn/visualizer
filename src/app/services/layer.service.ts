@@ -1,15 +1,13 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
-import { Layer, LayerGroup, LayerPlaybackConfig } from '../models';
+import {
+  Layer,
+  LayerGroup,
+  LayerPlaybackConfig,
+  ActiveLayerGroup,
+  ACTIVE_LAYER_GROUP_DEFINITIONS,
+  LayerState,
+} from '../models';
 import { LAYER_DEFINITIONS } from '../config/layer-definitions';
-
-interface LayerState {
-  id: string;
-  visible: boolean;
-  opacity: number;
-  zIndex?: number;
-  timeIndex?: number;
-  playback?: LayerPlaybackConfig;
-}
 
 @Injectable({
   providedIn: 'root',
@@ -23,12 +21,20 @@ export class LayerService {
 
   public readonly layerGroups = this._layerGroups.asReadonly();
 
+  // Capas activas agrupadas por z-index group
   public readonly activeLayers = computed(() => {
     const allLayers = this._getAllLayers();
     return allLayers
       .filter((layer: Layer) => layer.visible)
       .sort((a: Layer, b: Layer) => (b.zIndex ?? 0) - (a.zIndex ?? 0));
   });
+
+  /**
+   * Obtiene capas activas para un grupo específico
+   */
+  public getActiveLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
+    return this.activeLayers().filter((layer) => layer.zIndexGroup === groupId);
+  }
 
   constructor() {
     // Persistir estado cuando cambian las capas
@@ -67,7 +73,7 @@ export class LayerService {
     this._updateLayer(layerId, (layer) => {
       if (!layer.visible) {
         layer.visible = true;
-        layer.zIndex = this._getNextZIndex();
+        layer.zIndex = this._getNextZIndex(layer.zIndexGroup);
       }
     });
   }
@@ -99,7 +105,7 @@ export class LayerService {
     this._updateLayer(layerId, (layer) => {
       layer.visible = !layer.visible;
       if (layer.visible && layer.zIndex === undefined) {
-        layer.zIndex = this._getNextZIndex();
+        layer.zIndex = this._getNextZIndex(layer.zIndexGroup);
       }
     });
   }
@@ -238,38 +244,55 @@ export class LayerService {
     });
   }
 
+  /**
+   * Mueve una capa hacia arriba (mayor z-index) dentro de su grupo
+   * Las capas solo se pueden reordenar dentro de su mismo grupo de z-index
+   */
   moveLayerUp(layerId: string): void {
     const layer = this.getLayerById(layerId);
     if (!layer?.visible || layer.zIndex === undefined) return;
 
-    const visibleLayers = this.activeLayers();
-    const currentIndex = visibleLayers.findIndex((l: Layer) => l.id === layerId);
+    // Filtrar solo capas del mismo grupo
+    const visibleLayersInGroup = this.activeLayers().filter(
+      (l: Layer) => l.zIndexGroup === layer.zIndexGroup,
+    );
+    const currentIndex = visibleLayersInGroup.findIndex((l: Layer) => l.id === layerId);
 
     if (currentIndex > 0) {
-      const prevLayer = visibleLayers[currentIndex - 1];
+      const prevLayer = visibleLayersInGroup[currentIndex - 1];
       this._swapZIndex(layer.id, prevLayer.id);
     }
   }
 
+  /**
+   * Mueve una capa hacia abajo (menor z-index) dentro de su grupo
+   * Las capas solo se pueden reordenar dentro de su mismo grupo de z-index
+   */
   moveLayerDown(layerId: string): void {
     const layer = this.getLayerById(layerId);
     if (!layer?.visible || layer.zIndex === undefined) return;
 
-    const visibleLayers = this.activeLayers();
-    const currentIndex = visibleLayers.findIndex((l: Layer) => l.id === layerId);
+    // Filtrar solo capas del mismo grupo
+    const visibleLayersInGroup = this.activeLayers().filter(
+      (l: Layer) => l.zIndexGroup === layer.zIndexGroup,
+    );
+    const currentIndex = visibleLayersInGroup.findIndex((l: Layer) => l.id === layerId);
 
-    if (currentIndex < visibleLayers.length - 1) {
-      const nextLayer = visibleLayers[currentIndex + 1];
+    if (currentIndex < visibleLayersInGroup.length - 1) {
+      const nextLayer = visibleLayersInGroup[currentIndex + 1];
       this._swapZIndex(layer.id, nextLayer.id);
     }
   }
 
   setLayerOrder(orderedLayerIds: string[]): void {
-    const maxZIndex = orderedLayerIds.length;
-    orderedLayerIds.forEach((layerId: string, index: number) => {
+    // Los IDs vienen ordenados de arriba hacia abajo en el UI
+    // Mayor índice = más arriba en la UI = mayor z-index en Leaflet
+    const maxIndex = orderedLayerIds.length - 1;
+    orderedLayerIds.forEach((layerId: string, uiIndex: number) => {
       this._updateLayer(layerId, (layer) => {
         if (layer.visible) {
-          layer.zIndex = maxZIndex - index;
+          // Invertir: primera capa en UI (uiIndex=0) → mayor zIndex relativo
+          layer.zIndex = maxIndex - uiIndex;
         }
       });
     });
@@ -294,14 +317,32 @@ export class LayerService {
     return layer?.name ?? layerId;
   }
 
-  private _getNextZIndex(): number {
-    const maxZIndex = Math.max(
-      0,
-      ...this._getAllLayers()
-        .filter((l: Layer) => l.zIndex !== undefined)
-        .map((l: Layer) => l.zIndex!),
+  /**
+   * Obtiene el siguiente zIndex RELATIVO para una capa dentro de su grupo (0-based)
+   */
+  private _getNextZIndex(zIndexGroup: ActiveLayerGroup): number {
+    const layersInGroup = this._getAllLayers().filter(
+      (l: Layer) => l.zIndexGroup === zIndexGroup && l.zIndex !== undefined,
     );
-    return Math.max(1, maxZIndex + 1);
+
+    if (layersInGroup.length === 0) {
+      return 0; // Primer capa del grupo
+    }
+
+    const maxZIndex = Math.max(...layersInGroup.map((l: Layer) => l.zIndex!));
+    return maxZIndex + 1;
+  }
+
+  /**
+   * Calcula el z-index ABSOLUTO para Leaflet a partir del z-index relativo y el grupo
+   * Formula: baseOffset + relativeZIndex
+   * - BASE: 0 + relativeZIndex → 0, 1, 2, ...
+   * - OVERLAY: 1000 + relativeZIndex → 1000, 1001, 1002, ...
+   */
+  getAbsoluteZIndex(layer: Layer): number {
+    if (layer.zIndex === undefined) return 0;
+    const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
+    return baseOffset + layer.zIndex;
   }
 
   private _swapZIndex(layerId1: string, layerId2: string): void {

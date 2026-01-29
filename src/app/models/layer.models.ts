@@ -2,15 +2,71 @@
  * Modelos para el sistema de capas
  */
 
+/**
+ * Tipos de capas basados en Leaflet
+ * Determina cómo se renderiza la capa en el mapa
+ */
 export enum LayerType {
-  RASTER = 'raster', // Imágenes satelitales, tiles, overlays
+  TILE = 'tile', // L.TileLayer - Tiles precalculados (satélites, mapas base)
+  WMS = 'wms', // L.TileLayer.WMS - Web Map Service
+  // Futuros: VECTOR = 'vector', GEOJSON = 'geojson', etc.
 }
 
+/**
+ * Categorías de capas para comportamientos específicos
+ * NO determina el renderizado (eso lo hace LayerType)
+ * Agrupa capas con características comunes de comportamiento
+ */
 export enum LayerCategory {
   SATELLITE_ABI = 'satellite_abi', // GOES ABI (canales individuales)
-  SATELLITE_GLM = 'satellite_glm', // GOES GLM (canales individuales)
-  IGN_WMS = 'ign_wms', // IGN WMS layers
+  IGN_WMS = 'ign_wms', // IGN WMS layers - permanecen en z-index superior
 }
+
+/**
+ * Grupos de capas activas para organizar por niveles
+ * Las capas solo se pueden reordenar dentro de su propio grupo
+ */
+export enum ActiveLayerGroup {
+  BASE = 'base', // Capas base (datos: satélite, modelos, etc.)
+  OVERLAY = 'overlay', // Capas superiores (IGN, referencias, etc.)
+}
+
+/**
+ * Definición completa de un grupo de capas activas
+ */
+export interface ActiveLayerGroupDefinition {
+  id: ActiveLayerGroup;
+  name: string;
+  subtitle: string;
+  description?: string;
+  icon: string;
+  zIndexRange: { min: number; max: number };
+}
+
+/**
+ * Definiciones de los grupos de capas activas
+ */
+export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroup, ActiveLayerGroupDefinition> =
+  {
+    [ActiveLayerGroup.BASE]: {
+      id: ActiveLayerGroup.BASE,
+      name: 'Capas de Datos',
+      subtitle: '(Satélites, modelos)',
+      description:
+        'Capas de datos científicos: imágenes satelitales, salidas de modelos numéricos, etc.',
+      icon: 'satellite_alt',
+      zIndexRange: { min: 0, max: 999 },
+    },
+    [ActiveLayerGroup.OVERLAY]: {
+      id: ActiveLayerGroup.OVERLAY,
+      name: 'Capas de Referencia',
+      subtitle: '(IGN, cartografía)',
+      description:
+        'Capas de referencia cartográfica del IGN. Siempre se muestran por encima de las capas de datos.',
+      icon: 'layers',
+      zIndexRange: { min: 1000, max: 1999 },
+    },
+  };
 
 /**
  * Configuración de reproducción temporal de una capa
@@ -24,17 +80,46 @@ export interface LayerPlaybackConfig {
 }
 
 /**
+ * Metadata para grupos de capas activas con funciones de control
+ */
+export interface ZIndexGroupMetadata {
+  id: ActiveLayerGroup;
+  name: string;
+  subtitle: string;
+  description?: string;
+  icon: string;
+  layers: Layer[];
+  expanded: () => boolean;
+  setExpanded: (value: boolean) => void;
+  onDrop: (event: any) => void;
+  clearGroup: (event: Event) => void;
+}
+
+/**
+ * Estado de capa para persistencia
+ */
+export interface LayerState {
+  id: string;
+  visible: boolean;
+  opacity: number;
+  zIndex?: number;
+  timeIndex?: number;
+  playback?: LayerPlaybackConfig;
+}
+
+/**
  * Capa individual
  */
 export interface Layer {
   id: string;
   name: string;
   description?: string;
-  type: LayerType;
-  category: LayerCategory;
+  type: LayerType; // Determina cómo se renderiza (tile, wms, etc.)
+  category: LayerCategory; // Determina comportamiento específico de la capa
   visible: boolean;
   opacity: number; // 0-100
-  zIndex?: number; // Solo para capas visibles, define orden de renderizado
+  zIndex?: number; // RELATIVO al grupo (0, 1, 2...), no absoluto
+  zIndexGroup: ActiveLayerGroup; // Grupo de capas activas (base o overlay)
   timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
   playback?: LayerPlaybackConfig; // Configuración de reproducción
   availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])

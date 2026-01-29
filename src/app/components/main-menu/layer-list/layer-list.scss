@@ -20,12 +20,37 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+
+  // Ensure tabs take equal width
+  ::ng-deep .mat-mdc-tab {
+    flex: 1;
+    min-width: 0;
+  }
+
+  ::ng-deep .mat-mdc-tab-labels {
+    display: flex;
+  }
 }
 
 .tab-label-container {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px; // Increase gap for better spacing with badge
+  min-width: 0; // Prevenir crecimiento del tab
+  justify-content: center; // Center content in tab
+  width: 100%;
+}
+
+// Info icon for descriptions
+.info-icon {
+  color: var(--mat-sys-on-surface-variant);
+  cursor: help;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+  }
 }
 
 // Search
@@ -57,11 +82,11 @@
 
 // Accordion
 .layers-accordion {
-  // Root panel styling (Group)
+  // Root panel styling (Group) - Gray background
   .mat-expansion-panel {
     border-radius: 0;
     box-shadow: none;
-    background-color: var(--mat-sys-surface);
+    background-color: var(--mat-sys-surface-container); // Gray for groups
 
     // Tonal separation
     &:not(.mat-expanded) .mat-expansion-panel-header {
@@ -86,6 +111,14 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      flex: 1; // Take available space
+    }
+
+    .mat-expansion-panel-header-description {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto; // Don't grow, only use needed space
     }
   }
 
@@ -93,20 +126,39 @@
     padding: 0;
   }
 
-  // Nested accordion (subgroups)
+  // Nested accordion (subgroups) - Lighter gray
   .subgroup-panel {
-    background-color: var(--mat-sys-surface-container-low); // Tonal hierarchy
+    background-color: var(--mat-sys-surface-container-low); // Lighter gray for subgroups
 
     // Adjust nesting padding via header
     .mat-expansion-panel-header {
-      padding-left: 24px; // Reduced padding for subgroup header
+      padding-left: 32px; // More indentation for hierarchy
       font-weight: 400; // Lighter weight for hierarchy
     }
 
     .mat-expansion-panel-body {
-      padding: 4px 0; // Minimal vertical padding
+      padding: 0; // Remove padding, layers handle their own
+      background-color: var(--mat-sys-surface); // White for layer items
     }
   }
+
+  // Icon in panel title (major groups)
+  .panel-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
+  }
+}
+
+// Active indicator dot (replaces badge)
+.active-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--mat-sys-primary);
+  flex-shrink: 0;
 }
 
 // Layer Items
@@ -117,6 +169,102 @@
 // Active layers list
 .active-layers-list {
   padding: 0;
+}
+
+// Active layer group panels (colapsables)
+.active-group-panel {
+  box-shadow: none;
+  border-radius: 0;
+  background-color: var(--mat-sys-surface-container); // Gray like available groups
+  padding: 0;
+
+  &::before {
+    display: none; // Remover línea divisoria de Material
+  }
+
+  .mat-expansion-panel-header {
+    padding: 0 16px;
+    height: 48px; // Standard height
+    background-color: var(--mat-sys-surface-container);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    font-weight: 500;
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-high);
+    }
+
+    .mat-expansion-panel-header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .mat-expansion-panel-header-description {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+  }
+
+  .mat-expansion-panel-body {
+    padding: 0;
+    background-color: var(--mat-sys-surface); // White for layer items
+  }
+
+  // Force zero padding on Material's internal wrapper
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0;
+  }
+
+  .group-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
+  }
+
+  .group-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+
+  .mat-panel-description {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  // Botón de limpiar grupo
+  .clear-group-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mat-sys-on-surface-variant);
+    transition:
+      color 0.2s,
+      background-color 0.2s;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      color: var(--mat-sys-error);
+      background-color: var(--mat-sys-error-container);
+    }
+  }
 }
 
 .active-layer-item {
@@ -139,7 +287,9 @@
 
 // Estilo del preview mientras se arrastra
 .cdk-drag-preview .active-layer-item {
-  box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2), 0 8px 10px 1px rgba(0, 0, 0, 0.14),
+  box-shadow:
+    0 5px 5px -3px rgba(0, 0, 0, 0.2),
+    0 8px 10px 1px rgba(0, 0, 0, 0.14),
     0 3px 14px 2px rgba(0, 0, 0, 0.12);
 }
 
@@ -148,7 +298,8 @@
 }
 
 // Empty State
-.empty-state, .empty-state-container {
+.empty-state,
+.empty-state-container {
   display: flex;
   flex-direction: column;
   align-items: center;
