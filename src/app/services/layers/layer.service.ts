@@ -1,8 +1,22 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
-import { ActiveLayerGroup, Layer, LayerGroup, LayerState } from '../../models';
+import {
+  ActiveLayerGroup,
+  Layer,
+  LayerGroup,
+  LayerState,
+  LayerType,
+  TileLayer,
+} from '../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../config/layer-groups/active-groups.config';
 import { LAYER_DEFINITIONS } from '../../config/layer-definitions';
 import { DEFAULT_ACTIVE_LAYERS } from '../../config/default-active-layers.config';
+
+/**
+ * Type guard para verificar si una capa es de tipo TILE (con timeControl)
+ */
+function isTileLayer(layer: Layer): layer is TileLayer {
+  return layer.type === LayerType.TILE;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -67,18 +81,16 @@ export class LayerService {
                 visible: state.visible,
                 opacity: state.opacity,
                 zIndex: state.zIndex,
-                ...(state.timeControl &&
-                  layer.timeControl && {
-                    timeControl: {
-                      ...layer.timeControl,
-                      timeIndex: state.timeControl.timeIndex,
-                      ...(state.timeControl.playback && {
-                        playback: {
-                          ...layer.timeControl.playback,
-                          ...state.timeControl.playback,
-                          isPlaying: false, // Siempre iniciar pausado
-                        } as any,
-                      }),
+                ...(isTileLayer(layer) &&
+                  state.timeIndex !== undefined && {
+                    timeIndex: state.timeIndex,
+                  }),
+                ...(isTileLayer(layer) &&
+                  state.playback && {
+                    playback: {
+                      ...layer.playback,
+                      ...state.playback,
+                      isPlaying: false, // Siempre iniciar pausado
                     },
                   }),
               };
@@ -108,13 +120,15 @@ export class LayerService {
       visible: layer.visible,
       opacity: layer.opacity,
       zIndex: layer.zIndex,
-      // Solo guardar timeControl si existe
-      ...(layer.timeControl && {
-        timeControl: {
-          timeIndex: layer.timeControl.timeIndex,
-          playback: layer.timeControl.playback,
-        },
-      }),
+      // Solo guardar timeIndex y playback si es TileLayer
+      ...(isTileLayer(layer) &&
+        layer.timeIndex !== undefined && {
+          timeIndex: layer.timeIndex,
+        }),
+      ...(isTileLayer(layer) &&
+        layer.playback && {
+          playback: layer.playback,
+        }),
     }));
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
   }
@@ -178,20 +192,20 @@ export class LayerService {
 
   setTimeIndex(layerId: string, timeIndex: number): void {
     this._updateLayer(layerId, (layer) => {
-      if (layer.timeControl) {
-        layer.timeControl.timeIndex = timeIndex;
+      if (isTileLayer(layer)) {
+        layer.timeIndex = timeIndex;
       }
     });
   }
 
   isPlaying(layerId: string): boolean {
     const layer = this.getLayerById(layerId);
-    return layer?.timeControl?.playback?.isPlaying || false;
+    return (layer && isTileLayer(layer) && layer.playback?.isPlaying) || false;
   }
 
   getPlaySpeed(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer?.timeControl?.playback?.speed || 1;
+    return layer && isTileLayer(layer) ? (layer.playback?.speed ?? 1) : 1;
   }
 
   setPlaySpeed(layerId: string, speed: number): void {
@@ -199,19 +213,20 @@ export class LayerService {
     const wasPlaying = this.isPlaying(layerId);
 
     this._updateLayer(layerId, (layer) => {
-      if (!layer.timeControl) {
-        layer.timeControl = {};
+      if (!isTileLayer(layer)) return;
+
+      if (!layer.playback) {
+        layer.playback = { isPlaying: false, speed: 1 };
       }
-      if (!layer.timeControl.playback) {
-        layer.timeControl.playback = { isPlaying: false, speed: 1 };
-      }
-      layer.timeControl.playback.speed = clampedSpeed;
+      layer.playback.speed = clampedSpeed;
     });
 
     if (wasPlaying) {
       const layer = this.getLayerById(layerId);
-      const maxTimeIndex = layer?.timeControl?.playback?.maxTimeIndex ?? 0;
-      const lastImagesCount = layer?.timeControl?.playback?.lastImagesCount ?? 1;
+      if (!layer || !isTileLayer(layer)) return;
+
+      const maxTimeIndex = layer.playback?.maxTimeIndex ?? 0;
+      const lastImagesCount = layer.playback?.lastImagesCount ?? 1;
       const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
       this.stopPlayback(layerId);
       this.startPlayback(layerId, maxTimeIndex, minTimeIndex);
@@ -230,33 +245,32 @@ export class LayerService {
     this.stopPlayback(layerId);
 
     this._updateLayer(layerId, (layer) => {
-      if (!layer.timeControl) {
-        layer.timeControl = {};
-      }
-      layer.timeControl.playback = {
+      if (!isTileLayer(layer)) return;
+
+      layer.playback = {
         isPlaying: true,
-        speed: layer.timeControl.playback?.speed || 1,
+        speed: layer.playback?.speed || 1,
         maxTimeIndex,
         minTimeIndex,
-        lastImagesCount: layer.timeControl.playback?.lastImagesCount,
+        lastImagesCount: layer.playback?.lastImagesCount,
       };
 
       // Clamp current time index to new range
-      const current = layer.timeControl.timeIndex ?? maxTimeIndex;
-      layer.timeControl.timeIndex = Math.max(minTimeIndex, Math.min(current, maxTimeIndex));
+      const current = layer.timeIndex ?? maxTimeIndex;
+      layer.timeIndex = Math.max(minTimeIndex, Math.min(current, maxTimeIndex));
     });
 
     const speed = this.getPlaySpeed(layerId);
     const interval = setInterval(() => {
       const layer = this.getLayerById(layerId);
-      if (!layer?.visible || !layer.timeControl?.playback?.isPlaying) {
+      if (!layer?.visible || !isTileLayer(layer) || !layer.playback?.isPlaying) {
         this.stopPlayback(layerId);
         return;
       }
 
-      const max = layer.timeControl.playback.maxTimeIndex ?? maxTimeIndex;
-      const min = layer.timeControl.playback.minTimeIndex ?? minTimeIndex;
-      const current = layer.timeControl.timeIndex ?? min;
+      const max = layer.playback.maxTimeIndex ?? maxTimeIndex;
+      const min = layer.playback.minTimeIndex ?? minTimeIndex;
+      const current = layer.timeIndex ?? min;
 
       this.setTimeIndex(layerId, current >= max ? min : current + 1);
     }, speed * 1000);
@@ -266,9 +280,9 @@ export class LayerService {
 
   stopPlayback(layerId: string): void {
     this._updateLayer(layerId, (layer) => {
-      if (layer.timeControl?.playback) {
-        layer.timeControl.playback.isPlaying = false;
-        layer.timeControl.playback.maxTimeIndex = undefined;
+      if (isTileLayer(layer) && layer.playback) {
+        layer.playback.isPlaying = false;
+        layer.playback.maxTimeIndex = undefined;
       }
     });
 
@@ -283,9 +297,9 @@ export class LayerService {
     this.playIntervals.forEach((interval, layerId) => {
       clearInterval(interval);
       this._updateLayer(layerId, (layer) => {
-        if (layer.timeControl?.playback) {
-          layer.timeControl.playback.isPlaying = false;
-          layer.timeControl.playback.maxTimeIndex = undefined;
+        if (isTileLayer(layer) && layer.playback) {
+          layer.playback.isPlaying = false;
+          layer.playback.maxTimeIndex = undefined;
         }
       });
     });
@@ -294,22 +308,21 @@ export class LayerService {
 
   getLastImagesCount(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer?.timeControl?.playback?.lastImagesCount ?? 1;
+    return layer && isTileLayer(layer) ? (layer.playback?.lastImagesCount ?? 1) : 1;
   }
 
   setLastImagesCount(layerId: string, count: number): void {
     this._updateLayer(layerId, (layer) => {
-      if (!layer.timeControl) {
-        layer.timeControl = {};
-      }
-      if (!layer.timeControl.playback) {
-        layer.timeControl.playback = {
+      if (!isTileLayer(layer)) return;
+
+      if (!layer.playback) {
+        layer.playback = {
           isPlaying: false,
           speed: 1.0,
           lastImagesCount: count,
         };
       } else {
-        layer.timeControl.playback.lastImagesCount = count;
+        layer.playback.lastImagesCount = count;
       }
     });
   }

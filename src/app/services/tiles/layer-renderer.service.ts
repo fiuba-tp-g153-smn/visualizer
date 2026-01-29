@@ -1,10 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import * as L from 'leaflet';
-import { Layer, LayerType, LayerCategory } from '../../models';
+import { Layer, LayerType, LayerCategory, WmsLayer, TileLayer } from '../../models';
 import { BACKEND_CONFIG } from '../../config/backend.config';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from '../layers/layer-config.service';
-import { IGN_WMS_BASE_CONFIG, getIgnWmsLayerName } from '../../config/layers/ign/ign-wms.config';
+import { IGN_WMS_BASE_CONFIG } from '../../config/layers/ign/ign-wms.config';
 
 /**
  * Servicio para crear tile layers de Leaflet según tipo de capa
@@ -58,7 +58,9 @@ export class LayerRendererService {
         tileLayer = this.createWmsLayer(layer);
         break;
       default:
-        throw new Error(`Unsupported layer type: ${layer.type}`);
+        // Exhaustiveness check - TypeScript will error if we add a new LayerType and forget to handle it
+        const _exhaustiveCheck: never = layer;
+        throw new Error(`Unsupported layer type`);
     }
 
     // 4. Configurar errores (solo una vez)
@@ -90,11 +92,12 @@ export class LayerRendererService {
    * Crea un tile layer estándar (satélites, rasters, etc.)
    * La categoría determina el comportamiento específico de cada tipo de dato
    */
-  private createTileLayer(layer: Layer, timeIndex: number = 0): L.TileLayer {
+  private createTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
+    // TypeScript already knows layer is TileLayer
     // Según la categoría, obtener configuración específica
     switch (layer.category) {
       case LayerCategory.SATELLITE_ABI:
-        return this.createSatelliteTileLayer(layer.id, layer.opacity, timeIndex);
+        return this.createSatelliteTileLayer(layer, timeIndex);
       default:
         throw new Error(`Unsupported tile layer category: ${layer.category}`);
     }
@@ -104,10 +107,10 @@ export class LayerRendererService {
    * Crea un tile layer WMS
    * La categoría determina el comportamiento específico
    */
-  private createWmsLayer(layer: Layer): L.TileLayer {
+  private createWmsLayer(layer: WmsLayer): L.TileLayer {
     switch (layer.category) {
       case LayerCategory.IGN_WMS:
-        return this.createIgnWmsLayer(layer.id, layer.opacity);
+        return this.createIgnWmsLayer(layer);
       default:
         throw new Error(`Unsupported WMS layer category: ${layer.category}`);
     }
@@ -115,16 +118,13 @@ export class LayerRendererService {
 
   /**
    * Crea un tile layer para satélite ABI
+   * Lee configuración directamente del objeto TileLayer
    */
-  private createSatelliteTileLayer(
-    layerId: string,
-    opacity: number,
-    timeIndex: number = 0,
-  ): L.TileLayer {
+  private createSatelliteTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
     // Si hay configuración dinámica cargada, usarla
-    if (this.layerConfigService.hasConfig(layerId)) {
-      const config = this.layerConfigService.getChannelConfig(layerId);
-      const tileUrl = this.layerConfigService.buildTileUrl(layerId, timeIndex);
+    if (this.layerConfigService.hasConfig(layer.id)) {
+      const config = this.layerConfigService.getChannelConfig(layer.id);
+      const tileUrl = this.layerConfigService.buildTileUrl(layer.id, timeIndex);
 
       if (config && tileUrl) {
         const bounds = config.channel_info.bounding_box;
@@ -144,7 +144,7 @@ export class LayerRendererService {
           ],
           noWrap: true,
           attribution: `${config.product} ${config.instrument} ${config.channel} | SMN`,
-          opacity: opacity / 100,
+          opacity: layer.opacity / 100,
         });
       }
     }
@@ -162,26 +162,16 @@ export class LayerRendererService {
   /**
    * Crea un tile layer WMS para capas del IGN
    */
-  private createIgnWmsLayer(layerId: string, opacity: number): L.TileLayer {
-    const layerName = getIgnWmsLayerName(layerId);
+  private createIgnWmsLayer(layer: WmsLayer): L.TileLayer {
+    const url = IGN_WMS_BASE_CONFIG.defaultUrl;
 
-    if (!layerName) {
-      console.warn(`No WMS layer name configured for layer: ${layerId}`);
-      const placeholder = L.tileLayer('about:blank', {
-        opacity: 0,
-        attribution: 'Configuración no disponible',
-      });
-      (placeholder as any)._isPlaceholder = true;
-      return placeholder;
-    }
-
-    return L.tileLayer.wms(IGN_WMS_BASE_CONFIG.baseUrl, {
-      layers: layerName,
+    return L.tileLayer.wms(url, {
+      layers: layer.wmsLayerName,
       format: IGN_WMS_BASE_CONFIG.format,
       transparent: IGN_WMS_BASE_CONFIG.transparent,
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
-      opacity: opacity / 100,
+      opacity: layer.opacity / 100,
       attribution: IGN_WMS_BASE_CONFIG.attribution,
     });
   }

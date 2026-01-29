@@ -55,16 +55,6 @@ export interface LayerPlaybackConfig {
 }
 
 /**
- * Configuración para capas con control temporal (satélites, modelos numéricos)
- * Se usa como composición: solo las capas que necesitan control de tiempo tienen esta config
- */
-export interface TimeBasedLayerConfig {
-  timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
-  playback?: LayerPlaybackConfig; // Configuración de reproducción
-  availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
-}
-
-/**
  * Metadata para grupos de capas activas con funciones de control
  */
 export interface ZIndexGroupMetadata {
@@ -89,30 +79,51 @@ export interface LayerState {
   opacity: number;
   zIndex?: number;
   // Configuración temporal (solo para capas con control de tiempo)
-  timeControl?: {
-    timeIndex?: number;
-    playback?: LayerPlaybackConfig;
-  };
+  timeIndex?: number;
+  playback?: LayerPlaybackConfig;
 }
 
 /**
- * Capa base - propiedades comunes a todas las capas
+ * Propiedades base comunes a todas las capas
  */
-export interface Layer {
+interface BaseLayer {
   id: string;
   name: string;
   description?: string;
-  type: LayerType; // Determina cómo se renderiza (tile, wms, etc.)
   category: LayerCategory; // Determina comportamiento específico de la capa
   visible: boolean;
   opacity: number; // 0-100
   zIndex?: number; // RELATIVO al grupo (0, 1, 2...), no absoluto
   zIndexGroup: ActiveLayerGroup; // Grupo de capas activas (base o overlay)
-
-  // Configuración opcional para capas con control temporal
-  // Solo presente en capas que lo necesitan (satélites, modelos)
-  timeControl?: TimeBasedLayerConfig;
 }
+
+/**
+ * Capa de tipo TILE (satélites, modelos, rasters precalculados)
+ * Usa L.TileLayer de Leaflet
+ */
+export interface TileLayer extends BaseLayer {
+  type: LayerType.TILE;
+  // Configuración temporal (satélites, modelos numéricos)
+  timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
+  playback?: LayerPlaybackConfig; // Configuración de reproducción
+  availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
+}
+
+/**
+ * Capa de tipo WMS (servicios Web Map Service)
+ * Usa L.TileLayer.WMS de Leaflet
+ */
+export interface WmsLayer extends BaseLayer {
+  type: LayerType.WMS;
+  wmsLayerName: string;
+  wmsWorkspace?: string;
+}
+
+/**
+ * Unión discriminada de todos los tipos de capas
+ * TypeScript puede inferir el tipo correcto basándose en la propiedad 'type'
+ */
+export type Layer = TileLayer | WmsLayer;
 
 /**
  * Subgrupo: contiene capas
