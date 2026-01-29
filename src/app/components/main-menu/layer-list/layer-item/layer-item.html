@@ -15,18 +15,26 @@
         {{ layer.name }}
       </mat-checkbox>
       @if (showInfo) {
-        <mat-icon class="info-icon" [matTooltip]="layer.description || 'Sin descripción'"
-          >info_outline</mat-icon
+        <button
+          mat-icon-button
+          [matTooltip]="layer.description || 'Sin descripción'"
+          class="info-btn"
+          tabindex="0"
         >
+          <mat-icon>info_outline</mat-icon>
+        </button>
       }
       @if (isActive() && hasAdvancedControls()) {
-        <mat-icon
-          class="config-icon"
+        <button
+          mat-icon-button
           (click)="toggleControls()"
           [matTooltip]="isControlsExpanded() ? 'Ocultar animación' : 'Configurar animación'"
+          class="config-btn"
           [class.active-config]="isControlsExpanded()"
-          >movie</mat-icon
+          tabindex="0"
         >
+          <mat-icon>movie</mat-icon>
+        </button>
       }
     </div>
   }
@@ -44,13 +52,16 @@
         </button>
       }
       @if (hasAdvancedControls()) {
-        <mat-icon
-          class="config-icon"
+        <button
+          mat-icon-button
           (click)="toggleControls()"
           [matTooltip]="isControlsExpanded() ? 'Ocultar animación' : 'Configurar animación'"
+          class="config-btn"
           [class.active-config]="isControlsExpanded()"
-          >movie</mat-icon
+          tabindex="0"
         >
+          <mat-icon>movie</mat-icon>
+        </button>
       }
     </div>
   }
