@@ -14,14 +14,12 @@
   overflow-y: auto;
 }
 
-// Tabs
 .layer-tabs {
   display: flex;
   flex-direction: column;
   flex: 1;
   overflow: hidden;
 
-  // Ensure tabs take equal width
   ::ng-deep .mat-mdc-tab {
     flex: 1;
     min-width: 0;
@@ -35,26 +33,62 @@
 .tab-label-container {
   display: flex;
   align-items: center;
-  gap: 8px; // Increase gap for better spacing with badge
-  min-width: 0; // Prevenir crecimiento del tab
-  justify-content: center; // Center content in tab
+  gap: 8px;
+  min-width: 0;
+  justify-content: center;
   width: 100%;
 }
 
-// Info icon for descriptions
-.info-icon {
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 12px;
   color: var(--mat-sys-on-surface-variant);
-  cursor: help;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  height: 100%;
 
-  &:hover {
-    opacity: 1;
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
   }
 }
 
-// Search
-.search-container {
+.disabled-state {
+  opacity: 0.7;
+  pointer-events: none;
+  height: 100%;
+}
+
+.active-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.search-bar {
   display: flex;
   align-items: center;
   gap: 12px;

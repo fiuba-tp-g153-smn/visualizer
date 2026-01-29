@@ -15,93 +15,8 @@
             <span>Disponibles</span>
           </div>
         </ng-template>
-
         <div class="tab-content">
-          <!-- Buscador -->
-          <div class="search-container">
-            <mat-icon>search</mat-icon>
-            <input type="text" placeholder="Buscar capas" [(ngModel)]="searchText" />
-          </div>
-
-          <!-- No hay resultados -->
-          @if (hasSearch() && filteredGroups().length === 0) {
-            <div class="empty-state">
-              <mat-icon>search_off</mat-icon>
-              <p>No se encontraron resultados</p>
-              <span>Intenta con otros términos de búsqueda</span>
-            </div>
-          }
-
-          <!-- Lista de grupos -->
-          <mat-accordion class="layers-accordion" displayMode="flat" multi>
-            @for (group of filteredGroups(); track group.id; let isLast = $last) {
-              <mat-expansion-panel
-                class="group-panel"
-                [expanded]="group._shouldExpandGroup"
-                #groupPanel="matExpansionPanel"
-              >
-                <mat-expansion-panel-header>
-                  <mat-panel-title>
-                    <mat-icon class="panel-icon">{{ group.icon }}</mat-icon>
-                    <span class="panel-title-text">{{ group.name }}</span>
-                  </mat-panel-title>
-                  <mat-panel-description>
-                    @if (getActiveLayersCountInGroup(group) > 0 && !groupPanel.expanded) {
-                      <span class="active-dot"></span>
-                    }
-                    @if (group.description) {
-                      <mat-icon class="info-icon" [matTooltip]="group.description"
-                        >info_outline</mat-icon
-                      >
-                    }
-                  </mat-panel-description>
-                </mat-expansion-panel-header>
-
-                <!-- Subgrupos -->
-                <mat-accordion displayMode="flat" multi>
-                  @for (subgroup of group.subgroups; track subgroup.id; let isLastSub = $last) {
-                    <mat-expansion-panel
-                      class="subgroup-panel"
-                      [expanded]="subgroup._shouldExpandSubgroup"
-                      #subPanel="matExpansionPanel"
-                    >
-                      <mat-expansion-panel-header>
-                        <mat-panel-title>
-                          <span class="panel-title-text">{{ subgroup.name }}</span>
-                        </mat-panel-title>
-                        <mat-panel-description>
-                          @if (getActiveLayersCountInSubgroup(subgroup) > 0 && !subPanel.expanded) {
-                            <span class="active-dot"></span>
-                          }
-                          @if (subgroup.description) {
-                            <mat-icon class="info-icon" [matTooltip]="subgroup.description"
-                              >info_outline</mat-icon
-                            >
-                          }
-                        </mat-panel-description>
-                      </mat-expansion-panel-header>
-
-                      <!-- Lista de capas -->
-                      <div class="layer-list-container">
-                        @for (layer of subgroup.layers; track layer.id; let isLastLayer = $last) {
-                          <app-layer-item [layer]="layer" mode="available" />
-                          @if (!isLastLayer) {
-                            <mat-divider />
-                          }
-                        }
-                      </div>
-                    </mat-expansion-panel>
-                    @if (!isLastSub) {
-                      <mat-divider />
-                    }
-                  }
-                </mat-accordion>
-              </mat-expansion-panel>
-              @if (!isLast) {
-                <mat-divider />
-              }
-            }
-          </mat-accordion>
+          <app-available-layers />
         </div>
       </mat-tab>
 
@@ -111,66 +26,13 @@
           <div class="tab-label-container">
             <mat-icon class="tab-icon">tune</mat-icon>
             <span>Activas</span>
-            @if (getActiveLayers().length > 0) {
-              <span class="active-count">{{ getActiveLayers().length }}</span>
+            @if (getActiveLayersCount() > 0) {
+              <span class="active-count">{{ getActiveLayersCount() }}</span>
             }
           </div>
         </ng-template>
-
         <div class="tab-content">
-          @if (getActiveLayers().length === 0) {
-            <div class="empty-state">
-              <mat-icon>layers_clear</mat-icon>
-              <p>No hay capas activas</p>
-              <span>Activa capas desde la pestaña "Disponibles"</span>
-            </div>
-          } @else {
-            @for (group of activeLayerGroups(); track group.id) {
-              @if (group.layers.length > 0) {
-                <mat-expansion-panel
-                  class="active-group-panel"
-                  [expanded]="group.expanded()"
-                  (expandedChange)="group.setExpanded($event)"
-                >
-                  <mat-expansion-panel-header>
-                    <mat-panel-title>
-                      <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
-                      <span class="group-title">{{ group.name }}</span>
-                    </mat-panel-title>
-                    <mat-panel-description>
-                      @if (group.description) {
-                        <mat-icon class="info-icon" [matTooltip]="group.description"
-                          >info_outline</mat-icon
-                        >
-                      }
-                      <button
-                        mat-icon-button
-                        class="clear-group-button"
-                        (click)="group.clearGroup($event)"
-                        [matTooltip]="'Desactivar todas las capas de ' + group.name.toLowerCase()"
-                      >
-                        <mat-icon>clear_all</mat-icon>
-                      </button>
-                    </mat-panel-description>
-                  </mat-expansion-panel-header>
-                  <div
-                    cdkDropList
-                    (cdkDropListDropped)="group.onDrop($event)"
-                    class="active-layers-list"
-                  >
-                    @for (layer of group.layers; track layer.id; let isLast = $last) {
-                      <div cdkDrag class="active-layer-item">
-                        <app-layer-item [layer]="layer" mode="active" />
-                      </div>
-                      @if (!isLast) {
-                        <mat-divider />
-                      }
-                    }
-                  </div>
-                </mat-expansion-panel>
-              }
-            }
-          }
+          <app-active-layers />
         </div>
       </mat-tab>
     </mat-tab-group>

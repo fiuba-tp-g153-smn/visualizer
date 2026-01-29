@@ -20,9 +20,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import { Layer } from '../../../../models';
-import { LayerService } from '../../../../services/layer.service';
-import { ChannelConfigService } from '../../../../services/channel-config.service';
-import { LayerReloadService } from '../../../../services/layer-reload.service';
+import { LayerService } from '../../../../services/layers/layer.service';
+import { LayerReloadService } from '../../../../services/layers/layer-reload.service';
+import { LayerConfigService } from '../../../../services/layers/layer-config.service';
 
 /**
  * Modo de visualización del componente
@@ -60,7 +60,7 @@ export type LayerItemMode = 'available' | 'active';
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly layerService = inject(LayerService);
-  private readonly channelConfigService = inject(ChannelConfigService);
+  private readonly layerConfigService = inject(LayerConfigService);
   private readonly reloadService = inject(LayerReloadService);
 
   /**
@@ -123,14 +123,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita control de tiempo
    */
   hasTimeControl = computed(() => {
-    return this.channelConfigService.hasConfig(this.layer.id);
+    return this.layerConfigService.hasConfig(this.layer.id);
   });
 
   /**
    * Obtiene el índice máximo de tiempo
    */
   maxTimeIndex = computed(() => {
-    const tilesets = this.channelConfigService.getTilesets(this.layer.id);
+    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     return Math.max(0, tilesets.length - 1);
   });
 
@@ -198,7 +198,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita cargar configuración
    */
   private needsConfig(): boolean {
-    return this.layer.id.startsWith('abi-') && !this.channelConfigService.hasConfig(this.layer.id);
+    return this.layer.id.startsWith('abi-') && !this.layerConfigService.hasConfig(this.layer.id);
   }
 
   /**
@@ -217,7 +217,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     this.isLoadingConfig.set(true);
 
-    this.channelConfigService
+    this.layerConfigService
       .loadChannelConfig(this.layer.id, product, instrument, channel)
       .subscribe({
         next: (config) => {
@@ -337,7 +337,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return 'Cargando...';
     }
 
-    const tilesets = this.channelConfigService.getTilesets(this.layer.id);
+    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
       // Extraer información de fecha del ID (formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567)
@@ -369,7 +369,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return '--:--';
     }
 
-    const tilesets = this.channelConfigService.getTilesets(this.layer.id);
+    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
       const match = tileset.id.match(/_s(\d{11})/);

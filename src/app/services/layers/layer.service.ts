@@ -1,13 +1,12 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
 import {
+  ACTIVE_LAYER_GROUP_DEFINITIONS,
+  ActiveLayerGroup,
   Layer,
   LayerGroup,
-  LayerPlaybackConfig,
-  ActiveLayerGroup,
-  ACTIVE_LAYER_GROUP_DEFINITIONS,
   LayerState,
-} from '../models';
-import { LAYER_DEFINITIONS } from '../config/layer-definitions';
+} from '../../models';
+import { LAYER_DEFINITIONS } from '../../config/layer-definitions';
 
 @Injectable({
   providedIn: 'root',

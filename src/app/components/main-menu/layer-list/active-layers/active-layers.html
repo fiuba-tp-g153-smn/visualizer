@@ -1,0 +1,49 @@
+<div class="active-layers">
+  @if (getActiveLayers().length === 0) {
+    <div class="empty-state">
+      <mat-icon>layers_clear</mat-icon>
+      <p>No hay capas activas</p>
+      <span>Activa capas desde la pestaña "Disponibles"</span>
+    </div>
+  } @else {
+    @for (group of activeLayerGroups(); track group.id) {
+      @if (group.layers.length > 0) {
+        <mat-expansion-panel
+          class="active-group-panel"
+          [expanded]="group.expanded()"
+          (expandedChange)="group.setExpanded($event)"
+        >
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
+              <span class="group-title">{{ group.name }}</span>
+            </mat-panel-title>
+            <mat-panel-description>
+              @if (group.description) {
+                <mat-icon class="info-icon" [matTooltip]="group.description">info_outline</mat-icon>
+              }
+              <button
+                mat-icon-button
+                class="clear-group-button"
+                (click)="group.clearGroup($event)"
+                [matTooltip]="'Desactivar todas las capas de ' + group.name.toLowerCase()"
+              >
+                <mat-icon>clear_all</mat-icon>
+              </button>
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div cdkDropList (cdkDropListDropped)="group.onDrop($event)" class="active-layers-list">
+            @for (layer of group.layers; track layer.id; let isLast = $last) {
+              <div cdkDrag class="active-layer-item">
+                <app-layer-item [layer]="layer" mode="active" />
+              </div>
+              @if (!isLast) {
+                <mat-divider />
+              }
+            }
+          </div>
+        </mat-expansion-panel>
+      }
+    }
+  }
+</div>

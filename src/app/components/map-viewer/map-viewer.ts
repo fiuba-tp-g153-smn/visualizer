@@ -13,10 +13,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config/map.config';
-import { TileService } from '../../services/tile.service';
-import { LayerService } from '../../services/layer.service';
-import { LayerRendererService } from '../../services/layer-renderer.service';
-import { ChannelConfigService } from '../../services/channel-config.service';
+import { TileService } from '../../services/tiles/tile.service';
+import { LayerService } from '../../services/layers/layer.service';
+import { LayerRendererService } from '../../services/tiles/layer-renderer.service';
+import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { Layer, TileProvider, LayerCategory } from '../../models';
 
 @Component({
@@ -32,7 +32,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private tileService = inject(TileService);
   private layerService = inject(LayerService);
   private layerRendererService = inject(LayerRendererService);
-  private channelConfigService = inject(ChannelConfigService);
+  private layerConfigService = inject(LayerConfigService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -162,7 +162,7 @@ export class MapViewer implements OnInit, OnDestroy {
     for (const layer of layers) {
       if (!layer.visible) continue;
 
-      const tilesets = this.channelConfigService.getTilesets(layer.id);
+      const tilesets = this.layerConfigService.getTilesets(layer.id);
       const currentTimeIndex = layer.timeIndex ?? 0;
 
       // Definir ventana de pre-fetching: [T-1, T, T+1]

@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import * as L from 'leaflet';
-import { Layer, LayerType, LayerCategory } from '../models';
-import { BACKEND_CONFIG } from '../config/backend.config';
-import { NotificationService } from './notification.service';
-import { ChannelConfigService } from './channel-config.service';
-import { getAbiTileConfig } from '../config/layer-tiles/satellite/abi.tiles';
-import { IGN_WMS_BASE_CONFIG, getIgnWmsLayerName } from '../config/layer-tiles/map/ign-wms.tiles';
+import { Layer, LayerType, LayerCategory } from '../../models';
+import { BACKEND_CONFIG } from '../../config/backend.config';
+import { NotificationService } from '../notifications/notification.service';
+import { LayerConfigService } from '../layers/layer-config.service';
+import { getAbiTileConfig } from '../../config/layers/satellite/abi.config';
+import { IGN_WMS_BASE_CONFIG, getIgnWmsLayerName } from '../../config/layers/ign/ign-wms.config';
 
 /**
  * Servicio para crear tile layers de Leaflet según tipo de capa
@@ -17,7 +17,7 @@ import { IGN_WMS_BASE_CONFIG, getIgnWmsLayerName } from '../config/layer-tiles/m
 })
 export class LayerRendererService {
   private readonly notificationService = inject(NotificationService);
-  private readonly channelConfigService = inject(ChannelConfigService);
+  private readonly layerConfigService = inject(LayerConfigService);
 
   // Track de errores por capa para evitar spam de notificaciones
   private readonly errorTracker = new Map<string, number>();
@@ -31,7 +31,7 @@ export class LayerRendererService {
    */
   getTileLayerForTime(layer: Layer, timeIndex: number): L.TileLayer {
     // 1. Obtener ID del tileset para generar clave única
-    const tilesets = this.channelConfigService.getTilesets(layer.id);
+    const tilesets = this.layerConfigService.getTilesets(layer.id);
     let tilesetId = 'default';
 
     if (tilesets && tilesets[timeIndex]) {
@@ -123,9 +123,9 @@ export class LayerRendererService {
     timeIndex: number = 0,
   ): L.TileLayer {
     // Si hay configuración dinámica cargada, usarla
-    if (this.channelConfigService.hasConfig(layerId)) {
-      const config = this.channelConfigService.getChannelConfig(layerId);
-      const tileUrl = this.channelConfigService.buildTileUrl(layerId, timeIndex);
+    if (this.layerConfigService.hasConfig(layerId)) {
+      const config = this.layerConfigService.getChannelConfig(layerId);
+      const tileUrl = this.layerConfigService.buildTileUrl(layerId, timeIndex);
 
       if (config && tileUrl) {
         const bounds = config.channel_info.bounding_box;
