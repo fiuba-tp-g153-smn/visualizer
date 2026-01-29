@@ -19,7 +19,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
-import { Layer, LayerCategory } from '../../../../models';
+import { Layer, LayerCategory, LayerType } from '../../../../models';
 import { LayerService } from '../../../../services/layers/layer.service';
 import { LayerReloadService } from '../../../../services/layers/layer-reload.service';
 import { LayerConfigService } from '../../../../services/layers/layer-config.service';
@@ -103,7 +103,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
    */
   lastImagesOptions = computed(() => {
-    return this.layer.timeControl?.availablePeriods ?? [1]; // Fallback a valor por defecto
+    return this.layer.type === LayerType.TILE ? (this.layer.availablePeriods ?? [1]) : [1];
   });
 
   /**
@@ -174,7 +174,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentTimeIndex = computed(() => {
     const activeLayer = this.getActiveLayer();
-    const currentIndex = activeLayer?.timeControl?.timeIndex ?? this.maxTimeIndex();
+    const currentIndex =
+      activeLayer && activeLayer.type === LayerType.TILE
+        ? (activeLayer.timeIndex ?? this.maxTimeIndex())
+        : this.maxTimeIndex();
     // Asegurar que el índice actual esté dentro del rango visible
     const min = this.minTimeIndex();
     const max = this.maxTimeIndex();

@@ -1,8 +1,8 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, effect, inject } from '@angular/core';
 import { LayerService } from './layer.service';
 import { LayerConfigService } from './layer-config.service';
 import { NotificationService } from '../notifications/notification.service';
-import { NotificationType } from '../../models';
+import { LayerType, NotificationType } from '../../models';
 
 interface RefreshState {
   intervalId?: number;
@@ -95,8 +95,13 @@ export class LayerReloadService {
    */
   private getMaxSelectablePeriods(layerId: string): number {
     const layer = this.layerService.getLayerById(layerId);
-    if (layer?.timeControl?.availablePeriods && layer.timeControl.availablePeriods.length > 0) {
-      return Math.max(...layer.timeControl.availablePeriods);
+    if (
+      layer &&
+      layer.type === LayerType.TILE &&
+      layer.availablePeriods &&
+      layer.availablePeriods.length > 0
+    ) {
+      return Math.max(...layer.availablePeriods);
     }
     return 1;
   }

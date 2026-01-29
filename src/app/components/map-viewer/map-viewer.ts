@@ -17,7 +17,7 @@ import { TileService } from '../../services/tiles/tile.service';
 import { LayerService } from '../../services/layers/layer.service';
 import { LayerRendererService } from '../../services/tiles/layer-renderer.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
-import { Layer, TileProvider, LayerCategory } from '../../models';
+import { Layer, TileProvider, LayerCategory, LayerType } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -163,7 +163,8 @@ export class MapViewer implements OnInit, OnDestroy {
       if (!layer.visible) continue;
 
       const tilesets = this.layerConfigService.getTilesets(layer.id);
-      const currentTimeIndex = layer.timeControl?.timeIndex ?? 0;
+      // Solo para capas con control temporal (TILE layers)
+      const currentTimeIndex = layer.type === LayerType.TILE ? (layer.timeIndex ?? 0) : 0;
 
       // Definir ventana de pre-fetching: [T-1, T, T+1]
       // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T

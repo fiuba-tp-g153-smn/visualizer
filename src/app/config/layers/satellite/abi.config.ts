@@ -1,4 +1,10 @@
-import { LayerSubgroup, LayerType, LayerCategory, ActiveLayerGroup } from '../../../models';
+import {
+  LayerSubgroup,
+  LayerType,
+  LayerCategory,
+  ActiveLayerGroup,
+  TileLayer,
+} from '../../../models';
 import { environment } from '../../../../environments/environment';
 
 /**
@@ -10,10 +16,8 @@ const ABI_DEFAULTS = {
   opacity: 80,
   zIndexGroup: ActiveLayerGroup.BASE, // Capas de datos
   // Configuración de control temporal (común para todas las capas ABI)
-  timeControl: {
-    availablePeriods: [1, 6, 12, 24], // Períodos disponibles para todas las capas ABI
-  },
-} as const;
+  availablePeriods: [1, 6, 12, 24] as const, // Períodos disponibles para todas las capas ABI
+};
 
 /**
  * Definición de capas satelitales ABI (GOES-19)
@@ -26,29 +30,29 @@ export const ABI_SUBGROUP: LayerSubgroup = {
   expanded: true,
   layers: [
     {
+      ...ABI_DEFAULTS,
       id: 'abi-ch2',
       name: 'Canal 2 (Visible)',
       description: 'Banda visible (0.64 μm)',
       type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI,
-      ...ABI_DEFAULTS,
-    },
+    } as TileLayer,
     {
+      ...ABI_DEFAULTS,
       id: 'abi-ch9',
       name: 'Canal 9 (Vapor de agua)',
       description: 'Banda de vapor de agua (6.9 μm)',
       type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI,
-      ...ABI_DEFAULTS,
-    },
+    } as TileLayer,
     {
+      ...ABI_DEFAULTS,
       id: 'abi-ch13',
       name: 'Canal 13 (Infrarrojo)',
       description: 'Banda infrarroja (10.3 μm)',
       type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI,
-      ...ABI_DEFAULTS,
-    },
+    } as TileLayer,
   ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
 };
 import { buildTileUrl, BACKEND_CONFIG } from '../../backend.config';
