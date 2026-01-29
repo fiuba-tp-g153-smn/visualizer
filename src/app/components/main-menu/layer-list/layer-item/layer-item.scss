@@ -16,6 +16,22 @@
     background-color: var(--mat-sys-surface);
     .layer-header {
       justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+
+      .layer-checkbox {
+        flex: 1;
+      }
+
+      .info-btn,
+      .config-btn {
+        flex-shrink: 0;
+        color: var(--mat-sys-on-surface-variant);
+
+        &:hover {
+          color: var(--mat-sys-primary);
+        }
+      }
     }
     .layer-checkbox { flex: 1; }
   }
@@ -65,6 +81,42 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      width: 100%;
+
+      .drag-handle {
+        cursor: grab;
+        color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
+
+        &:active {
+          cursor: grabbing;
+        }
+      }
+
+      .layer-name {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .config-btn {
+        flex-shrink: 0;
+        color: var(--mat-sys-on-surface-variant);
+
+        &:hover {
+          color: var(--mat-sys-primary);
+        }
+      }
+
+      .close-btn {
+        flex-shrink: 0;
+        color: var(--mat-sys-on-surface-variant);
+
+        &:hover {
+          color: var(--mat-sys-error);
+        }
+      }
     }
   }
 

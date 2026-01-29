@@ -68,15 +68,15 @@ export class AvailableLayersComponent {
               const layerDescMatches = layer.description
                 ? this.normalizeText(layer.description).includes(search)
                 : false;
-              return layerNameMatches || layerDescMatches;
+              return (
+                layerNameMatches || layerDescMatches || groupNameMatches || subgroupNameMatches
+              );
             });
 
             return {
               ...subgroup,
               layers,
-              _shouldExpandSubgroup: search
-                ? layers.length > 0 && layers.length < subgroup.layers.length
-                : false,
+              _shouldExpandSubgroup: search ? layers.length > 0 : false,
             };
           })
           .filter((subgroup) => subgroup.layers.length > 0);
@@ -88,7 +88,7 @@ export class AvailableLayersComponent {
         return {
           ...group,
           subgroups: filteredSubgroups,
-          _shouldExpandGroup: hasMatchingLayers || (hasMatchingSubgroups && !groupNameMatches),
+          _shouldExpandGroup: search ? filteredSubgroups.length > 0 : false,
         };
       })
       .filter((group) => group.subgroups.length > 0);
