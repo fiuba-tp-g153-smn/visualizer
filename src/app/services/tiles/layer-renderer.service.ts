@@ -240,9 +240,4 @@ export class LayerRendererService {
       }
     });
   }
-
-  // Para agregar WRF, ECMWF, etc., solo agregar un nuevo case:
-  // case LayerCategory.WRF:
-  //   tileLayer = createWrfTileLayer(layer.id, layer.opacity);
-  //   break;
 }

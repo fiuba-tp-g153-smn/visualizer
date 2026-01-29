@@ -19,16 +19,13 @@
         flex: 1;
       }
 
-      .info-icon,
-      .config-icon {
+      .info-btn,
+      .config-btn {
         flex-shrink: 0;
         color: var(--mat-sys-on-surface-variant);
-        cursor: pointer;
-        opacity: 0.7;
-        transition: opacity 0.2s;
 
         &:hover {
-          opacity: 1;
+          color: var(--mat-sys-primary);
         }
       }
     }
@@ -61,15 +58,12 @@
         color: var(--mat-sys-on-surface);
       }
 
-      .config-icon {
+      .config-btn {
         flex-shrink: 0;
         color: var(--mat-sys-on-surface-variant);
-        cursor: pointer;
-        opacity: 0.7;
-        transition: opacity 0.2s;
 
         &:hover {
-          opacity: 1;
+          color: var(--mat-sys-primary);
         }
       }
 
