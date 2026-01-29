@@ -18,6 +18,12 @@ export const IGN_WMS_BASE_CONFIG = {
     '<a href="https://www.ign.gob.ar/" target="_blank">Instituto Geográfico Nacional</a>',
 } as const;
 
+export const IGN_WMS_WORKSPACE_URLS: Record<string, string> = {
+  ows: 'https://wms.ign.gob.ar/geoserver/ows',
+  limites: 'https://wms.ign.gob.ar/geoserver/limites/wms',
+  'relieve-suelo': 'https://wms.ign.gob.ar/geoserver/relieve-suelo/wms',
+};
+
 export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
   id: 'ign-limits',
   name: 'Límites (IGN)',
@@ -54,6 +60,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Obra destinada a marcar o señalar la posición de un punto que constituya el deslinde del territorio internacional ',
       wmsLayerName: 'hitos_internacionales',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
     {
@@ -62,6 +69,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Obra destinada a marcar o señalar la posición de un punto que constituya el deslinde del territorio interprovincial.',
       wmsLayerName: 'hitos_interprovinciales',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
     {
@@ -70,6 +78,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Línea que constituye la representación de la traza demarcadora que delimita un país.',
       wmsLayerName: 'linea_de_limite_FA004',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
     {
@@ -78,6 +87,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Líneas que representan los diferentes espacíos marítimos en su límite exterior.',
       wmsLayerName: 'linea_limite_maritimos',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
   ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
@@ -132,6 +142,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
       name: 'Departamento',
       description: 'División político administrativa de segundo orden.',
       wmsLayerName: 'departamento_FA001',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
     {
@@ -140,6 +151,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
       description:
         'Jurisdicción político-administrativa de tercer o cuarto orden. Incluye Municipios, Comunas, Juntas y Comisiones.',
       wmsLayerName: 'gobiernoslocales_2022',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
     {
@@ -148,6 +160,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
       description:
         'División político territorial de primer orden. Incluye la Ciudad Autónoma de Buenos Aires (CABA).',
       wmsLayerName: 'provincia_FA003',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
   ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
@@ -166,6 +179,7 @@ export const IGN_WMS_TERRITORIAL_SUBGROUP: LayerSubgroup = {
       description:
         'Áreas que representan las diferentes regiones montañosas de la República Argentina.',
       wmsLayerName: 'ign:area_de_montana',
+      wmsWorkspace: 'relieve-suelo',
       ...IGN_WMS_DEFAULTS,
     },
     {
@@ -322,6 +336,7 @@ export const IGN_WMS_TERRITORIAL_SUBGROUP: LayerSubgroup = {
       description:
         'Área de tierra y/o mar destinada a la protección y mantenimiento de la diversidad biológica y de los recursos naturales y culturales asociados.',
       wmsLayerName: 'area_protegida_070115',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
     {
@@ -1040,6 +1055,7 @@ export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
       description:
         'Zona adyacente al límite internacional, que constituye una zona de seguridad destinada a complementar las previsiones territoriales de la defensa nacional y/o un área prioritaria para su desarrollo.',
       wmsLayerName: 'zona_de_frontera_070113',
+      wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
   ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),

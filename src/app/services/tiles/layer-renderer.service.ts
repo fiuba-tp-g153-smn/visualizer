@@ -4,7 +4,10 @@ import { Layer, LayerType, LayerCategory, WmsLayer, TileLayer } from '../../mode
 import { BACKEND_CONFIG } from '../../config/backend.config';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from '../layers/layer-config.service';
-import { IGN_WMS_BASE_CONFIG } from '../../config/layers/ign/ign-wms.config';
+import {
+  IGN_WMS_BASE_CONFIG,
+  IGN_WMS_WORKSPACE_URLS,
+} from '../../config/layers/ign/ign-wms.config';
 
 /**
  * Servicio para crear tile layers de Leaflet según tipo de capa
@@ -59,7 +62,6 @@ export class LayerRendererService {
         break;
       default:
         // Exhaustiveness check - TypeScript will error if we add a new LayerType and forget to handle it
-        const _exhaustiveCheck: never = layer;
         throw new Error(`Unsupported layer type`);
     }
 
@@ -79,7 +81,7 @@ export class LayerRendererService {
    * @param activeKeys Set de claves (layerId-tilesetId) que DEBEN mantenerse
    */
   prunePool(activeKeys: Set<string>): void {
-    for (const [key, layer] of this.layerPool) {
+    for (const [key] of this.layerPool) {
       if (!activeKeys.has(key)) {
         // Opcional: limpiar listeners si fuera necesario, pero Leaflet lo maneja bien
         this.layerPool.delete(key);
@@ -161,9 +163,12 @@ export class LayerRendererService {
 
   /**
    * Crea un tile layer WMS para capas del IGN
+   * Usa wmsWorkspace si está definido, sino usa la URL por defecto
    */
   private createIgnWmsLayer(layer: WmsLayer): L.TileLayer {
-    const url = IGN_WMS_BASE_CONFIG.defaultUrl;
+    const url = layer.wmsWorkspace
+      ? IGN_WMS_WORKSPACE_URLS[layer.wmsWorkspace] || IGN_WMS_BASE_CONFIG.defaultUrl
+      : IGN_WMS_BASE_CONFIG.defaultUrl;
 
     return L.tileLayer.wms(url, {
       layers: layer.wmsLayerName,
