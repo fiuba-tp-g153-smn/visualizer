@@ -163,7 +163,7 @@ export class MapViewer implements OnInit, OnDestroy {
       if (!layer.visible) continue;
 
       const tilesets = this.layerConfigService.getTilesets(layer.id);
-      const currentTimeIndex = layer.timeIndex ?? 0;
+      const currentTimeIndex = layer.timeControl?.timeIndex ?? 0;
 
       // Definir ventana de pre-fetching: [T-1, T, T+1]
       // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T

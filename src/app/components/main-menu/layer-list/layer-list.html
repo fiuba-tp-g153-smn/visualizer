@@ -26,9 +26,9 @@
           <div class="tab-label-container">
             <mat-icon class="tab-icon">tune</mat-icon>
             <span>Activas</span>
-            @if (getActiveLayersCount() > 0) {
-              <span class="active-count">{{ getActiveLayersCount() }}</span>
-            }
+            <span class="active-count" [class.visible]="getActiveLayersCount() > 0">
+              {{ getActiveLayersCount() }}
+            </span>
           </div>
         </ng-template>
         <div class="tab-content">

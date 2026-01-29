@@ -53,8 +53,13 @@ export class LayerService {
       visible: layer.visible,
       opacity: layer.opacity,
       zIndex: layer.zIndex,
-      timeIndex: layer.timeIndex,
-      playback: layer.playback,
+      // Solo guardar timeControl si existe
+      ...(layer.timeControl && {
+        timeControl: {
+          timeIndex: layer.timeControl.timeIndex,
+          playback: layer.timeControl.playback,
+        },
+      }),
     }));
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
   }
@@ -118,18 +123,20 @@ export class LayerService {
 
   setTimeIndex(layerId: string, timeIndex: number): void {
     this._updateLayer(layerId, (layer) => {
-      layer.timeIndex = timeIndex;
+      if (layer.timeControl) {
+        layer.timeControl.timeIndex = timeIndex;
+      }
     });
   }
 
   isPlaying(layerId: string): boolean {
     const layer = this.getLayerById(layerId);
-    return layer?.playback?.isPlaying || false;
+    return layer?.timeControl?.playback?.isPlaying || false;
   }
 
   getPlaySpeed(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer?.playback?.speed || 1;
+    return layer?.timeControl?.playback?.speed || 1;
   }
 
   setPlaySpeed(layerId: string, speed: number): void {
@@ -137,16 +144,19 @@ export class LayerService {
     const wasPlaying = this.isPlaying(layerId);
 
     this._updateLayer(layerId, (layer) => {
-      if (!layer.playback) {
-        layer.playback = { isPlaying: false, speed: 1 };
+      if (!layer.timeControl) {
+        layer.timeControl = {};
       }
-      layer.playback.speed = clampedSpeed;
+      if (!layer.timeControl.playback) {
+        layer.timeControl.playback = { isPlaying: false, speed: 1 };
+      }
+      layer.timeControl.playback.speed = clampedSpeed;
     });
 
     if (wasPlaying) {
       const layer = this.getLayerById(layerId);
-      const maxTimeIndex = layer?.playback?.maxTimeIndex ?? 0;
-      const lastImagesCount = layer?.playback?.lastImagesCount ?? 1;
+      const maxTimeIndex = layer?.timeControl?.playback?.maxTimeIndex ?? 0;
+      const lastImagesCount = layer?.timeControl?.playback?.lastImagesCount ?? 1;
       const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
       this.stopPlayback(layerId);
       this.startPlayback(layerId, maxTimeIndex, minTimeIndex);
@@ -165,30 +175,33 @@ export class LayerService {
     this.stopPlayback(layerId);
 
     this._updateLayer(layerId, (layer) => {
-      layer.playback = {
+      if (!layer.timeControl) {
+        layer.timeControl = {};
+      }
+      layer.timeControl.playback = {
         isPlaying: true,
-        speed: layer.playback?.speed || 1,
+        speed: layer.timeControl.playback?.speed || 1,
         maxTimeIndex,
         minTimeIndex,
-        lastImagesCount: layer.playback?.lastImagesCount,
+        lastImagesCount: layer.timeControl.playback?.lastImagesCount,
       };
 
       // Clamp current time index to new range
-      const current = layer.timeIndex ?? maxTimeIndex;
-      layer.timeIndex = Math.max(minTimeIndex, Math.min(current, maxTimeIndex));
+      const current = layer.timeControl.timeIndex ?? maxTimeIndex;
+      layer.timeControl.timeIndex = Math.max(minTimeIndex, Math.min(current, maxTimeIndex));
     });
 
     const speed = this.getPlaySpeed(layerId);
     const interval = setInterval(() => {
       const layer = this.getLayerById(layerId);
-      if (!layer?.visible || !layer.playback?.isPlaying) {
+      if (!layer?.visible || !layer.timeControl?.playback?.isPlaying) {
         this.stopPlayback(layerId);
         return;
       }
 
-      const max = layer.playback.maxTimeIndex ?? maxTimeIndex;
-      const min = layer.playback.minTimeIndex ?? minTimeIndex;
-      const current = layer.timeIndex ?? min;
+      const max = layer.timeControl.playback.maxTimeIndex ?? maxTimeIndex;
+      const min = layer.timeControl.playback.minTimeIndex ?? minTimeIndex;
+      const current = layer.timeControl.timeIndex ?? min;
 
       this.setTimeIndex(layerId, current >= max ? min : current + 1);
     }, speed * 1000);
@@ -198,9 +211,9 @@ export class LayerService {
 
   stopPlayback(layerId: string): void {
     this._updateLayer(layerId, (layer) => {
-      if (layer.playback) {
-        layer.playback.isPlaying = false;
-        layer.playback.maxTimeIndex = undefined;
+      if (layer.timeControl?.playback) {
+        layer.timeControl.playback.isPlaying = false;
+        layer.timeControl.playback.maxTimeIndex = undefined;
       }
     });
 
@@ -215,9 +228,9 @@ export class LayerService {
     this.playIntervals.forEach((interval, layerId) => {
       clearInterval(interval);
       this._updateLayer(layerId, (layer) => {
-        if (layer.playback) {
-          layer.playback.isPlaying = false;
-          layer.playback.maxTimeIndex = undefined;
+        if (layer.timeControl?.playback) {
+          layer.timeControl.playback.isPlaying = false;
+          layer.timeControl.playback.maxTimeIndex = undefined;
         }
       });
     });
@@ -226,19 +239,22 @@ export class LayerService {
 
   getLastImagesCount(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer?.playback?.lastImagesCount ?? 1;
+    return layer?.timeControl?.playback?.lastImagesCount ?? 1;
   }
 
   setLastImagesCount(layerId: string, count: number): void {
     this._updateLayer(layerId, (layer) => {
-      if (!layer.playback) {
-        layer.playback = {
+      if (!layer.timeControl) {
+        layer.timeControl = {};
+      }
+      if (!layer.timeControl.playback) {
+        layer.timeControl.playback = {
           isPlaying: false,
           speed: 1.0,
           lastImagesCount: count,
         };
       } else {
-        layer.playback.lastImagesCount = count;
+        layer.timeControl.playback.lastImagesCount = count;
       }
     });
   }

@@ -9,7 +9,10 @@ const ABI_DEFAULTS = {
   visible: false,
   opacity: 80,
   zIndexGroup: ActiveLayerGroup.BASE, // Capas de datos
-  availablePeriods: [1, 6, 12, 24], // Períodos disponibles para todas las capas ABI
+  // Configuración de control temporal (común para todas las capas ABI)
+  timeControl: {
+    availablePeriods: [1, 6, 12, 24], // Períodos disponibles para todas las capas ABI
+  },
 } as const;
 
 /**

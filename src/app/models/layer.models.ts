@@ -80,6 +80,16 @@ export interface LayerPlaybackConfig {
 }
 
 /**
+ * Configuración para capas con control temporal (satélites, modelos numéricos)
+ * Se usa como composición: solo las capas que necesitan control de tiempo tienen esta config
+ */
+export interface TimeBasedLayerConfig {
+  timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
+  playback?: LayerPlaybackConfig; // Configuración de reproducción
+  availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
+}
+
+/**
  * Metadata para grupos de capas activas con funciones de control
  */
 export interface ZIndexGroupMetadata {
@@ -103,12 +113,15 @@ export interface LayerState {
   visible: boolean;
   opacity: number;
   zIndex?: number;
-  timeIndex?: number;
-  playback?: LayerPlaybackConfig;
+  // Configuración temporal (solo para capas con control de tiempo)
+  timeControl?: {
+    timeIndex?: number;
+    playback?: LayerPlaybackConfig;
+  };
 }
 
 /**
- * Capa individual
+ * Capa base - propiedades comunes a todas las capas
  */
 export interface Layer {
   id: string;
@@ -120,9 +133,10 @@ export interface Layer {
   opacity: number; // 0-100
   zIndex?: number; // RELATIVO al grupo (0, 1, 2...), no absoluto
   zIndexGroup: ActiveLayerGroup; // Grupo de capas activas (base o overlay)
-  timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
-  playback?: LayerPlaybackConfig; // Configuración de reproducción
-  availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
+
+  // Configuración opcional para capas con control temporal
+  // Solo presente en capas que lo necesitan (satélites, modelos)
+  timeControl?: TimeBasedLayerConfig;
 }
 
 /**
