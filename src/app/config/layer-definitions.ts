@@ -5,6 +5,9 @@ import {
   IGN_WMS_LIMITS_SUBGROUP,
   IGN_WMS_GEOGRAPHIC_SUBGROUP,
   IGN_WMS_INFRASTRUCTURE_SUBGROUP,
+  IGN_WMS_MARITIME_SUBGROUP,
+  IGN_WMS_GEODESY_SUBGROUP,
+  IGN_WMS_TERRITORIAL_SUBGROUP,
 } from './layers/ign/ign-wms.config';
 
 /**
@@ -37,6 +40,9 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
       IGN_WMS_LIMITS_SUBGROUP,
       IGN_WMS_GEOGRAPHIC_SUBGROUP,
       IGN_WMS_INFRASTRUCTURE_SUBGROUP,
+      IGN_WMS_MARITIME_SUBGROUP,
+      IGN_WMS_GEODESY_SUBGROUP,
+      IGN_WMS_TERRITORIAL_SUBGROUP,
     ],
   },
 ].filter((group) => !environment.ui.disabledLayers.includes(group.id));
