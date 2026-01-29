@@ -1,11 +1,6 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
-import {
-  ACTIVE_LAYER_GROUP_DEFINITIONS,
-  ActiveLayerGroup,
-  Layer,
-  LayerGroup,
-  LayerState,
-} from '../../models';
+import { ActiveLayerGroup, Layer, LayerGroup, LayerState } from '../../models';
+import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../config/layer-groups/active-groups.config';
 import { LAYER_DEFINITIONS } from '../../config/layer-definitions';
 
 @Injectable({
