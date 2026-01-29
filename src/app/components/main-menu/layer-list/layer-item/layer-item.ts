@@ -19,7 +19,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
-import { Layer } from '../../../../models';
+import { Layer, LayerCategory } from '../../../../models';
 import { LayerService } from '../../../../services/layers/layer.service';
 import { LayerReloadService } from '../../../../services/layers/layer-reload.service';
 import { LayerConfigService } from '../../../../services/layers/layer-config.service';
@@ -142,6 +142,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
+   * Verifica si la capa tiene controles avanzados (tiempo/animación)
+   * Actualmente solo las capas ABI (satélite) tienen control de tiempo
+   */
+  hasAdvancedControls = computed(() => {
+    return this.layer.category !== LayerCategory.IGN_WMS;
+  });
+
+  /**
    * Obtiene el índice mínimo para el slider (limitado por el máximo del dropdown)
    */
   minTimeIndex = computed(() => {
@@ -249,8 +257,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   toggleActive(checked: boolean): void {
     if (checked) {
       this.activateLayer();
-      // Expandir controles automáticamente al activar
-      this.isControlsExpanded.set(true);
+      // Controls remain collapsed by default
+      // this.isControlsExpanded.set(true);
     } else {
       this.deactivateLayer();
     }

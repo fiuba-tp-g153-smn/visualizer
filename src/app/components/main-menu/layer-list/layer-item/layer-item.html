@@ -19,12 +19,13 @@
           >info_outline</mat-icon
         >
       }
-      @if (isActive()) {
+      @if (isActive() && hasAdvancedControls()) {
         <mat-icon
           class="config-icon"
           (click)="toggleControls()"
-          [matTooltip]="isControlsExpanded() ? 'Ocultar controles' : 'Mostrar controles'"
-          >{{ isControlsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon
+          [matTooltip]="isControlsExpanded() ? 'Ocultar animación' : 'Configurar animación'"
+          [class.active-config]="isControlsExpanded()"
+          >movie</mat-icon
         >
       }
     </div>
@@ -42,19 +43,21 @@
           <mat-icon>close</mat-icon>
         </button>
       }
-      <mat-icon
-        class="config-icon"
-        (click)="toggleControls()"
-        [matTooltip]="isControlsExpanded() ? 'Ocultar controles' : 'Mostrar controles'"
-        >{{ isControlsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon
-      >
+      @if (hasAdvancedControls()) {
+        <mat-icon
+          class="config-icon"
+          (click)="toggleControls()"
+          [matTooltip]="isControlsExpanded() ? 'Ocultar animación' : 'Configurar animación'"
+          [class.active-config]="isControlsExpanded()"
+          >movie</mat-icon
+        >
+      }
     </div>
   }
 
-  <!-- Controles (solo si está activa Y expandida) -->
-  @if (isActive() && isControlsExpanded()) {
-    <div class="layer-controls">
-      <!-- Control de opacidad -->
+  <!-- Opacidad siempre visible si está activa (independiente del modo) -->
+  @if (isActive()) {
+    <div class="always-visible-controls">
       <div class="opacity-control">
         <span class="control-label">Opacidad</span>
         <mat-slider
@@ -73,7 +76,12 @@
         </mat-slider>
         <span class="control-value">{{ getActiveLayer()?.opacity ?? layer.opacity }}%</span>
       </div>
+    </div>
+  }
 
+  <!-- Controles (solo si está activa Y expandida) -->
+  @if (isActive() && isControlsExpanded()) {
+    <div class="layer-controls">
       <!-- Control de tiempo (solo si tiene configuración cargada) -->
       @if (hasTimeControl()) {
         <div class="time-control">
