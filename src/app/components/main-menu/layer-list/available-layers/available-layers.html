@@ -25,14 +25,11 @@
         <mat-expansion-panel-header>
           <mat-panel-title>
             <mat-icon class="panel-icon">{{ group.icon }}</mat-icon>
-            <span class="panel-title-text">{{ group.name }}</span>
+            <span class="panel-title-text" [matTooltip]="group.description">{{ group.name }}</span>
           </mat-panel-title>
           <mat-panel-description>
             @if (getActiveLayersCountInGroup(group) > 0 && !groupPanel.expanded) {
               <span class="active-dot"></span>
-            }
-            @if (group.description) {
-              <mat-icon class="info-icon" [matTooltip]="group.description">info_outline</mat-icon>
             }
           </mat-panel-description>
         </mat-expansion-panel-header>
@@ -47,16 +44,13 @@
             >
               <mat-expansion-panel-header>
                 <mat-panel-title>
-                  <span class="panel-title-text">{{ subgroup.name }}</span>
+                  <span class="panel-title-text" [matTooltip]="subgroup.description">{{
+                    subgroup.name
+                  }}</span>
                 </mat-panel-title>
                 <mat-panel-description>
                   @if (getActiveLayersCountInSubgroup(subgroup) > 0 && !subPanel.expanded) {
                     <span class="active-dot"></span>
-                  }
-                  @if (subgroup.description) {
-                    <mat-icon class="info-icon" [matTooltip]="subgroup.description"
-                      >info_outline</mat-icon
-                    >
                   }
                 </mat-panel-description>
               </mat-expansion-panel-header>
