@@ -4,7 +4,6 @@ import { Layer, LayerType, LayerCategory } from '../../models';
 import { BACKEND_CONFIG } from '../../config/backend.config';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from '../layers/layer-config.service';
-import { getAbiTileConfig } from '../../config/layers/satellite/abi.config';
 import { IGN_WMS_BASE_CONFIG, getIgnWmsLayerName } from '../../config/layers/ign/ign-wms.config';
 
 /**
