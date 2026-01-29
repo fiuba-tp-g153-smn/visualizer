@@ -1,12 +1,14 @@
-import { LayerSubgroup, LayerType, LayerCategory } from '../../../models';
+import { LayerSubgroup, LayerType, LayerCategory, ActiveLayerGroup } from '../../../models';
 import { environment } from '../../../../environments/environment';
 
 /**
  * Valores por defecto para capas WMS del IGN
+ * Opacidad 100% y grupo overlay (siempre por encima de capas de datos)
  */
 const IGN_WMS_DEFAULTS = {
   visible: false,
-  opacity: 70,
+  opacity: 100,
+  zIndexGroup: ActiveLayerGroup.OVERLAY, // Siempre por encima de capas de datos
 } as const;
 
 /**
@@ -23,7 +25,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       id: 'ign-limite-internacional',
       name: 'Límite Internacional',
       description: 'Límite internacional de Argentina',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -31,7 +33,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       id: 'ign-limite-provincial',
       name: 'Límites Provinciales',
       description: 'Límites entre provincias',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -39,23 +41,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       id: 'ign-limite-departamental',
       name: 'Límites Departamentales',
       description: 'Límites entre departamentos',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-provincias',
-      name: 'Provincias',
-      description: 'Polígonos de provincias argentinas',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-municipios',
-      name: 'Municipios',
-      description: 'Municipios de Argentina',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -72,7 +58,7 @@ export const IGN_WMS_GEOGRAPHIC_SUBGROUP: LayerSubgroup = {
       id: 'ign-localidades',
       name: 'Localidades',
       description: 'Localidades de Argentina',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -80,7 +66,7 @@ export const IGN_WMS_GEOGRAPHIC_SUBGROUP: LayerSubgroup = {
       id: 'ign-vias-nacionales',
       name: 'Rutas Nacionales',
       description: 'Red vial nacional',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -88,7 +74,7 @@ export const IGN_WMS_GEOGRAPHIC_SUBGROUP: LayerSubgroup = {
       id: 'ign-vias-provinciales',
       name: 'Rutas Provinciales',
       description: 'Red vial provincial',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -96,23 +82,7 @@ export const IGN_WMS_GEOGRAPHIC_SUBGROUP: LayerSubgroup = {
       id: 'ign-ferrocarriles',
       name: 'Ferrocarriles',
       description: 'Red ferroviaria',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-rios-perennes',
-      name: 'Ríos Perennes',
-      description: 'Cursos de agua permanentes',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-cuerpos-agua',
-      name: 'Cuerpos de Agua',
-      description: 'Lagos, lagunas y embalses',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -129,7 +99,7 @@ export const IGN_WMS_INFRASTRUCTURE_SUBGROUP: LayerSubgroup = {
       id: 'ign-aeropuertos',
       name: 'Aeropuertos',
       description: 'Aeropuertos y aeródromos',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },
@@ -137,73 +107,7 @@ export const IGN_WMS_INFRASTRUCTURE_SUBGROUP: LayerSubgroup = {
       id: 'ign-puertos',
       name: 'Puertos',
       description: 'Puertos marítimos y fluviales',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-pasos-fronterizos',
-      name: 'Pasos Fronterizos',
-      description: 'Pasos de frontera internacionales',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-hitos-internacionales',
-      name: 'Hitos Internacionales',
-      description: 'Hitos de límite internacional',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-  ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
-};
-
-export const IGN_WMS_PROTECTED_AREAS_SUBGROUP: LayerSubgroup = {
-  id: 'ign-protected',
-  name: 'Áreas Protegidas (IGN)',
-  description: 'Parques nacionales y áreas protegidas',
-  expanded: false,
-  layers: [
-    {
-      id: 'ign-parques-nacionales',
-      name: 'Parques Nacionales',
-      description: 'Sistema de parques nacionales',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-reservas-naturales',
-      name: 'Reservas Naturales',
-      description: 'Áreas naturales protegidas',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-  ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
-};
-
-export const IGN_WMS_CARTOGRAPHY_SUBGROUP: LayerSubgroup = {
-  id: 'ign-cartography',
-  name: 'Cartografía (IGN)',
-  description: 'Elementos cartográficos',
-  expanded: false,
-  layers: [
-    {
-      id: 'ign-curvas-nivel',
-      name: 'Curvas de Nivel',
-      description: 'Líneas de elevación',
-      type: LayerType.RASTER,
-      category: LayerCategory.IGN_WMS,
-      ...IGN_WMS_DEFAULTS,
-    },
-    {
-      id: 'ign-grilla-coordenadas',
-      name: 'Grilla de Coordenadas',
-      description: 'Grilla geográfica',
-      type: LayerType.RASTER,
+      type: LayerType.WMS,
       category: LayerCategory.IGN_WMS,
       ...IGN_WMS_DEFAULTS,
     },

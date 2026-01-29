@@ -198,7 +198,11 @@ export class MapViewer implements OnInit, OnDestroy {
         // Capas ocultas (prefetch) van al fondo para no interferir eventos aunque tengan opacity 0
         if (isTarget) {
           tileLayer.setOpacity(layer.opacity / 100);
-          if (layer.zIndex !== undefined) tileLayer.setZIndex(layer.zIndex);
+          if (layer.zIndex !== undefined) {
+            // Calcular z-index absoluto para Leaflet desde el relativo del grupo
+            const absoluteZIndex = this.layerService.getAbsoluteZIndex(layer);
+            tileLayer.setZIndex(absoluteZIndex);
+          }
         } else {
           tileLayer.setOpacity(0);
           tileLayer.setZIndex(0);

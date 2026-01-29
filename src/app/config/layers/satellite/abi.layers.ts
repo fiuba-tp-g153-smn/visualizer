@@ -1,4 +1,4 @@
-import { LayerSubgroup, LayerType, LayerCategory } from '../../../models';
+import { LayerSubgroup, LayerType, LayerCategory, ActiveLayerGroup } from '../../../models';
 import { environment } from '../../../../environments/environment';
 
 /**
@@ -8,6 +8,7 @@ import { environment } from '../../../../environments/environment';
 const ABI_DEFAULTS = {
   visible: false,
   opacity: 80,
+  zIndexGroup: ActiveLayerGroup.BASE, // Capas de datos
   availablePeriods: [1, 6, 12, 24], // Períodos disponibles para todas las capas ABI
 } as const;
 
@@ -25,7 +26,7 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       id: 'abi-ch2',
       name: 'Canal 2 (Visible)',
       description: 'Banda visible (0.64 μm)',
-      type: LayerType.RASTER,
+      type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI,
       ...ABI_DEFAULTS,
     },
@@ -33,7 +34,7 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       id: 'abi-ch9',
       name: 'Canal 9 (Vapor de agua)',
       description: 'Banda de vapor de agua (6.9 μm)',
-      type: LayerType.RASTER,
+      type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI,
       ...ABI_DEFAULTS,
     },
@@ -41,7 +42,7 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       id: 'abi-ch13',
       name: 'Canal 13 (Infrarrojo)',
       description: 'Banda infrarroja (10.3 μm)',
-      type: LayerType.RASTER,
+      type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI,
       ...ABI_DEFAULTS,
     },

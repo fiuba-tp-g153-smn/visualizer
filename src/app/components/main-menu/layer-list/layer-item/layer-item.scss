@@ -12,27 +12,23 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
       width: 100%;
 
       .layer-checkbox {
         flex: 1;
       }
 
-      .info-btn {
+      .info-icon,
+      .config-icon {
         flex-shrink: 0;
         color: var(--mat-sys-on-surface-variant);
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
 
         &:hover {
-          color: var(--mat-sys-primary);
-        }
-      }
-
-      .config-btn {
-        flex-shrink: 0;
-        color: var(--mat-sys-on-surface-variant);
-
-        &:hover {
-          color: var(--mat-sys-primary);
+          opacity: 1;
         }
       }
     }
@@ -64,12 +60,15 @@
         color: var(--mat-sys-on-surface);
       }
 
-      .config-btn {
+      .config-icon {
         flex-shrink: 0;
         color: var(--mat-sys-on-surface-variant);
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
 
         &:hover {
-          color: var(--mat-sys-primary);
+          opacity: 1;
         }
       }
 
@@ -203,7 +202,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-top: 8px;
+        padding-top: 8px;
 
         // Unified styles variables
         $control-height: 28px;
@@ -272,7 +271,7 @@
               // HIDE Material underline and ripples
               .mdc-line-ripple,
               .mat-mdc-form-field-focus-overlay {
-                display: none !important;
+                display: none;
               }
             }
           }

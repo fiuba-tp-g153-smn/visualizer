@@ -10,7 +10,6 @@ export const IGN_WMS_BASE_CONFIG = {
   version: '1.3.0',
   format: 'image/png',
   transparent: true,
-  crs: 'EPSG:3857',
   attribution:
     '<a href="https://www.ign.gob.ar/" target="_blank">Instituto Geográfico Nacional</a>',
 } as const;
