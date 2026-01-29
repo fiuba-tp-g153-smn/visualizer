@@ -11,19 +11,10 @@
         (change)="toggleActive($event.checked)"
         color="primary"
         class="layer-checkbox"
+        [matTooltip]="layer.description || 'Sin descripción'"
       >
         {{ layer.name }}
       </mat-checkbox>
-      @if (showInfo) {
-        <button
-          mat-icon-button
-          [matTooltip]="layer.description || 'Sin descripción'"
-          class="info-btn"
-          tabindex="0"
-        >
-          <mat-icon>info_outline</mat-icon>
-        </button>
-      }
       @if (isActive() && hasAdvancedControls()) {
         <button
           mat-icon-button
@@ -45,7 +36,9 @@
       @if (showDragHandle) {
         <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
       }
-      <span class="layer-name">{{ layer.name }}</span>
+      <span class="layer-name" [matTooltip]="layer.description || 'Sin descripción'">{{
+        layer.name
+      }}</span>
       @if (showClose) {
         <button mat-icon-button (click)="deactivateLayer()" class="close-btn">
           <mat-icon>close</mat-icon>
