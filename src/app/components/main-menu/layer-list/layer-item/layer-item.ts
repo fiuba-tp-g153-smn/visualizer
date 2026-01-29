@@ -103,7 +103,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
    */
   lastImagesOptions = computed(() => {
-    return this.layer.availablePeriods ?? [1]; // Fallback a valor por defecto
+    return this.layer.timeControl?.availablePeriods ?? [1]; // Fallback a valor por defecto
   });
 
   /**
@@ -166,7 +166,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentTimeIndex = computed(() => {
     const activeLayer = this.getActiveLayer();
-    const currentIndex = activeLayer?.timeIndex ?? this.maxTimeIndex();
+    const currentIndex = activeLayer?.timeControl?.timeIndex ?? this.maxTimeIndex();
     // Asegurar que el índice actual esté dentro del rango visible
     const min = this.minTimeIndex();
     const max = this.maxTimeIndex();

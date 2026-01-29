@@ -95,8 +95,8 @@ export class LayerReloadService {
    */
   private getMaxSelectablePeriods(layerId: string): number {
     const layer = this.layerService.getLayerById(layerId);
-    if (layer?.availablePeriods && layer.availablePeriods.length > 0) {
-      return Math.max(...layer.availablePeriods);
+    if (layer?.timeControl?.availablePeriods && layer.timeControl.availablePeriods.length > 0) {
+      return Math.max(...layer.timeControl.availablePeriods);
     }
     return 1;
   }
