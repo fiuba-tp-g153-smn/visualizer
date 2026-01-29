@@ -2,12 +2,13 @@ import { Injectable, signal, computed, effect } from '@angular/core';
 import { ActiveLayerGroup, Layer, LayerGroup, LayerState } from '../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../config/layer-groups/active-groups.config';
 import { LAYER_DEFINITIONS } from '../../config/layer-definitions';
+import { DEFAULT_ACTIVE_LAYERS } from '../../config/default-active-layers.config';
 
 @Injectable({
   providedIn: 'root',
 })
 export class LayerService {
-  private readonly STORAGE_KEY = 'smn-active-layers';
+  private readonly STORAGE_KEY = 'smn-active-layers-v2';
   private readonly _layerGroups = signal<LayerGroup[]>(this._initializeLayerGroups());
 
   // Intervalos de reproducción activos
@@ -39,7 +40,66 @@ export class LayerService {
   }
 
   private _initializeLayerGroups(): LayerGroup[] {
-    return LAYER_DEFINITIONS;
+    const savedState = this._loadState();
+    if (savedState) {
+      console.debug('Visualizator: Loaded layer state from storage', savedState.length, 'layers');
+    } else {
+      console.debug('Visualizator: No saved state, applying defaults');
+    }
+
+    // Mapa para búsqueda rápida de estado
+    const stateMap = savedState ? new Map(savedState.map((s) => [s.id, s])) : null;
+
+    // Contador auxiliar para z-index inicial de defaults si no hay estado
+    let defaultZIndexCounter = 0;
+
+    return LAYER_DEFINITIONS.map((group) => ({
+      ...group,
+      subgroups: group.subgroups.map((subgroup) => ({
+        ...subgroup,
+        layers: subgroup.layers.map((layer) => {
+          // 1. Si hay estado guardado, aplicar
+          if (stateMap) {
+            const state = stateMap.get(layer.id);
+            if (state) {
+              return {
+                ...layer,
+                visible: state.visible,
+                opacity: state.opacity,
+                zIndex: state.zIndex,
+                ...(state.timeControl &&
+                  layer.timeControl && {
+                    timeControl: {
+                      ...layer.timeControl,
+                      timeIndex: state.timeControl.timeIndex,
+                      ...(state.timeControl.playback && {
+                        playback: {
+                          ...layer.timeControl.playback,
+                          ...state.timeControl.playback,
+                          isPlaying: false, // Siempre iniciar pausado
+                        } as any,
+                      }),
+                    },
+                  }),
+              };
+            }
+            // Si hay estado global pero no para esta capa, seguimos para chequear defaults
+          }
+
+          // 2. Si NO hay estado (o no para esta capa), aplicar defaults
+          if (DEFAULT_ACTIVE_LAYERS.includes(layer.id)) {
+            return {
+              ...layer,
+              visible: true,
+              zIndex: defaultZIndexCounter++,
+              opacity: 100, // Opacidad full para defaults
+            };
+          }
+
+          return layer;
+        }),
+      })),
+    }));
   }
 
   private _saveState(layers: Layer[]): void {
