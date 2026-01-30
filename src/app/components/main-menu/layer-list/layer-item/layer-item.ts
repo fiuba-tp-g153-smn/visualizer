@@ -91,6 +91,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // Estado local
   isLoadingConfig = signal(false);
   isControlsExpanded = signal(false);
+  isExpanded = signal(true);
 
   /**
    * Estado de reproducción - lee del servicio
@@ -272,6 +273,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   toggleControls(): void {
     this.isControlsExpanded.update((expanded) => !expanded);
+  }
+
+  /**
+   * Alterna la expansión del card completo (opacidad + controles)
+   */
+  toggleExpansion(): void {
+    this.isExpanded.update((expanded) => !expanded);
   }
 
   /**
