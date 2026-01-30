@@ -3,46 +3,82 @@
   flex-direction: column;
   gap: 12px;
   padding: 8px 0;
+  // Shared header styles
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+
+      .config-btn, .expand-btn {
+        color: var(--mat-sys-on-surface-variant);
+        &.active-config { color: var(--mat-sys-primary); }
+        &:hover { color: var(--mat-sys-primary); }
+      }
+
+      .close-btn {
+        color: var(--mat-sys-on-surface-variant);
+        &:hover { color: var(--mat-sys-error); }
+      }
+    }
+  }
 
   &.mode-available {
     padding: 8px;
     background-color: var(--mat-sys-surface);
-
     .layer-header {
-      display: flex;
-      align-items: center;
       justify-content: space-between;
+      gap: 8px;
       width: 100%;
 
       .layer-checkbox {
         flex: 1;
       }
-
-      .info-btn {
-        flex-shrink: 0;
-        color: var(--mat-sys-on-surface-variant);
-
-        &:hover {
-          color: var(--mat-sys-primary);
-        }
-      }
-
-      .config-btn {
-        flex-shrink: 0;
-        color: var(--mat-sys-on-surface-variant);
-
-        &:hover {
-          color: var(--mat-sys-primary);
-        }
-      }
     }
+    .layer-checkbox { flex: 1; }
   }
 
   &.mode-active {
     padding: 8px 16px;
     background-color: var(--mat-sys-surface);
+    .drag-handle {
+      cursor: grab;
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+      &:active { cursor: grabbing; }
+    }
+    .layer-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface);
+    }
+  }
 
-    .layer-header {
+  .layer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+
+
+  .control-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .always-visible-controls {
+    padding-left: 8px;
+    margin-top: 4px;
+    .opacity-control {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -60,6 +96,7 @@
 
       .layer-name {
         flex: 1;
+        font-size: 14px;
         font-weight: 500;
         color: var(--mat-sys-on-surface);
       }
@@ -84,113 +121,56 @@
     }
   }
 
+  .control-slider {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .control-value {
+    min-width: 40px;
+    text-align: right;
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
   .layer-controls {
     display: flex;
     flex-direction: column;
     gap: 12px;
     padding-left: 8px;
 
-    .opacity-control,
     .time-control {
       display: flex;
       flex-direction: column;
-    }
-
-    .control-label {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--mat-sys-on-surface-variant);
-    }
-
-    .opacity-control {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 8px;
-
-      .control-slider {
-        flex: 1;
-        min-width: 0; // Allow slider to shrink
-      }
-
-      .control-value {
-        min-width: 40px;
-        width: 40px;
-        text-align: right;
-        font-size: 0.875rem;
-        color: var(--mat-sys-on-surface-variant);
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-    }
-
-    .time-control {
       .time-control-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-
         .reload-btn {
           color: var(--mat-sys-on-surface-variant);
-
-          &:hover {
-            color: var(--mat-sys-primary);
-          }
+          &:hover { color: var(--mat-sys-primary); }
         }
       }
-
       .time-slider-container {
         display: flex;
         align-items: center;
         gap: 6px;
-
-        .time-min,
-        .time-max {
+        .time-min, .time-max {
           font-size: 0.75rem;
           font-family: monospace;
-          font-variant-numeric: tabular-nums;
           color: var(--mat-sys-on-surface-variant);
           min-width: 42px;
-          width: 42px;
           text-align: center;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
           flex-shrink: 0;
         }
-
-        .control-slider {
-          flex: 1;
-
-          // Customize the discrete value indicator (thumb label)
-          ::ng-deep {
-            .mdc-slider__value-indicator-container {
-              width: fit-content;
-              left: 0;
-              right: 0;
-              transform: none;
-            }
-
-            .mdc-slider__value-indicator {
-              border-radius: 6px;
-              padding: 4px 8px;
-              height: fit-content;
-              width: fit-content;
-              transform-origin: bottom center;
-            }
-
-            .mdc-slider__value-indicator-text {
-              width: fit-content;
-              font-size: 0.7rem;
-              transform: none;
-            }
-          }
-        }
-
         .play-btn {
           color: var(--mat-sys-primary);
           flex-shrink: 0;
-
           &:disabled {
             color: var(--mat-sys-on-surface-variant);
             opacity: 0.38;
@@ -203,18 +183,11 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-top: 8px;
-
-        // Unified styles variables
-        $control-height: 28px;
-        $control-radius: 4px;
-        $control-border: 1px solid var(--mat-sys-outline-variant);
-        $control-bg: var(--mat-sys-surface);
+        padding-top: 8px;
 
         .time-current {
           font-size: 0.8rem;
           font-family: monospace;
-          font-variant-numeric: tabular-nums;
           color: var(--mat-sys-on-surface);
           flex: 1;
           min-width: 0;
@@ -225,57 +198,7 @@
 
         .images-count-control {
           flex-shrink: 0;
-
-          .images-count-select {
-            width: 60px; // Slightly wider for arrow
-            text-align: center;
-
-            // Force the Material Field to look like a simple Input
-            ::ng-deep {
-              .mat-mdc-text-field-wrapper {
-                height: $control-height;
-                padding: 0;
-                background: $control-bg;
-                border: $control-border;
-                border-radius: $control-radius;
-              }
-
-              // Alignment fixes for the internal flex container
-              .mat-mdc-form-field-flex {
-                height: 100%;
-                align-items: center;
-                padding: 0 4px;
-              }
-
-              .mat-mdc-form-field-infix {
-                padding: 0;
-                min-height: auto;
-                width: auto;
-                border-top: 0;
-              }
-
-              .mat-mdc-form-field-subscript-wrapper {
-                display: none;
-              }
-
-              // Text style
-              .mat-mdc-select-value {
-                font-size: 0.75rem;
-                color: var(--mat-sys-on-surface);
-              }
-
-              // Arrow adjustments
-              .mat-mdc-select-arrow-wrapper {
-                transform: translateY(0%); // Fix vertical alignment
-              }
-
-              // HIDE Material underline and ripples
-              .mdc-line-ripple,
-              .mat-mdc-form-field-focus-overlay {
-                display: none !important;
-              }
-            }
-          }
+          .images-count-select { width: 60px; text-align: center; }
         }
 
         .speed-control {
@@ -283,25 +206,18 @@
           align-items: center;
           gap: 4px;
           flex-shrink: 0;
-
           .speed-input {
             width: 60px;
-            height: $control-height; // Match Select height exactly
-            box-sizing: border-box; // Ensure padding doesn't add to height
+            height: 28px;
             padding: 0 6px;
-            border: $control-border;
-            border-radius: $control-radius;
-            background: $control-bg;
+            border: 1px solid var(--mat-sys-outline-variant);
+            border-radius: 4px;
+            background: var(--mat-sys-surface);
             color: var(--mat-sys-on-surface);
             font-size: 0.75rem;
             text-align: center;
-
-            &:focus {
-              outline: none;
-              border-color: var(--mat-sys-primary);
-            }
+            &:focus { outline: none; border-color: var(--mat-sys-primary); }
           }
-
           .speed-label {
             font-size: 0.75rem;
             color: var(--mat-sys-on-surface-variant);
@@ -309,66 +225,58 @@
         }
       }
     }
+  }
 
-    .loading-config {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px;
-      color: var(--mat-sys-on-surface-variant);
-      font-size: 0.875rem;
-
-      .loading-icon {
-        animation: pulse 1.5s ease-in-out infinite;
-      }
-    }
+  .loading-config {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+    .loading-icon { animation: pulse 1.5s ease-in-out infinite; }
   }
 }
 
 @keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-// Material Customizations
+// Global overrides
 ::ng-deep {
   .layer-item-container {
-    .mat-mdc-slider {
-      // Value indicator text size only
-      .mdc-slider__value-indicator-text {
-        font-size: 0.75rem;
-      }
+    .mat-mdc-slider .mdc-slider__value-indicator-text { font-size: 0.75rem; }
+    
+    // Custom slider thumb
+    .mdc-slider__value-indicator-container {
+      width: fit-content; left: 0; right: 0; transform: none;
+    }
+    .mdc-slider__value-indicator {
+      border-radius: 6px; padding: 4px 8px; height: fit-content; width: fit-content; transform-origin: bottom center;
+    }
+    .mdc-slider__value-indicator-text {
+      width: fit-content; font-size: 0.7rem; transform: none;
     }
   }
 
-  // Remove Checkmarks (Ticks) from the specific Select Dropdown
-  .layer-select-panel {
-    .mat-mdc-option {
-      min-height: 32px;
-      padding: 0 10px;
-      font-size: 0.8rem;
+  .layer-select-panel .mat-mdc-option {
+    min-height: 32px; padding: 0 10px; font-size: 0.8rem;
+    .mat-pseudo-checkbox { display: none; }
+    .mdc-list-item__primary-text { text-align: center; width: 100%; }
+    &.mdc-list-item--selected { background-color: var(--mat-sys-surface-variant); font-weight: 600; }
+  }
 
-      // Hide the checkmark/tick
-      .mat-pseudo-checkbox {
-        display: none;
-      }
-
-      // Center text since checkmark is gone
-      .mdc-list-item__primary-text {
-        text-align: center;
-        width: 100%;
-      }
-
-      // Selection style
-      &.mdc-list-item--selected {
-        background-color: var(--mat-sys-surface-variant);
-        font-weight: 600;
-      }
-    }
+  // Custom Form Field for Speed/Images Count
+  .images-count-select .mat-mdc-text-field-wrapper {
+      height: 28px; padding: 0; background: var(--mat-sys-surface); border: 1px solid var(--mat-sys-outline-variant); border-radius: 4px;
+  }
+  .images-count-select .mat-mdc-form-field-flex { height: 100%; align-items: center; padding: 0 4px; }
+  .images-count-select {
+    .mat-mdc-form-field-infix { padding: 0; min-height: auto; width: auto; border-top: 0; }
+    .mat-mdc-form-field-subscript-wrapper { display: none; }
+    .mat-mdc-select-value { font-size: 0.75rem; color: var(--mat-sys-on-surface); }
+    .mat-mdc-select-arrow-wrapper { transform: translateY(0%); } // Align arrow
+    .mdc-line-ripple, .mat-mdc-form-field-focus-overlay { display: none; }
   }
 }

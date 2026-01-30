@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { Notification, NotificationType } from '../models';
+import { NotificationType, Notification } from '../../models';
 
 /**
  * Servicio para gestionar notificaciones en la UI

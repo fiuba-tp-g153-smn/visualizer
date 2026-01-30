@@ -1,112 +1,40 @@
 <div class="layer-list" [class.disabled-state]="!hasAvailableLayers()">
   @if (!hasAvailableLayers()) {
-  <div class="empty-state-container">
-    <mat-icon class="empty-icon">layers_clear</mat-icon>
-    <h3>Sin capas disponibles</h3>
-    <p>No hay capas configuradas para visualizar.</p>
-  </div>
+    <div class="empty-state-container">
+      <mat-icon class="empty-icon">layers_clear</mat-icon>
+      <h3>Sin capas disponibles</h3>
+      <p>No hay capas configuradas para visualizar.</p>
+    </div>
   } @else {
-  <mat-tab-group class="layer-tabs" animationDuration="0ms">
-    <!-- Tab: Capas Disponibles -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <div class="tab-label-container">
-          <mat-icon class="tab-icon">grid_view</mat-icon>
-          <span>Disponibles</span>
-        </div>
-      </ng-template>
-
-      <div class="tab-content">
-        <!-- Buscador -->
-        <div class="search-container">
-          <mat-icon>search</mat-icon>
-          <input type="text" placeholder="Buscar capas" [(ngModel)]="searchText" />
-        </div>
-
-        <!-- No hay resultados -->
-        @if (hasSearch() && filteredGroups().length === 0) {
-        <div class="empty-state">
-          <mat-icon>search_off</mat-icon>
-          <p>No se encontraron resultados</p>
-          <span>Intenta con otros términos de búsqueda</span>
-        </div>
-        }
-
-        <!-- Lista de grupos -->
-        <mat-accordion class="layers-accordion" displayMode="flat" multi>
-          @for (group of filteredGroups(); track group.id; let isLast = $last) {
-          <mat-expansion-panel class="group-panel" [expanded]="group._shouldExpandGroup">
-            <mat-expansion-panel-header>
-              <mat-panel-title>
-                <mat-icon color="primary" class="panel-icon">{{ group.icon }}</mat-icon>
-                {{ group.name }}
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-
-            <!-- Subgrupos -->
-            <mat-accordion displayMode="flat" multi>
-              @for (subgroup of group.subgroups; track subgroup.id; let isLastSub = $last) {
-              <mat-expansion-panel
-                class="subgroup-panel"
-                [expanded]="subgroup._shouldExpandSubgroup"
-              >
-                <mat-expansion-panel-header>
-                  <mat-panel-title>{{ subgroup.name }}</mat-panel-title>
-                </mat-expansion-panel-header>
-
-                <!-- Lista de capas -->
-                <div class="layer-list-container">
-                  @for (layer of subgroup.layers; track layer.id; let isLastLayer = $last) {
-                  <app-layer-item [layer]="layer" mode="available" />
-                  @if (!isLastLayer) {
-                  <mat-divider />
-                  } }
-                </div>
-              </mat-expansion-panel>
-              @if (!isLastSub) {
-              <mat-divider />
-              } }
-            </mat-accordion>
-          </mat-expansion-panel>
-          @if (!isLast) {
-          <mat-divider />
-          } }
-        </mat-accordion>
-      </div>
-    </mat-tab>
-
-    <!-- Tab: Capas Activas -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <div class="tab-label-container">
-          <mat-icon class="tab-icon">tune</mat-icon>
-          <span>Activas</span>
-          @if (getActiveLayers().length > 0) {
-          <span class="active-count">{{ getActiveLayers().length }}</span>
-          }
-        </div>
-      </ng-template>
-
-      <div class="tab-content">
-        @if (getActiveLayers().length === 0) {
-        <div class="empty-state">
-          <mat-icon>layers_clear</mat-icon>
-          <p>No hay capas activas</p>
-          <span>Activa capas desde la pestaña "Disponibles"</span>
-        </div>
-        } @else {
-        <div cdkDropList (cdkDropListDropped)="onLayerDrop($event)" class="active-layers-list">
-          @for (layer of getActiveLayers(); track layer.id; let isLast = $last) {
-          <div cdkDrag class="active-layer-item">
-            <app-layer-item [layer]="layer" mode="active" />
+    <mat-tab-group class="layer-tabs" animationDuration="0ms">
+      <!-- Tab: Capas Disponibles -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label-container">
+            <mat-icon class="tab-icon">grid_view</mat-icon>
+            <span>Disponibles</span>
           </div>
-          @if (!isLast) {
-          <mat-divider />
-          } }
+        </ng-template>
+        <div class="tab-content">
+          <app-available-layers />
         </div>
-        }
-      </div>
-    </mat-tab>
-  </mat-tab-group>
+      </mat-tab>
+
+      <!-- Tab: Capas Activas -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label-container">
+            <mat-icon class="tab-icon">tune</mat-icon>
+            <span>Activas</span>
+            <span class="active-count" [class.visible]="getActiveLayersCount() > 0">
+              {{ getActiveLayersCount() }}
+            </span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          <app-active-layers />
+        </div>
+      </mat-tab>
+    </mat-tab-group>
   }
 </div>

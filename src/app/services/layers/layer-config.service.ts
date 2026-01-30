@@ -1,9 +1,9 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
-import { ChannelConfig, ChannelConfigCache } from '../models';
-import { BACKEND_CONFIG } from '../config/backend.config';
-import { NotificationService } from './notification.service';
+import { ChannelConfig, ChannelConfigCache } from '../../models';
+import { BACKEND_CONFIG } from '../../config/backend.config';
+import { NotificationService } from '../notifications/notification.service';
 
 /**
  * Servicio para gestionar configuraciones de canales satelitales
@@ -11,14 +11,12 @@ import { NotificationService } from './notification.service';
 @Injectable({
   providedIn: 'root',
 })
-export class ChannelConfigService {
+export class LayerConfigService {
   private _configCache = signal<ChannelConfigCache>({});
   public readonly configCache = this._configCache.asReadonly();
 
-  constructor(
-    private http: HttpClient,
-    private notificationService: NotificationService,
-  ) {}
+  private readonly http = inject(HttpClient);
+  private readonly notificationService = inject(NotificationService);
 
   /**
    * Obtiene la configuración de un canal desde el backend

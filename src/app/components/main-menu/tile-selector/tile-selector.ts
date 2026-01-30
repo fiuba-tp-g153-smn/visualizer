@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { TileService } from '../../../services/tile.service';
+import { TileService } from '../../../services/tiles/tile.service';
 import { TileProvider } from '../../../models';
 import { MenuPanelComponent } from '../menu-section.model';
 
