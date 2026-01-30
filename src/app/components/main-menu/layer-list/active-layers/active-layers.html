@@ -16,12 +16,9 @@
           <mat-expansion-panel-header>
             <mat-panel-title>
               <mat-icon class="group-icon">{{ group.icon }}</mat-icon>
-              <span class="group-title">{{ group.name }}</span>
+              <span class="group-title" [matTooltip]="group.description">{{ group.name }}</span>
             </mat-panel-title>
             <mat-panel-description>
-              @if (group.description) {
-                <mat-icon class="info-icon" [matTooltip]="group.description">info_outline</mat-icon>
-              }
               <button
                 mat-icon-button
                 class="clear-group-button"
