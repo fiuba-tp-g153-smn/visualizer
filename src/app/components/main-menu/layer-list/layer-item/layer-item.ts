@@ -91,7 +91,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // Estado local
   isLoadingConfig = signal(false);
   isControlsExpanded = signal(false);
-  isExpanded = signal(true);
+  isExpanded = signal(false);
 
   /**
    * Estado de reproducción - lee del servicio
@@ -272,14 +272,30 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Alterna la expansión de los controles
    */
   toggleControls(): void {
-    this.isControlsExpanded.update((expanded) => !expanded);
+    if (this.isControlsExpanded()) {
+      // Si ya está abierto, solo cerramos los controles de animación
+      this.isControlsExpanded.set(false);
+      // Mantenemos isExpanded en true (opacidad visible)
+    } else {
+      // Si está cerrado, abrimos animación Y aseguramos que el contenedor esté expandido
+      this.isExpanded.set(true);
+      this.isControlsExpanded.set(true);
+    }
   }
 
   /**
    * Alterna la expansión del card completo (opacidad + controles)
    */
   toggleExpansion(): void {
-    this.isExpanded.update((expanded) => !expanded);
+    if (this.isExpanded()) {
+      // Si colapsamos, cerramos TODO (incluida la animación)
+      this.isExpanded.set(false);
+      this.isControlsExpanded.set(false);
+    } else {
+      // Si expandimos, mostramos solo opacidad inicialmente (animación cerrada)
+      this.isExpanded.set(true);
+      this.isControlsExpanded.set(false);
+    }
   }
 
   /**
