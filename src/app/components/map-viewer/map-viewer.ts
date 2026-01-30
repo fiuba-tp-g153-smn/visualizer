@@ -13,11 +13,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config/map.config';
-import { TileService } from '../../services/tile.service';
-import { LayerService } from '../../services/layer.service';
-import { LayerRendererService } from '../../services/layer-renderer.service';
-import { ChannelConfigService } from '../../services/channel-config.service';
-import { Layer, TileProvider, LayerCategory } from '../../models';
+import { TileService } from '../../services/tiles/tile.service';
+import { LayerService } from '../../services/layers/layer.service';
+import { LayerRendererService } from '../../services/tiles/layer-renderer.service';
+import { LayerConfigService } from '../../services/layers/layer-config.service';
+import { Layer, TileProvider, LayerCategory, LayerType } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -32,7 +32,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private tileService = inject(TileService);
   private layerService = inject(LayerService);
   private layerRendererService = inject(LayerRendererService);
-  private channelConfigService = inject(ChannelConfigService);
+  private layerConfigService = inject(LayerConfigService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -162,8 +162,9 @@ export class MapViewer implements OnInit, OnDestroy {
     for (const layer of layers) {
       if (!layer.visible) continue;
 
-      const tilesets = this.channelConfigService.getTilesets(layer.id);
-      const currentTimeIndex = layer.timeIndex ?? 0;
+      const tilesets = this.layerConfigService.getTilesets(layer.id);
+      // Solo para capas con control temporal (TILE layers)
+      const currentTimeIndex = layer.type === LayerType.TILE ? (layer.timeIndex ?? 0) : 0;
 
       // Definir ventana de pre-fetching: [T-1, T, T+1]
       // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T
@@ -198,7 +199,11 @@ export class MapViewer implements OnInit, OnDestroy {
         // Capas ocultas (prefetch) van al fondo para no interferir eventos aunque tengan opacity 0
         if (isTarget) {
           tileLayer.setOpacity(layer.opacity / 100);
-          if (layer.zIndex !== undefined) tileLayer.setZIndex(layer.zIndex);
+          if (layer.zIndex !== undefined) {
+            // Calcular z-index absoluto para Leaflet desde el relativo del grupo
+            const absoluteZIndex = this.layerService.getAbsoluteZIndex(layer);
+            tileLayer.setZIndex(absoluteZIndex);
+          }
         } else {
           tileLayer.setOpacity(0);
           tileLayer.setZIndex(0);
@@ -234,7 +239,7 @@ export class MapViewer implements OnInit, OnDestroy {
   zoomIn(): void {
     if (this.map) {
       this.ignoreNextMapEvents = true;
-      const newZoom = Math.min(this.currentZoom() + 1, this.map.getMaxZoom());
+      const newZoom = Math.min(this.currentZoom() + 1, MAP_CONFIG.maxZoom);
       this.currentZoom.set(newZoom);
     }
   }
@@ -242,7 +247,7 @@ export class MapViewer implements OnInit, OnDestroy {
   zoomOut(): void {
     if (this.map) {
       this.ignoreNextMapEvents = true;
-      const newZoom = Math.max(this.currentZoom() - 1, this.map.getMinZoom());
+      const newZoom = Math.max(this.currentZoom() - 1, MAP_CONFIG.minZoom);
       this.currentZoom.set(newZoom);
     }
   }

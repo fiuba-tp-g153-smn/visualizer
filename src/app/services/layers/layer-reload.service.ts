@@ -1,8 +1,8 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, effect, inject } from '@angular/core';
 import { LayerService } from './layer.service';
-import { ChannelConfigService } from './channel-config.service';
-import { NotificationService } from './notification.service';
-import { NotificationType } from '../models';
+import { LayerConfigService } from './layer-config.service';
+import { NotificationService } from '../notifications/notification.service';
+import { LayerType, NotificationType } from '../../models';
 
 interface RefreshState {
   intervalId?: number;
@@ -19,7 +19,7 @@ interface RefreshState {
 })
 export class LayerReloadService {
   private readonly layerService = inject(LayerService);
-  private readonly channelConfigService = inject(ChannelConfigService);
+  private readonly layerConfigService = inject(LayerConfigService);
   private readonly notificationService = inject(NotificationService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10 * 1000;
@@ -95,7 +95,12 @@ export class LayerReloadService {
    */
   private getMaxSelectablePeriods(layerId: string): number {
     const layer = this.layerService.getLayerById(layerId);
-    if (layer?.availablePeriods && layer.availablePeriods.length > 0) {
+    if (
+      layer &&
+      layer.type === LayerType.TILE &&
+      layer.availablePeriods &&
+      layer.availablePeriods.length > 0
+    ) {
       return Math.max(...layer.availablePeriods);
     }
     return 1;
@@ -105,7 +110,7 @@ export class LayerReloadService {
    * Checks if a layer has time-indexed data
    */
   private hasTimeData(layerId: string): boolean {
-    return this.channelConfigService.hasConfig(layerId);
+    return this.layerConfigService.hasConfig(layerId);
   }
 
   /**
@@ -116,7 +121,7 @@ export class LayerReloadService {
       return;
     }
 
-    const initialTilesets = this.channelConfigService.getTilesets(layerId);
+    const initialTilesets = this.layerConfigService.getTilesets(layerId);
     const initialCount = initialTilesets.length;
 
     const state: RefreshState = {
@@ -192,60 +197,58 @@ export class LayerReloadService {
 
       const maxSelectable = this.getMaxSelectablePeriods(layerId);
 
-      const beforeAllTilesets = this.channelConfigService.getTilesets(layerId);
+      const beforeAllTilesets = this.layerConfigService.getTilesets(layerId);
       const beforeTilesets = beforeAllTilesets.slice(-maxSelectable);
 
-      this.channelConfigService
-        .reloadChannelConfig(layerId, product, instrument, channel)
-        .subscribe({
-          next: () => {
-            const afterAllTilesets = this.channelConfigService.getTilesets(layerId);
-            const afterTilesets = afterAllTilesets.slice(-maxSelectable);
+      this.layerConfigService.reloadChannelConfig(layerId, product, instrument, channel).subscribe({
+        next: () => {
+          const afterAllTilesets = this.layerConfigService.getTilesets(layerId);
+          const afterTilesets = afterAllTilesets.slice(-maxSelectable);
 
-            const beforeIds = new Set(beforeTilesets.map((t) => t.id));
-            const afterIds = new Set(afterTilesets.map((t) => t.id));
+          const beforeIds = new Set(beforeTilesets.map((t) => t.id));
+          const afterIds = new Set(afterTilesets.map((t) => t.id));
 
-            const added = afterTilesets.filter((t) => !beforeIds.has(t.id));
-            const removed = beforeTilesets.filter((t) => !afterIds.has(t.id));
+          const added = afterTilesets.filter((t) => !beforeIds.has(t.id));
+          const removed = beforeTilesets.filter((t) => !afterIds.has(t.id));
 
-            const layerName = this.layerService.getLayerDisplayName(layerId);
+          const layerName = this.layerService.getLayerDisplayName(layerId);
 
-            if (added.length > 0 || removed.length > 0) {
-              let message: string;
+          if (added.length > 0 || removed.length > 0) {
+            let message: string;
 
-              if (added.length > 0 && removed.length === 0) {
-                message =
-                  added.length === 1
-                    ? `1 período agregado para ${layerName}`
-                    : `${added.length} períodos agregados para ${layerName}`;
-              } else if (removed.length > 0 && added.length === 0) {
-                message =
-                  removed.length === 1
-                    ? `1 período eliminado para ${layerName}`
-                    : `${removed.length} períodos eliminados para ${layerName}`;
-              } else if (added.length === removed.length) {
-                message =
-                  added.length === 1
-                    ? `1 período modificado para ${layerName}`
-                    : `${added.length} períodos modificados para ${layerName}`;
-              } else {
-                message = `${added.length} períodos agregados, ${removed.length} eliminados para ${layerName}`;
-              }
-
-              this.notificationService.show(NotificationType.INFO, message);
-            } else if (showNoChanges) {
-              this.notificationService.show(
-                NotificationType.INFO,
-                `No hay cambios para ${layerName}`,
-              );
+            if (added.length > 0 && removed.length === 0) {
+              message =
+                added.length === 1
+                  ? `1 período agregado para ${layerName}`
+                  : `${added.length} períodos agregados para ${layerName}`;
+            } else if (removed.length > 0 && added.length === 0) {
+              message =
+                removed.length === 1
+                  ? `1 período eliminado para ${layerName}`
+                  : `${removed.length} períodos eliminados para ${layerName}`;
+            } else if (added.length === removed.length) {
+              message =
+                added.length === 1
+                  ? `1 período modificado para ${layerName}`
+                  : `${added.length} períodos modificados para ${layerName}`;
+            } else {
+              message = `${added.length} períodos agregados, ${removed.length} eliminados para ${layerName}`;
             }
 
-            resolve();
-          },
-          error: (err) => {
-            reject(err);
-          },
-        });
+            this.notificationService.show(NotificationType.INFO, message);
+          } else if (showNoChanges) {
+            this.notificationService.show(
+              NotificationType.INFO,
+              `No hay cambios para ${layerName}`,
+            );
+          }
+
+          resolve();
+        },
+        error: (err) => {
+          reject(err);
+        },
+      });
     });
   }
 }

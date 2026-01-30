@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { TILE_PROVIDERS, getTileProvider } from '../config/tile-providers.config';
-import { TileProvider } from '../models';
-import { MAP_CONFIG } from '../config/map.config';
+import { MAP_CONFIG } from '../../config/map.config';
+import { getTileProvider, TILE_PROVIDERS } from '../../config/tile-providers.config';
+import { TileProvider } from '../../models';
 
 /**
  * Servicio para gestionar el proveedor de tiles del mapa base
@@ -12,7 +12,7 @@ import { MAP_CONFIG } from '../config/map.config';
 export class TileService {
   // Signal del proveedor actual (reactivo)
   private _currentProvider = signal<TileProvider>(
-    getTileProvider(MAP_CONFIG.defaultTileProviderId)
+    getTileProvider(MAP_CONFIG.defaultTileProviderId),
   );
 
   // Getter readonly para exponer el signal

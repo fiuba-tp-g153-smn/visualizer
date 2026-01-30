@@ -1,21 +1,28 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
-import { Layer, LayerGroup, LayerPlaybackConfig } from '../models';
-import { LAYER_DEFINITIONS } from '../config/layer-definitions';
+import {
+  ActiveLayerGroup,
+  Layer,
+  LayerGroup,
+  LayerState,
+  LayerType,
+  TileLayer,
+} from '../../models';
+import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../config/layer-groups/active-groups.config';
+import { LAYER_DEFINITIONS } from '../../config/layer-definitions';
+import { DEFAULT_ACTIVE_LAYERS } from '../../config/default-active-layers.config';
 
-interface LayerState {
-  id: string;
-  visible: boolean;
-  opacity: number;
-  zIndex?: number;
-  timeIndex?: number;
-  playback?: LayerPlaybackConfig;
+/**
+ * Type guard para verificar si una capa es de tipo TILE (con timeControl)
+ */
+function isTileLayer(layer: Layer): layer is TileLayer {
+  return layer.type === LayerType.TILE;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class LayerService {
-  private readonly STORAGE_KEY = 'smn-active-layers';
+  private readonly STORAGE_KEY = 'smn-active-layers-v2';
   private readonly _layerGroups = signal<LayerGroup[]>(this._initializeLayerGroups());
 
   // Intervalos de reproducción activos
@@ -23,12 +30,20 @@ export class LayerService {
 
   public readonly layerGroups = this._layerGroups.asReadonly();
 
+  // Capas activas agrupadas por z-index group
   public readonly activeLayers = computed(() => {
     const allLayers = this._getAllLayers();
     return allLayers
       .filter((layer: Layer) => layer.visible)
       .sort((a: Layer, b: Layer) => (b.zIndex ?? 0) - (a.zIndex ?? 0));
   });
+
+  /**
+   * Obtiene capas activas para un grupo específico
+   */
+  public getActiveLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
+    return this.activeLayers().filter((layer) => layer.zIndexGroup === groupId);
+  }
 
   constructor() {
     // Persistir estado cuando cambian las capas
@@ -39,7 +54,64 @@ export class LayerService {
   }
 
   private _initializeLayerGroups(): LayerGroup[] {
-    return LAYER_DEFINITIONS;
+    const savedState = this._loadState();
+    if (savedState) {
+      console.debug('Visualizator: Loaded layer state from storage', savedState.length, 'layers');
+    } else {
+      console.debug('Visualizator: No saved state, applying defaults');
+    }
+
+    // Mapa para búsqueda rápida de estado
+    const stateMap = savedState ? new Map(savedState.map((s) => [s.id, s])) : null;
+
+    // Contador auxiliar para z-index inicial de defaults si no hay estado
+    let defaultZIndexCounter = 0;
+
+    return LAYER_DEFINITIONS.map((group) => ({
+      ...group,
+      subgroups: group.subgroups.map((subgroup) => ({
+        ...subgroup,
+        layers: subgroup.layers.map((layer) => {
+          // 1. Si hay estado guardado, aplicar
+          if (stateMap) {
+            const state = stateMap.get(layer.id);
+            if (state) {
+              return {
+                ...layer,
+                visible: state.visible,
+                opacity: state.opacity,
+                zIndex: state.zIndex,
+                ...(isTileLayer(layer) &&
+                  state.timeIndex !== undefined && {
+                    timeIndex: state.timeIndex,
+                  }),
+                ...(isTileLayer(layer) &&
+                  state.playback && {
+                    playback: {
+                      ...layer.playback,
+                      ...state.playback,
+                      isPlaying: false, // Siempre iniciar pausado
+                    },
+                  }),
+              };
+            }
+            // Si hay estado global pero no para esta capa, seguimos para chequear defaults
+          }
+
+          // 2. Si NO hay estado (o no para esta capa), aplicar defaults
+          if (DEFAULT_ACTIVE_LAYERS.includes(layer.id)) {
+            return {
+              ...layer,
+              visible: true,
+              zIndex: defaultZIndexCounter++,
+              opacity: 100, // Opacidad full para defaults
+            };
+          }
+
+          return layer;
+        }),
+      })),
+    }));
   }
 
   private _saveState(layers: Layer[]): void {
@@ -48,8 +120,15 @@ export class LayerService {
       visible: layer.visible,
       opacity: layer.opacity,
       zIndex: layer.zIndex,
-      timeIndex: layer.timeIndex,
-      playback: layer.playback,
+      // Solo guardar timeIndex y playback si es TileLayer
+      ...(isTileLayer(layer) &&
+        layer.timeIndex !== undefined && {
+          timeIndex: layer.timeIndex,
+        }),
+      ...(isTileLayer(layer) &&
+        layer.playback && {
+          playback: layer.playback,
+        }),
     }));
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
   }
@@ -67,7 +146,7 @@ export class LayerService {
     this._updateLayer(layerId, (layer) => {
       if (!layer.visible) {
         layer.visible = true;
-        layer.zIndex = this._getNextZIndex();
+        layer.zIndex = this._getNextZIndex(layer.zIndexGroup);
       }
     });
   }
@@ -99,7 +178,7 @@ export class LayerService {
     this._updateLayer(layerId, (layer) => {
       layer.visible = !layer.visible;
       if (layer.visible && layer.zIndex === undefined) {
-        layer.zIndex = this._getNextZIndex();
+        layer.zIndex = this._getNextZIndex(layer.zIndexGroup);
       }
     });
   }
@@ -113,18 +192,20 @@ export class LayerService {
 
   setTimeIndex(layerId: string, timeIndex: number): void {
     this._updateLayer(layerId, (layer) => {
-      layer.timeIndex = timeIndex;
+      if (isTileLayer(layer)) {
+        layer.timeIndex = timeIndex;
+      }
     });
   }
 
   isPlaying(layerId: string): boolean {
     const layer = this.getLayerById(layerId);
-    return layer?.playback?.isPlaying || false;
+    return (layer && isTileLayer(layer) && layer.playback?.isPlaying) || false;
   }
 
   getPlaySpeed(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer?.playback?.speed || 1;
+    return layer && isTileLayer(layer) ? (layer.playback?.speed ?? 1) : 1;
   }
 
   setPlaySpeed(layerId: string, speed: number): void {
@@ -132,6 +213,8 @@ export class LayerService {
     const wasPlaying = this.isPlaying(layerId);
 
     this._updateLayer(layerId, (layer) => {
+      if (!isTileLayer(layer)) return;
+
       if (!layer.playback) {
         layer.playback = { isPlaying: false, speed: 1 };
       }
@@ -140,8 +223,10 @@ export class LayerService {
 
     if (wasPlaying) {
       const layer = this.getLayerById(layerId);
-      const maxTimeIndex = layer?.playback?.maxTimeIndex ?? 0;
-      const lastImagesCount = layer?.playback?.lastImagesCount ?? 1;
+      if (!layer || !isTileLayer(layer)) return;
+
+      const maxTimeIndex = layer.playback?.maxTimeIndex ?? 0;
+      const lastImagesCount = layer.playback?.lastImagesCount ?? 1;
       const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
       this.stopPlayback(layerId);
       this.startPlayback(layerId, maxTimeIndex, minTimeIndex);
@@ -160,6 +245,8 @@ export class LayerService {
     this.stopPlayback(layerId);
 
     this._updateLayer(layerId, (layer) => {
+      if (!isTileLayer(layer)) return;
+
       layer.playback = {
         isPlaying: true,
         speed: layer.playback?.speed || 1,
@@ -176,7 +263,7 @@ export class LayerService {
     const speed = this.getPlaySpeed(layerId);
     const interval = setInterval(() => {
       const layer = this.getLayerById(layerId);
-      if (!layer?.visible || !layer.playback?.isPlaying) {
+      if (!layer?.visible || !isTileLayer(layer) || !layer.playback?.isPlaying) {
         this.stopPlayback(layerId);
         return;
       }
@@ -193,7 +280,7 @@ export class LayerService {
 
   stopPlayback(layerId: string): void {
     this._updateLayer(layerId, (layer) => {
-      if (layer.playback) {
+      if (isTileLayer(layer) && layer.playback) {
         layer.playback.isPlaying = false;
         layer.playback.maxTimeIndex = undefined;
       }
@@ -210,7 +297,7 @@ export class LayerService {
     this.playIntervals.forEach((interval, layerId) => {
       clearInterval(interval);
       this._updateLayer(layerId, (layer) => {
-        if (layer.playback) {
+        if (isTileLayer(layer) && layer.playback) {
           layer.playback.isPlaying = false;
           layer.playback.maxTimeIndex = undefined;
         }
@@ -221,11 +308,13 @@ export class LayerService {
 
   getLastImagesCount(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer?.playback?.lastImagesCount ?? 1;
+    return layer && isTileLayer(layer) ? (layer.playback?.lastImagesCount ?? 1) : 1;
   }
 
   setLastImagesCount(layerId: string, count: number): void {
     this._updateLayer(layerId, (layer) => {
+      if (!isTileLayer(layer)) return;
+
       if (!layer.playback) {
         layer.playback = {
           isPlaying: false,
@@ -238,38 +327,55 @@ export class LayerService {
     });
   }
 
+  /**
+   * Mueve una capa hacia arriba (mayor z-index) dentro de su grupo
+   * Las capas solo se pueden reordenar dentro de su mismo grupo de z-index
+   */
   moveLayerUp(layerId: string): void {
     const layer = this.getLayerById(layerId);
     if (!layer?.visible || layer.zIndex === undefined) return;
 
-    const visibleLayers = this.activeLayers();
-    const currentIndex = visibleLayers.findIndex((l: Layer) => l.id === layerId);
+    // Filtrar solo capas del mismo grupo
+    const visibleLayersInGroup = this.activeLayers().filter(
+      (l: Layer) => l.zIndexGroup === layer.zIndexGroup,
+    );
+    const currentIndex = visibleLayersInGroup.findIndex((l: Layer) => l.id === layerId);
 
     if (currentIndex > 0) {
-      const prevLayer = visibleLayers[currentIndex - 1];
+      const prevLayer = visibleLayersInGroup[currentIndex - 1];
       this._swapZIndex(layer.id, prevLayer.id);
     }
   }
 
+  /**
+   * Mueve una capa hacia abajo (menor z-index) dentro de su grupo
+   * Las capas solo se pueden reordenar dentro de su mismo grupo de z-index
+   */
   moveLayerDown(layerId: string): void {
     const layer = this.getLayerById(layerId);
     if (!layer?.visible || layer.zIndex === undefined) return;
 
-    const visibleLayers = this.activeLayers();
-    const currentIndex = visibleLayers.findIndex((l: Layer) => l.id === layerId);
+    // Filtrar solo capas del mismo grupo
+    const visibleLayersInGroup = this.activeLayers().filter(
+      (l: Layer) => l.zIndexGroup === layer.zIndexGroup,
+    );
+    const currentIndex = visibleLayersInGroup.findIndex((l: Layer) => l.id === layerId);
 
-    if (currentIndex < visibleLayers.length - 1) {
-      const nextLayer = visibleLayers[currentIndex + 1];
+    if (currentIndex < visibleLayersInGroup.length - 1) {
+      const nextLayer = visibleLayersInGroup[currentIndex + 1];
       this._swapZIndex(layer.id, nextLayer.id);
     }
   }
 
   setLayerOrder(orderedLayerIds: string[]): void {
-    const maxZIndex = orderedLayerIds.length;
-    orderedLayerIds.forEach((layerId: string, index: number) => {
+    // Los IDs vienen ordenados de arriba hacia abajo en el UI
+    // Mayor índice = más arriba en la UI = mayor z-index en Leaflet
+    const maxIndex = orderedLayerIds.length - 1;
+    orderedLayerIds.forEach((layerId: string, uiIndex: number) => {
       this._updateLayer(layerId, (layer) => {
         if (layer.visible) {
-          layer.zIndex = maxZIndex - index;
+          // Invertir: primera capa en UI (uiIndex=0) → mayor zIndex relativo
+          layer.zIndex = maxIndex - uiIndex;
         }
       });
     });
@@ -294,14 +400,32 @@ export class LayerService {
     return layer?.name ?? layerId;
   }
 
-  private _getNextZIndex(): number {
-    const maxZIndex = Math.max(
-      0,
-      ...this._getAllLayers()
-        .filter((l: Layer) => l.zIndex !== undefined)
-        .map((l: Layer) => l.zIndex!),
+  /**
+   * Obtiene el siguiente zIndex RELATIVO para una capa dentro de su grupo (0-based)
+   */
+  private _getNextZIndex(zIndexGroup: ActiveLayerGroup): number {
+    const layersInGroup = this._getAllLayers().filter(
+      (l: Layer) => l.zIndexGroup === zIndexGroup && l.zIndex !== undefined,
     );
-    return Math.max(1, maxZIndex + 1);
+
+    if (layersInGroup.length === 0) {
+      return 0; // Primer capa del grupo
+    }
+
+    const maxZIndex = Math.max(...layersInGroup.map((l: Layer) => l.zIndex!));
+    return maxZIndex + 1;
+  }
+
+  /**
+   * Calcula el z-index ABSOLUTO para Leaflet a partir del z-index relativo y el grupo
+   * Formula: baseOffset + relativeZIndex
+   * - BASE: 0 + relativeZIndex → 0, 1, 2, ...
+   * - OVERLAY: 1000 + relativeZIndex → 1000, 1001, 1002, ...
+   */
+  getAbsoluteZIndex(layer: Layer): number {
+    if (layer.zIndex === undefined) return 0;
+    const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
+    return baseOffset + layer.zIndex;
   }
 
   private _swapZIndex(layerId1: string, layerId2: string): void {

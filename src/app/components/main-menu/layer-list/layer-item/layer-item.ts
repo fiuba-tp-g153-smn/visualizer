@@ -19,10 +19,10 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
-import { Layer } from '../../../../models';
-import { LayerService } from '../../../../services/layer.service';
-import { ChannelConfigService } from '../../../../services/channel-config.service';
-import { LayerReloadService } from '../../../../services/layer-reload.service';
+import { Layer, LayerCategory, LayerType } from '../../../../models';
+import { LayerService } from '../../../../services/layers/layer.service';
+import { LayerReloadService } from '../../../../services/layers/layer-reload.service';
+import { LayerConfigService } from '../../../../services/layers/layer-config.service';
 
 /**
  * Modo de visualización del componente
@@ -60,7 +60,7 @@ export type LayerItemMode = 'available' | 'active';
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly layerService = inject(LayerService);
-  private readonly channelConfigService = inject(ChannelConfigService);
+  private readonly layerConfigService = inject(LayerConfigService);
   private readonly reloadService = inject(LayerReloadService);
 
   /**
@@ -91,6 +91,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // Estado local
   isLoadingConfig = signal(false);
   isControlsExpanded = signal(false);
+  isExpanded = signal(false);
 
   /**
    * Estado de reproducción - lee del servicio
@@ -103,7 +104,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
    */
   lastImagesOptions = computed(() => {
-    return this.layer.availablePeriods ?? [1]; // Fallback a valor por defecto
+    return this.layer.type === LayerType.TILE ? (this.layer.availablePeriods ?? [1]) : [1];
   });
 
   /**
@@ -123,14 +124,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita control de tiempo
    */
   hasTimeControl = computed(() => {
-    return this.channelConfigService.hasConfig(this.layer.id);
+    return this.layerConfigService.hasConfig(this.layer.id);
   });
 
   /**
    * Obtiene el índice máximo de tiempo
    */
   maxTimeIndex = computed(() => {
-    const tilesets = this.channelConfigService.getTilesets(this.layer.id);
+    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     return Math.max(0, tilesets.length - 1);
   });
 
@@ -139,6 +140,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   hasMultiplePeriods = computed(() => {
     return this.maxTimeIndex() > 0;
+  });
+
+  /**
+   * Verifica si la capa tiene controles avanzados (tiempo/animación)
+   * Actualmente solo las capas ABI (satélite) tienen control de tiempo
+   */
+  hasAdvancedControls = computed(() => {
+    return this.layer.category !== LayerCategory.IGN_WMS;
   });
 
   /**
@@ -166,7 +175,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentTimeIndex = computed(() => {
     const activeLayer = this.getActiveLayer();
-    const currentIndex = activeLayer?.timeIndex ?? this.maxTimeIndex();
+    const currentIndex =
+      activeLayer && activeLayer.type === LayerType.TILE
+        ? (activeLayer.timeIndex ?? this.maxTimeIndex())
+        : this.maxTimeIndex();
     // Asegurar que el índice actual esté dentro del rango visible
     const min = this.minTimeIndex();
     const max = this.maxTimeIndex();
@@ -198,7 +210,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita cargar configuración
    */
   private needsConfig(): boolean {
-    return this.layer.id.startsWith('abi-') && !this.channelConfigService.hasConfig(this.layer.id);
+    return this.layer.id.startsWith('abi-') && !this.layerConfigService.hasConfig(this.layer.id);
   }
 
   /**
@@ -217,7 +229,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     this.isLoadingConfig.set(true);
 
-    this.channelConfigService
+    this.layerConfigService
       .loadChannelConfig(this.layer.id, product, instrument, channel)
       .subscribe({
         next: (config) => {
@@ -249,8 +261,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   toggleActive(checked: boolean): void {
     if (checked) {
       this.activateLayer();
-      // Expandir controles automáticamente al activar
-      this.isControlsExpanded.set(true);
+      // Controls remain collapsed by default
+      // this.isControlsExpanded.set(true);
     } else {
       this.deactivateLayer();
     }
@@ -260,7 +272,30 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Alterna la expansión de los controles
    */
   toggleControls(): void {
-    this.isControlsExpanded.update((expanded) => !expanded);
+    if (this.isControlsExpanded()) {
+      // Si ya está abierto, solo cerramos los controles de animación
+      this.isControlsExpanded.set(false);
+      // Mantenemos isExpanded en true (opacidad visible)
+    } else {
+      // Si está cerrado, abrimos animación Y aseguramos que el contenedor esté expandido
+      this.isExpanded.set(true);
+      this.isControlsExpanded.set(true);
+    }
+  }
+
+  /**
+   * Alterna la expansión del card completo (opacidad + controles)
+   */
+  toggleExpansion(): void {
+    if (this.isExpanded()) {
+      // Si colapsamos, cerramos TODO (incluida la animación)
+      this.isExpanded.set(false);
+      this.isControlsExpanded.set(false);
+    } else {
+      // Si expandimos, mostramos solo opacidad inicialmente (animación cerrada)
+      this.isExpanded.set(true);
+      this.isControlsExpanded.set(false);
+    }
   }
 
   /**
@@ -337,7 +372,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return 'Cargando...';
     }
 
-    const tilesets = this.channelConfigService.getTilesets(this.layer.id);
+    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
       // Extraer información de fecha del ID (formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567)
@@ -369,7 +404,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return '--:--';
     }
 
-    const tilesets = this.channelConfigService.getTilesets(this.layer.id);
+    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
       const match = tileset.id.match(/_s(\d{11})/);

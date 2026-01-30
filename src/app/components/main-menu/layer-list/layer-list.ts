@@ -1,160 +1,43 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatSliderModule } from '@angular/material/slider';
-import { MatListModule } from '@angular/material/list';
-import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { LayerService } from '../../../services/layer.service';
-import { Layer } from '../../../models';
+import { LayerService } from '../../../services/layers/layer.service';
 import { MenuPanelComponent } from '../menu-section.model';
-import { LayerItemComponent } from './layer-item/layer-item';
+import { AvailableLayersComponent } from './available-layers/available-layers';
+import { ActiveLayersComponent } from './active-layers/active-layers';
 
 /**
- * Lista de capas con controles de visibilidad, opacidad y orden
+ * Contenedor de listas de capas con pestañas
+ * Componente inteligente que coordina las capas disponibles y activas
  */
 @Component({
   selector: 'app-layer-list',
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     MatTabsModule,
     MatIconModule,
-    MatButtonModule,
-    MatTooltipModule,
-    MatExpansionModule,
-    MatSliderModule,
-    MatListModule,
-    MatCardModule,
-    MatCheckboxModule,
-    MatDividerModule,
-    MatInputModule,
-    MatFormFieldModule,
-    DragDropModule,
-    LayerItemComponent,
+    AvailableLayersComponent,
+    ActiveLayersComponent,
   ],
   templateUrl: './layer-list.html',
   styleUrl: './layer-list.scss',
 })
 export class LayerListComponent implements MenuPanelComponent {
-  readonly layerService = inject(LayerService);
+  private readonly layerService = inject(LayerService);
 
-  // Estado local
-  searchText = signal('');
-
-  /**
-   * Indica si hay búsqueda activa
-   */
-  hasSearch = computed(() => this.searchText().trim().length > 0);
-
-  /**
-   * Indica si hay capas disponibles para mostrar
-   */
   hasAvailableLayers = computed(() => {
     return this.layerService.layerGroups().some((group) => {
       return group.subgroups.some((subgroup) => subgroup.layers.length > 0);
     });
   });
 
-  /**
-   * Normaliza texto removiendo tildes y convirtiendo a minúsculas
-   */
-  private normalizeText(text: string): string {
-    return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+  getActiveLayersCount(): number {
+    return this.layerService.activeLayers().length;
   }
 
-  /**
-   * Grupos filtrados según el texto de búsqueda
-   */
-  filteredGroups = computed(() => {
-    const search = this.normalizeText(this.searchText().trim());
-
-    // 1. Obtener grupos base
-    const baseGroups = this.layerService.layerGroups();
-
-    // 2. Procesar grupos (filtrar vacíos y aplicar búsqueda si existe)
-    return baseGroups
-      .map((group) => {
-        // Si hay búsqueda, filtrar por nombre
-        const groupNameMatches = search ? this.normalizeText(group.name).includes(search) : true;
-
-        // Filtrar subgrupos
-        const filteredSubgroups = group.subgroups
-          .map((subgroup) => {
-            const subgroupNameMatches = search
-              ? this.normalizeText(subgroup.name).includes(search)
-              : true;
-
-            // Filtrar capas del subgrupo
-            const layers = subgroup.layers.filter((layer) => {
-              if (!search) return true;
-              return (
-                this.normalizeText(layer.name).includes(search) ||
-                subgroupNameMatches ||
-                groupNameMatches
-              );
-            });
-
-            // Retornar subgrupo procesado
-            return {
-              ...subgroup,
-              layers,
-              _shouldExpandSubgroup: search ? layers.length > 0 && layers.length < subgroup.layers.length : false,
-            };
-          })
-          .filter((subgroup) => subgroup.layers.length > 0); // Ocultar subgrupos vacíos
-
-        // Determinar expansión del grupo
-        const hasMatchingLayers = filteredSubgroups.some((sg) => sg._shouldExpandSubgroup);
-        const hasMatchingSubgroups =
-          search &&
-          filteredSubgroups.some((sg) => this.normalizeText(sg.name).includes(search));
-
-        return {
-          ...group,
-          subgroups: filteredSubgroups,
-          _shouldExpandGroup: hasMatchingLayers || (hasMatchingSubgroups && !groupNameMatches),
-        };
-      })
-      .filter((group) => group.subgroups.length > 0); // Ocultar grupos vacíos
-  });
-
-  /**
-   * Implementación de MenuPanelComponent
-   */
   onPanelOpen(): void {
     // Hook cuando el panel se abre
-  }
-
-  /**
-   * Filtra capas visibles (para tab "Activas")
-   */
-  getActiveLayers(): Layer[] {
-    return this.layerService.activeLayers();
-  }
-
-  /**
-   * Maneja el drop en la lista de capas activas (drag & drop)
-   */
-  onLayerDrop(event: CdkDragDrop<Layer[]>): void {
-    const activeLayers = [...this.getActiveLayers()];
-    moveItemInArray(activeLayers, event.previousIndex, event.currentIndex);
-
-    // Actualizar el orden de los zIndex
-    const orderedIds = activeLayers.map((layer) => layer.id);
-    this.layerService.setLayerOrder(orderedIds);
   }
 }
