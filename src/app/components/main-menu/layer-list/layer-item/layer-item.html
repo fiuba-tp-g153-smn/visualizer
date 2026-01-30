@@ -20,7 +20,9 @@
           <button
             mat-icon-button
             (click)="toggleControls()"
-            [matTooltip]="isControlsExpanded() ? 'Ocultar animación' : 'Configurar animación'"
+            [matTooltip]="
+              isControlsExpanded() ? 'Ocultar panel de animación' : 'Mostrar panel de animación'
+            "
             class="config-btn"
             [class.active-config]="isControlsExpanded()"
             tabindex="0"
@@ -63,7 +65,9 @@
           <button
             mat-icon-button
             (click)="toggleControls()"
-            [matTooltip]="isControlsExpanded() ? 'Ocultar animación' : 'Configurar animación'"
+            [matTooltip]="
+              isControlsExpanded() ? 'Ocultar panel de animación' : 'Mostrar panel de animación'
+            "
             class="config-btn"
             [class.active-config]="isControlsExpanded()"
             tabindex="0"
@@ -83,7 +87,12 @@
         </button>
 
         @if (showClose) {
-          <button mat-icon-button (click)="deactivateLayer()" class="close-btn">
+          <button
+            mat-icon-button
+            (click)="deactivateLayer()"
+            class="close-btn"
+            matTooltip="Desactivar capa"
+          >
             <mat-icon>close</mat-icon>
           </button>
         }
