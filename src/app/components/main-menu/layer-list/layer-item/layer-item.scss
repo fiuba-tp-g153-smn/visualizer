@@ -9,6 +9,24 @@
     align-items: center;
     gap: 8px;
     width: 100%;
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+
+      .config-btn, .expand-btn {
+        color: var(--mat-sys-on-surface-variant);
+        &.active-config { color: var(--mat-sys-primary); }
+        &:hover { color: var(--mat-sys-primary); }
+      }
+
+      .close-btn {
+        color: var(--mat-sys-on-surface-variant);
+        &:hover { color: var(--mat-sys-error); }
+      }
+    }
   }
 
   &.mode-available {
@@ -21,15 +39,6 @@
 
       .layer-checkbox {
         flex: 1;
-      }
-
-      .config-btn {
-        flex-shrink: 0;
-        color: var(--mat-sys-on-surface-variant);
-
-        &:hover {
-          color: var(--mat-sys-primary);
-        }
       }
     }
     .layer-checkbox { flex: 1; }
@@ -50,11 +59,12 @@
       font-weight: 500;
       color: var(--mat-sys-on-surface);
     }
-    .close-btn {
-      flex-shrink: 0;
-      color: var(--mat-sys-on-surface-variant);
-      &:hover { color: var(--mat-sys-error); }
-    }
+  }
+
+  .layer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
 
