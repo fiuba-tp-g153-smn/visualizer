@@ -3,13 +3,13 @@
     <div class="sidebar-header d-flex justify-content-between align-items-center">
       <a routerLink="/" class="back-link">
         <mat-icon>arrow_back</mat-icon>
-        Back to App
+        Ir al Mapa
       </a>
-      <h2>Documentation</h2>
+      <h2>Documentación</h2>
       <button
         mat-icon-button
         (click)="toggleTheme()"
-        [matTooltip]="isDarkMode ? 'Light Mode' : 'Dark Mode'"
+        [matTooltip]="isDarkMode ? 'Modo Claro' : 'Modo Oscuro'"
       >
         <mat-icon>{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>
