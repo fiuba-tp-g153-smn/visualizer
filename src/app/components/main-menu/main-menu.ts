@@ -1,5 +1,4 @@
 import { Component, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayerListComponent } from './layer-list/layer-list';
 import { TileSelectorComponent } from './tile-selector/tile-selector';
 import { MenuSection } from './menu-section.model';
+import { environment } from '../../../environments/environment';
 
 /**
  * Configuración de secciones del menú
@@ -58,7 +58,7 @@ export class MainMenuComponent {
   // Panel activo (ID de la sección o null)
   readonly activePanel = signal<string | null>(null);
 
-  constructor(private router: Router) {}
+  constructor() {}
 
   /**
    * Obtiene la sección activa
@@ -87,6 +87,6 @@ export class MainMenuComponent {
   }
 
   goToDocs() {
-    this.router.navigate(['/docs']);
+    window.open(environment.docsUrl, '_blank');
   }
 }

@@ -13,4 +13,5 @@ export const environment = {
   ui: {
     disabledLayers: ['abi-ch2', 'radar'],
   },
+  docsUrl: $ENV.DOCS_URL,
 };
