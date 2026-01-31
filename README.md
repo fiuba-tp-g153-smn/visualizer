@@ -33,3 +33,25 @@ cp .env.example .env
 ```
 
 Edit the `.env` file to set your desired configuration values.
+
+## Documentation System
+
+This project includes an integrated documentation viewer located at `/docs`. It uses `ngx-markdown` to render Markdown files from the `public/docs` directory.
+
+### How to Add New Documents
+
+1.  **Create the Markdown File**:
+    Add your `.md` file to the `public/docs/` directory.
+    Example: `public/docs/my-new-feature.md`
+
+2.  **Register the Topic**:
+    Open `src/app/pages/docs/docs.component.ts` and add a new entry to the `topics` array:
+
+    ```typescript
+    topics = [
+      { id: 'intro', title: 'Introduction' },
+      { id: 'my-new-feature', title: 'My New Feature' }, // ID must match filename
+    ];
+    ```
+
+    The `id` corresponds to the filename without the extension. The `title` is what appears in the sidebar navigation.
