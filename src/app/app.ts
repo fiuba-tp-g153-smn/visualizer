@@ -1,12 +1,10 @@
 import { Component } from '@angular/core';
-import { MapViewer } from './components/map-viewer/map-viewer';
-import { NotificationPanelComponent } from './components/notification-panel/notification-panel';
-import { MainMenuComponent } from './components/main-menu/main-menu';
+import { RouterOutlet } from '@angular/router';
 import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
-  imports: [MapViewer, NotificationPanelComponent, MainMenuComponent],
+  imports: [RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

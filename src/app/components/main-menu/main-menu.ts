@@ -1,4 +1,5 @@
 import { Component, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -57,6 +58,8 @@ export class MainMenuComponent {
   // Panel activo (ID de la sección o null)
   readonly activePanel = signal<string | null>(null);
 
+  constructor(private router: Router) {}
+
   /**
    * Obtiene la sección activa
    */
@@ -81,5 +84,9 @@ export class MainMenuComponent {
    */
   closePanel(): void {
     this.activePanel.set(null);
+  }
+
+  goToDocs() {
+    this.router.navigate(['/docs']);
   }
 }
