@@ -24,11 +24,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 export class DocsComponent {
   // Simple list of topics for now. In a real app potentially loaded from a manifest
   topics = [
-    { id: 'intro', title: 'Introduction' },
+    { id: 'manual-de-uso', title: 'Manual de Uso' },
     // Add more topics here or load dynamically
   ];
 
-  activeTopic = 'intro';
+  activeTopic = 'manual-de-uso';
   isDarkMode = false;
 
   constructor(private http: HttpClient) {}
