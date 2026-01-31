@@ -1,6 +1,6 @@
 services:
   visualizator:
-    container_name: visualizator-container-dev-container
+    container_name: visualizator-dev-container
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -11,6 +11,17 @@ services:
       - USE_MOCK_TILES=${USE_MOCK_TILES}
       - TILE_FORMAT=${TILE_FORMAT}
       - APP_HOST_PORT=${APP_HOST_PORT}
+      - DOCS_URL=${DOCS_URL}
     volumes:
       - .:/app
     restart: unless-stopped
+
+  docs:
+    container_name: docs-dev-container
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3000"
+    environment:
+      - NODE_ENV=development

@@ -5,4 +5,5 @@ interface Env {
   USE_MOCK_TILES: boolean;
   TILE_FORMAT: string;
   APP_HOST_PORT: integer;
+  DOCS_URL: string;
 }
