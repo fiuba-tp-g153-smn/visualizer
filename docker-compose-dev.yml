@@ -3,9 +3,11 @@ services:
     container_name: docs-dev-container
     build:
       context: ./docs-service
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
-      - "3005:3000"
+      - "${DOCS_HOST_PORT}:3000"
+    volumes:
+      - ./docs-service:/app
     environment:
       - NODE_ENV=development
     healthcheck:

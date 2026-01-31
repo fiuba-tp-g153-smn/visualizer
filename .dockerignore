@@ -4,7 +4,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-docs
 .pnpm-store
 # Build output
 dist
@@ -103,7 +102,6 @@ temp/
 
 # Documentation
 README.md
-docs/
 
 # CI/CD
 .github/
@@ -115,3 +113,6 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 .angular
+
+# Documentation Service
+docs-service/
