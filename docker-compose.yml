@@ -1,4 +1,19 @@
 services:
+  docs:
+    container_name: docs-container
+    build:
+      context: ./docs-service
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3000"
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 3s
+      timeout: 8s
+      retries: 20
+
   visualizator:
     container_name: visualizator-container
     image: visualizator
@@ -23,14 +38,4 @@ services:
       test: ["CMD-SHELL", "nc -z localhost 80 || exit 1"]
       interval: 2s
       timeout: 10s
-      retries: 3
-
-  docs:
-    container_name: docs-container
-    build:
-      context: ./docs
-      dockerfile: Dockerfile
-    ports:
-      - "3005:3000"
-    environment:
-      - NODE_ENV=production
+      retries: 10
