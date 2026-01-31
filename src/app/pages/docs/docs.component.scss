@@ -1,43 +1,22 @@
 .docs-container {
-  /* Default Dark Theme Variables */
-  --bg-color: #0f1117;
-  --sidebar-bg: #0b0d11;
-  --sidebar-border: #1e293b;
-  --text-main: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-header: #fff;
-  --link-color: #60a5fa;
-  --code-bg: #1e293b;
-  --code-text: #e2e8f0;
-  --pre-bg: #0b0d11;
-  --pre-border: #1e293b;
+  /* Enforce Light Theme Variables */
+  --bg-color: #ffffff;
+  --sidebar-bg: #f8fafc;
+  --sidebar-border: #e2e8f0;
+  --text-main: #334155;
+  --text-muted: #64748b;
+  --text-header: #0f172a;
+  --link-color: #2563eb;
+  --code-bg: #f1f5f9;
+  --code-text: #0f172a;
+  --pre-bg: #f8fafc;
+  --pre-border: #e2e8f0;
   --blockquote-border: #3b82f6;
-  --blockquote-bg: rgba(59, 130, 246, 0.1);
-  --blockquote-text: #93c5fd;
-  --hover-bg: #1e293b;
-  --active-bg: #3b82f6;
+  --blockquote-bg: #eff6ff;
+  --blockquote-text: #1d4ed8;
+  --hover-bg: #e2e8f0;
+  --active-bg: #2563eb;
   --active-text: #fff;
-
-  &.light-mode {
-    /* Light Theme Overrides */
-    --bg-color: #ffffff;
-    --sidebar-bg: #f8fafc;
-    --sidebar-border: #e2e8f0;
-    --text-main: #334155;
-    --text-muted: #64748b;
-    --text-header: #0f172a;
-    --link-color: #2563eb;
-    --code-bg: #f1f5f9;
-    --code-text: #0f172a;
-    --pre-bg: #f8fafc;
-    --pre-border: #e2e8f0;
-    --blockquote-border: #3b82f6;
-    --blockquote-bg: #eff6ff;
-    --blockquote-text: #1d4ed8;
-    --hover-bg: #e2e8f0;
-    --active-bg: #2563eb;
-    --active-text: #fff;
-  }
 
   display: flex;
   height: 100vh;

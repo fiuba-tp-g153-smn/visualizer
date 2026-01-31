@@ -5,19 +5,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-docs',
   standalone: true,
-  imports: [
-    CommonModule,
-    MarkdownModule,
-    MatButtonModule,
-    MatIconModule,
-    RouterLink,
-    MatTooltipModule,
-  ],
+  imports: [CommonModule, MarkdownModule, MatButtonModule, MatIconModule, RouterLink],
   templateUrl: './docs.component.html',
   styleUrl: './docs.component.scss',
 })
@@ -29,16 +21,11 @@ export class DocsComponent {
   ];
 
   activeTopic = 'manual-de-uso';
-  isDarkMode = false;
 
   constructor(private http: HttpClient) {}
 
   selectTopic(topicId: string) {
     this.activeTopic = topicId;
-  }
-
-  toggleTheme() {
-    this.isDarkMode = !this.isDarkMode;
   }
 
   get currentDocUrl() {
