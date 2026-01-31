@@ -1,6 +1,6 @@
 services:
-  docs:
-    container_name: docs-dev-container
+  docs-service:
+    container_name: docs-service-dev-container
     build:
       context: ./docs-service
       dockerfile: Dockerfile.dev
@@ -19,8 +19,8 @@ services:
   visualizator:
     container_name: visualizator-dev-container
     depends_on:
-      docs:
-          condition: service_healthy
+      docs-service:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile.dev
