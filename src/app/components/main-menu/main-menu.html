@@ -8,31 +8,40 @@
 
     <!-- Botones de secciones -->
     @for (section of sections; track section.id) {
+      <button
+        mat-icon-button
+        [class.active]="activePanel() === section.id"
+        (click)="togglePanel(section.id)"
+        [matTooltip]="section.tooltip"
+        matTooltipPosition="right"
+      >
+        <mat-icon>{{ section.icon }}</mat-icon>
+      </button>
+    }
+
     <button
       mat-icon-button
-      [class.active]="activePanel() === section.id"
-      (click)="togglePanel(section.id)"
-      [matTooltip]="section.tooltip"
+      (click)="goToDocs()"
+      matTooltip="Documentación"
       matTooltipPosition="right"
     >
-      <mat-icon>{{ section.icon }}</mat-icon>
+      <mat-icon>help</mat-icon>
     </button>
-    }
   </mat-card>
 
   <!-- Panel lateral -->
   @if (getActiveSection(); as activeSection) {
-  <mat-card class="menu-panel">
-    <mat-toolbar class="menu-header">
-      <span>{{ activeSection.title }}</span>
-      <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú">
-        <mat-icon>close</mat-icon>
-      </button>
-    </mat-toolbar>
+    <mat-card class="menu-panel">
+      <mat-toolbar class="menu-header">
+        <span>{{ activeSection.title }}</span>
+        <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-toolbar>
 
-    <mat-card-content class="panel-content">
-      <ng-container *ngComponentOutlet="activeSection.component" />
-    </mat-card-content>
-  </mat-card>
+      <mat-card-content class="panel-content">
+        <ng-container *ngComponentOutlet="activeSection.component" />
+      </mat-card-content>
+    </mat-card>
   }
 </div>

@@ -1,0 +1,27 @@
+<div class="docs-container">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <a routerLink="/" class="back-link">
+        <mat-icon>arrow_back</mat-icon>
+        Back to App
+      </a>
+      <h2>Documentation</h2>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ul>
+        <li *ngFor="let topic of topics">
+          <button [class.active]="topic.id === activeTopic" (click)="selectTopic(topic.id)">
+            {{ topic.title }}
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <main class="content-area">
+    <div class="markdown-wrapper">
+      <markdown [src]="currentDocUrl"></markdown>
+    </div>
+  </main>
+</div>
