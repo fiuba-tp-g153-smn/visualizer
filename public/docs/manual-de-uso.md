@@ -33,3 +33,14 @@ Para visualizar datos meteorológicos, utilice el panel de capas.
 
 - **Zoom**: Utilice la rueda del ratón o los botones en pantalla.
 - **Pan**: Haga clic y arrastre para mover el mapa.
+
+## Configuración de Mapa Base
+
+Puede cambiar el estilo visual del mapa base según sus necesidades (Satélite, Oscuro, Claro, etc.).
+
+![Selector de Mapa Base](docs/images/manual-basemap.png)
+
+1.  Haga clic en el icono de **Mapa** (Maps) en el menú lateral.
+2.  Se abrirá el selector de mapas base.
+3.  Elija una opción como **ArgenMAP**, **OpenStreetMap** o **Satélite**.
+4.  El fondo del mapa cambiará inmediatamente.
