@@ -1,6 +1,6 @@
 services:
-  docs:
-    container_name: docs-container
+  docs-service:
+    container_name: docs-service-container
     build:
       context: ./docs-service
       dockerfile: Dockerfile
@@ -17,6 +17,9 @@ services:
   visualizator:
     container_name: visualizator-container
     image: visualizator
+    depends_on:
+      docs-service:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Dockerfile
