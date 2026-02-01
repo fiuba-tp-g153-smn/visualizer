@@ -13,4 +13,5 @@ export const environment = {
   ui: {
     disabledLayers: [] as string[],
   },
+  docsUrl: $ENV.DOCS_URL,
 };

@@ -1,6 +1,26 @@
 services:
+  docs-service:
+    container_name: docs-service-dev-container
+    build:
+      context: ./docs-service
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${DOCS_HOST_PORT}:3000"
+    volumes:
+      - ./docs-service:/app
+    environment:
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 3s
+      timeout: 8s
+      retries: 5
+
   visualizator:
-    container_name: visualizator-container-dev-container
+    container_name: visualizator-dev-container
+    depends_on:
+      docs-service:
+        condition: service_started
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -11,6 +31,12 @@ services:
       - USE_MOCK_TILES=${USE_MOCK_TILES}
       - TILE_FORMAT=${TILE_FORMAT}
       - APP_HOST_PORT=${APP_HOST_PORT}
+      - DOCS_URL=${DOCS_URL}
     volumes:
       - .:/app
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:4200 || exit 1"]
+      interval: 2s
+      timeout: 10s
+      retries: 3
