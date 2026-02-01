@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface DocsNavigationMessage {
   type: 'docs-navigation';
@@ -16,11 +17,17 @@ interface DocsNavigationMessage {
 @Component({
   selector: 'app-docs',
   standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule, MatButtonModule, MatIconModule],
+  imports: [
+    CommonModule,
+    MatProgressSpinnerModule,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+  ],
   template: `
     <div class="docs-container">
       <div class="docs-header">
-        <button mat-icon-button (click)="goBack()" aria-label="Volver">
+        <button mat-icon-button (click)="goBack()" aria-label="Volver" matTooltip="Ir al mapa">
           <mat-icon>arrow_back</mat-icon>
         </button>
         <span class="docs-title">Documentación</span>
