@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # Build stage
 FROM node:22-alpine AS build
 
@@ -7,14 +9,16 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with cache mount for Docusaurus
+RUN --mount=type=cache,target=/app/.docusaurus \
+    npm run build
 
 # Production stage
 FROM nginx:alpine AS runner
