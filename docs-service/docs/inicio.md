@@ -1,6 +1,7 @@
 ---
 slug: /
 title: Inicio
+sidebar_position: 1
 ---
 
 # Bienvenido al Visualizador del MapaSMN
