@@ -1,3 +1,6 @@
+---
+slug: /
+title: Inicio
+---
+
 # Inicio
-
-

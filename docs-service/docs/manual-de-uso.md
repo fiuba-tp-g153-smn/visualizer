@@ -16,7 +16,7 @@ Esta guía técnica proporciona una referencia detallada sobre la arquitectura, 
 5. [Buenas Prácticas de Rendimiento](#5-buenas-practicas-de-rendimiento)
 6. [Referencias y Estándares](#6-referencias-y-estandares)
 
-## 1. Introducción y Alcance
+## 1. Introducción y Alcance {#1-introduccion-y-alcance}
 
 **Visualizator** es una plataforma de visualización geoespacial de alto rendimiento diseñada para la integración de datos meteorológicos en tiempo real y cartografía base estandarizada. La aplicación permite la superposición de capas raster y vectoriales provenientes de diversas fuentes (WMS, TMS, XYZ), facilitando el análisis de fenómenos atmosféricos sobre un contexto geográfico preciso.
 
@@ -28,7 +28,7 @@ Esta guía técnica proporciona una referencia detallada sobre la arquitectura, 
 
 ---
 
-## 2. Arquitectura y Tecnologías
+## 2. Arquitectura y Tecnologías {#2-arquitectura-y-tecnologias}
 
 La aplicación está construida sobre un stack moderno orientado a la web:
 
@@ -47,11 +47,11 @@ El sistema opera principalmente bajo el estándar **Web Mercator (EPSG:3857)** p
 
 ---
 
-## 3. Catálogo de Datos y Proveedores
+## 3. Catálogo de Datos y Proveedores {#3-catalogo-de-datos-y-proveedores}
 
 La aplicación implementa una arquitectura flexible de proveedores de mapas base y capas superpuestas. A continuación se detallan las configuraciones técnicas.
 
-### 3.1. Proveedores de Mapas Base (Basemaps)
+### 3.1. Proveedores de Mapas Base (Basemaps) {#31-proveedores-de-mapas-base-basemaps}
 
 Los mapas base proporcionan el contexto geográfico. La aplicación soporta protocolos `XYZ` y `TMS`.
 
@@ -66,7 +66,7 @@ Los mapas base proporcionan el contexto geográfico. La aplicación soporta prot
 > [!IMPORTANT]
 > **ArgenMAP y TMS**: El servicio de ArgenMAP se consume utilizando el protocolo TMS (Tile Map Service), lo cual requiere una inversión en la coordenada `Y` (`{-y}` en Leaflet o `(2^zoom - 1) - y` manual) para mapear correctamente las tiles en una grilla XYZ estándar.
 
-### 3.2. Capas Meteorológicas y Geoespaciales
+### 3.2. Capas Meteorológicas y Geoespaciales {#32-capas-meteorologicas-y-geoespaciales}
 
 Las capas operativas se organizan en grupos lógicos.
 
@@ -98,9 +98,9 @@ Integración de la Infraestructura de Datos Espaciales (IDE) de Argentina a trav
 
 ---
 
-## 4. Guía de Uso de la Interfaz
+## 4. Guía de Uso de la Interfaz {#4-guia-de-uso-de-la-interfaz}
 
-### 4.1. Control de Capas (Layer Control)
+### 4.1. Control de Capas (Layer Control) {#41-control-de-capas-layer-control}
 
 El panel de capas permite la gestión de visibilidad y opacidad.
 
@@ -109,14 +109,14 @@ El panel de capas permite la gestión de visibilidad y opacidad.
 3.  **Activación**: Checkbox para prender/apagar.
 4.  **Orden (Z-Index)**: Las capas se apilan según el orden en el árbol de configuración. Las capas puntuales o lineales (ej. rutas) suelen renderizarse sobre las capas base o raster (ej. satélite) para mantener visibilidad.
 
-### 4.2. Selector de Mapas Base
+### 4.2. Selector de Mapas Base {#42-selector-de-mapas-base}
 
 Permite conmutar el fondo cartográfico sin afectar las capas operativas superpuestas.
 
 - **Recomendación para Meteorología**: Utilice _CartoDB Dark Matter_ o _Satellite_ para resaltar datos de nubes o precipitación con colores brillantes.
 - **Recomendación para Referencia**: Utilice _ArgenMAP_ o _OpenStreetMap_ cuando necesite toponimia detallada y rutas.
 
-### 4.3. Navegación en el Mapa
+### 4.3. Navegación en el Mapa {#43-navegacion-en-el-mapa}
 
 - **Zoom**: Rueda del mouse o controles +/-.
 - **Pan**: Arrastrar mapa (Click izquierdo + Drag).
@@ -124,7 +124,7 @@ Permite conmutar el fondo cartográfico sin afectar las capas operativas superpu
 
 ---
 
-## 5. Buenas Prácticas de Rendimiento
+## 5. Buenas Prácticas de Rendimiento {#5-buenas-practicas-de-rendimiento}
 
 Para garantizar una experiencia fluida, especialmente en dispositivos con recursos limitados:
 
@@ -133,7 +133,7 @@ Para garantizar una experiencia fluida, especialmente en dispositivos con recurs
 
 ---
 
-## 6. Referencias y Estándares
+## 6. Referencias y Estándares {#6-referencias-y-estandares}
 
 - **OGC WMS**: [OpenGIS Web Map Service Implementation Specification](https://www.ogc.org/standards/wms)
 - **EPSG:3857**: [Proyección Web Mercator - EPSG.io](https://upsg.io/3857)
