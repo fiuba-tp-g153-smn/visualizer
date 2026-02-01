@@ -3,37 +3,36 @@ slug: /
 title: Inicio
 ---
 
-# Bienvenido a Visualizator
+# Bienvenido al Visualizador del MapaSMN
 
-**Visualizator** es una plataforma de visualización geoespacial de alto rendimiento diseñada para la integración de datos meteorológicos en tiempo real y cartografía base estandarizada.
+Esta es una plataforma de visualización geoespacial diseñada para la integración de datos meteorológicos en tiempo real acorde a la producción de imágenes fuente.
 
 Esta documentación te guiará a través de las funcionalidades, la configuración y el uso avanzado de la herramienta.
 
-## 🚀 Funcionalidades Principales
+## Funcionalidades Principales
 
 Visualizator integra múltiples fuentes de datos para ofrecer un contexto geográfico preciso:
 
-- **Mapas Base**: Soporte para tiles XYZ y TMS, incluyendo ArgenMAP, OpenStreetMap y capas satelitales de ESRI.
-- **Capas Meteorológicas**: Visualización de satélites GOES-R y redes de radares meteorológicos.
-- **Datos del IGN**: Integración con servicios WMS para visualizar límites, hidrografía y rutas de Argentina.
+- **Mapas Base**: Soporte para tiles del mapa base con proveedores de tiles incluyendo ArgenMAP (IGN), OpenStreetMap, CartoDB y capas satelitales de ESRI.
+- **Capas Meteorológicas**: Visualización de imágenes del satélite GOES-19.
+- **Datos del IGN**: Integración con servicios WMS del IGN (Instituto Geográfico Nacional) para visualizar límites, hidrografía y rutas de Argentina.
 - **Interacción Avanzada**: Control de opacidad y orden de capas (Z-Index) para análisis personalizados.
 
 ## 📖 Explorar la Documentación
 
-### [Manual de Uso](/manual-de-uso)
+### Guía de Uso
 
 Consulta nuestra guía detallada para aprender a utilizar la interfaz.
 
-- **[Gestión de Capas](/manual-de-uso#41-control-de-capas-layer-control)**: Aprende a activar, desactivar y organizar la información en el mapa.
-- **[Navegación](/manual-de-uso#43-navegacion-en-el-mapa)**: Controles de zoom, desplazamiento e inspección de features.
-- **[Catálogo de Datos](/manual-de-uso#3-catalogo-de-datos-y-proveedores)**: Conoce las fuentes de datos y proveedores integrados.
+- **[Uso General](./uso-general.md)**: Información general sobre el uso de la interfaz.
+- **[Mapa Base](./mapa-base.md)**: Información sobre los diferentes mapas base disponibles y navegación general del mapa.
+- **[Productos Meteorológicos](./productos-meteorologicos.md)**: Aprende a activar, desactivar y organizar la información en el mapa.
 
 ### Información Técnica
 
-Para desarrolladores y especialistas SIG:
+Para desarrolladores y especialistas GIS (Geographic Information System):
 
-- [Arquitectura del Sistema](/manual-de-uso#2-arquitectura-y-tecnologias)
-- [Estándares y Referencias](/manual-de-uso#6-referencias-y-estandares)
+- [Arquitectura del Sistema](./arquitectura.md)
 
 ---
 
