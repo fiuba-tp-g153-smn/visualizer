@@ -6,7 +6,6 @@ const config: Config = {
   title: 'Visualizator',
   tagline: 'Documentación del Sistema de Visualización Meteorológica',
   favicon: 'img/favicon.ico',
-
   future: {
     v4: true,
   },
