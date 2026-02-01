@@ -1,6 +1,6 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
-import { Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -40,6 +40,7 @@ const MENU_SECTIONS: MenuSection[] = [
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     NgComponentOutlet,
     MatIconModule,
     MatButtonModule,
@@ -57,8 +58,6 @@ export class MainMenuComponent {
 
   // Panel activo (ID de la sección o null)
   readonly activePanel = signal<string | null>(null);
-
-  private router = inject(Router);
 
   constructor() {}
 
@@ -86,9 +85,5 @@ export class MainMenuComponent {
    */
   closePanel(): void {
     this.activePanel.set(null);
-  }
-
-  goToDocs() {
-    this.router.navigate(['/docs']);
   }
 }

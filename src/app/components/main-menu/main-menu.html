@@ -19,14 +19,9 @@
       </button>
     }
 
-    <button
-      mat-icon-button
-      (click)="goToDocs()"
-      matTooltip="Documentación"
-      matTooltipPosition="right"
-    >
+    <a mat-icon-button routerLink="/docs" matTooltip="Documentación" matTooltipPosition="right">
       <mat-icon>help</mat-icon>
-    </button>
+    </a>
   </mat-card>
 
   <!-- Panel lateral -->
