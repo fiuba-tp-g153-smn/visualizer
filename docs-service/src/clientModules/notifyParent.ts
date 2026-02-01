@@ -5,6 +5,9 @@ interface ScrollToAnchorMessage {
   anchor: string;
 }
 
+// Track if initial load has completed to avoid overwriting parent URL
+let isInitialLoad = true;
+
 /**
  * Scroll to an anchor element by ID.
  */
@@ -42,6 +45,12 @@ export function onRouteDidUpdate({ location }: { location: Location }): void {
 
   // Only post message if we're in an iframe
   if (window.parent !== window) {
+    // Skip initial load to avoid overwriting parent URL with hash
+    if (isInitialLoad) {
+      isInitialLoad = false;
+      return;
+    }
+
     // Decode hash to prevent double-encoding by Angular router
     const decodedHash = location.hash ? decodeURIComponent(location.hash) : '';
 

@@ -57,9 +57,9 @@ export class DocsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     window.addEventListener('message', this.messageHandler);
 
-    const path = this.route.snapshot.paramMap.get('path') || 'inicio';
+    const path = this.route.snapshot.paramMap.get('path');
     const fragment = this.route.snapshot.fragment;
-    this.loadDocsPage(path, fragment);
+    this.loadDocsPage(path || '', fragment);
   }
 
   ngOnDestroy(): void {
@@ -97,7 +97,7 @@ export class DocsComponent implements OnInit, OnDestroy {
       if (iframe?.contentWindow) {
         iframe.contentWindow.postMessage(
           { type: 'scroll-to-anchor', anchor: this.pendingFragment },
-          '*'
+          '*',
         );
       }
       this.pendingFragment = null;
