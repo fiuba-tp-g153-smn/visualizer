@@ -1,6 +1,5 @@
 ---
-title: Mapa Base
-slug: /mapa-base
+sidebar_position: 3
 ---
 
 # Mapa Base

@@ -1,6 +1,5 @@
 ---
-title: Productos Meteorológicos
-slug: /productos-meteorologicos
+sidebar_position: 4
 ---
 
 # Productos Meteorológicos

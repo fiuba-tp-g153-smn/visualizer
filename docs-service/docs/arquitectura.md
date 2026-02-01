@@ -1,3 +1,7 @@
+---
+sidebar_position: 5
+---
+
 # Arquitectura Interna del Sistema
 
 ### Tabla de Contenidos
