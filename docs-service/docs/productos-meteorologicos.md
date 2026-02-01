@@ -11,7 +11,6 @@ slug: /productos-meteorologicos
    - [Satélite (GOES-19)](#a-satelite-goes-19-abi-advanced-baseline-imager)
 2. [Capas de Referencia](#capas-de-referencia)
    - [IGN Argentina](#ign-argentina-wms)
-3. [Control de Capas](#control-de-capas-layer-control)
 
 Las capas operativas se organizan en grupos lógicos para facilitar el análisis de fenómenos atmosféricos.
 
@@ -44,12 +43,3 @@ Integración de la Infraestructura de Datos Espaciales (IDE) de Argentina a trav
   - **Vías de Comunicación**: Rutas, caminos, vías férreas.
   - **Infraestructura y Asentamientos**.
   - **Topografía y Relieve**.
-
-## Control de Capas (Layer Control)
-
-El panel de capas permite la gestión de visibilidad y opacidad.
-
-1.  Acceda al menú lateral **Capas**.
-2.  Las capas están agrupadas por categoría (Satélite, Radar, IGN).
-3.  **Activación**: Checkbox para prender/apagar.
-4.  **Orden (Z-Index)**: Las capas se apilan según el orden en el árbol de configuración. Las capas puntuales o lineales (ej. rutas) suelen renderizarse sobre las capas base o raster (ej. satélite) para mantener visibilidad.
