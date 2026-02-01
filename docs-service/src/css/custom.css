@@ -1,30 +1,74 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * Custom styles for Visualizator documentation
+ * Optimized for iframe embedding
  */
 
-/* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: #1976d2;
+  --ifm-color-primary-dark: #1565c0;
+  --ifm-color-primary-darker: #0d47a1;
+  --ifm-color-primary-darkest: #0a3d8f;
+  --ifm-color-primary-light: #42a5f5;
+  --ifm-color-primary-lighter: #64b5f6;
+  --ifm-color-primary-lightest: #90caf9;
   --ifm-code-font-size: 95%;
+  --ifm-footer-background-color: #f8f9fa;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* Reset navbar height since it's hidden */
+  --ifm-navbar-height: 0px;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+/* Fix scroll behavior for anchor links */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1rem;
+}
+
+/* Hide navbar completely for iframe embedding */
+.navbar {
+  display: none !important;
+  height: 0 !important;
+}
+
+/* Remove navbar placeholder space */
+.main-wrapper {
+  padding-top: 0 !important;
+}
+
+/* Ensure proper scroll margins for headings */
+.markdown h1[id],
+.markdown h2[id],
+.markdown h3[id],
+.markdown h4[id],
+.markdown h5[id],
+.markdown h6[id] {
+  scroll-margin-top: 1rem;
+}
+
+/* Minimal footer */
+.footer {
+  padding: 1rem;
+  background-color: var(--ifm-footer-background-color);
+}
+
+.footer__copyright {
+  color: #888;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Improve doc content readability */
+.markdown {
+  max-width: 900px;
+}
+
+/* Table styling */
+table {
+  display: table;
+  width: 100%;
+}
+
+/* Sidebar adjustments for iframe */
+.theme-doc-sidebar-container {
+  border-right: 1px solid #e0e0e0;
 }
