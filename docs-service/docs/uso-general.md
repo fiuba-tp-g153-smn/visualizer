@@ -1,5 +1,14 @@
 # Uso General
 
+## Tabla de Contenidos
+
+1. [Interfaz](#interfaz)
+   - [Mapas Base](#mapas-base)
+   - [Capas Meteorológicas](#capas-meteorologicas)
+   - [Animación de Capas](#animacion-de-capas)
+2. [Navegación del mapa](#navegacion-del-mapa)
+3. [Capas Activas (Control de Capas)](#capas-activas-control-de-capas)
+
 Ejemplo de uso:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
@@ -15,7 +24,7 @@ La interfaz de usuario está compuesta por los siguientes elementos:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/main-ui.png').default}
+  src={require('./imgs/uso-general/main-ui.png').default}
   alt="Interfaz Principal de Visualizador"
   title="Interfaz Principal de Visualizador"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '400px', height: 'auto' }}
@@ -32,20 +41,20 @@ Se puede seleccionar el mapa base que se desea utilizar, por defecto se muestra 
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/mapas-base.png').default}
+  src={require('./imgs/uso-general/mapas-base.png').default}
   alt="Mapas base"
   title="Mapas base"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '500px', height: 'auto' }}
   />
 </div>
 
-### Capas Meteorológicas
+### Capas Meteorológicas {#capas-meteorologicas}
 
 Una vez seleccionado el desplegable de capas del mapa se observan las fuentes de datos disponibles:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/capas-1-fuentes-de-datos.png').default}
+  src={require('./imgs/uso-general/capas-1-fuentes-de-datos.png').default}
   alt="Fuentes de Datos Disponibles"
   title="Fuentes de Datos Disponibles"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
@@ -56,7 +65,7 @@ Al desplegar las fuentes de datos se observan agrupaciones de productos/capas:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/capas-2-agrupacion-de-capas.png').default}
+  src={require('./imgs/uso-general/capas-2-agrupacion-de-capas.png').default}
   alt="Agrupación de Capas por Categoría"
   title="Agrupación de Capas por Categoría"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
@@ -71,7 +80,7 @@ Desplegando la agrupación de capas se pueden observar los productos individuale
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/capas-3-productos-individuales.png').default}
+  src={require('./imgs/uso-general/capas-3-productos-individuales.png').default}
   alt="Selección de Productos Individuales"
   title="Selección de Productos Individuales"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
@@ -82,7 +91,7 @@ Cuando se selecciona una capa haciendo click en el checkbox se visualiza en el m
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/capas-4-capas-activas.png').default}
+  src={require('./imgs/uso-general/capas-4-capas-activas.png').default}
   alt="Capa Activa Seleccionada"
   title="Capa Activa Seleccionada"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
@@ -93,20 +102,20 @@ Desplegando las configuraciones de una capa recién activada (por ejemplo el Can
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/capas-5-configuracion-opacidad.png').default}
+  src={require('./imgs/uso-general/capas-5-configuracion-opacidad.png').default}
   alt="Configuración de Opacidad"
   title="Configuración de Opacidad"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
   />
 </div>
 
-### Animación de Capas
+### Animación de Capas {#animacion-de-capas}
 
 Haciendo click en el ícono de animación se despliegan las configuraciones de animación de imágenes para poder ver la evolución de la capa seleccionada:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/capas-6-configuracion-animacion.png').default}
+  src={require('./imgs/uso-general/capas-6-configuracion-animacion.png').default}
   alt="Controles de Animación de Capa"
   title="Controles de Animación de Capa"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
@@ -128,14 +137,14 @@ Donde:
   </video>
 </div>
 
-## Navegación del mapa
+## Navegación del mapa {#navegacion-del-mapa}
 
 - **Zoom**: Rueda del mouse ó controles de la UI (+/-).
 - **Desplazamiento**: Arrastrar mapa (Click izquierdo + Drag) o usar las flechas del teclado.
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/navegacion-mapa.png').default}
+  src={require('./imgs/uso-general/navegacion-mapa.png').default}
   alt="Navegación del mapa"
   title="Navegación del mapa"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
@@ -148,7 +157,7 @@ Al seleccionar la sección de capas activas se despliegan las capas activas:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/capas-activas.png').default}
+  src={require('./imgs/uso-general/capas-activas.png').default}
   alt="Capas Activas"
   title="Capas Activas"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '300px', height: 'auto' }}
@@ -163,7 +172,7 @@ Ejemplo del Canal 9 encima del Canal 13:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/z-index-1.png').default}
+  src={require('./imgs/uso-general/z-index-1.png').default}
   alt="Z-Index Canal 9 encima de Canal 13"
   title="Z-Index Canal 9 encima de Canal 13"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
@@ -174,7 +183,7 @@ Ejemplo del Canal 13 encima del Canal 9:
 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
-  src={require('./imgs/z-index-2.png').default}
+  src={require('./imgs/uso-general/z-index-2.png').default}
   alt="Z-Index Canal 13 encima de Canal 9"
   title="Z-Index Canal 13 encima de Canal 9"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '450px', height: 'auto' }}
