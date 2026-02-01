@@ -20,7 +20,7 @@ services:
     container_name: visualizator-dev-container
     depends_on:
       docs-service:
-        condition: service_healthy
+        condition: service_started
     build:
       context: .
       dockerfile: Dockerfile.dev
