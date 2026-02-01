@@ -28,8 +28,8 @@ En este artículo recorremos la arquitectura completa del sistema: desde la desc
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/main-flow.png').default}
-  alt=""
-  title=""
+  alt="Diagrama de flujo principal desde AWS hasta el navegador"
+  title="Diagrama de flujo principal desde AWS hasta el navegador"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '400px', height: 'auto' }}
   />
 </div>
@@ -63,8 +63,8 @@ El tiles-processor es el corazón del pipeline de datos. Su diseño interno sigu
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/tiles-processor-main-flow.png').default}
-  alt=""
-  title=""
+  alt="Flujo de trabajo principal del Tiles Processor usando RabbitMQ"
+  title="Flujo de trabajo principal del Tiles Processor usando RabbitMQ"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '500px', height: 'auto' }}
   />
 </div>
@@ -82,8 +82,8 @@ La ventaja fundamental de usar RabbitMQ es el **control del paralelismo**. Sin l
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/tiles-processor-full.png').default}
-  alt=""
-  title=""
+  alt="Arquitectura completa del Tiles Processor con gestión de estado en SQLite"
+  title="Arquitectura completa del Tiles Processor con gestión de estado en SQLite"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '500px', height: 'auto' }}
   />
 </div>
@@ -99,8 +99,8 @@ Cada worker, al tomar una tarea de la cola, registra en la base SQLite3 que esos
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/tiles-processor-in-progress.png').default}
-  alt=""
-  title=""
+  alt="Coordinación de estado entre Producer y Workers"
+  title="Coordinación de estado entre Producer y Workers"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '350px', height: 'auto' }}
   />
 </div>
@@ -126,8 +126,8 @@ El sistema se despliega sobre dos servidores en **Hetzner Cloud**, gestionados a
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/deployment-centralsv.png').default}
-  alt=""
-  title=""
+  alt="Esquema de despliegue del Servidor Central"
+  title="Esquema de despliegue del Servidor Central"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '500px', height: 'auto' }}
   />
 </div>
@@ -146,8 +146,8 @@ Con 4 GB de RAM, este servidor está dimensionado para la capa de presentación 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/deployment-worker1.png').default}
-  alt=""
-  title=""
+  alt="Esquema de despliegue del Servidor Worker1"
+  title="Esquema de despliegue del Servidor Worker1"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '500px', height: 'auto' }}
   />
 </div>
@@ -168,8 +168,8 @@ Con 8 GB de RAM y 4 vCPUs, este servidor tiene el doble de recursos que el centr
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/monitoring.png').default}
-  alt=""
-  title=""
+  alt="Stack de monitoreo distribuido con Prometheus y Grafana"
+  title="Stack de monitoreo distribuido con Prometheus y Grafana"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '400px', height: 'auto' }}
   />
 </div>
@@ -187,8 +187,8 @@ Esta arquitectura de monitoreo distribuido es especialmente importante dado que 
 <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 0' }}>
   <img
   src={require('./imgs/arquitectura/uptime.png').default}
-  alt=""
-  title=""
+  alt="Dashboard de disponibilidad en Uptime Kuma"
+  title="Dashboard de disponibilidad en Uptime Kuma"
   style={{ border: '1px solid #000000ff', borderRadius: '5px', maxHeight: '400px', height: 'auto' }}
   />
 </div>
