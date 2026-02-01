@@ -99,7 +99,6 @@ temp/
 # .env.development.local
 # .env.test.local
 # .env.production.local
-.env.example
 
 # Documentation
 README.md
@@ -114,6 +113,3 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 .angular
-
-# Documentation Service
-docs-service/
