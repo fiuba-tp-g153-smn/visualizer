@@ -22,8 +22,12 @@ jobs:
 
       - name: Build Docker images
         run: |
-          docker build -t visualizator:scan .
-          docker build -t docs-service:scan ./docs-service
+          docker build -t visualizator:scan . &
+          pid1=$!
+          docker build -t docs-service:scan ./docs-service &
+          pid2=$!
+          wait $pid1
+          wait $pid2
 
       - name: Install Trivy
         run: |
