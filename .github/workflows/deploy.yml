@@ -33,10 +33,10 @@ jobs:
 
       # ── Visualizator: npm dependency scan ──
       - name: 'Visualizator: scan dependencies (HIGH)'
-        run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln --skip-db-update .
+        run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update .
 
       - name: 'Visualizator: scan dependencies (CRITICAL)'
-        run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln --skip-db-update --quiet .
+        run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet .
 
       # ── Visualizator: Docker image scan ──
       - name: 'Visualizator: scan image (HIGH)'
@@ -47,10 +47,10 @@ jobs:
 
       # ── Docs service: npm dependency scan ──
       - name: 'Docs service: scan dependencies (HIGH)'
-        run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln --skip-db-update ./docs-service
+        run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update ./docs-service
 
       - name: 'Docs service: scan dependencies (CRITICAL)'
-        run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln --skip-db-update --quiet ./docs-service
+        run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet ./docs-service
 
       # ── Docs service: Docker image scan ──
       - name: 'Docs service: scan image (HIGH)'
