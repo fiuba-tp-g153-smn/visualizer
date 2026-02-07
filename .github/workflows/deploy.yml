@@ -60,7 +60,7 @@ jobs:
         run: trivy image --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet docs-service:scan
 
   deploy:
-    needs: [test, vulnerabilities-scan]
+    needs: [test, image-scan]
     runs-on: ubuntu-24.04
     environment:
       name: ${{ (github.ref_name == 'main' && 'prod') || 'unknown' }}
