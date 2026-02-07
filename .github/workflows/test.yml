@@ -2,26 +2,46 @@ name: Run tests
 
 on:
   push:
+    branches-ignore:
+      - "main"
   pull_request:
+    branches-ignore:
+      - "main"
+  workflow_call:
 
 jobs:
+  secret-leak-scan:
+    name: secrets scan (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C /usr/local/bin gitleaks
+      - name: Run gitleaks
+        run: gitleaks detect --source . --verbose
+
   test:
+    needs: [secret-leak-scan]
     runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Create reports directory
-      run: mkdir -p reports
+      - name: Create reports directory
+        run: mkdir -p reports
 
-    - name: Run tests
-      run: npm run test
-      continue-on-error: true
+      - name: Run tests
+        run: npm run test
+        continue-on-error: true
