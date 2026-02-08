@@ -11,7 +11,7 @@ export const environment = {
     format: $ENV.TILE_FORMAT,
   },
   ui: {
-    disabledLayers: ['radar'] as string[],
+    disabledLayers: ['radar'],
   },
   docsUrl: $ENV.DOCS_URL,
 };
