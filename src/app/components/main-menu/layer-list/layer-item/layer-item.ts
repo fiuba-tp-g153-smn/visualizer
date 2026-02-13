@@ -210,7 +210,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita cargar configuración
    */
   private needsConfig(): boolean {
-    return this.layer.id.startsWith('abi-') && !this.layerConfigService.hasConfig(this.layer.id);
+    const isSatellite = this.layer.id.startsWith('abi-') || this.layer.id.startsWith('glm-');
+    return isSatellite && !this.layerConfigService.hasConfig(this.layer.id);
   }
 
   /**
@@ -222,10 +223,22 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const parts = this.layer.id.split('-');
     if (parts.length < 2) return;
 
-    const instrument = parts[0];
-    const channelNumber = parts[1];
-    const channel = `ch-${channelNumber.replace('ch', '')}`;
+    const instrument = parts[0]; // 'abi' or 'glm'
     const product = 'goes-19';
+    let channel: string;
+
+    // Handle different layer ID formats
+    if (instrument === 'abi') {
+      // ABI format: abi-ch2 → ch-2
+      const channelNumber = parts[1];
+      channel = `ch-${channelNumber.replace('ch', '')}`;
+    } else if (instrument === 'glm') {
+      // GLM format: glm-fed → glm-fed
+      channel = this.layer.id; // Use full ID as channel name
+    } else {
+      console.warn(`Unknown instrument: ${instrument}`);
+      return;
+    }
 
     this.isLoadingConfig.set(true);
 
@@ -375,14 +388,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
-      // Extraer información de fecha del ID (formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567)
-      const match = tileset.id.match(/_s(\d{11})/);
+      // Extraer información de fecha del ID
+      // ABI formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567 (11 dígitos: YYYYDDDHHMI)
+      // GLM formato: GLM_FED_s2026044013000 (13 dígitos: YYYYDDDHHMISS)
+      const match = tileset.id.match(/_s(\d+)/);
       if (match) {
         const dateStr = match[1];
         const year = dateStr.substring(0, 4);
         const dayOfYear = dateStr.substring(4, 7);
         const hour = dateStr.substring(7, 9);
         const minute = dateStr.substring(9, 11);
+        // Seconds only present in GLM format (13 digits)
+        const hasSeconds = dateStr.length >= 13;
 
         // Convertir día juliano a fecha
         const date = this.julianToDate(year, dayOfYear);
@@ -407,7 +424,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
-      const match = tileset.id.match(/_s(\d{11})/);
+      // Handle both ABI (11 digits) and GLM (13 digits) formats
+      const match = tileset.id.match(/_s(\d+)/);
       if (match) {
         const dateStr = match[1];
         const hour = dateStr.substring(7, 9);

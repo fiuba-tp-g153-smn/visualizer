@@ -190,10 +190,22 @@ export class LayerReloadService {
         return;
       }
 
-      const instrument = parts[0];
-      const channelNumber = parts[1];
-      const channel = `ch-${channelNumber.replace('ch', '')}`;
+      const instrument = parts[0]; // 'abi' or 'glm'
       const product = 'goes-19';
+      let channel: string;
+
+      // Handle different layer ID formats
+      if (instrument === 'abi') {
+        // ABI format: abi-ch2 → ch-2
+        const channelNumber = parts[1];
+        channel = `ch-${channelNumber.replace('ch', '')}`;
+      } else if (instrument === 'glm') {
+        // GLM format: glm-fed → glm-fed
+        channel = layerId; // Use full ID as channel name
+      } else {
+        reject(new Error(`Unknown instrument: ${instrument}`));
+        return;
+      }
 
       const maxSelectable = this.getMaxSelectablePeriods(layerId);
 
