@@ -16,7 +16,7 @@ const ABI_DEFAULTS = {
   opacity: 80,
   zIndexGroup: ActiveLayerGroup.BASE, // Capas de datos
   // Configuración de control temporal (común para todas las capas ABI)
-  availablePeriods: [1, 6, 12, 24] as const, // Períodos disponibles para todas las capas ABI
+  availablePeriods: [1, 6, 12, 24] as const, // Image count options: show last 1, 6, 12, or 24 images
 };
 
 /**

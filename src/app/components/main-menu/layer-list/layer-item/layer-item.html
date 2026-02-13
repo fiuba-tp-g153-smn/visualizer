@@ -165,7 +165,7 @@
                 <button
                   mat-icon-button
                   (click)="togglePlayback()"
-                  [disabled]="lastImagesCount() === 1"
+                  [disabled]="!hasMultiplePeriods()"
                   [matTooltip]="isPlaying() ? 'Pausar' : 'Reproducir'"
                   class="play-btn"
                 >
