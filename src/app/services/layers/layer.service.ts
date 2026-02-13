@@ -147,6 +147,27 @@ export class LayerService {
       if (!layer.visible) {
         layer.visible = true;
         layer.zIndex = this._getNextZIndex(layer.zIndexGroup);
+
+        // Initialize playback config for time-based layers if not already set
+        if (isTileLayer(layer) && !layer.playback) {
+          const availablePeriods = layer.availablePeriods ?? [1];
+
+          // GLM layers: default to latest image (1) for immediate current data view
+          // ABI layers: default to 6 images for better temporal context
+          let defaultCount: number;
+          if (layer.id.startsWith('glm-')) {
+            defaultCount = 1; // Show latest image by default
+          } else {
+            // ABI and others: second option (usually 6) or first if only one
+            defaultCount = availablePeriods.length > 1 ? availablePeriods[1] : availablePeriods[0];
+          }
+
+          layer.playback = {
+            isPlaying: false,
+            speed: 1,
+            lastImagesCount: defaultCount,
+          };
+        }
       }
     });
   }
