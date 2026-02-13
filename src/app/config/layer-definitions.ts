@@ -1,6 +1,7 @@
 import { LayerGroup } from '../models';
 import { environment } from '../../environments/environment';
 import { ABI_SUBGROUP } from './layers/satellite/abi.config';
+import { GLM_SUBGROUP } from './layers/satellite/glm.config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
   IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
@@ -26,7 +27,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     description: 'Capas satelitales GOES-19',
     icon: 'satellite_alt',
     expanded: true,
-    subgroups: [ABI_SUBGROUP],
+    subgroups: [ABI_SUBGROUP, GLM_SUBGROUP],
   },
   {
     id: 'radar',

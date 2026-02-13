@@ -38,9 +38,11 @@ export class LayerConfigService {
         // Ordenar tilesets por ID (que incluye timestamp) antes de guardar
         if (config.tilesets && config.tilesets.length > 0) {
           config.tilesets.sort((a, b) => {
-            // Extraer timestamp del ID (formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567)
-            const matchA = a.id.match(/_s(\d{11})/);
-            const matchB = b.id.match(/_s(\d{11})/);
+            // Extraer timestamp del ID
+            // ABI formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567 (11 dígitos)
+            // GLM formato: GLM_FED_s2026044013000 (13 dígitos)
+            const matchA = a.id.match(/_s(\d+)/);
+            const matchB = b.id.match(/_s(\d+)/);
             if (matchA && matchB) {
               return matchA[1].localeCompare(matchB[1]);
             }
