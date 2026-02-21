@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "visualizator": {
+    "visualizer": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -24,7 +24,7 @@
             "customWebpackConfig": {
               "path": "custom-webpack.config.js"
             },
-            "outputPath": "dist/visualizator",
+            "outputPath": "dist/visualizer",
             "index": "src/index.html",
             "main": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
@@ -76,10 +76,10 @@
           "builder": "@angular-builders/custom-webpack:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "visualizator:build:production"
+              "buildTarget": "visualizer:build:production"
             },
             "development": {
-              "buildTarget": "visualizator:build:development"
+              "buildTarget": "visualizer:build:development"
             }
           },
           "defaultConfiguration": "development"

@@ -56,9 +56,9 @@ export class LayerService {
   private _initializeLayerGroups(): LayerGroup[] {
     const savedState = this._loadState();
     if (savedState) {
-      console.debug('Visualizator: Loaded layer state from storage', savedState.length, 'layers');
+      console.debug('Visualizer: Loaded layer state from storage', savedState.length, 'layers');
     } else {
-      console.debug('Visualizator: No saved state, applying defaults');
+      console.debug('Visualizer: No saved state, applying defaults');
     }
 
     // Mapa para búsqueda rápida de estado
@@ -226,7 +226,7 @@ export class LayerService {
 
   getPlaySpeed(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer && isTileLayer(layer) ? (layer.playback?.speed ?? 1) : 1;
+    return layer && isTileLayer(layer) ? layer.playback?.speed ?? 1 : 1;
   }
 
   setPlaySpeed(layerId: string, speed: number): void {
@@ -329,7 +329,7 @@ export class LayerService {
 
   getLastImagesCount(layerId: string): number {
     const layer = this.getLayerById(layerId);
-    return layer && isTileLayer(layer) ? (layer.playback?.lastImagesCount ?? 1) : 1;
+    return layer && isTileLayer(layer) ? layer.playback?.lastImagesCount ?? 1 : 1;
   }
 
   setLastImagesCount(layerId: string, count: number): void {
@@ -358,7 +358,7 @@ export class LayerService {
 
     // Filtrar solo capas del mismo grupo
     const visibleLayersInGroup = this.activeLayers().filter(
-      (l: Layer) => l.zIndexGroup === layer.zIndexGroup,
+      (l: Layer) => l.zIndexGroup === layer.zIndexGroup
     );
     const currentIndex = visibleLayersInGroup.findIndex((l: Layer) => l.id === layerId);
 
@@ -378,7 +378,7 @@ export class LayerService {
 
     // Filtrar solo capas del mismo grupo
     const visibleLayersInGroup = this.activeLayers().filter(
-      (l: Layer) => l.zIndexGroup === layer.zIndexGroup,
+      (l: Layer) => l.zIndexGroup === layer.zIndexGroup
     );
     const currentIndex = visibleLayersInGroup.findIndex((l: Layer) => l.id === layerId);
 
@@ -426,7 +426,7 @@ export class LayerService {
    */
   private _getNextZIndex(zIndexGroup: ActiveLayerGroup): number {
     const layersInGroup = this._getAllLayers().filter(
-      (l: Layer) => l.zIndexGroup === zIndexGroup && l.zIndex !== undefined,
+      (l: Layer) => l.zIndexGroup === zIndexGroup && l.zIndex !== undefined
     );
 
     if (layersInGroup.length === 0) {

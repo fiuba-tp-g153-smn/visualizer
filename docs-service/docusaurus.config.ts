@@ -3,18 +3,18 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'Visualizator',
+  title: 'Visualizer',
   tagline: 'Documentación del Sistema de Visualización Meteorológica',
   favicon: 'img/favicon.ico',
   future: {
     v4: true,
   },
 
-  url: 'https://visualizator.example.com',
+  url: 'https://visualizer.example.com',
   baseUrl: '/',
 
   organizationName: 'fiuba-tp-g153-smn',
-  projectName: 'visualizator',
+  projectName: 'visualizer',
 
   onBrokenLinks: 'throw',
 
@@ -53,7 +53,7 @@ const config: Config = {
     },
     footer: {
       style: 'light',
-      copyright: `© ${new Date().getFullYear()} Visualizator - FIUBA`,
+      copyright: `© ${new Date().getFullYear()} Visualizer - FIUBA`,
     },
     prism: {
       theme: prismThemes.github,

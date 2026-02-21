@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Visualizator is an Angular 21 web application for visualizing interactive maps with multiple layers, tile providers, and satellite imagery (SMN - Argentine National Weather Service). Uses Leaflet for mapping and Angular Signals for state management.
+Visualizer is an Angular 21 web application for visualizing interactive maps with multiple layers, tile providers, and satellite imagery (SMN - Argentine National Weather Service). Uses Leaflet for mapping and Angular Signals for state management.
 
 ## Commands
 

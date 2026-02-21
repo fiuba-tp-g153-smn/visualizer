@@ -9,16 +9,20 @@ services:
     environment:
       - NODE_ENV=production
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1",
+        ]
       interval: 10s
       timeout: 10s
       retries: 20
       start_period: 10s
       start_interval: 1s
 
-  visualizator:
-    container_name: visualizator-container
-    image: visualizator
+  visualizer:
+    container_name: visualizer-container
+    image: visualizer
     depends_on:
       docs-service:
         condition: service_healthy
@@ -40,7 +44,11 @@ services:
       - APP_HOST_PORT=${APP_HOST_PORT}
       - DOCS_URL=${DOCS_URL}
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1",
+        ]
       interval: 10s
       timeout: 10s
       retries: 20

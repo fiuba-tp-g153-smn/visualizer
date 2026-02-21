@@ -29,7 +29,7 @@ Consulta nuestra guía detallada para aprender a utilizar la interfaz.
 
 ## Funcionalidades Principales
 
-Visualizator integra múltiples fuentes de datos para ofrecer un contexto geográfico preciso:
+Visualizer integra múltiples fuentes de datos para ofrecer un contexto geográfico preciso:
 
 - **Mapas Base**: Soporte para tiles del mapa base con proveedores de tiles incluyendo ArgenMAP (IGN), OpenStreetMap, CartoDB y capas satelitales de ESRI.
 - **Capas Meteorológicas**: Visualización de imágenes del satélite GOES-19.

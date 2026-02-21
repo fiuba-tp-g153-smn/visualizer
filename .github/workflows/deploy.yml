@@ -22,7 +22,7 @@ jobs:
 
       - name: Build Docker images
         run: |
-          docker build -t visualizator:scan . &
+          docker build -t visualizer:scan . &
           pid1=$!
           docker build -t docs-service:scan ./docs-service &
           pid2=$!
@@ -35,32 +35,32 @@ jobs:
           curl -sSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" | tar -xz -C /usr/local/bin trivy
           trivy image --download-db-only
 
-      # ── Visualizator: npm dependency scan ──
-      - name: 'Visualizator: scan dependencies (HIGH)'
+      # ── Visualizer: npm dependency scan ──
+      - name: "Visualizer: scan dependencies (HIGH)"
         run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update .
 
-      - name: 'Visualizator: scan dependencies (CRITICAL)'
+      - name: "Visualizer: scan dependencies (CRITICAL)"
         run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet .
 
-      # ── Visualizator: Docker image scan ──
-      - name: 'Visualizator: scan image (HIGH)'
-        run: trivy image --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update visualizator:scan
+      # ── Visualizer: Docker image scan ──
+      - name: "Visualizer: scan image (HIGH)"
+        run: trivy image --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update visualizer:scan
 
-      - name: 'Visualizator: scan image (CRITICAL)'
-        run: trivy image --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet visualizator:scan
+      - name: "Visualizer: scan image (CRITICAL)"
+        run: trivy image --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet visualizer:scan
 
       # ── Docs service: npm dependency scan ──
-      - name: 'Docs service: scan dependencies (HIGH)'
+      - name: "Docs service: scan dependencies (HIGH)"
         run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update ./docs-service
 
-      - name: 'Docs service: scan dependencies (CRITICAL)'
+      - name: "Docs service: scan dependencies (CRITICAL)"
         run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet ./docs-service
 
       # ── Docs service: Docker image scan ──
-      - name: 'Docs service: scan image (HIGH)'
+      - name: "Docs service: scan image (HIGH)"
         run: trivy image --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update docs-service:scan
 
-      - name: 'Docs service: scan image (CRITICAL)'
+      - name: "Docs service: scan image (CRITICAL)"
         run: trivy image --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet docs-service:scan
 
   deploy:
