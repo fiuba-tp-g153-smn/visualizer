@@ -42,7 +42,7 @@ export class LayerService {
    * Obtiene capas activas para un grupo específico
    */
   public getActiveLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
-    return this.activeLayers().filter((layer) => layer.zIndexGroup === groupId);
+    return this.activeLayers().filter((layer: Layer) => layer.zIndexGroup === groupId);
   }
 
   constructor() {
@@ -215,6 +215,14 @@ export class LayerService {
     this._updateLayer(layerId, (layer) => {
       if (isTileLayer(layer)) {
         layer.timeIndex = timeIndex;
+      }
+    });
+  }
+
+  setElevationIndex(layerId: string, elevationIndex: number): void {
+    this._updateLayer(layerId, (layer) => {
+      if (isTileLayer(layer)) {
+        layer.elevationIndex = elevationIndex;
       }
     });
   }

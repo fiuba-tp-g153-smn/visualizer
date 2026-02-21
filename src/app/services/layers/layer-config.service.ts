@@ -1,7 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
-import { ChannelConfig, ChannelConfigCache } from '../../models';
+import { ChannelConfig, ChannelConfigCache, RadarConfig, Tileset } from '../../models';
 import { BACKEND_CONFIG } from '../../config/backend.config';
 import { NotificationService } from '../notifications/notification.service';
 
@@ -29,15 +29,15 @@ export class LayerConfigService {
     layerId: string,
     product: string,
     instrument: string,
-    channel: string,
+    channel: string
   ): Observable<ChannelConfig> {
     const url = BACKEND_CONFIG.endpoints.channelConfig(product, instrument, channel);
 
     return this.http.get<ChannelConfig>(url).pipe(
-      tap((config) => {
+      tap((config: ChannelConfig) => {
         // Ordenar tilesets por ID (que incluye timestamp) antes de guardar
         if (config.tilesets && config.tilesets.length > 0) {
-          config.tilesets.sort((a, b) => {
+          config.tilesets.sort((a: Tileset, b: Tileset) => {
             // Extraer timestamp del ID
             // ABI formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567 (11 dígitos)
             // GLM formato: GLM_FED_s2026044013000 (13 dígitos)
@@ -54,13 +54,65 @@ export class LayerConfigService {
         const cache = this._configCache();
         this._configCache.set({ ...cache, [layerId]: config });
       }),
-      catchError((error) => {
+      catchError((error: any) => {
         console.error(`❌ Error cargando configuración de ${layerId}:`, error);
         this.notificationService.error(
-          'Error al cargar canal: no se pudo obtener la configuración del servidor',
+          'Error al cargar canal: no se pudo obtener la configuración del servidor'
         );
         throw error;
+      })
+    );
+  }
+
+  /**
+   * Obtiene la configuración de un radar desde el backend
+   * @param layerId ID de la capa (ej: 'rma1-dbzh')
+   * @param radarId ID del radar (ej: 'RMA1')
+   * @param variableId ID de la variable (ej: 'DBZH')
+   * @param elevationId ID de la elevación (ej: 'elev0')
+   */
+  loadRadarConfig(
+    layerId: string,
+    radarId: string,
+    variableId: string,
+    elevationId: string
+  ): Observable<any> {
+    const url = `${BACKEND_CONFIG.baseUrl}/products/radar/${radarId}/${variableId}/${elevationId}`;
+
+    return this.http.get<any>(url).pipe(
+      tap((response: any) => {
+        // Construir config similar a ChannelConfig
+        const config = {
+          radar_id: response.radar,
+          variable_id: response.variable,
+          elevation_id: response.elevation,
+          tilesets: response.tilesets || [],
+          tile_url_pattern: `/products/radar/${radarId}/${variableId}/${elevationId}/{tileset_id}/{z}/{x}/{y}.webp`,
+          channel_info: {
+            name: `${radarId} ${variableId} ${elevationId}`,
+            description: `Radar ${radarId} - Variable ${variableId} - Elevación ${elevationId}`,
+            zoom_levels: { min: 4, max: 8 },
+            bounding_box: { minx: -90, miny: -60, maxx: -30, maxy: -15 },
+            tile_format: 'webp',
+          },
+        };
+
+        // Ordenar tilesets por timestamp
+        if (config.tilesets && config.tilesets.length > 0) {
+          config.tilesets.sort((a: any, b: any) => a.id.localeCompare(b.id));
+        }
+
+        // Guardar en cache
+        const cache = this._configCache();
+        this._configCache.set({ ...cache, [layerId]: config });
       }),
+      catchError((error: any) => {
+        console.error(`❌ Error cargando configuración de radar ${layerId}:`, error);
+        this.notificationService.error(
+          'Error al cargar radar: no se pudo obtener la configuración del servidor'
+        );
+        throw error;
+      })
     );
   }
 
@@ -71,7 +123,7 @@ export class LayerConfigService {
     layerId: string,
     product: string,
     instrument: string,
-    channel: string,
+    channel: string
   ): Observable<ChannelConfig> {
     return this.loadChannelConfig(layerId, product, instrument, channel);
   }
@@ -79,7 +131,7 @@ export class LayerConfigService {
   /**
    * Obtiene configuración cacheada de un canal
    */
-  getChannelConfig(layerId: string): ChannelConfig | undefined {
+  getChannelConfig(layerId: string): ChannelConfig | RadarConfig | undefined {
     return this._configCache()[layerId];
   }
 

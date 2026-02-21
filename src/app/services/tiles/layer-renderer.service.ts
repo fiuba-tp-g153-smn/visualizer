@@ -41,9 +41,17 @@ export class LayerRendererService {
     } else if (layer.category === LayerCategory.SATELLITE_ABI) {
       // Si es satélite y no hay config aún, es un placeholder temporal
       tilesetId = `placeholder-${timeIndex}`;
+    } else if (layer.category === LayerCategory.RADAR) {
+      // Si es radar y no hay config aún, es un placeholder temporal
+      tilesetId = `placeholder-${timeIndex}`;
     }
 
-    const poolKey = `${layer.id}-${tilesetId}`;
+    // Para radar, incluir elevationIndex en la clave del pool
+    const elevationSuffix =
+      layer.category === LayerCategory.RADAR && (layer as TileLayer).elevationIndex !== undefined
+        ? `-elev${(layer as TileLayer).elevationIndex}`
+        : '';
+    const poolKey = `${layer.id}-${tilesetId}${elevationSuffix}`;
 
     // 2. Verificar pool
     if (this.layerPool.has(poolKey)) {
@@ -100,6 +108,8 @@ export class LayerRendererService {
     switch (layer.category) {
       case LayerCategory.SATELLITE_ABI:
         return this.createSatelliteTileLayer(layer, timeIndex);
+      case LayerCategory.RADAR:
+        return this.createRadarTileLayer(layer, timeIndex);
       default:
         throw new Error(`Unsupported tile layer category: ${layer.category}`);
     }
@@ -135,6 +145,12 @@ export class LayerRendererService {
         // Buffer de seguridad para evitar clipping de tiles en los bordes al hacer zoom
         const buffer = 5.0;
 
+        // ChannelConfig tiene product/instrument/channel
+        const attribution =
+          'product' in config
+            ? `${config.product} ${config.instrument} ${config.channel} | SMN`
+            : 'Satélite | SMN';
+
         return L.tileLayer(tileUrl, {
           minNativeZoom: zoomLevels.min,
           maxNativeZoom: zoomLevels.max,
@@ -145,7 +161,55 @@ export class LayerRendererService {
             [bounds.maxy + buffer, bounds.maxx + buffer],
           ],
           noWrap: true,
-          attribution: `${config.product} ${config.instrument} ${config.channel} | SMN`,
+          attribution,
+          opacity: layer.opacity / 100,
+        });
+      }
+    }
+
+    // Si no hay configuración, crear un layer vacío/placeholder
+    // Esto evita errores de carga mientras se obtiene la configuración del backend
+    const placeholder = L.tileLayer('about:blank', {
+      opacity: 0,
+      attribution: 'Cargando...',
+    });
+    (placeholder as any)._isPlaceholder = true;
+    return placeholder;
+  }
+
+  /**
+   * Crea un tile layer para RADAR
+   * Lee configuración directamente del objeto TileLayer
+   */
+  private createRadarTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
+    // Si hay configuración dinámica cargada, usarla
+    if (this.layerConfigService.hasConfig(layer.id)) {
+      const config = this.layerConfigService.getChannelConfig(layer.id) as any;
+      const tileUrl = this.layerConfigService.buildTileUrl(layer.id, timeIndex);
+
+      if (config && tileUrl) {
+        const bounds = config.channel_info.bounding_box;
+        const zoomLevels = config.channel_info.zoom_levels;
+
+        // Buffer de seguridad para evitar clipping de tiles en los bordes al hacer zoom
+        const buffer = 5.0;
+
+        // Verificar si es RadarConfig o ChannelConfig
+        const attribution = config.radar_id
+          ? `RADAR ${config.radar_id} ${config.variable_id} | SMN`
+          : `${config.product} ${config.instrument} ${config.channel} | SMN`;
+
+        return L.tileLayer(tileUrl, {
+          minNativeZoom: zoomLevels.min,
+          maxNativeZoom: zoomLevels.max,
+          minZoom: 0,
+          maxZoom: 18,
+          bounds: [
+            [bounds.miny - buffer, bounds.minx - buffer],
+            [bounds.maxy + buffer, bounds.maxx + buffer],
+          ],
+          noWrap: true,
+          attribution,
           opacity: layer.opacity / 100,
         });
       }
@@ -202,7 +266,7 @@ export class LayerRendererService {
       console.warn(
         `Error cargando tile de ${layer.name}:`,
         error.error,
-        `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`,
+        `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`
       );
 
       // Después de varios errores consecutivos, notificar al usuario
@@ -213,7 +277,7 @@ export class LayerRendererService {
         if (currentErrors === 0) {
           this.notificationService.error(
             `La capa "${layer.name}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
-            layer.id,
+            layer.id
           );
         }
 

@@ -13,9 +13,10 @@ import { environment } from '../../../../environments/environment';
 const GLM_DEFAULTS = {
   visible: false,
   opacity: 80,
-  zIndexGroup: ActiveLayerGroup.BASE, // Capas de datos
-  // Configuración de control temporal (común para todas las capas GLM)
-  availablePeriods: [1, 6, 12, 24] as const, // Image count options: show last 1, 6, 12, or 24 images
+  zIndexGroup: ActiveLayerGroup.BASE,
+  availablePeriods: [1, 6, 12, 24] as const,
+  category: LayerCategory.SATELLITE_ABI,
+  type: LayerType.TILE,
 };
 
 /**
@@ -33,8 +34,6 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       id: 'glm-fed',
       name: 'Flash Extent Density',
       description: 'Densidad de extensión de rayos',
-      type: LayerType.TILE,
-      category: LayerCategory.SATELLITE_ABI, // Usa misma categoría para reutilizar lógica de renderizado
     } as TileLayer,
   ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
 };

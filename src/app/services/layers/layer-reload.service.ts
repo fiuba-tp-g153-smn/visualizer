@@ -2,7 +2,7 @@ import { Injectable, effect, inject } from '@angular/core';
 import { LayerService } from './layer.service';
 import { LayerConfigService } from './layer-config.service';
 import { NotificationService } from '../notifications/notification.service';
-import { LayerType, NotificationType } from '../../models';
+import { LayerType, NotificationType, Tileset } from '../../models';
 
 interface RefreshState {
   intervalId?: number;
@@ -217,11 +217,11 @@ export class LayerReloadService {
           const afterAllTilesets = this.layerConfigService.getTilesets(layerId);
           const afterTilesets = afterAllTilesets.slice(-maxSelectable);
 
-          const beforeIds = new Set(beforeTilesets.map((t) => t.id));
-          const afterIds = new Set(afterTilesets.map((t) => t.id));
+          const beforeIds = new Set(beforeTilesets.map((t: Tileset) => t.id));
+          const afterIds = new Set(afterTilesets.map((t: Tileset) => t.id));
 
-          const added = afterTilesets.filter((t) => !beforeIds.has(t.id));
-          const removed = beforeTilesets.filter((t) => !afterIds.has(t.id));
+          const added = afterTilesets.filter((t: Tileset) => !beforeIds.has(t.id));
+          const removed = beforeTilesets.filter((t: Tileset) => !afterIds.has(t.id));
 
           const layerName = this.layerService.getLayerDisplayName(layerId);
 
@@ -251,7 +251,7 @@ export class LayerReloadService {
           } else if (showNoChanges) {
             this.notificationService.show(
               NotificationType.INFO,
-              `No hay cambios para ${layerName}`,
+              `No hay cambios para ${layerName}`
             );
           }
 

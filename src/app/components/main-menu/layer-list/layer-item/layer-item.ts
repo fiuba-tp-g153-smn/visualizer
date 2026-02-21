@@ -104,7 +104,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
    */
   lastImagesOptions = computed(() => {
-    return this.layer.type === LayerType.TILE ? (this.layer.availablePeriods ?? [1]) : [1];
+    return this.layer.type === LayerType.TILE ? this.layer.availablePeriods ?? [1] : [1];
   });
 
   /**
@@ -125,6 +125,33 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   hasTimeControl = computed(() => {
     return this.layerConfigService.hasConfig(this.layer.id);
+  });
+
+  /**
+   * Verifica si la capa necesita control de elevación (solo RADAR)
+   */
+  hasElevationControl = computed(() => {
+    return (
+      this.layer.category === LayerCategory.RADAR &&
+      this.layer.type === LayerType.TILE &&
+      this.layer.availableElevations &&
+      this.layer.availableElevations.length > 0
+    );
+  });
+
+  /**
+   * Obtiene las elevaciones disponibles
+   */
+  availableElevations = computed(() => {
+    return this.layer.type === LayerType.TILE ? this.layer.availableElevations ?? [] : [];
+  });
+
+  /**
+   * Obtiene el índice de elevación actual
+   */
+  currentElevationIndex = computed(() => {
+    const activeLayer = this.getActiveLayer();
+    return activeLayer && activeLayer.type === LayerType.TILE ? activeLayer.elevationIndex ?? 0 : 0;
   });
 
   /**
@@ -177,7 +204,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const activeLayer = this.getActiveLayer();
     const currentIndex =
       activeLayer && activeLayer.type === LayerType.TILE
-        ? (activeLayer.timeIndex ?? this.maxTimeIndex())
+        ? activeLayer.timeIndex ?? this.maxTimeIndex()
         : this.maxTimeIndex();
     // Asegurar que el índice actual esté dentro del rango visible
     const min = this.minTimeIndex();
@@ -211,7 +238,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   private needsConfig(): boolean {
     const isSatellite = this.layer.id.startsWith('abi-') || this.layer.id.startsWith('glm-');
-    return isSatellite && !this.layerConfigService.hasConfig(this.layer.id);
+    const isRadar = this.layer.category === LayerCategory.RADAR;
+    return (isSatellite || isRadar) && !this.layerConfigService.hasConfig(this.layer.id);
   }
 
   /**
@@ -220,6 +248,33 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private loadChannelConfig(): void {
     if (this.isLoadingConfig()) return;
 
+    // Si es RADAR, cargar configuración de radar
+    if (this.layer.category === LayerCategory.RADAR) {
+      const parts = this.layer.id.split('-');
+      if (parts.length >= 2) {
+        const radarId = parts[0].toUpperCase(); // RMA1
+        const variableId = parts[1].toUpperCase(); // DBZH
+        const elevationIndex = this.currentElevationIndex();
+        const elevations = this.availableElevations();
+        const elevationId = elevations[elevationIndex] || 'elev0';
+
+        this.isLoadingConfig.set(true);
+        this.layerConfigService
+          .loadRadarConfig(this.layer.id, radarId, variableId, elevationId)
+          .subscribe({
+            next: () => {
+              this.isLoadingConfig.set(false);
+            },
+            error: (err) => {
+              this.isLoadingConfig.set(false);
+              console.error(`❌ [LayerItem] Error cargando config de radar ${this.layer.id}:`, err);
+            },
+          });
+      }
+      return;
+    }
+
+    // Si es satélite, cargar configuración de satélite
     const parts = this.layer.id.split('-');
     if (parts.length < 2) return;
 
@@ -377,6 +432,56 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.layerService.setTimeIndex(this.layer.id, timeIndex);
   }
 
+  // ==========================================================================
+  // Control de Elevación (RADAR)
+  // ==========================================================================
+
+  /**
+   * Actualiza el índice de elevación
+   */
+  onElevationChange(elevationIndex: number): void {
+    this.layerService.setElevationIndex(this.layer.id, elevationIndex);
+
+    // Recargar configuración del radar con la nueva elevación
+    if (this.layer.category === LayerCategory.RADAR) {
+      // Extraer radar_id y variable_id del layer.id (formato: rma1-dbzh)
+      const parts = this.layer.id.split('-');
+      if (parts.length >= 2) {
+        const radarId = parts[0].toUpperCase(); // RMA1
+        const variableId = parts[1].toUpperCase(); // DBZH
+        const elevations = this.availableElevations();
+        const elevationId = elevations[elevationIndex] || 'elev0';
+
+        this.isLoadingConfig.set(true);
+        this.layerConfigService
+          .loadRadarConfig(this.layer.id, radarId, variableId, elevationId)
+          .subscribe({
+            next: () => {
+              this.isLoadingConfig.set(false);
+            },
+            error: (err) => {
+              this.isLoadingConfig.set(false);
+              console.error(`❌ [LayerItem] Error cargando config de radar ${this.layer.id}:`, err);
+            },
+          });
+      }
+    }
+  }
+
+  /**
+   * Obtiene la etiqueta de elevación para mostrar
+   */
+  getElevationLabel(elevationIndex: number): string {
+    const elevations = this.availableElevations();
+    if (elevationIndex >= 0 && elevationIndex < elevations.length) {
+      const elevation = elevations[elevationIndex];
+      // Convertir 'elev0' en 'Elevación 0'
+      const num = elevation.replace('elev', '');
+      return `Elevación ${num}`;
+    }
+    return 'N/A';
+  }
+
   /**
    * Obtiene la etiqueta de tiempo para mostrar (YYYY-MM-DD HH:MM)
    */
@@ -458,7 +563,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.layerService.togglePlayback(
       this.layer.id,
       this.maxTimeIndex(),
-      this.playbackMinTimeIndex(),
+      this.playbackMinTimeIndex()
     );
   }
 
@@ -491,7 +596,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         this.layerService.startPlayback(
           this.layer.id,
           this.maxTimeIndex(),
-          this.playbackMinTimeIndex(),
+          this.playbackMinTimeIndex()
         );
       }, 0);
     }
