@@ -37,8 +37,20 @@ export interface ChannelConfig {
 }
 
 /**
+ * Configuración de radar con elevaciones
+ */
+export interface RadarConfig {
+  radar_id: string;
+  variable_id: string;
+  elevation_id: string;
+  channel_info: ChannelInfo;
+  tilesets: Tileset[];
+  tile_url_pattern: string;
+}
+
+/**
  * Cache de configuraciones de canales cargadas
  */
 export interface ChannelConfigCache {
-  [layerId: string]: ChannelConfig;
+  [layerId: string]: ChannelConfig | RadarConfig;
 }

@@ -19,6 +19,7 @@ export enum LayerType {
  */
 export enum LayerCategory {
   SATELLITE_ABI = 'satellite_abi', // GOES ABI (canales individuales)
+  RADAR = 'radar', // Radar meteorológico
   IGN_WMS = 'ign_wms', // IGN WMS layers - permanecen en z-index superior
 }
 
@@ -107,6 +108,9 @@ export interface TileLayer extends BaseLayer {
   timeIndex?: number; // Índice del tileset temporal seleccionado (0-based)
   playback?: LayerPlaybackConfig; // Configuración de reproducción
   availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
+  // Configuración de elevación (solo para RADAR)
+  elevationIndex?: number; // Índice de elevación seleccionada (0, 1, 2)
+  availableElevations?: readonly string[]; // Elevaciones disponibles (ej: ['elev0', 'elev1', 'elev2'])
 }
 
 /**

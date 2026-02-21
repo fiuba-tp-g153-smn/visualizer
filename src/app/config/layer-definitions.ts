@@ -2,6 +2,7 @@ import { LayerGroup } from '../models';
 import { environment } from '../../environments/environment';
 import { ABI_SUBGROUP } from './layers/satellite/abi.config';
 import { GLM_SUBGROUP } from './layers/satellite/glm.config';
+import { RADAR_SUBGROUPS } from './layers/radar/config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
   IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
@@ -35,7 +36,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     description: 'Capas de radar meteorológico',
     icon: 'waves',
     expanded: false,
-    subgroups: [],
+    subgroups: RADAR_SUBGROUPS,
   },
   {
     id: 'ign-wms',
