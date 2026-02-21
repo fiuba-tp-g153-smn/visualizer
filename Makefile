@@ -1,8 +1,8 @@
 # Makefile for Docker operations
 
-IMAGE_NAME = visualizator
-CONTAINER_NAME = visualizator-container
-DEV_CONTAINER_NAME = visualizator-dev-container
+IMAGE_NAME = visualizer
+CONTAINER_NAME = visualizer-container
+DEV_CONTAINER_NAME = visualizer-dev-container
 
 .PHONY: build stop clean up down dev
 

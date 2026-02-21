@@ -44,7 +44,7 @@ Todo comienza con el **tiles-processor**, que descarga datos crudos desde el buc
 
 Elegimos MinIO en lugar de un filesystem compartido entre las aplicaciones de Python por una razón concreta: desacoplar. El tiles-processor sube los tiles al bucket local y el **data-service** los lee desde ahí, sin que ambos necesiten compartir un sistema de archivos directamente. Esto hace la comunicación más limpia y el sistema más fácil de mantener.
 
-Cuando un usuario visita el sitio, el **visualizator** (la aplicación frontend, desarrollada en Angular) solicita los tiles al data-service, que actúa como intermediario entre el navegador y MinIO. El data-service está diseñado para servir tiles en el formato que Leaflet espera, de modo que a medida que el usuario se desplaza por el mapa o hace zoom, Leaflet pide exactamente las tiles que necesita y el data-service las entrega de forma eficiente.
+Cuando un usuario visita el sitio, el **visualizer** (la aplicación frontend, desarrollada en Angular) solicita los tiles al data-service, que actúa como intermediario entre el navegador y MinIO. El data-service está diseñado para servir tiles en el formato que Leaflet espera, de modo que a medida que el usuario se desplaza por el mapa o hace zoom, Leaflet pide exactamente las tiles que necesita y el data-service las entrega de forma eficiente.
 
 Este diseño desacopla la generación de tiles de su consumo: el procesamiento ocurre de forma asíncrona y continua en segundo plano, mientras que la entrega al usuario es inmediata porque los tiles ya están pre-generados y almacenados.
 
@@ -138,7 +138,7 @@ El sistema se despliega sobre dos servidores en **Hetzner Cloud**, gestionados a
 
 El servidor central (`centralsv-ubuntu-4gb-fsn1-1`) se ubica en la IP `5.75.229.87` y atiende todas las peticiones dirigidas a `*.mapasmn.com`. Caddy recibe el tráfico y lo distribuye entre cuatro contenedores:
 
-- **visualizator**: La aplicación frontend en Angular que ven los usuarios. Es la interfaz principal del sistema.
+- **visualizer**: La aplicación frontend en Angular que ven los usuarios. Es la interfaz principal del sistema.
 - **grafana**: Dashboards de monitoreo para visualizar métricas de toda la infraestructura.
 - **prometheus centralsv**: Instancia local de Prometheus que recolecta métricas de este servidor y sus contenedores.
 - **uptime kuma**: Monitoreo de disponibilidad de todos los servicios del sistema.
@@ -180,7 +180,7 @@ Con 8 GB de RAM y 4 vCPUs, este servidor tiene el doble de recursos que el centr
 
 La observabilidad del sistema se construye sobre **Prometheus** y **Grafana**, implementados de forma distribuida para cubrir ambos servidores.
 
-Cada servidor tiene su propia instancia de Prometheus. **prometheus centralsv** recolecta estadísticas de los contenedores del servidor central (visualizator, uptime kuma) además de las métricas del sistema operativo y de Coolify. **prometheus worker1** hace lo propio con los contenedores del servidor worker (minIO, tiles-processor, data-service) y sus métricas de sistema.
+Cada servidor tiene su propia instancia de Prometheus. **prometheus centralsv** recolecta estadísticas de los contenedores del servidor central (visualizer, uptime kuma) además de las métricas del sistema operativo y de Coolify. **prometheus worker1** hace lo propio con los contenedores del servidor worker (minIO, tiles-processor, data-service) y sus métricas de sistema.
 
 **Grafana**, alojada en el servidor central, consume datos de ambas instancias de Prometheus, proporcionando una vista unificada de todo el sistema. Esto permite correlacionar métricas de ambos servidores —por ejemplo, detectar si un aumento en el uso de CPU del worker coincide con un pico de procesamiento de tiles, o si la latencia en el data-service se degrada cuando MinIO está bajo carga.
 
@@ -197,7 +197,7 @@ Esta arquitectura de monitoreo distribuido es especialmente importante dado que 
   />
 </div>
 
-Complementando las métricas de rendimiento, **Uptime Kuma** realiza healthchecks cada minuto sobre todos los servicios críticos del sistema: visualizator, data-service, tiles-processor, ambas instancias de Coolify, Grafana y ambas instancias de Prometheus.
+Complementando las métricas de rendimiento, **Uptime Kuma** realiza healthchecks cada minuto sobre todos los servicios críticos del sistema: visualizer, data-service, tiles-processor, ambas instancias de Coolify, Grafana y ambas instancias de Prometheus.
 
 Uptime Kuma proporciona una perspectiva diferente a Prometheus/Grafana: mientras que estos últimos se enfocan en métricas detalladas de rendimiento, Uptime Kuma responde a la pregunta más básica — "¿está el servicio disponible o no?". Si un contenedor cae o deja de responder, Uptime Kuma lo detecta en menos de un minuto.
 

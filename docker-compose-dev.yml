@@ -11,15 +11,19 @@ services:
     environment:
       - NODE_ENV=development
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1",
+        ]
       interval: 10s
       timeout: 10s
       retries: 5
       start_period: 10s
       start_interval: 1s
 
-  visualizator:
-    container_name: visualizator-dev-container
+  visualizer:
+    container_name: visualizer-dev-container
     depends_on:
       docs-service:
         condition: service_started
@@ -38,7 +42,11 @@ services:
       - .:/app
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:4200 || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://127.0.0.1:4200 || exit 1",
+        ]
       interval: 10s
       timeout: 10s
       retries: 5
