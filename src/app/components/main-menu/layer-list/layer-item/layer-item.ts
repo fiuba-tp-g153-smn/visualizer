@@ -388,12 +388,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
-      // Extraer información de fecha del ID
-      // ABI formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567 (11 dígitos: YYYYDDDHHMI)
-      // GLM formato: GLM_FED_s2026044013000 (13 dígitos: YYYYDDDHHMISS)
-      const match = tileset.id.match(/_s(\d+)/);
-      if (match) {
-        const dateStr = match[1];
+      // El ID ahora es directamente el timestamp (14 dígitos: YYYYDDDHHMISS)
+      const dateStr = tileset.id;
+      if (dateStr && dateStr.length >= 11) {
         const year = dateStr.substring(0, 4);
         const dayOfYear = dateStr.substring(4, 7);
         const hour = dateStr.substring(7, 9);
@@ -424,10 +421,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const tilesets = this.layerConfigService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
-      // Handle both ABI (11 digits) and GLM (13 digits) formats
-      const match = tileset.id.match(/_s(\d+)/);
-      if (match) {
-        const dateStr = match[1];
+      // El ID ahora es directamente el timestamp (14 dígitos: YYYYDDDHHMISS)
+      const dateStr = tileset.id;
+      if (dateStr && dateStr.length >= 11) {
         const hour = dateStr.substring(7, 9);
         const minute = dateStr.substring(9, 11);
         return `${hour}:${minute}`;
