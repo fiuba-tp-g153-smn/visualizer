@@ -14,10 +14,10 @@ export const MAP_CONFIG = {
 
   // Bounds de Argentina (para limitar el área visible si es necesario)
   argentinaBounds: {
-    north: -21.0,
-    south: -55.0,
-    east: -53.0,
-    west: -74.0,
+    north: -15.0,
+    south: -60.0,
+    east: -30.0,
+    west: -110.0,
   } as const,
 
   // Proveedor de tiles por defecto
