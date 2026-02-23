@@ -5,23 +5,29 @@ import { environment } from '../../environments/environment';
  */
 const BACKEND_BASE_URL = environment.backend.baseUrl;
 
-export const BACKEND_CONFIG = {
+const BACKEND_CONFIG = {
   baseUrl: BACKEND_BASE_URL,
-  useMockTiles: environment.backend.useMockTiles,
   endpoints: {
     tiles: `${BACKEND_BASE_URL}/tiles`,
     products: `${BACKEND_BASE_URL}/products`,
-    channelConfig: (product: string, instrument: string, channel: string) =>
-      `${BACKEND_BASE_URL}/products/${product}/${instrument}/${channel}`,
   },
 } as const;
 
 /**
+ * Construye URL de configuración de canal para un producto específico
+ * @param pathToProduct - Ruta específica del producto (e.g., "goes-19/abi/ch-02")
+ * @returns URL para obtener la configuración del canal
+ */
+export function buildChannelConfigUrl(pathToProduct: string): string {
+  return `${BACKEND_CONFIG.endpoints.products}/${pathToProduct}`;
+}
+
+/**
  * Construye URL de tiles para un producto específico
- * @param productName Nombre del producto (ej: 'abi-ch13')
+ * @param pathToTileset - Ruta específica del tileset (e.g., "goes-19/abi/ch-02/202601010000")
  * @returns URL template para Leaflet con formato desde environment
  */
-export function buildTileUrl(productName: string): string {
+export function buildTileUrl(pathToProduct: string): string {
   const format = environment.tiles.format;
-  return `${BACKEND_CONFIG.endpoints.tiles}/${productName}/{z}/{x}/{y}.${format}`;
+  return `${BACKEND_CONFIG.endpoints.tiles}/${pathToProduct}/{z}/{x}/{y}.${format}`;
 }

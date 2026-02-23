@@ -1,9 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import * as L from 'leaflet';
 import { Layer, LayerType, LayerCategory, WmsLayer, TileLayer } from '../../models';
-import { BACKEND_CONFIG } from '../../config/backend.config';
 import { NotificationService } from '../notifications/notification.service';
-import { LayerConfigService } from '../layers/layer-config.service';
+import { LayerConfigService } from './layer-config.service';
 import {
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
@@ -19,7 +18,7 @@ import {
 })
 export class LayerRendererService {
   private readonly notificationService = inject(NotificationService);
-  private readonly layerConfigService = inject(LayerConfigService);
+  private readonly configService = inject(LayerConfigService);
 
   // Track de errores por capa para evitar spam de notificaciones
   private readonly errorTracker = new Map<string, number>();
@@ -33,12 +32,12 @@ export class LayerRendererService {
    */
   getTileLayerForTime(layer: Layer, timeIndex: number): L.TileLayer {
     // 1. Obtener ID del tileset para generar clave única
-    const tilesets = this.layerConfigService.getTilesets(layer.id);
+    const tilesets = this.configService.getTilesets(layer.id);
     let tilesetId = 'default';
 
     if (tilesets && tilesets[timeIndex]) {
       tilesetId = tilesets[timeIndex].id;
-    } else if (layer.category === LayerCategory.SATELLITE_ABI) {
+    } else if (layer.category === LayerCategory.GOES_19) {
       // Si es satélite y no hay config aún, es un placeholder temporal
       tilesetId = `placeholder-${timeIndex}`;
     } else if (layer.category === LayerCategory.RADAR) {
@@ -75,7 +74,7 @@ export class LayerRendererService {
 
     // 4. Configurar errores (solo una vez)
     const isPlaceholder = (tileLayer as any)._isPlaceholder;
-    if (!BACKEND_CONFIG.useMockTiles && !isPlaceholder) {
+    if (!isPlaceholder) {
       this.attachErrorHandlers(tileLayer, layer);
     }
 
@@ -106,12 +105,12 @@ export class LayerRendererService {
     // TypeScript already knows layer is TileLayer
     // Según la categoría, obtener configuración específica
     switch (layer.category) {
-      case LayerCategory.SATELLITE_ABI:
+      case LayerCategory.GOES_19:
         return this.createSatelliteTileLayer(layer, timeIndex);
       case LayerCategory.RADAR:
         return this.createRadarTileLayer(layer, timeIndex);
       default:
-        throw new Error(`Unsupported tile layer category: ${layer.category}`);
+        throw new Error(`Layer category does not have a defined product path template`);
     }
   }
 
@@ -124,7 +123,7 @@ export class LayerRendererService {
       case LayerCategory.IGN_WMS:
         return this.createIgnWmsLayer(layer);
       default:
-        throw new Error(`Unsupported WMS layer category: ${layer.category}`);
+        throw new Error(`WMS layer category does not have a defined product path template`);
     }
   }
 
@@ -134,9 +133,9 @@ export class LayerRendererService {
    */
   private createSatelliteTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
     // Si hay configuración dinámica cargada, usarla
-    if (this.layerConfigService.hasConfig(layer.id)) {
-      const config = this.layerConfigService.getChannelConfig(layer.id);
-      const tileUrl = this.layerConfigService.buildTileUrl(layer.id, timeIndex);
+    if (this.configService.hasConfig(layer.id)) {
+      const config = this.configService.getConfig(layer.id);
+      const tileUrl = this.configService.buildTileUrl(layer.id, timeIndex);
 
       if (config && tileUrl) {
         const bounds = config.channel_info.bounding_box;
@@ -162,7 +161,7 @@ export class LayerRendererService {
           ],
           noWrap: true,
           attribution,
-          opacity: layer.opacity / 100,
+          opacity: layer.opacity ? layer.opacity / 100 : 1.0,
         });
       }
     }
@@ -183,9 +182,9 @@ export class LayerRendererService {
    */
   private createRadarTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
     // Si hay configuración dinámica cargada, usarla
-    if (this.layerConfigService.hasConfig(layer.id)) {
-      const config = this.layerConfigService.getChannelConfig(layer.id) as any;
-      const tileUrl = this.layerConfigService.buildTileUrl(layer.id, timeIndex);
+    if (this.configService.hasConfig(layer.id)) {
+      const config = this.configService.getConfig(layer.id) as any;
+      const tileUrl = this.configService.buildTileUrl(layer.id, timeIndex);
 
       if (config && tileUrl) {
         const bounds = config.channel_info.bounding_box;
@@ -210,7 +209,7 @@ export class LayerRendererService {
           ],
           noWrap: true,
           attribution,
-          opacity: layer.opacity / 100,
+          opacity: layer.opacity ? layer.opacity / 100 : 1.0,
         });
       }
     }
@@ -240,20 +239,10 @@ export class LayerRendererService {
       transparent: IGN_WMS_BASE_CONFIG.transparent,
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
-      opacity: layer.opacity / 100,
+      opacity: layer.opacity ? layer.opacity / 100 : 1.0,
       attribution: IGN_WMS_BASE_CONFIG.attribution,
     });
   }
-
-  // Para agregar WRF, ECMWF, etc., solo agregar un nuevo case y método privado:
-  // case LayerCategory.WRF:
-  //   tileLayer = this.createWrfTileLayer(layer.id, layer.opacity);
-  //   break;
-  //
-  // private createWrfTileLayer(layerId: string, opacity: number): L.TileLayer {
-  //   const { url, options } = getWrfTileConfig(layerId);
-  //   return L.tileLayer(url, { ...options, opacity: opacity / 100 });
-  // }
 
   /**
    * Adjunta manejadores de error a un tile layer
@@ -266,7 +255,7 @@ export class LayerRendererService {
       console.warn(
         `Error cargando tile de ${layer.name}:`,
         error.error,
-        `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`
+        `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`,
       );
 
       // Después de varios errores consecutivos, notificar al usuario
@@ -277,7 +266,7 @@ export class LayerRendererService {
         if (currentErrors === 0) {
           this.notificationService.error(
             `La capa "${layer.name}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
-            layer.id
+            layer.id,
           );
         }
 

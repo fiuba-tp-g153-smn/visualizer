@@ -1,23 +1,16 @@
-import {
-  LayerSubgroup,
-  LayerType,
-  LayerCategory,
-  ActiveLayerGroup,
-  TileLayer,
-} from '../../../models';
-import { environment } from '../../../../environments/environment';
+import { LayerType, LayerCategory, SatelliteTileLayer } from '../../../models';
+import { ActiveLayerGroup, LayerSubgroup } from '../../../models/layers/groups.models';
 
 /**
  * Valores por defecto para capas ABI
  * Sin repetir el mismo número en cada capa
  */
 const ABI_DEFAULTS = {
-  visible: false,
-  opacity: 80,
+  groupId: 'satellite',
+  subgroupId: 'abi',
   zIndexGroup: ActiveLayerGroup.BASE,
   availablePeriods: [1, 6, 12, 24] as const,
-  category: LayerCategory.SATELLITE_ABI,
-
+  category: LayerCategory.GOES_19,
   type: LayerType.TILE,
 };
 
@@ -29,25 +22,32 @@ export const ABI_SUBGROUP: LayerSubgroup = {
   id: 'abi',
   name: 'ABI',
   description: 'Advanced Baseline Imager',
+  groupId: 'satellite',
   expanded: true,
   layers: [
     {
       ...ABI_DEFAULTS,
-      id: 'abi-ch2',
+      id: 'abi-ch-02',
+      groupId: 'satellite',
+      subgroupId: 'abi',
       name: 'Canal 2 (Visible)',
       description: 'Banda visible (0.64 μm)',
-    } as TileLayer,
+    },
     {
       ...ABI_DEFAULTS,
-      id: 'abi-ch9',
+      id: 'abi-ch-09',
+      groupId: 'satellite',
+      subgroupId: 'abi',
       name: 'Canal 9 (Vapor de agua)',
       description: 'Banda de vapor de agua (6.9 μm)',
-    } as TileLayer,
+    },
     {
       ...ABI_DEFAULTS,
-      id: 'abi-ch13',
+      id: 'abi-ch-13',
+      groupId: 'satellite',
+      subgroupId: 'abi',
       name: 'Canal 13 (Infrarrojo)',
       description: 'Banda infrarroja (10.3 μm)',
-    } as TileLayer,
-  ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
+    },
+  ] as SatelliteTileLayer[],
 };

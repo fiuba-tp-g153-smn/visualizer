@@ -2,7 +2,8 @@ import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
-import { LayerService } from '../../../services/layers/layer.service';
+import { LayersService } from '../../../services/layers/layers.service';
+import { LayerControlService } from '../../../services/layers/layer-control.service';
 import { MenuPanelComponent } from '../menu-section.model';
 import { AvailableLayersComponent } from './available-layers/available-layers';
 import { ActiveLayersComponent } from './active-layers/active-layers';
@@ -25,16 +26,17 @@ import { ActiveLayersComponent } from './active-layers/active-layers';
   styleUrl: './layer-list.scss',
 })
 export class LayerListComponent implements MenuPanelComponent {
-  private readonly layerService = inject(LayerService);
+  private readonly layersService = inject(LayersService);
+  private readonly controlService = inject(LayerControlService);
 
   hasAvailableLayers = computed(() => {
-    return this.layerService.layerGroups().some((group) => {
+    return this.layersService.getLayerGroups().some((group) => {
       return group.subgroups.some((subgroup) => subgroup.layers.length > 0);
     });
   });
 
   getActiveLayersCount(): number {
-    return this.layerService.activeLayers().length;
+    return this.controlService.activeLayers().length;
   }
 
   onPanelOpen(): void {

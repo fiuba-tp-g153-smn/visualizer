@@ -20,8 +20,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import { Layer, LayerCategory, LayerType } from '../../../../models';
-import { LayerService } from '../../../../services/layers/layer.service';
-import { LayerReloadService } from '../../../../services/layers/layer-reload.service';
+import { LayersService } from '../../../../services/layers/layers.service';
+import { LayerControlService } from '../../../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../../../services/layers/layer-config.service';
 
 /**
@@ -59,9 +59,9 @@ export type LayerItemMode = 'available' | 'active';
   styleUrl: './layer-item.scss',
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
-  private readonly layerService = inject(LayerService);
-  private readonly layerConfigService = inject(LayerConfigService);
-  private readonly reloadService = inject(LayerReloadService);
+  private readonly layersService = inject(LayersService);
+  private readonly controlService = inject(LayerControlService);
+  private readonly configService = inject(LayerConfigService);
 
   /**
    * Capa a renderizar (requerido)
@@ -93,25 +93,19 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isControlsExpanded = signal(false);
   isExpanded = signal(false);
 
-  /**
-   * Estado de reproducción - lee del servicio
-   */
-  isPlaying = computed(() => this.layerService.isPlaying(this.layer.id));
-  playSpeed = computed(() => this.layerService.getPlaySpeed(this.layer.id));
-  lastImagesCount = computed(() => this.layerService.getLastImagesCount(this.layer.id));
+  isPlaying = computed(() => this.controlService.isPlaying(this.layer.id));
+  playSpeed = computed(() => this.controlService.getPlaySpeed(this.layer.id));
+  lastImagesCount = computed(() => this.controlService.getLastImagesCount(this.layer.id));
 
   /**
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
    */
   lastImagesOptions = computed(() => {
-    return this.layer.type === LayerType.TILE ? this.layer.availablePeriods ?? [1] : [1];
+    return this.layer.type === LayerType.TILE ? (this.layer.availablePeriods ?? [1]) : [1];
   });
 
-  /**
-   * Obtiene la capa actualizada desde el servicio (single source of truth)
-   */
   getActiveLayer = computed(() => {
-    return this.layerService.activeLayers().find((l) => l.id === this.layer.id);
+    return this.controlService.activeLayers().find((l) => l.id === this.layer.id);
   });
   /**
    * Indica si la capa está activa (visible en el mapa)
@@ -120,11 +114,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return this.getActiveLayer() !== undefined;
   });
 
-  /**
-   * Verifica si la capa necesita control de tiempo
-   */
   hasTimeControl = computed(() => {
-    return this.layerConfigService.hasConfig(this.layer.id);
+    return this.configService.hasConfig(this.layer.id);
   });
 
   /**
@@ -143,7 +134,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene las elevaciones disponibles
    */
   availableElevations = computed(() => {
-    return this.layer.type === LayerType.TILE ? this.layer.availableElevations ?? [] : [];
+    return this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.RADAR
+      ? (this.layer.availableElevations ?? [])
+      : [];
   });
 
   /**
@@ -151,14 +144,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentElevationIndex = computed(() => {
     const activeLayer = this.getActiveLayer();
-    return activeLayer && activeLayer.type === LayerType.TILE ? activeLayer.elevationIndex ?? 0 : 0;
+    return activeLayer && activeLayer.type === LayerType.TILE
+      ? (activeLayer.elevationIndex ?? 0)
+      : 0;
   });
 
   /**
    * Obtiene el índice máximo de tiempo
    */
   maxTimeIndex = computed(() => {
-    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
+    const tilesets = this.configService.getTilesets(this.layer.id);
     return Math.max(0, tilesets.length - 1);
   });
 
@@ -204,7 +199,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const activeLayer = this.getActiveLayer();
     const currentIndex =
       activeLayer && activeLayer.type === LayerType.TILE
-        ? activeLayer.timeIndex ?? this.maxTimeIndex()
+        ? (activeLayer.timeIndex ?? this.maxTimeIndex())
         : this.maxTimeIndex();
     // Asegurar que el índice actual esté dentro del rango visible
     const min = this.minTimeIndex();
@@ -239,7 +234,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private needsConfig(): boolean {
     const isSatellite = this.layer.id.startsWith('abi-') || this.layer.id.startsWith('glm-');
     const isRadar = this.layer.category === LayerCategory.RADAR;
-    return (isSatellite || isRadar) && !this.layerConfigService.hasConfig(this.layer.id);
+    return (isSatellite || isRadar) && !this.configService.hasConfig(this.layer.id);
   }
 
   /**
@@ -259,7 +254,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         const elevationId = elevations[elevationIndex] || 'elev0';
 
         this.isLoadingConfig.set(true);
-        this.layerConfigService
+        this.configService
           .loadRadarConfig(this.layer.id, radarId, variableId, elevationId)
           .subscribe({
             next: () => {
@@ -297,26 +292,19 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     this.isLoadingConfig.set(true);
 
-    this.layerConfigService
-      .loadChannelConfig(this.layer.id, product, instrument, channel)
-      .subscribe({
-        next: (config) => {
-          this.isLoadingConfig.set(false);
-        },
-        error: (err) => {
-          this.isLoadingConfig.set(false);
-          console.error(`❌ [LayerItem] Error cargando config de ${this.layer.id}:`, err);
-        },
-      });
+    this.configService.loadChannelConfig(this.layer.id, product, instrument, channel).subscribe({
+      next: (config) => {
+        this.isLoadingConfig.set(false);
+      },
+      error: (err) => {
+        this.isLoadingConfig.set(false);
+        console.error(`❌ [LayerItem] Error cargando config de ${this.layer.id}:`, err);
+      },
+    });
   }
 
-  /**
-   * Recarga la configuración del canal (actualiza períodos disponibles)
-   */
   reloadChannelConfig(): void {
-    // Use reload service to handle the manual refresh
-    // This coordinates with auto-refresh and resets the timer
-    this.reloadService.manualRefresh(this.layer.id);
+    this.configService.manualRefresh(this.layer.id);
   }
 
   // ==========================================================================
@@ -373,32 +361,25 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     // Si necesita config, cargarla primero
     if (this.needsConfig()) {
       this.loadChannelConfig();
-      // La activación se hará después de cargar la config
       setTimeout(() => {
-        this.layerService.activateLayer(this.layer.id);
+        this.controlService.activateLayer(this.layer.id);
       }, 100);
     } else {
-      this.layerService.activateLayer(this.layer.id);
+      this.controlService.activateLayer(this.layer.id);
     }
   }
 
-  /**
-   * Desactiva la capa
-   */
   deactivateLayer(): void {
-    this.layerService.stopPlayback(this.layer.id);
-    this.layerService.deactivateLayer(this.layer.id);
+    this.controlService.stopPlayback(this.layer.id);
+    this.controlService.deactivateLayer(this.layer.id);
   }
 
   // ==========================================================================
   // Control de Opacidad
   // ==========================================================================
 
-  /**
-   * Actualiza la opacidad de la capa
-   */
   onOpacityChange(opacity: number): void {
-    this.layerService.setOpacity(this.layer.id, opacity);
+    this.controlService.setOpacity(this.layer.id, opacity);
   }
 
   /**
@@ -419,28 +400,20 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // Control de Tiempo
   // ==========================================================================
 
-  /**
-   * Actualiza el índice de tiempo
-   */
   onTimeIndexChange(timeIndex: number): void {
-    // Si está reproduciendo, pausar (control manual)
     if (this.isPlaying()) {
-      this.layerService.stopPlayback(this.layer.id);
+      this.controlService.stopPlayback(this.layer.id);
     }
 
-    // Actualizar directamente en el servicio (única fuente de verdad)
-    this.layerService.setTimeIndex(this.layer.id, timeIndex);
+    this.controlService.setTimeIndex(this.layer.id, timeIndex);
   }
 
   // ==========================================================================
   // Control de Elevación (RADAR)
   // ==========================================================================
 
-  /**
-   * Actualiza el índice de elevación
-   */
   onElevationChange(elevationIndex: number): void {
-    this.layerService.setElevationIndex(this.layer.id, elevationIndex);
+    this.controlService.setElevationIndex(this.layer.id, elevationIndex);
 
     // Recargar configuración del radar con la nueva elevación
     if (this.layer.category === LayerCategory.RADAR) {
@@ -453,7 +426,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         const elevationId = elevations[elevationIndex] || 'elev0';
 
         this.isLoadingConfig.set(true);
-        this.layerConfigService
+        this.configService
           .loadRadarConfig(this.layer.id, radarId, variableId, elevationId)
           .subscribe({
             next: () => {
@@ -490,7 +463,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return 'Cargando...';
     }
 
-    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
+    const tilesets = this.configService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
       // Extraer información de fecha del ID
@@ -526,7 +499,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return '--:--';
     }
 
-    const tilesets = this.layerConfigService.getTilesets(this.layer.id);
+    const tilesets = this.configService.getTilesets(this.layer.id);
     if (timeIndex >= 0 && timeIndex < tilesets.length) {
       const tileset = tilesets[timeIndex];
       // Handle both ABI (11 digits) and GLM (13 digits) formats
@@ -556,47 +529,34 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // Control de Reproducción
   // ==========================================================================
 
-  /**
-   * Alterna play/pause
-   */
   togglePlayback(): void {
-    this.layerService.togglePlayback(
+    this.controlService.togglePlayback(
       this.layer.id,
       this.maxTimeIndex(),
-      this.playbackMinTimeIndex()
+      this.playbackMinTimeIndex(),
     );
   }
 
-  /**
-   * Actualiza la velocidad de reproducción
-   */
   onPlaySpeedChange(speed: number): void {
-    this.layerService.setPlaySpeed(this.layer.id, speed);
+    this.controlService.setPlaySpeed(this.layer.id, speed);
   }
 
-  /**
-   * Actualiza el número de últimas imágenes a mostrar
-   */
   onLastImagesCountChange(count: number): void {
     const wasPlaying = this.isPlaying();
 
-    // Actualizar el contador
-    this.layerService.setLastImagesCount(this.layer.id, count);
+    this.controlService.setLastImagesCount(this.layer.id, count);
 
-    // Si cambió a 1, detener reproducción inmediatamente
     if (count === 1 && wasPlaying) {
-      this.layerService.stopPlayback(this.layer.id);
+      this.controlService.stopPlayback(this.layer.id);
       return;
     }
 
-    // Si estaba reproduciendo, reiniciar con el nuevo rango (sin detener)
     if (wasPlaying) {
-      // Usar setTimeout para asegurar que los computed signals se actualicen
       setTimeout(() => {
-        this.layerService.startPlayback(
+        this.controlService.startPlayback(
           this.layer.id,
           this.maxTimeIndex(),
-          this.playbackMinTimeIndex()
+          this.playbackMinTimeIndex(),
         );
       }, 0);
     }

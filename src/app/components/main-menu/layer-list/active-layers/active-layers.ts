@@ -6,9 +6,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { LayerService } from '../../../../services/layers/layer.service';
-import { Layer, ActiveLayerGroup, ZIndexGroupMetadata } from '../../../../models';
-import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../config/layer-groups/active-groups.config';
+import { LayersService } from '../../../../services/layers/layers.service';
+import { LayerControlService } from '../../../../services/layers/layer-control.service';
+import { ActiveLayerGroup, Layer } from '../../../../models';
+import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../config/layers/active-groups.config';
 import { LayerItemComponent } from '../layer-item/layer-item';
 
 /**
@@ -33,7 +34,8 @@ import { LayerItemComponent } from '../layer-item/layer-item';
   styleUrl: './active-layers.scss',
 })
 export class ActiveLayersComponent {
-  private readonly layerService = inject(LayerService);
+  private readonly layersService = inject(LayersService);
+  private readonly controlService = inject(LayerControlService);
 
   private groupExpansionState = new Map<ActiveLayerGroup, ReturnType<typeof signal<boolean>>>(
     Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS).map((def) => [def.id, signal(true)]),
@@ -42,7 +44,7 @@ export class ActiveLayersComponent {
   /**
    * Obtiene capas activas organizadas en grupos de z-index con metadata
    */
-  activeLayerGroups = computed<ZIndexGroupMetadata[]>(() => {
+  activeLayerGroups = computed(() => {
     return Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS)
       .sort((a, b) => b.zIndexRange.min - a.zIndexRange.min)
       .map((definition) => {
@@ -65,7 +67,7 @@ export class ActiveLayersComponent {
   });
 
   private getLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
-    return this.layerService.getActiveLayersForGroup(groupId);
+    return this.controlService.getActiveLayersForGroup(groupId);
   }
 
   private setGroupExpanded(groupId: ActiveLayerGroup, expanded: boolean): void {
@@ -76,7 +78,7 @@ export class ActiveLayersComponent {
   }
 
   getActiveLayers(): Layer[] {
-    return this.layerService.activeLayers();
+    return this.controlService.activeLayers();
   }
 
   private handleGroupDrop(event: CdkDragDrop<Layer[]>, groupId: ActiveLayerGroup): void {
@@ -85,14 +87,14 @@ export class ActiveLayersComponent {
     moveItemInArray(layers, event.previousIndex, event.currentIndex);
 
     const orderedIds = layers.map((layer) => layer.id);
-    this.layerService.setLayerOrder(orderedIds);
+    this.controlService.setLayerOrder(orderedIds);
   }
 
   private handleClearGroup(event: Event, groupId: ActiveLayerGroup): void {
     event.stopPropagation();
     const groupLayers = this.getLayersForGroup(groupId);
     groupLayers.forEach((layer) => {
-      this.layerService.deactivateLayer(layer.id);
+      this.controlService.deactivateLayer(layer.id);
     });
   }
 }
