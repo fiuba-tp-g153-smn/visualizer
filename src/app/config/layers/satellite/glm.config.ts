@@ -36,5 +36,13 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI, // Usa misma categoría para reutilizar lógica de renderizado
     } as TileLayer,
+    {
+      ...GLM_DEFAULTS,
+      id: 'glm-toe',
+      name: 'Total Optical Energy',
+      description: 'Energía óptica total radiada por rayos',
+      type: LayerType.TILE,
+      category: LayerCategory.SATELLITE_ABI,
+    } as TileLayer,
   ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
 };
