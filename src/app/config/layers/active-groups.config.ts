@@ -1,4 +1,4 @@
-import { ActiveLayerGroup, ActiveLayerGroupDefinition } from '../../models';
+import { ActiveLayerGroup, ActiveLayerGroupDefinition } from '../../models/layers/groups.models';
 
 /**
  * Definiciones de los grupos de capas activas

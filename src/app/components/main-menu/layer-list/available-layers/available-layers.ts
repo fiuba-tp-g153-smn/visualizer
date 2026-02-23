@@ -5,7 +5,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
-import { LayerService } from '../../../../services/layers/layer.service';
+import { LayersService } from '../../../../services/layers/layers.service';
 import { LayerGroup, LayerSubgroup } from '../../../../models';
 import { LayerItemComponent } from '../layer-item/layer-item';
 
@@ -29,7 +29,7 @@ import { LayerItemComponent } from '../layer-item/layer-item';
   styleUrl: './available-layers.scss',
 })
 export class AvailableLayersComponent {
-  private readonly layerService = inject(LayerService);
+  private readonly layersService = inject(LayersService);
 
   searchText = signal('');
 
@@ -45,12 +45,9 @@ export class AvailableLayersComponent {
       .replace(/[\u0300-\u036f]/g, '');
   }
 
-  /**
-   * Grupos filtrados según el texto de búsqueda
-   */
   filteredGroups = computed(() => {
     const search = this.normalizeText(this.searchText().trim());
-    const baseGroups = this.layerService.layerGroups();
+    const baseGroups = this.layersService.getLayerGroups();
 
     return baseGroups
       .map((group) => {

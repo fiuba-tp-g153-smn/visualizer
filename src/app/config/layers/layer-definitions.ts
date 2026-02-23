@@ -1,8 +1,6 @@
-import { LayerGroup } from '../models';
-import { environment } from '../../environments/environment';
-import { ABI_SUBGROUP } from './layers/satellite/abi.config';
-import { GLM_SUBGROUP } from './layers/satellite/glm.config';
-import { RADAR_SUBGROUPS } from './layers/radar/config';
+import { ABI_SUBGROUP } from './satellite/abi.config';
+import { GLM_SUBGROUP } from './satellite/glm.config';
+import { RADAR_SUBGROUPS } from './radar/config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
   IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
@@ -16,7 +14,8 @@ import {
   IGN_WMS_RELIEF_SUBGROUP,
   IGN_WMS_TERRITORIAL_SUBGROUP,
   IGN_WMS_VEGETATION_SUBGROUP,
-} from './layers/ign/ign-wms.config';
+} from './ign/ign-wms.config';
+import { LayerGroup } from '../../models/layers/groups.models';
 
 /**
  * Definición de capas disponibles en el visualizador
@@ -27,7 +26,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     name: 'Satélite',
     description: 'Capas satelitales GOES-19',
     icon: 'satellite_alt',
-    expanded: true,
+    expanded: false,
     subgroups: [ABI_SUBGROUP, GLM_SUBGROUP],
   },
   {
@@ -59,4 +58,4 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
       IGN_WMS_OTHER_SUBGROUP,
     ],
   },
-].filter((group) => !environment.ui.disabledLayers.includes(group.id));
+];
