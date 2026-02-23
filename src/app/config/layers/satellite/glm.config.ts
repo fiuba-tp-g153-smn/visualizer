@@ -44,5 +44,13 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       type: LayerType.TILE,
       category: LayerCategory.SATELLITE_ABI,
     } as TileLayer,
+    {
+      ...GLM_DEFAULTS,
+      id: 'glm-mfa',
+      name: 'Minimum Flash Area',
+      description: 'Área mínima de destello de rayos',
+      type: LayerType.TILE,
+      category: LayerCategory.SATELLITE_ABI,
+    } as TileLayer,
   ].filter((layer) => !environment.ui.disabledLayers.includes(layer.id)),
 };
