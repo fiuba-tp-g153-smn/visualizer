@@ -98,7 +98,8 @@ export class AvailableLayersComponent {
     let count = 0;
     for (const subgroup of group.subgroups) {
       for (const layer of subgroup.layers) {
-        if (layer.visible) count++;
+        const controls = this.controlService.getControls(layer.id);
+        if (controls?.visible) count++;
       }
     }
     return count;
@@ -108,6 +109,9 @@ export class AvailableLayersComponent {
    * Cuenta cuántas capas activas tiene un subgrupo
    */
   getActiveLayersCountInSubgroup(subgroup: LayerSubgroup): number {
-    return subgroup.layers.filter((layer) => layer.visible).length;
+    return subgroup.layers.filter((layer) => {
+      const controls = this.controlService.getControls(layer.id);
+      return controls?.visible;
+    }).length;
   }
 }

@@ -18,7 +18,7 @@ import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRendererService } from '../../services/layers/layer-renderer.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
-import { Layer, TileProvider, LayerCategory, LayerType } from '../../models';
+import { Layer, TileProvider, LayerCategory, LayerType, LayerControls } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -155,18 +155,18 @@ export class MapViewer implements OnInit, OnDestroy {
 
   private onMapLayers = new Map<string, L.TileLayer>();
 
-  private syncLayers(layers: Layer[]): void {
+  private syncLayers(items: { layer: Layer; controls: LayerControls }[]): void {
     if (!this.map) return;
 
     const desiredLayersOnMap = new Map<string, L.TileLayer>();
     const activeKeysForPool = new Set<string>();
 
-    for (const layer of layers) {
-      if (!layer.visible) continue;
+    for (const { layer, controls } of items) {
+      if (!controls.visible) continue;
 
       const tilesets = this.configService.getTilesets(layer.id);
       // Solo para capas con control temporal (TILE layers)
-      const currentTimeIndex = layer.type === LayerType.TILE ? (layer.timeIndex ?? 0) : 0;
+      const currentTimeIndex = controls.type === LayerType.TILE ? (controls.playback?.timeIndex ?? 0) : 0;
 
       // Definir ventana de pre-fetching: [T-1, T, T+1]
       // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T
@@ -191,7 +191,7 @@ export class MapViewer implements OnInit, OnDestroy {
         activeKeysForPool.add(uniqueKey);
 
         // Obtener instancia del pool
-        const tileLayer = this.layerRendererService.getTileLayerForTime(layer, tIndex);
+        const tileLayer = this.layerRendererService.getTileLayerForTime(layer, controls, tIndex);
         desiredLayersOnMap.set(uniqueKey, tileLayer);
 
         // Configurar estado visual
@@ -200,9 +200,9 @@ export class MapViewer implements OnInit, OnDestroy {
         // Z-Index: Mantener orden relativo de capas.
         // Capas ocultas (prefetch) van al fondo para no interferir eventos aunque tengan opacity 0
         if (isTarget) {
-          tileLayer.setOpacity((layer.opacity ?? 100) / 100);
-          if (layer.zIndex !== undefined) {
-            const absoluteZIndex = this.controlService.getAbsoluteZIndex(layer);
+          tileLayer.setOpacity((controls.opacity ?? 100) / 100);
+          if (controls.zIndex !== undefined) {
+            const absoluteZIndex = this.controlService.getAbsoluteZIndex(layer, controls);
             tileLayer.setZIndex(absoluteZIndex);
           }
         } else {

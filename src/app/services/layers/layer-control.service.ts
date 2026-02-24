@@ -1,24 +1,17 @@
 import { Injectable, inject, computed, signal, effect } from '@angular/core';
-import { Layer, LayerType, LayerCategory, ActiveLayerGroup } from '../../models';
+import {
+  Layer,
+  LayerType,
+  LayerCategory,
+  ActiveLayerGroup,
+  LayerControls,
+  GoesLayerControls,
+  RadarLayerControls,
+  WmsLayerControls,
+} from '../../models';
 import { LayersService } from './layers.service';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../config/layers/active-groups.config';
 import { DEFAULT_ACTIVE_LAYERS } from '../../config/layers/default';
-
-interface LayerStateStorage {
-  id: string;
-  visible: boolean;
-  opacity: number;
-  zIndex: number;
-  timeIndex?: number;
-  elevationIndex?: number;
-  playback?: {
-    isPlaying: boolean;
-    speed: number;
-    lastImagesCount: number;
-    maxTimeIndex?: number;
-    minTimeIndex?: number;
-  };
-}
 
 @Injectable({
   providedIn: 'root',
@@ -26,42 +19,52 @@ interface LayerStateStorage {
 export class LayerControlService {
   private readonly STORAGE_KEY = 'smn-active-layers-v2';
   private readonly layersService = inject(LayersService);
-  private readonly _layers = signal<Map<string, Layer>>(new Map());
+  private readonly _controls = signal<Map<string, LayerControls>>(new Map());
   private readonly playIntervals = new Map<string, any>();
 
-  public readonly layers = computed(() => Array.from(this._layers().values()));
-
   public readonly activeLayers = computed(() => {
-    return this.layers()
-      .filter((layer) => layer.visible)
-      .sort((a, b) => (b.zIndex ?? 0) - (a.zIndex ?? 0));
+    const allLayers = this.layersService.getAllLayers();
+    return allLayers
+      .map((layer) => {
+        const controls = this._controls().get(layer.id);
+        return controls?.visible ? { layer, controls } : null;
+      })
+      .filter((item): item is { layer: Layer; controls: LayerControls } => item !== null)
+      .sort((a, b) => (b.controls.zIndex ?? 0) - (a.controls.zIndex ?? 0));
   });
 
   constructor() {
-    this._initializeLayers();
+    this._initializeControls();
 
     effect(() => {
-      const layers = this.layers();
-      this._saveState(layers);
+      const controls = Array.from(this._controls().values());
+      this._saveState(controls);
     });
   }
 
-  getActiveLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
-    return this.activeLayers().filter((layer) => layer.zIndexGroup === groupId);
+  getActiveLayersForGroup(groupId: ActiveLayerGroup): { layer: Layer; controls: LayerControls }[] {
+    return this.activeLayers().filter(({ layer }) => layer.zIndexGroup === groupId);
   }
 
   getLayerById(layerId: string): Layer | undefined {
-    return this._layers().get(layerId);
+    return this.layersService.getLayerById(layerId);
+  }
+
+  getControls(layerId: string): LayerControls | undefined {
+    return this._controls().get(layerId);
   }
 
   activateLayer(layerId: string): void {
-    this._updateLayer(layerId, (layer) => {
-      if (!layer.visible) {
-        layer.visible = true;
-        layer.zIndex = this._getNextZIndex(layer.zIndexGroup);
-        layer.opacity = layer.opacity ?? 100;
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer) return;
 
-        if (layer.type === LayerType.TILE && !layer.playback) {
+    this._updateControls(layerId, (controls) => {
+      if (!controls.visible) {
+        controls.visible = true;
+        controls.zIndex = this._getNextZIndex(layer.zIndexGroup);
+        controls.opacity = controls.opacity ?? 100;
+
+        if (layer.type === LayerType.TILE && controls.type === LayerType.TILE && !controls.playback) {
           const availablePeriods = layer.availablePeriods ?? [1];
 
           let defaultCount: number;
@@ -71,9 +74,10 @@ export class LayerControlService {
             defaultCount = availablePeriods.length > 1 ? availablePeriods[1] : availablePeriods[0];
           }
 
-          layer.playback = {
+          controls.playback = {
             isPlaying: false,
             speed: 1,
+            timeIndex: 0,
             lastImagesCount: defaultCount,
           };
         }
@@ -82,16 +86,16 @@ export class LayerControlService {
   }
 
   deactivateLayer(layerId: string): void {
-    this._updateLayer(layerId, (layer) => {
-      layer.visible = false;
+    this._updateControls(layerId, (controls) => {
+      controls.visible = false;
     });
   }
 
   replaceAllWithLayer(layerId: string): void {
-    this._layers.update((layersMap) => {
-      const newMap = new Map(layersMap);
-      newMap.forEach((layer) => {
-        layer.visible = false;
+    this._controls.update((controlsMap) => {
+      const newMap = new Map(controlsMap);
+      newMap.forEach((controls) => {
+        controls.visible = false;
       });
       return newMap;
     });
@@ -99,75 +103,78 @@ export class LayerControlService {
   }
 
   toggleLayer(layerId: string): void {
-    this._updateLayer(layerId, (layer) => {
-      layer.visible = !layer.visible;
-      if (layer.visible) {
-        layer.zIndex = layer.zIndex ?? this._getNextZIndex(layer.zIndexGroup);
-        layer.opacity = layer.opacity ?? 100;
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer) return;
+
+    this._updateControls(layerId, (controls) => {
+      controls.visible = !controls.visible;
+      if (controls.visible) {
+        controls.zIndex = controls.zIndex ?? this._getNextZIndex(layer.zIndexGroup);
+        controls.opacity = controls.opacity ?? 100;
       }
     });
   }
 
-  getAbsoluteZIndex(layer: Layer): number {
-    if (layer.zIndex === undefined) return 0;
+  getAbsoluteZIndex(layer: Layer, controls: LayerControls): number {
+    if (controls.zIndex === undefined) return 0;
     const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
-    return baseOffset + layer.zIndex;
+    return baseOffset + controls.zIndex;
   }
 
   setOpacity(layerId: string, opacity: number): void {
     const clampedOpacity = Math.max(0, Math.min(100, opacity));
-    this._updateLayer(layerId, (layer) => {
-      layer.opacity = clampedOpacity;
+    this._updateControls(layerId, (controls) => {
+      controls.opacity = clampedOpacity;
     });
   }
 
   setTimeIndex(layerId: string, timeIndex: number): void {
-    this._updateLayer(layerId, (layer) => {
-      if (layer.type === LayerType.TILE) {
-        layer.timeIndex = timeIndex;
+    this._updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE && controls.playback) {
+        controls.playback.timeIndex = timeIndex;
       }
     });
   }
 
   setElevationIndex(layerId: string, elevationIndex: number): void {
-    this._updateLayer(layerId, (layer) => {
-      if (layer.type === LayerType.TILE) {
-        layer.elevationIndex = elevationIndex;
+    this._updateControls(layerId, (controls) => {
+      if ('elevation' in controls && controls.elevation) {
+        controls.elevation.elevationIndex = elevationIndex;
       }
     });
   }
 
   isPlaying(layerId: string): boolean {
-    const layer = this.getLayerById(layerId);
-    if (!layer || layer.type !== LayerType.TILE) return false;
-    return layer.playback?.isPlaying ?? false;
+    const controls = this.getControls(layerId);
+    if (!controls || controls.type !== LayerType.TILE) return false;
+    return controls.playback?.isPlaying ?? false;
   }
 
   getPlaySpeed(layerId: string): number {
-    const layer = this.getLayerById(layerId);
-    if (!layer || layer.type !== LayerType.TILE) return 1;
-    return layer.playback?.speed ?? 1;
+    const controls = this.getControls(layerId);
+    if (!controls || controls.type !== LayerType.TILE) return 1;
+    return controls.playback?.speed ?? 1;
   }
 
   setPlaySpeed(layerId: string, speed: number): void {
     const clampedSpeed = Math.max(0.4, Math.min(10, speed));
     const wasPlaying = this.isPlaying(layerId);
 
-    this._updateLayer(layerId, (layer) => {
-      if (layer.type === LayerType.TILE) {
-        if (!layer.playback) {
-          layer.playback = { isPlaying: false, speed: 1, lastImagesCount: 1 };
+    this._updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE) {
+        if (!controls.playback) {
+          controls.playback = { isPlaying: false, speed: 1, timeIndex: 0, lastImagesCount: 1 };
         }
-        layer.playback.speed = clampedSpeed;
+        controls.playback.speed = clampedSpeed;
       }
     });
 
     if (wasPlaying) {
-      const layer = this.getLayerById(layerId);
-      if (!layer || layer.type !== LayerType.TILE) return;
+      const controls = this.getControls(layerId);
+      if (!controls || controls.type !== LayerType.TILE || !controls.playback) return;
 
-      const maxTimeIndex = layer.playback?.maxTimeIndex ?? 0;
-      const lastImagesCount = layer.playback?.lastImagesCount ?? 1;
+      const maxTimeIndex = controls.playback.maxTimeIndex ?? 0;
+      const lastImagesCount = controls.playback.lastImagesCount ?? 1;
       const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
       this.stopPlayback(layerId);
       this.startPlayback(layerId, maxTimeIndex, minTimeIndex);
@@ -185,37 +192,39 @@ export class LayerControlService {
   startPlayback(layerId: string, maxTimeIndex: number, minTimeIndex: number = 0): void {
     this.stopPlayback(layerId);
 
-    this._updateLayer(layerId, (layer) => {
-      if (layer.type === LayerType.TILE) {
-        layer.playback = {
+    this._updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE) {
+        const currentSpeed = controls.playback?.speed || 1;
+        const currentCount = controls.playback?.lastImagesCount ?? 1;
+        const currentTime = controls.playback?.timeIndex ?? maxTimeIndex;
+        
+        controls.playback = {
           isPlaying: true,
-          speed: layer.playback?.speed || 1,
+          speed: currentSpeed,
           maxTimeIndex,
           minTimeIndex,
-          lastImagesCount: layer.playback?.lastImagesCount ?? 1,
+          lastImagesCount: currentCount,
+          timeIndex: Math.max(minTimeIndex, Math.min(currentTime, maxTimeIndex)),
         };
-
-        const current = layer.timeIndex ?? maxTimeIndex;
-        layer.timeIndex = Math.max(minTimeIndex, Math.min(current, maxTimeIndex));
       }
     });
 
     const speed = this.getPlaySpeed(layerId);
     const interval = setInterval(() => {
-      const layer = this.getLayerById(layerId);
-      if (!layer?.visible || layer.type !== LayerType.TILE) {
+      const controls = this.getControls(layerId);
+      if (!controls?.visible || controls.type !== LayerType.TILE) {
         this.stopPlayback(layerId);
         return;
       }
 
-      if (!layer.playback?.isPlaying) {
+      if (!controls.playback?.isPlaying) {
         this.stopPlayback(layerId);
         return;
       }
 
-      const max = layer.playback.maxTimeIndex ?? maxTimeIndex;
-      const min = layer.playback.minTimeIndex ?? minTimeIndex;
-      const current = layer.timeIndex ?? min;
+      const max = controls.playback.maxTimeIndex ?? maxTimeIndex;
+      const min = controls.playback.minTimeIndex ?? minTimeIndex;
+      const current = controls.playback.timeIndex ?? min;
 
       this.setTimeIndex(layerId, current >= max ? min : current + 1);
     }, speed * 1000);
@@ -224,10 +233,10 @@ export class LayerControlService {
   }
 
   stopPlayback(layerId: string): void {
-    this._updateLayer(layerId, (layer) => {
-      if (layer.type === LayerType.TILE && layer.playback) {
-        layer.playback.isPlaying = false;
-        layer.playback.maxTimeIndex = undefined;
+    this._updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE && controls.playback) {
+        controls.playback.isPlaying = false;
+        controls.playback.maxTimeIndex = undefined;
       }
     });
 
@@ -241,10 +250,10 @@ export class LayerControlService {
   stopAllPlayback(): void {
     this.playIntervals.forEach((interval, layerId) => {
       clearInterval(interval);
-      this._updateLayer(layerId, (layer) => {
-        if (layer.type === LayerType.TILE && layer.playback) {
-          layer.playback.isPlaying = false;
-          layer.playback.maxTimeIndex = undefined;
+      this._updateControls(layerId, (controls) => {
+        if (controls.type === LayerType.TILE && controls.playback) {
+          controls.playback.isPlaying = false;
+          controls.playback.maxTimeIndex = undefined;
         }
       });
     });
@@ -252,165 +261,196 @@ export class LayerControlService {
   }
 
   getLastImagesCount(layerId: string): number {
-    const layer = this.getLayerById(layerId);
-    if (!layer || layer.type !== LayerType.TILE) return 1;
-    return layer.playback?.lastImagesCount ?? 1;
+    const controls = this.getControls(layerId);
+    if (!controls || controls.type !== LayerType.TILE) return 1;
+    return controls.playback?.lastImagesCount ?? 1;
   }
 
   setLastImagesCount(layerId: string, count: number): void {
-    this._updateLayer(layerId, (layer) => {
-      if (layer.type === LayerType.TILE) {
-        if (!layer.playback) {
-          layer.playback = {
+    this._updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE) {
+        if (!controls.playback) {
+          controls.playback = {
             isPlaying: false,
             speed: 1.0,
+            timeIndex: 0,
             lastImagesCount: count,
           };
         } else {
-          layer.playback.lastImagesCount = count;
+          controls.playback.lastImagesCount = count;
         }
       }
     });
   }
 
   moveLayerUp(layerId: string): void {
-    const layer = this.getLayerById(layerId);
-    if (!layer?.visible || layer.zIndex === undefined) return;
+    const controls = this.getControls(layerId);
+    const layer = this.layersService.getLayerById(layerId);
+    if (!controls?.visible || !layer || controls.zIndex === undefined) return;
 
-    const visibleLayersInGroup = this.activeLayers().filter(
-      (l) => l.zIndexGroup === layer.zIndexGroup,
-    );
-    const currentIndex = visibleLayersInGroup.findIndex((l) => l.id === layerId);
+    const visibleLayersInGroup = this.activeLayers()
+      .filter((item) => item.layer.zIndexGroup === layer.zIndexGroup);
+    const currentIndex = visibleLayersInGroup.findIndex((item) => item.layer.id === layerId);
 
     if (currentIndex > 0) {
       const prevLayer = visibleLayersInGroup[currentIndex - 1];
-      this._swapZIndex(layer.id, prevLayer.id);
+      this._swapZIndex(layer.id, prevLayer.layer.id);
     }
   }
 
   moveLayerDown(layerId: string): void {
-    const layer = this.getLayerById(layerId);
-    if (!layer?.visible || layer.zIndex === undefined) return;
+    const controls = this.getControls(layerId);
+    const layer = this.layersService.getLayerById(layerId);
+    if (!controls?.visible || !layer || controls.zIndex === undefined) return;
 
-    const visibleLayersInGroup = this.activeLayers().filter(
-      (l) => l.zIndexGroup === layer.zIndexGroup,
-    );
-    const currentIndex = visibleLayersInGroup.findIndex((l) => l.id === layerId);
+    const visibleLayersInGroup = this.activeLayers()
+      .filter((item) => item.layer.zIndexGroup === layer.zIndexGroup);
+    const currentIndex = visibleLayersInGroup.findIndex((item) => item.layer.id === layerId);
 
     if (currentIndex < visibleLayersInGroup.length - 1) {
       const nextLayer = visibleLayersInGroup[currentIndex + 1];
-      this._swapZIndex(layer.id, nextLayer.id);
+      this._swapZIndex(layer.id, nextLayer.layer.id);
     }
   }
 
   setLayerOrder(orderedLayerIds: string[]): void {
     const maxIndex = orderedLayerIds.length - 1;
     orderedLayerIds.forEach((layerId: string, uiIndex: number) => {
-      this._updateLayer(layerId, (layer) => {
-        if (layer.visible) {
-          layer.zIndex = maxIndex - uiIndex;
+      this._updateControls(layerId, (controls) => {
+        if (controls.visible) {
+          controls.zIndex = maxIndex - uiIndex;
         }
       });
     });
   }
 
   private _swapZIndex(layerId1: string, layerId2: string): void {
-    const layer1 = this.getLayerById(layerId1);
-    const layer2 = this.getLayerById(layerId2);
+    const controls1 = this.getControls(layerId1);
+    const controls2 = this.getControls(layerId2);
 
-    if (!layer1?.zIndex || !layer2?.zIndex) return;
+    if (!controls1?.zIndex || !controls2?.zIndex) return;
 
-    const tempZIndex = layer1.zIndex;
-    this._updateLayer(layerId1, (layer) => {
-      layer.zIndex = layer2!.zIndex;
+    const tempZIndex = controls1.zIndex;
+    this._updateControls(layerId1, (controls) => {
+      controls.zIndex = controls2!.zIndex;
     });
-    this._updateLayer(layerId2, (layer) => {
-      layer.zIndex = tempZIndex;
+    this._updateControls(layerId2, (controls) => {
+      controls.zIndex = tempZIndex;
     });
   }
 
-  private _initializeLayers(): void {
+  private _initializeControls(): void {
     const savedState = this._loadState();
     if (savedState) {
-      console.debug('Visualizer: Loaded layer state from storage', savedState.length, 'layers');
+      console.debug('Visualizer: Loaded layer state from storage', savedState.length, 'controls');
     } else {
       console.debug('Visualizer: No saved state, applying defaults');
     }
 
     const stateMap = savedState ? new Map(savedState.map((s) => [s.id, s])) : null;
-    const layersMap = new Map<string, Layer>();
+    const controlsMap = new Map<string, LayerControls>();
     let defaultZIndexCounter = 0;
 
     for (const layerDef of this.layersService.getAllLayers()) {
-      let layer: Layer = { ...layerDef };
+      let controls: LayerControls;
 
       if (stateMap) {
-        const state = stateMap.get(layer.id);
-        if (state) {
-          layer = {
-            ...layer,
-            visible: state.visible,
-            opacity: state.opacity,
-            zIndex: state.zIndex,
-          };
-
-          if (layer.type === LayerType.TILE) {
-            if (state.timeIndex !== undefined) {
-              layer.timeIndex = state.timeIndex;
-            }
-            if (state.elevationIndex !== undefined) {
-              layer.elevationIndex = state.elevationIndex;
-            }
-            if (state.playback) {
-              layer.playback = {
-                ...state.playback,
-                isPlaying: false,
-              };
-            }
+        const savedControls = stateMap.get(layerDef.id);
+        if (savedControls) {
+          // Restore saved state, but ensure isPlaying is false
+          controls = { ...savedControls };
+          if (controls.type === LayerType.TILE && controls.playback) {
+            controls.playback = {
+              ...controls.playback,
+              isPlaying: false,
+            };
           }
+        } else {
+          // No saved state for this layer, create default inactive controls
+          controls = this._createControlsForLayer(layerDef);
         }
-      } else if (DEFAULT_ACTIVE_LAYERS.includes(layer.id)) {
-        layer.visible = true;
-        layer.zIndex = defaultZIndexCounter++;
-        layer.opacity = 100;
+      } else if (DEFAULT_ACTIVE_LAYERS.includes(layerDef.id)) {
+        // Apply default active layers
+        controls = this._createControlsForLayer(layerDef);
+        controls.visible = true;
+        controls.zIndex = defaultZIndexCounter++;
+        controls.opacity = 100;
+      } else {
+        // Create default inactive controls
+        controls = this._createControlsForLayer(layerDef);
       }
 
-      layersMap.set(layer.id, layer);
+      controlsMap.set(layerDef.id, controls);
     }
 
-    this._layers.set(layersMap);
+    this._controls.set(controlsMap);
   }
 
-  private _saveState(layers: Layer[]): void {
-    const state: LayerStateStorage[] = layers
-      .filter((layer) => layer.visible || layer.opacity !== undefined || layer.zIndex !== undefined)
-      .map((layer) => {
-        const baseState: LayerStateStorage = {
-          id: layer.id,
-          visible: layer.visible ?? false,
-          opacity: layer.opacity ?? 100,
-          zIndex: layer.zIndex ?? 0,
-        };
+  private _createControlsForLayer(layer: Layer): LayerControls {
+    if (layer.type === LayerType.WMS) {
+      return {
+        id: layer.id,
+        type: LayerType.WMS,
+        visible: false,
+        opacity: 100,
+        zIndex: 0,
+      };
+    }
 
-        if (layer.type === LayerType.TILE) {
-          if (layer.timeIndex !== undefined) {
-            baseState.timeIndex = layer.timeIndex;
-          }
-          if (layer.elevationIndex !== undefined) {
-            baseState.elevationIndex = layer.elevationIndex;
-          }
-          if (layer.playback) {
-            baseState.playback = layer.playback;
-          }
-        }
+    // TILE layers
+    if (layer.category === LayerCategory.GOES_19) {
+      return {
+        id: layer.id,
+        type: LayerType.TILE,
+        category: LayerCategory.GOES_19,
+        visible: false,
+        opacity: 100,
+        zIndex: 0,
+        availablePeriods: layer.availablePeriods,
+        playback: {
+          isPlaying: false,
+          timeIndex: 0,
+          speed: 1,
+          lastImagesCount: 1,
+        },
+      };
+    }
 
-        return baseState;
-      });
+    if (layer.category === LayerCategory.RADAR) {
+      return {
+        id: layer.id,
+        type: LayerType.TILE,
+        category: LayerCategory.RADAR,
+        visible: false,
+        opacity: 100,
+        zIndex: 0,
+        playback: {
+          isPlaying: false,
+          timeIndex: 0,
+          speed: 1,
+          lastImagesCount: 1,
+        },
+        elevation: {
+          elevationIndex: 0,
+        },
+      };
+    }
+
+    // Fallback should not happen but TypeScript requires it
+    throw new Error(`Unknown layer configuration`);
+  }
+
+  private _saveState(controls: LayerControls[]): void {
+    // Filter to only save controls with meaningful state
+    const state = controls.filter(
+      (c) => c.visible || c.opacity !== 100 || c.zIndex !== 0 || 
+      (c.type === LayerType.TILE && c.playback)
+    );
 
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
   }
 
-  private _loadState(): LayerStateStorage[] | null {
+  private _loadState(): LayerControls[] | null {
     try {
       const saved = localStorage.getItem(this.STORAGE_KEY);
       return saved ? JSON.parse(saved) : null;
@@ -420,26 +460,45 @@ export class LayerControlService {
   }
 
   private _getNextZIndex(zIndexGroup: ActiveLayerGroup): number {
-    const layersInGroup = this.layers().filter(
-      (l) => l.zIndexGroup === zIndexGroup && l.zIndex !== undefined,
-    );
+    const controlsInGroup = Array.from(this._controls().values())
+      .map(controls => ({ controls, layer: this.layersService.getLayerById(controls.id) }))
+      .filter(({ controls, layer }) => 
+        layer && 
+        layer.zIndexGroup === zIndexGroup && 
+        controls.zIndex !== undefined
+      );
 
-    if (layersInGroup.length === 0) {
+    if (controlsInGroup.length === 0) {
       return 0;
     }
 
-    const maxZIndex = Math.max(...layersInGroup.map((l) => l.zIndex!));
+    const maxZIndex = Math.max(...controlsInGroup.map(({ controls }) => controls.zIndex!));
     return maxZIndex + 1;
   }
 
-  private _updateLayer(layerId: string, updateFn: (layer: Layer) => void): void {
-    this._layers.update((layersMap) => {
-      const newMap = new Map(layersMap);
-      const layer = newMap.get(layerId);
-      if (layer) {
-        const updatedLayer = { ...layer };
-        updateFn(updatedLayer);
-        newMap.set(layerId, updatedLayer);
+  private _updateControls(layerId: string, updateFn: (controls: LayerControls) => void): void {
+    this._controls.update((controlsMap) => {
+      const newMap = new Map(controlsMap);
+      const controls = newMap.get(layerId);
+      if (controls) {
+        // Deep copy to ensure immutability
+        let updatedControls: LayerControls;
+        
+        if (controls.type === LayerType.TILE) {
+          updatedControls = {
+            ...controls,
+            playback: { ...controls.playback },
+          };
+          
+          if ('elevation' in controls) {
+            (updatedControls as RadarLayerControls).elevation = { ...controls.elevation };
+          }
+        } else {
+          updatedControls = { ...controls };
+        }
+        
+        updateFn(updatedControls);
+        newMap.set(layerId, updatedControls);
       }
       return newMap;
     });

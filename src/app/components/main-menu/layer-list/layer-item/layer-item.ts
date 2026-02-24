@@ -105,7 +105,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   getActiveLayer = computed(() => {
-    return this.controlService.activeLayers().find((l) => l.id === this.layer.id);
+    return this.controlService.activeLayers().find((item) => item.layer.id === this.layer.id);
   });
   /**
    * Indica si la capa está activa (visible en el mapa)
@@ -143,10 +143,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene el índice de elevación actual
    */
   currentElevationIndex = computed(() => {
-    const activeLayer = this.getActiveLayer();
-    return activeLayer && activeLayer.type === LayerType.TILE
-      ? (activeLayer.elevationIndex ?? 0)
-      : 0;
+    const activeItem = this.getActiveLayer();
+    if (activeItem && activeItem.controls.type === LayerType.TILE && 'elevation' in activeItem.controls) {
+      return activeItem.controls.elevation?.elevationIndex ?? 0;
+    }
+    return 0;
   });
 
   /**
@@ -196,10 +197,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Índice de tiempo actual - lee directamente del servicio
    */
   currentTimeIndex = computed(() => {
-    const activeLayer = this.getActiveLayer();
+    const activeItem = this.getActiveLayer();
     const currentIndex =
-      activeLayer && activeLayer.type === LayerType.TILE
-        ? (activeLayer.timeIndex ?? this.maxTimeIndex())
+      activeItem && activeItem.controls.type === LayerType.TILE
+        ? (activeItem.controls.playback?.timeIndex ?? this.maxTimeIndex())
         : this.maxTimeIndex();
     // Asegurar que el índice actual esté dentro del rango visible
     const min = this.minTimeIndex();
