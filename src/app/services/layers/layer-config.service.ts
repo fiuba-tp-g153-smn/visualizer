@@ -30,9 +30,9 @@ export class LayerConfigService {
   constructor() {
     effect(() => {
       const activeLayers = this.layerControl.activeLayers();
-      const activeLayerIds = new Set(activeLayers.map((l: Layer) => l.id));
+      const activeLayerIds = new Set(activeLayers.map((item) => item.layer.id));
 
-      for (const layer of activeLayers) {
+      for (const { layer } of activeLayers) {
         if (this.hasConfig(layer.id) && !this.refreshStates.has(layer.id)) {
           this.startAutoRefresh(layer.id);
         }

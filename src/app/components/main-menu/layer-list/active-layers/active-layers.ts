@@ -67,7 +67,7 @@ export class ActiveLayersComponent {
   });
 
   private getLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
-    return this.controlService.getActiveLayersForGroup(groupId);
+    return this.controlService.getActiveLayersForGroup(groupId).map(item => item.layer);
   }
 
   private setGroupExpanded(groupId: ActiveLayerGroup, expanded: boolean): void {
@@ -78,7 +78,7 @@ export class ActiveLayersComponent {
   }
 
   getActiveLayers(): Layer[] {
-    return this.controlService.activeLayers();
+    return this.controlService.activeLayers().map(item => item.layer);
   }
 
   private handleGroupDrop(event: CdkDragDrop<Layer[]>, groupId: ActiveLayerGroup): void {

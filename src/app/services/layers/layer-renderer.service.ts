@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import * as L from 'leaflet';
-import { Layer, LayerType, LayerCategory, WmsLayer, TileLayer } from '../../models';
+import { Layer, LayerType, LayerCategory, WmsLayer, TileLayer, LayerControls } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
 import {
@@ -30,7 +30,7 @@ export class LayerRendererService {
   /**
    * Obtiene una instancia de TileLayer para un tiempo específico (usando pool)
    */
-  getTileLayerForTime(layer: Layer, timeIndex: number): L.TileLayer {
+  getTileLayerForTime(layer: Layer, controls: LayerControls, timeIndex: number): L.TileLayer {
     // 1. Obtener ID del tileset para generar clave única
     const tilesets = this.configService.getTilesets(layer.id);
     let tilesetId = 'default';
@@ -47,8 +47,8 @@ export class LayerRendererService {
 
     // Para radar, incluir elevationIndex en la clave del pool
     const elevationSuffix =
-      layer.category === LayerCategory.RADAR && (layer as TileLayer).elevationIndex !== undefined
-        ? `-elev${(layer as TileLayer).elevationIndex}`
+      layer.category === LayerCategory.RADAR && 'elevation' in controls && controls.elevation
+        ? `-elev${controls.elevation.elevationIndex}`
         : '';
     const poolKey = `${layer.id}-${tilesetId}${elevationSuffix}`;
 
@@ -62,10 +62,10 @@ export class LayerRendererService {
 
     switch (layer.type) {
       case LayerType.TILE:
-        tileLayer = this.createTileLayer(layer, timeIndex);
+        tileLayer = this.createTileLayer(layer, controls, timeIndex);
         break;
       case LayerType.WMS:
-        tileLayer = this.createWmsLayer(layer);
+        tileLayer = this.createWmsLayer(layer, controls);
         break;
       default:
         // Exhaustiveness check - TypeScript will error if we add a new LayerType and forget to handle it
@@ -101,14 +101,14 @@ export class LayerRendererService {
    * Crea un tile layer estándar (satélites, rasters, etc.)
    * La categoría determina el comportamiento específico de cada tipo de dato
    */
-  private createTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
+  private createTileLayer(layer: TileLayer, controls: LayerControls, timeIndex: number = 0): L.TileLayer {
     // TypeScript already knows layer is TileLayer
     // Según la categoría, obtener configuración específica
     switch (layer.category) {
       case LayerCategory.GOES_19:
-        return this.createSatelliteTileLayer(layer, timeIndex);
+        return this.createSatelliteTileLayer(layer, controls, timeIndex);
       case LayerCategory.RADAR:
-        return this.createRadarTileLayer(layer, timeIndex);
+        return this.createRadarTileLayer(layer, controls, timeIndex);
       default:
         throw new Error(`Layer category does not have a defined product path template`);
     }
@@ -118,10 +118,10 @@ export class LayerRendererService {
    * Crea un tile layer WMS
    * La categoría determina el comportamiento específico
    */
-  private createWmsLayer(layer: WmsLayer): L.TileLayer {
+  private createWmsLayer(layer: WmsLayer, controls: LayerControls): L.TileLayer {
     switch (layer.category) {
       case LayerCategory.IGN_WMS:
-        return this.createIgnWmsLayer(layer);
+        return this.createIgnWmsLayer(layer, controls);
       default:
         throw new Error(`WMS layer category does not have a defined product path template`);
     }
@@ -131,7 +131,7 @@ export class LayerRendererService {
    * Crea un tile layer para satélite ABI
    * Lee configuración directamente del objeto TileLayer
    */
-  private createSatelliteTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
+  private createSatelliteTileLayer(layer: TileLayer, controls: LayerControls, timeIndex: number = 0): L.TileLayer {
     // Si hay configuración dinámica cargada, usarla
     if (this.configService.hasConfig(layer.id)) {
       const config = this.configService.getConfig(layer.id);
@@ -161,7 +161,7 @@ export class LayerRendererService {
           ],
           noWrap: true,
           attribution,
-          opacity: layer.opacity ? layer.opacity / 100 : 1.0,
+          opacity: controls.opacity ? controls.opacity / 100 : 1.0,
         });
       }
     }
@@ -180,7 +180,7 @@ export class LayerRendererService {
    * Crea un tile layer para RADAR
    * Lee configuración directamente del objeto TileLayer
    */
-  private createRadarTileLayer(layer: TileLayer, timeIndex: number = 0): L.TileLayer {
+  private createRadarTileLayer(layer: TileLayer, controls: LayerControls, timeIndex: number = 0): L.TileLayer {
     // Si hay configuración dinámica cargada, usarla
     if (this.configService.hasConfig(layer.id)) {
       const config = this.configService.getConfig(layer.id) as any;
@@ -209,7 +209,7 @@ export class LayerRendererService {
           ],
           noWrap: true,
           attribution,
-          opacity: layer.opacity ? layer.opacity / 100 : 1.0,
+          opacity: controls.opacity ? controls.opacity / 100 : 1.0,
         });
       }
     }
@@ -228,7 +228,7 @@ export class LayerRendererService {
    * Crea un tile layer WMS para capas del IGN
    * Usa wmsWorkspace si está definido, sino usa la URL por defecto
    */
-  private createIgnWmsLayer(layer: WmsLayer): L.TileLayer {
+  private createIgnWmsLayer(layer: WmsLayer, controls: LayerControls): L.TileLayer {
     const url = layer.wmsWorkspace
       ? IGN_WMS_WORKSPACE_URLS[layer.wmsWorkspace] || IGN_WMS_BASE_CONFIG.defaultUrl
       : IGN_WMS_BASE_CONFIG.defaultUrl;
@@ -239,7 +239,7 @@ export class LayerRendererService {
       transparent: IGN_WMS_BASE_CONFIG.transparent,
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
-      opacity: layer.opacity ? layer.opacity / 100 : 1.0,
+      opacity: controls.opacity ? controls.opacity / 100 : 1.0,
       attribution: IGN_WMS_BASE_CONFIG.attribution,
     });
   }

@@ -30,9 +30,6 @@ interface BaseLayer {
   groupId: string;
   subgroupId: string;
   zIndexGroup: ActiveLayerGroup;
-  opacity?: number;
-  visible?: boolean;
-  zIndex?: number;
   boundingBox?: BoundingBox;
 }
 
@@ -51,26 +48,17 @@ export type Layer = SatelliteTileLayer | RadarTileLayer | WmsLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
-  timeIndex?: number;
-  elevationIndex?: number;
-  playback?: {
-    isPlaying: boolean;
-    speed: number;
-    lastImagesCount: number;
-    maxTimeIndex?: number;
-    minTimeIndex?: number;
-  };
 }
 
 export interface SatelliteTileLayer extends TileLayer {
   category: LayerCategory.GOES_19;
-  availablePeriods: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
+  availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
 }
 
 export interface RadarTileLayer extends TileLayer {
   category: LayerCategory.RADAR;
   availablePeriods: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
-  availableElevations: readonly string[]; // Elevaciones disponibles (ej: ['elev0', 'elev1', 'elev2'])
+  availableElevations?: readonly string[]; // Elevaciones disponibles (ej: ['elev0', 'elev1', 'elev2'])
 }
 
 /**
