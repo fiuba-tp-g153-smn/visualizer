@@ -1,4 +1,4 @@
-import { ActiveLayerGroup } from './groups.models';
+import { ActiveLayerGroupId } from './groups.models';
 
 /**
  * Tipos de capas basados en Leaflet
@@ -29,7 +29,7 @@ interface BaseLayer {
   category: LayerCategory;
   groupId: string;
   subgroupId: string;
-  zIndexGroup: ActiveLayerGroup;
+  zIndexGroup: ActiveLayerGroupId;
   boundingBox?: BoundingBox;
 }
 
@@ -58,7 +58,7 @@ export interface SatelliteTileLayer extends TileLayer {
 export interface RadarTileLayer extends TileLayer {
   category: LayerCategory.RADAR;
   availablePeriods: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
-  availableElevations?: readonly string[]; // Elevaciones disponibles (ej: ['elev0', 'elev1', 'elev2'])
+  availableElevations: readonly string[]; // Elevaciones disponibles (ej: ['elev0', 'elev1', 'elev2'])
 }
 
 /**

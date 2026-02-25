@@ -1,6 +1,5 @@
-import { expand } from 'rxjs';
 import { LayerCategory, LayerType } from '../../../models';
-import { ActiveLayerGroup, LayerSubgroup } from '../../../models/layers/groups.models';
+import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups.models';
 
 const IGN_GROUP_DEFAULTS = {
   expanded: false,
@@ -8,7 +7,7 @@ const IGN_GROUP_DEFAULTS = {
 } as const;
 
 const IGN_WMS_DEFAULTS = {
-  zIndexGroup: ActiveLayerGroup.OVERLAY,
+  zIndexGroup: ActiveLayerGroupId.OVERLAY,
   type: LayerType.WMS,
   category: LayerCategory.IGN_WMS,
   groupId: 'ign',

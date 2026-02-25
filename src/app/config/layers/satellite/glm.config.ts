@@ -1,5 +1,5 @@
 import { LayerType, LayerCategory, SatelliteTileLayer } from '../../../models';
-import { ActiveLayerGroup, LayerSubgroup } from '../../../models/layers/groups.models';
+import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups.models';
 
 /**
  * Valores por defecto para capas GLM
@@ -9,7 +9,7 @@ const GLM_DEFAULTS = {
   subgroupId: 'glm',
   visible: false,
   opacity: 80,
-  zIndexGroup: ActiveLayerGroup.BASE,
+  zIndexGroup: ActiveLayerGroupId.BASE,
   availablePeriods: [1, 6, 12, 24] as const,
   category: LayerCategory.GOES_19,
   type: LayerType.TILE,
