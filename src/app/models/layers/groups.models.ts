@@ -4,13 +4,13 @@ import { Layer } from './models';
  * Grupos de capas activas para organizar por niveles
  * Las capas solo se pueden reordenar dentro de su propio grupo
  */
-export enum ActiveLayerGroup {
+export enum ActiveLayerGroupId {
   BASE = 'base',
   OVERLAY = 'overlay',
 }
 
-export interface ActiveLayerGroupDefinition {
-  id: ActiveLayerGroup;
+export interface ActiveLayerGroup {
+  id: ActiveLayerGroupId;
   name: string;
   subtitle: string;
   description?: string;

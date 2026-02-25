@@ -1,4 +1,4 @@
-import { Injectable, inject, effect } from '@angular/core';
+import { Injectable, inject, effect, Signal, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, catchError } from 'rxjs';
 import { buildChannelConfigUrl } from '../../config/backend.config';
@@ -24,7 +24,7 @@ export class LayerConfigService {
   private readonly notificationService = inject(NotificationService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10 * 1000;
-  private configMap = new Map<string, LayerConfig>();
+  private configMap = signal<Map<string, LayerConfig>>(new Map());
   private refreshStates = new Map<string, RefreshState>();
 
   constructor() {
@@ -189,8 +189,8 @@ export class LayerConfigService {
     });
   }
 
-  getConfig(layerId: string): any | null {
-    return this.configMap.get(layerId) || null;
+  getConfig(layerId: string): LayerConfig | null {
+    return this.configMap().get(layerId) || null;
   }
 
   getTilesets(layerId: string): any[] {

@@ -28,8 +28,8 @@ export class LayersService {
     return layers;
   }
 
-  getLayerById(layerId: string): Layer | undefined {
-    return this.getAllLayers().find((layer: Layer) => layer.id === layerId);
+  getLayerById(layerId: string): Layer | null {
+    return this.getAllLayers().find((layer: Layer) => layer.id === layerId) ?? null;
   }
 
   getLayerDisplayName(layerId: string): string {

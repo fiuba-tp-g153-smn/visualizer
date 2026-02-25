@@ -8,7 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LayersService } from '../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../services/layers/layer-control.service';
-import { ActiveLayerGroup, Layer } from '../../../../models';
+import { ActiveLayerGroupId, Layer } from '../../../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../config/layers/active-groups.config';
 import { LayerItemComponent } from '../layer-item/layer-item';
 
@@ -37,7 +37,7 @@ export class ActiveLayersComponent {
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
 
-  private groupExpansionState = new Map<ActiveLayerGroup, ReturnType<typeof signal<boolean>>>(
+  private groupExpansionState = new Map<ActiveLayerGroupId, ReturnType<typeof signal<boolean>>>(
     Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS).map((def) => [def.id, signal(true)]),
   );
 
@@ -66,11 +66,11 @@ export class ActiveLayersComponent {
       });
   });
 
-  private getLayersForGroup(groupId: ActiveLayerGroup): Layer[] {
-    return this.controlService.getActiveLayersForGroup(groupId).map(item => item.layer);
+  private getLayersForGroup(groupId: ActiveLayerGroupId): Layer[] {
+    return this.controlService.getActiveLayersForGroup(groupId).map((item) => item.layer);
   }
 
-  private setGroupExpanded(groupId: ActiveLayerGroup, expanded: boolean): void {
+  private setGroupExpanded(groupId: ActiveLayerGroupId, expanded: boolean): void {
     const signal = this.groupExpansionState.get(groupId);
     if (signal) {
       signal.set(expanded);
@@ -78,19 +78,19 @@ export class ActiveLayersComponent {
   }
 
   getActiveLayers(): Layer[] {
-    return this.controlService.activeLayers().map(item => item.layer);
+    return this.controlService.activeLayers().map((item) => item.layer);
   }
 
-  private handleGroupDrop(event: CdkDragDrop<Layer[]>, groupId: ActiveLayerGroup): void {
+  private handleGroupDrop(event: CdkDragDrop<Layer[]>, groupId: ActiveLayerGroupId): void {
     const groupLayers = this.getLayersForGroup(groupId);
     const layers = [...groupLayers];
     moveItemInArray(layers, event.previousIndex, event.currentIndex);
 
     const orderedIds = layers.map((layer) => layer.id);
-    this.controlService.setLayerOrder(orderedIds);
+    this.controlService.setActiveGroupLayersOrder(orderedIds);
   }
 
-  private handleClearGroup(event: Event, groupId: ActiveLayerGroup): void {
+  private handleClearGroup(event: Event, groupId: ActiveLayerGroupId): void {
     event.stopPropagation();
     const groupLayers = this.getLayersForGroup(groupId);
     groupLayers.forEach((layer) => {

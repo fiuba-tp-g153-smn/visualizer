@@ -2,7 +2,7 @@ import {
   LayerSubgroup,
   LayerType,
   LayerCategory,
-  ActiveLayerGroup,
+  ActiveLayerGroupId,
   RadarTileLayer,
 } from '../../../models';
 
@@ -12,7 +12,7 @@ import {
 const RADAR_DEFAULTS = {
   type: LayerType.TILE,
   groupId: 'radar',
-  zIndexGroup: ActiveLayerGroup.BASE,
+  zIndexGroup: ActiveLayerGroupId.BASE,
   availablePeriods: [1, 6, 12] as const,
   availableElevations: ['elev0', 'elev1', 'elev2'] as const,
   category: LayerCategory.RADAR,
