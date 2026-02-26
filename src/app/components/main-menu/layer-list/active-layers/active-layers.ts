@@ -9,7 +9,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { LayersService } from '../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../services/layers/layer-control.service';
 import { ActiveLayerGroupId, Layer } from '../../../../models';
-import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../config/layers/active-groups.config';
+import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../config/layers';
 import { LayerItemComponent } from '../layer-item/layer-item';
 
 /**

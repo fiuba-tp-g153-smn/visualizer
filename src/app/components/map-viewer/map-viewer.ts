@@ -12,7 +12,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
-import { MAP_CONFIG } from '../../config/map.config';
+import { MAP_CONFIG } from '../../config';
 import { TileService } from '../../services/tiles-providers/tile.service';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';

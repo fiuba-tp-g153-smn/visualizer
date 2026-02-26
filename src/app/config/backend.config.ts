@@ -18,7 +18,7 @@ const BACKEND_CONFIG = {
  * @param pathToProduct - Ruta específica del producto (e.g., "goes-19/abi/ch-02")
  * @returns URL para obtener la configuración del canal
  */
-export function buildChannelConfigUrl(pathToProduct: string): string {
+export function buildConfigUrl(pathToProduct: string): string {
   return `${BACKEND_CONFIG.endpoints.products}/${pathToProduct}`;
 }
 

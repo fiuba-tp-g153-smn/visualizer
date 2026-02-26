@@ -3,14 +3,12 @@ import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups
 
 const IGN_GROUP_DEFAULTS = {
   expanded: false,
-  groupId: 'ign',
 } as const;
 
 const IGN_WMS_DEFAULTS = {
   zIndexGroup: ActiveLayerGroupId.OVERLAY,
   type: LayerType.WMS,
   category: LayerCategory.IGN_WMS,
-  groupId: 'ign',
 } as const;
 
 export const IGN_WMS_BASE_CONFIG = {
@@ -31,7 +29,6 @@ export const IGN_WMS_WORKSPACE_URLS: Record<string, string> = {
 const IGN_WMS_LIMITS_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
   wmsWorkspace: 'limites',
-  subgroupId: 'ign-limits',
 } as const;
 
 export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
@@ -102,7 +99,6 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
 // Administrativo
 const IGN_WMS_ADMINISTRATIVE_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-administrative',
 } as const;
 
 export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
@@ -180,7 +176,6 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
 // Territorial
 const IGN_WMS_TERRITORIAL_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-territorial',
 } as const;
 
 export const IGN_WMS_TERRITORIAL_SUBGROUP: LayerSubgroup = {
@@ -376,7 +371,6 @@ export const IGN_WMS_TERRITORIAL_SUBGROUP: LayerSubgroup = {
 
 const IGN_WMS_GEOGRAPHIC_FEATURES_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-geographic-features',
 } as const;
 
 export const IGN_WMS_GEOGRAPHIC_FEATURES_SUBGROUP: LayerSubgroup = {
@@ -415,7 +409,6 @@ export const IGN_WMS_GEOGRAPHIC_FEATURES_SUBGROUP: LayerSubgroup = {
 // Infraestructura
 const IGN_WMS_INFRASTRUCTURE_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-infrastructure',
 } as const;
 
 export const IGN_WMS_INFRASTRUCTURE_SUBGROUP: LayerSubgroup = {
@@ -644,7 +637,6 @@ export const IGN_WMS_INFRASTRUCTURE_SUBGROUP: LayerSubgroup = {
 
 const IGN_WMS_HYDROGRAPHY_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-hydrography',
 } as const;
 
 export const IGN_WMS_HYDROGRAPHY_SUBGROUP: LayerSubgroup = {
@@ -855,7 +847,6 @@ export const IGN_WMS_HYDROGRAPHY_SUBGROUP: LayerSubgroup = {
 
 const IGN_WMS_MARITIME_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-maritime',
 } as const;
 
 export const IGN_WMS_MARITIME_SUBGROUP: LayerSubgroup = {
@@ -917,7 +908,6 @@ export const IGN_WMS_MARITIME_SUBGROUP: LayerSubgroup = {
 // Geodesia
 const IGN_WMS_GEODESY_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-geodesy',
 } as const;
 
 export const IGN_WMS_GEODESY_SUBGROUP: LayerSubgroup = {
@@ -1023,7 +1013,6 @@ export const IGN_WMS_GEODESY_SUBGROUP: LayerSubgroup = {
 
 const IGN_WMS_DEFENSE_SECURITY_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-defense-security',
 } as const;
 
 export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
@@ -1110,7 +1099,6 @@ export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
 // Relieve
 const IGN_WMS_RELIEF_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-relief',
 } as const;
 
 export const IGN_WMS_RELIEF_SUBGROUP: LayerSubgroup = {
@@ -1139,7 +1127,6 @@ export const IGN_WMS_RELIEF_SUBGROUP: LayerSubgroup = {
 
 const IGN_WMS_VEGETATION_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-vegetation',
 } as const;
 
 export const IGN_WMS_VEGETATION_SUBGROUP: LayerSubgroup = {
@@ -1210,7 +1197,6 @@ export const IGN_WMS_VEGETATION_SUBGROUP: LayerSubgroup = {
 // Otros
 const IGN_WMS_OTHER_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
-  subgroupId: 'ign-other',
 } as const;
 
 export const IGN_WMS_OTHER_SUBGROUP: LayerSubgroup = {

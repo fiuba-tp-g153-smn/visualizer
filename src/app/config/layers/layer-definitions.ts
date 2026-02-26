@@ -1,5 +1,5 @@
-import { ABI_SUBGROUP } from './satellite/abi.config';
-import { GLM_SUBGROUP } from './satellite/glm.config';
+import { ABI_SUBGROUP } from './goes/abi.config';
+import { GLM_SUBGROUP } from './goes/glm.config';
 import { RADAR_SUBGROUPS } from './radar/config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
@@ -14,15 +14,19 @@ import {
   IGN_WMS_RELIEF_SUBGROUP,
   IGN_WMS_TERRITORIAL_SUBGROUP,
   IGN_WMS_VEGETATION_SUBGROUP,
-} from './ign/ign-wms.config';
-import { LayerGroup } from '../../models/layers/groups.models';
+} from './ign-wms/config';
+import {
+  ActiveLayerGroup,
+  ActiveLayerGroupId,
+  LayerGroup,
+} from '../../models/layers/groups.models';
 
 /**
  * Definición de capas disponibles en el visualizador
  */
 export const LAYER_DEFINITIONS: LayerGroup[] = [
   {
-    id: 'satellite',
+    id: 'goes-19',
     name: 'Satélite',
     description: 'Capas satelitales GOES-19',
     icon: 'satellite_alt',
@@ -59,3 +63,28 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     ],
   },
 ];
+
+/**
+ * Definición de grupos de capas activas para organizar por niveles
+ * Las capas solo se pueden reordenar dentro de su propio grupo
+ */
+export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLayerGroup> = {
+  [ActiveLayerGroupId.BASE]: {
+    id: ActiveLayerGroupId.BASE,
+    name: 'Capas de Datos',
+    subtitle: '(Radar, modelos numéricos)',
+    description:
+      'Capas de datos científicos: radar meteorológico, salidas de modelos numéricos, imágenes satelitales, etc.',
+    icon: 'goes-19',
+    zIndexRange: { min: 0, max: 999 },
+  },
+  [ActiveLayerGroupId.OVERLAY]: {
+    id: ActiveLayerGroupId.OVERLAY,
+    name: 'Capas de Referencia',
+    subtitle: '(IGN, cartografía)',
+    description:
+      'Capas de referencia cartográfica del IGN. Siempre se muestran por encima de las capas de datos.',
+    icon: 'layers',
+    zIndexRange: { min: 1000, max: 1999 },
+  },
+};

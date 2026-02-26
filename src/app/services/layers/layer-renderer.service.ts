@@ -1,290 +1,326 @@
 import { Injectable, inject } from '@angular/core';
 import * as L from 'leaflet';
-import { Layer, LayerType, LayerCategory, WmsLayer, TileLayer, LayerControls } from '../../models';
+import {
+  LayerType,
+  LayerCategory,
+  WmsLayer,
+  GoesTileLayerConfig,
+  RadarTileLayerConfig,
+  RadarTileLayer,
+  TileLayerControls,
+  GoesLayerControls,
+  RadarLayerControls,
+  WmsLayerControls,
+} from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
+import { LayersService } from './layers.service';
+import { buildTileUrl, MAP_CONFIG } from '../../config';
 import {
+  LAYER_RENDERING_CONFIG,
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
-} from '../../config/layers/ign/ign-wms.config';
+} from '../../config/layers';
 
 /**
- * Servicio para crear tile layers de Leaflet según tipo de capa
- * Factory pattern: convierte Layer models en L.TileLayers configurados
- * El renderizado se basa en LayerType (TILE, WMS) y no en la categoría
+ * Service responsible for creating and managing Leaflet tile layers.
+ *
+ * This service:
+ * - Creates Leaflet layers based on layer type (TILE vs WMS) and category
+ * - Reacts to configuration changes from LayerConfigService
+ * - Builds dynamic tile URLs using layer.id and tileset information
+ * - Handles tile loading errors with user notifications
+ * - Creates placeholder layers when configuration is not yet available
+ *
+ * The service uses a factory pattern to convert Layer models into
+ * configured L.TileLayer instances appropriate for each layer type.
  */
 @Injectable({
   providedIn: 'root',
 })
 export class LayerRendererService {
   private readonly notificationService = inject(NotificationService);
-  private readonly configService = inject(LayerConfigService);
+  private readonly layerConfigService = inject(LayerConfigService);
+  private readonly layersService = inject(LayersService);
 
-  // Track de errores por capa para evitar spam de notificaciones
+  // Track errors per layer to avoid notification spam
   private readonly errorTracker = new Map<string, number>();
   private readonly MAX_ERRORS_BEFORE_NOTIFY = 5;
 
-  // Tile Layer Pool: cache de instancias de L.TileLayer para reutilización
-  private layerPool = new Map<string, L.TileLayer>();
+  // ============================================================================
+  // Public Methods - Layer Creation
+  // ============================================================================
 
   /**
-   * Obtiene una instancia de TileLayer para un tiempo específico (usando pool)
+   * Creates a Leaflet TileLayer for the given layer ID and controls.
+   * Returns a placeholder layer if configuration is not yet available or layer not found.
+   *
+   * @param layerId - The layer identifier
+   * @param controls - Current layer control state (opacity, timeIndex, elevation, etc.)
+   * @returns A configured Leaflet TileLayer
    */
-  getTileLayerForTime(layer: Layer, controls: LayerControls, timeIndex: number): L.TileLayer {
-    // 1. Obtener ID del tileset para generar clave única
-    const tilesets = this.configService.getTilesets(layer.id);
-    let tilesetId = 'default';
+  createTileLayer(layerId: string, controls: TileLayerControls | WmsLayerControls): L.TileLayer {
+    const layer = this.layersService.getLayerById(layerId);
 
-    if (tilesets && tilesets[timeIndex]) {
-      tilesetId = tilesets[timeIndex].id;
-    } else if (layer.category === LayerCategory.GOES_19) {
-      // Si es satélite y no hay config aún, es un placeholder temporal
-      tilesetId = `placeholder-${timeIndex}`;
-    } else if (layer.category === LayerCategory.RADAR) {
-      // Si es radar y no hay config aún, es un placeholder temporal
-      tilesetId = `placeholder-${timeIndex}`;
+    if (!layer) {
+      console.warn(`Layer ${layerId} not found`);
+      return this.createPlaceholderLayer();
     }
-
-    // Para radar, incluir elevationIndex en la clave del pool
-    const elevationSuffix =
-      layer.category === LayerCategory.RADAR && 'elevation' in controls && controls.elevation
-        ? `-elev${controls.elevation.elevationIndex}`
-        : '';
-    const poolKey = `${layer.id}-${tilesetId}${elevationSuffix}`;
-
-    // 2. Verificar pool
-    if (this.layerPool.has(poolKey)) {
-      return this.layerPool.get(poolKey)!;
-    }
-
-    // 3. Crear nueva instancia según el TIPO de capa (no la categoría)
-    let tileLayer: L.TileLayer;
 
     switch (layer.type) {
       case LayerType.TILE:
-        tileLayer = this.createTileLayer(layer, controls, timeIndex);
-        break;
+        return this.createDataTileLayer(layerId, controls as TileLayerControls);
       case LayerType.WMS:
-        tileLayer = this.createWmsLayer(layer, controls);
-        break;
+        return this.createWmsLayer(layerId, controls as WmsLayerControls);
       default:
-        // Exhaustiveness check - TypeScript will error if we add a new LayerType and forget to handle it
-        throw new Error(`Unsupported layer type`);
+        throw new Error(`Unsupported layer type for layer ${layerId}`);
+    }
+  }
+
+  // ============================================================================
+  // Private Methods - Tile Layer Factory
+  // ============================================================================
+
+  /**
+   * Creates a data tile layer (GOES, Radar, etc.) based on category.
+   */
+  private createDataTileLayer(layerId: string, controls: TileLayerControls): L.TileLayer {
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.TILE) {
+      return this.createPlaceholderLayer();
     }
 
-    // 4. Configurar errores (solo una vez)
-    const isPlaceholder = (tileLayer as any)._isPlaceholder;
-    if (!isPlaceholder) {
-      this.attachErrorHandlers(tileLayer, layer);
+    switch (layer.category) {
+      case LayerCategory.GOES_19:
+        return this.createGoesTileLayer(layerId, controls as GoesLayerControls);
+      case LayerCategory.RADAR:
+        return this.createRadarTileLayer(layerId, controls as RadarLayerControls);
+      default:
+        throw new Error(`Unsupported tile layer category for layer ${layerId}`);
+    }
+  }
+
+  /**
+   * Creates a WMS layer based on category.
+   */
+  private createWmsLayer(layerId: string, controls: WmsLayerControls): L.TileLayer.WMS {
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.WMS) {
+      throw new Error(`Layer ${layerId} is not a WMS layer`);
     }
 
-    // 5. Guardar en pool y retornar
-    this.layerPool.set(poolKey, tileLayer);
+    const wmsLayer = layer as WmsLayer;
+
+    switch (wmsLayer.category) {
+      case LayerCategory.IGN_WMS:
+        return this.createIgnWmsLayer(wmsLayer, controls);
+      default:
+        throw new Error(`Unsupported WMS layer category for layer ${layerId}`);
+    }
+  }
+
+  // ============================================================================
+  // Private Methods - GOES Layer Creation
+  // ============================================================================
+
+  /**
+   * Creates a tile layer for GOES-19 satellite imagery.
+   * Reads configuration from LayerConfigService to get available tilesets.
+   *
+   * Returns a placeholder layer if configuration is not yet loaded.
+   */
+  private createGoesTileLayer(layerId: string, controls: GoesLayerControls): L.TileLayer {
+    const config = this.layerConfigService.getConfig(layerId) as GoesTileLayerConfig | undefined;
+
+    if (!config) {
+      return this.createPlaceholderLayer();
+    }
+
+    // Get the tileset ID for the current time index
+    const timeIndex = controls.playback.timeIndex ?? 0;
+    const tilesets = config.availableTilesets;
+
+    if (!tilesets || tilesets.length === 0 || timeIndex >= tilesets.length) {
+      return this.createPlaceholderLayer();
+    }
+
+    const tilesetId = tilesets[timeIndex];
+    const pathToTileset = `${layerId}/${tilesetId}`;
+    const tileUrl = buildTileUrl(pathToTileset);
+
+    const baseOptions = this.createBaseTileLayerOptions(controls.opacity);
+    const tileLayer = L.tileLayer(tileUrl, {
+      ...baseOptions,
+      minNativeZoom: LAYER_RENDERING_CONFIG.goes.minNativeZoom,
+      maxNativeZoom: LAYER_RENDERING_CONFIG.goes.maxNativeZoom,
+      bounds: LAYER_RENDERING_CONFIG.goes.bounds,
+    });
+
+    this.attachErrorHandlers(tileLayer, layerId);
     return tileLayer;
   }
 
-  /**
-   * Limpia capas antiguas del pool que no están en uso
-   * @param activeKeys Set de claves (layerId-tilesetId) que DEBEN mantenerse
-   */
-  prunePool(activeKeys: Set<string>): void {
-    for (const [key] of this.layerPool) {
-      if (!activeKeys.has(key)) {
-        // Opcional: limpiar listeners si fuera necesario, pero Leaflet lo maneja bien
-        this.layerPool.delete(key);
-      }
-    }
-    // console.log(`Pool size: ${this.layerPool.size} (Active: ${activeKeys.size})`);
-  }
+  // ============================================================================
+  // Private Methods - Radar Layer Creation
+  // ============================================================================
 
   /**
-   * Crea un tile layer estándar (satélites, rasters, etc.)
-   * La categoría determina el comportamiento específico de cada tipo de dato
+   * Creates a tile layer for radar imagery.
+   * Reads configuration from LayerConfigService to get available tilesets by elevation.
+   *
+   * Returns a placeholder layer if configuration is not yet loaded.
    */
-  private createTileLayer(layer: TileLayer, controls: LayerControls, timeIndex: number = 0): L.TileLayer {
-    // TypeScript already knows layer is TileLayer
-    // Según la categoría, obtener configuración específica
-    switch (layer.category) {
-      case LayerCategory.GOES_19:
-        return this.createSatelliteTileLayer(layer, controls, timeIndex);
-      case LayerCategory.RADAR:
-        return this.createRadarTileLayer(layer, controls, timeIndex);
-      default:
-        throw new Error(`Layer category does not have a defined product path template`);
-    }
-  }
+  private createRadarTileLayer(layerId: string, controls: RadarLayerControls): L.TileLayer {
+    const layer = this.layersService.getLayerById(layerId);
+    const config = this.layerConfigService.getConfig(layerId) as RadarTileLayerConfig | undefined;
 
-  /**
-   * Crea un tile layer WMS
-   * La categoría determina el comportamiento específico
-   */
-  private createWmsLayer(layer: WmsLayer, controls: LayerControls): L.TileLayer {
-    switch (layer.category) {
-      case LayerCategory.IGN_WMS:
-        return this.createIgnWmsLayer(layer, controls);
-      default:
-        throw new Error(`WMS layer category does not have a defined product path template`);
-    }
-  }
-
-  /**
-   * Crea un tile layer para satélite ABI
-   * Lee configuración directamente del objeto TileLayer
-   */
-  private createSatelliteTileLayer(layer: TileLayer, controls: LayerControls, timeIndex: number = 0): L.TileLayer {
-    // Si hay configuración dinámica cargada, usarla
-    if (this.configService.hasConfig(layer.id)) {
-      const config = this.configService.getConfig(layer.id);
-      const tileUrl = this.configService.buildTileUrl(layer.id, timeIndex);
-
-      if (config && tileUrl) {
-        const bounds = config.channel_info.bounding_box;
-        const zoomLevels = config.channel_info.zoom_levels;
-
-        // Buffer de seguridad para evitar clipping de tiles en los bordes al hacer zoom
-        const buffer = 5.0;
-
-        // ChannelConfig tiene product/instrument/channel
-        const attribution =
-          'product' in config
-            ? `${config.product} ${config.instrument} ${config.channel} | SMN`
-            : 'Satélite | SMN';
-
-        return L.tileLayer(tileUrl, {
-          minNativeZoom: zoomLevels.min,
-          maxNativeZoom: zoomLevels.max,
-          minZoom: 0,
-          maxZoom: 18,
-          bounds: [
-            [bounds.miny - buffer, bounds.minx - buffer],
-            [bounds.maxy + buffer, bounds.maxx + buffer],
-          ],
-          noWrap: true,
-          attribution,
-          opacity: controls.opacity ? controls.opacity / 100 : 1.0,
-        });
-      }
+    if (!layer || layer.type !== LayerType.TILE || !config) {
+      return this.createPlaceholderLayer();
     }
 
-    // Si no hay configuración, crear un layer vacío/placeholder
-    // Esto evita errores de carga mientras se obtiene la configuración del backend
-    const placeholder = L.tileLayer('about:blank', {
-      opacity: 0,
-      attribution: 'Cargando...',
+    const radarLayer = layer as RadarTileLayer;
+
+    // Get elevation index from controls
+    const elevationIndex = controls.elevation.elevationIndex ?? 0;
+    const availableElevations = radarLayer.availableElevations;
+
+    if (!availableElevations || elevationIndex >= availableElevations.length) {
+      return this.createPlaceholderLayer();
+    }
+
+    const elevation = availableElevations[elevationIndex];
+
+    // Get tilesets for this specific elevation
+    const tilesetsByElevation = config.availableTilesetsByElevation;
+    const tilesetsForElevation = tilesetsByElevation[elevation];
+
+    if (!tilesetsForElevation || tilesetsForElevation.length === 0) {
+      return this.createPlaceholderLayer();
+    }
+
+    // Get the tileset ID for the current time index
+    const timeIndex = controls.playback.timeIndex ?? 0;
+
+    if (timeIndex >= tilesetsForElevation.length) {
+      return this.createPlaceholderLayer();
+    }
+
+    const tilesetId = tilesetsForElevation[timeIndex];
+    const pathToTileset = `${layerId}/${elevation}/${tilesetId}`;
+    const tileUrl = buildTileUrl(pathToTileset);
+
+    const baseOptions = this.createBaseTileLayerOptions(controls.opacity);
+    const tileLayer = L.tileLayer(tileUrl, {
+      ...baseOptions,
+      minNativeZoom: LAYER_RENDERING_CONFIG.radar.minNativeZoom,
+      maxNativeZoom: LAYER_RENDERING_CONFIG.radar.maxNativeZoom,
+      bounds: LAYER_RENDERING_CONFIG.radar.bounds,
     });
-    (placeholder as any)._isPlaceholder = true;
-    return placeholder;
+
+    this.attachErrorHandlers(tileLayer, layerId);
+    return tileLayer;
   }
 
-  /**
-   * Crea un tile layer para RADAR
-   * Lee configuración directamente del objeto TileLayer
-   */
-  private createRadarTileLayer(layer: TileLayer, controls: LayerControls, timeIndex: number = 0): L.TileLayer {
-    // Si hay configuración dinámica cargada, usarla
-    if (this.configService.hasConfig(layer.id)) {
-      const config = this.configService.getConfig(layer.id) as any;
-      const tileUrl = this.configService.buildTileUrl(layer.id, timeIndex);
-
-      if (config && tileUrl) {
-        const bounds = config.channel_info.bounding_box;
-        const zoomLevels = config.channel_info.zoom_levels;
-
-        // Buffer de seguridad para evitar clipping de tiles en los bordes al hacer zoom
-        const buffer = 5.0;
-
-        // Verificar si es RadarConfig o ChannelConfig
-        const attribution = config.radar_id
-          ? `RADAR ${config.radar_id} ${config.variable_id} | SMN`
-          : `${config.product} ${config.instrument} ${config.channel} | SMN`;
-
-        return L.tileLayer(tileUrl, {
-          minNativeZoom: zoomLevels.min,
-          maxNativeZoom: zoomLevels.max,
-          minZoom: 0,
-          maxZoom: 18,
-          bounds: [
-            [bounds.miny - buffer, bounds.minx - buffer],
-            [bounds.maxy + buffer, bounds.maxx + buffer],
-          ],
-          noWrap: true,
-          attribution,
-          opacity: controls.opacity ? controls.opacity / 100 : 1.0,
-        });
-      }
-    }
-
-    // Si no hay configuración, crear un layer vacío/placeholder
-    // Esto evita errores de carga mientras se obtiene la configuración del backend
-    const placeholder = L.tileLayer('about:blank', {
-      opacity: 0,
-      attribution: 'Cargando...',
-    });
-    (placeholder as any)._isPlaceholder = true;
-    return placeholder;
-  }
+  // ============================================================================
+  // Private Methods - WMS Layer Creation
+  // ============================================================================
 
   /**
-   * Crea un tile layer WMS para capas del IGN
-   * Usa wmsWorkspace si está definido, sino usa la URL por defecto
+   * Creates a WMS tile layer for IGN (Instituto Geográfico Nacional) layers.
+   * Uses configured WMS workspace or defaults to main IGN endpoint.
    */
-  private createIgnWmsLayer(layer: WmsLayer, controls: LayerControls): L.TileLayer {
+  private createIgnWmsLayer(layer: WmsLayer, controls: WmsLayerControls): L.TileLayer.WMS {
     const url = layer.wmsWorkspace
       ? IGN_WMS_WORKSPACE_URLS[layer.wmsWorkspace] || IGN_WMS_BASE_CONFIG.defaultUrl
       : IGN_WMS_BASE_CONFIG.defaultUrl;
 
-    return L.tileLayer.wms(url, {
+    const wmsLayer = L.tileLayer.wms(url, {
       layers: layer.wmsLayerName,
       format: IGN_WMS_BASE_CONFIG.format,
       transparent: IGN_WMS_BASE_CONFIG.transparent,
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
-      opacity: controls.opacity ? controls.opacity / 100 : 1.0,
-      attribution: IGN_WMS_BASE_CONFIG.attribution,
+      opacity: (controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100,
     });
+
+    this.attachErrorHandlers(wmsLayer, layer.id);
+    return wmsLayer;
+  }
+
+  // ============================================================================
+  // Private Methods - Utilities
+  // ============================================================================
+
+  /**
+   * Creates base tile layer options using global map configuration.
+   * These options are common to all tile layers.
+   */
+  private createBaseTileLayerOptions(opacity?: number): L.TileLayerOptions {
+    return {
+      minZoom: MAP_CONFIG.minZoom,
+      maxZoom: MAP_CONFIG.maxZoom,
+      noWrap: true,
+      opacity: (opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100,
+    };
   }
 
   /**
-   * Adjunta manejadores de error a un tile layer
+   * Creates a placeholder layer shown while configuration is loading.
+   * Uses a transparent blank tile to avoid errors.
    */
-  private attachErrorHandlers(tileLayer: L.TileLayer, layer: Layer): void {
+  private createPlaceholderLayer(): L.TileLayer {
+    const placeholder = L.tileLayer('about:blank', {
+      opacity: 0,
+    });
+
+    // Mark as placeholder so we don't attach error handlers
+    (placeholder as any)._isPlaceholder = true;
+    return placeholder;
+  }
+
+  /**
+   * Attaches error and success handlers to a tile layer for monitoring.
+   * Tracks errors and shows user notifications after repeated failures.
+   */
+  private attachErrorHandlers(tileLayer: L.TileLayer, layerId: string): void {
+    const layerName = this.layersService.getLayerDisplayName(layerId);
     let errorCount = 0;
 
     tileLayer.on('tileerror', (error: L.TileErrorEvent) => {
       errorCount++;
       console.warn(
-        `Error cargando tile de ${layer.name}:`,
+        `Error loading tile for ${layerName}:`,
         error.error,
         `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`,
       );
 
-      // Después de varios errores consecutivos, notificar al usuario
+      // After several consecutive errors, notify the user
       if (errorCount >= this.MAX_ERRORS_BEFORE_NOTIFY) {
-        const currentErrors = this.errorTracker.get(layer.id) || 0;
+        const currentErrors = this.errorTracker.get(layerId) || 0;
 
-        // Solo notificar la primera vez para no spamear
+        // Only notify once to avoid spam
         if (currentErrors === 0) {
           this.notificationService.error(
-            `La capa "${layer.name}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
-            layer.id,
+            `La capa "${layerName}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
+            layerId,
           );
         }
 
-        this.errorTracker.set(layer.id, currentErrors + 1);
-        errorCount = 0; // Reset para próximo batch
+        this.errorTracker.set(layerId, currentErrors + 1);
+        errorCount = 0; // Reset for next batch
       }
     });
 
-    // Si empieza a cargar bien, resetear contador y limpiar errores
+    // If tiles start loading successfully, reset error tracking
     tileLayer.on('tileload', () => {
       if (errorCount > 0) {
         errorCount = Math.max(0, errorCount - 1);
       }
 
-      // Si había errores previos, limpiar
-      if (this.errorTracker.has(layer.id)) {
-        console.info(`✅ Capa ${layer.name} se recuperó`);
-        this.errorTracker.delete(layer.id);
+      // If there were previous errors, clear them and log recovery
+      if (this.errorTracker.has(layerId)) {
+        console.info(`✅ Layer ${layerName} recovered`);
+        this.errorTracker.delete(layerId);
       }
     });
   }
