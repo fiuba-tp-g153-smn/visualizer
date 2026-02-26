@@ -87,7 +87,7 @@ export class ActiveLayersComponent {
     moveItemInArray(layers, event.previousIndex, event.currentIndex);
 
     const orderedIds = layers.map((layer) => layer.id);
-    this.controlService.setActiveGroupLayersOrder(orderedIds);
+    this.controlService.setActiveGroupLayersOrder(groupId, orderedIds);
   }
 
   private handleClearGroup(event: Event, groupId: ActiveLayerGroupId): void {

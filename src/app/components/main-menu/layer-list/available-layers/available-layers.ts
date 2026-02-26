@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { LayersService } from '../../../../services/layers/layers.service';
+import { LayerControlService } from '../../../../services/layers/layer-control.service';
 import { LayerGroup, LayerSubgroup } from '../../../../models';
 import { LayerItemComponent } from '../layer-item/layer-item';
 
@@ -30,6 +31,7 @@ import { LayerItemComponent } from '../layer-item/layer-item';
 })
 export class AvailableLayersComponent {
   private readonly layersService = inject(LayersService);
+  private readonly controlService = inject(LayerControlService);
 
   searchText = signal('');
 
