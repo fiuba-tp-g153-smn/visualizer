@@ -86,10 +86,9 @@
 
   .always-visible-controls {
     padding-left: 8px;
-    margin-top: 4px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 
     .opacity-control {
       display: flex;
@@ -140,7 +139,7 @@
 
       .control-label {
         font-size: 0.875rem;
-        color: var(--mat-sys-on-surface);
+        color: var(--mat-sys-on-surface-variant);
         min-width: fit-content;
       }
 
@@ -160,13 +159,17 @@
             height: 100%;
             align-items: center;
             padding: 0 8px;
+            display: flex;
           }
 
           .mat-mdc-form-field-infix {
             padding: 0;
-            min-height: auto;
-            width: auto;
+            min-height: 28px;
+            width: 100%;
+            flex: 1;
             border-top: 0;
+            display: flex;
+            align-items: center;
           }
 
           .mat-mdc-form-field-subscript-wrapper {
@@ -175,15 +178,28 @@
 
           .mat-mdc-select {
             padding: 0;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            width: 100%;
           }
 
           .mat-mdc-select-value {
             font-size: 0.75rem;
             color: var(--mat-sys-on-surface);
+            line-height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            text-align: center;
           }
 
           .mat-mdc-select-arrow-wrapper {
             transform: translateY(0%);
+            height: 100%;
+            display: flex;
+            align-items: center;
           }
 
           .mdc-line-ripple,
@@ -329,6 +345,18 @@
     font-size: 0.875rem;
     .loading-icon {
       animation: pulse 1.5s ease-in-out infinite;
+    }
+  }
+
+  .no-periods-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+    .info-icon {
+      color: var(--mat-sys-on-surface-variant);
     }
   }
 }

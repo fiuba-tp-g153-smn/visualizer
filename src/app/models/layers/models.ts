@@ -64,7 +64,12 @@ export interface GLMGoesTileLayer extends GoesTileLayer {
 export interface RadarTileLayer extends TileLayer {
   category: LayerCategory.RADAR;
   availablePeriods: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
-  availableElevations: readonly string[]; // Elevaciones disponibles (ej: ['elev0', 'elev1', 'elev2'])
+  availableElevations: readonly RadarElevation[]; // Elevaciones disponibles (ej: ['elev0', 'elev1', 'elev2'])
+}
+
+export interface RadarElevation {
+  id: string;
+  name: string;
 }
 
 /**

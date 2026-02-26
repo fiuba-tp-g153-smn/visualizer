@@ -144,9 +144,9 @@
 
       <!-- Controles de animación (solo si está activa Y expandida la animación) -->
       @if (isControlsExpanded()) {
-        <div class="layer-controls">
-          <!-- Control de tiempo (solo si tiene configuración cargada) -->
-          @if (hasTimeControl()) {
+        @if (needsTimeControl()) {
+          <div class="layer-controls">
+            <!-- Control de tiempo - Header siempre visible -->
             <div class="time-control">
               <!-- Header con label y botón de recarga -->
               <div class="time-control-header">
@@ -161,78 +161,86 @@
                 </button>
               </div>
 
-              <!-- Slider de tiempo con play -->
-              <div class="time-slider-container">
-                <span class="time-min">{{ getTimeOnly(minTimeIndex()) }}</span>
-                <mat-slider
-                  [min]="minTimeIndex()"
-                  [max]="maxTimeIndex()"
-                  step="1"
-                  discrete
-                  class="control-slider"
-                  [displayWith]="formatTimeIndex"
-                >
-                  <input
-                    matSliderThumb
-                    [value]="currentTimeIndex()"
-                    (valueChange)="onTimeIndexChange($event)"
-                  />
-                </mat-slider>
-                <span class="time-max">{{ getTimeOnly(maxTimeIndex()) }}</span>
-                <button
-                  mat-icon-button
-                  (click)="canPlayback() && togglePlayback()"
-                  [disabled]="!canPlayback()"
-                  [matTooltip]="isPlaying() ? 'Pausar' : 'Reproducir'"
-                  class="play-btn"
-                >
-                  <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
-                </button>
-              </div>
-
-              <!-- Time - Last imgs - Speed -->
-              <div class="time-controls-row">
-                <!-- Tiempo actual -->
-                <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
-
-                <!-- Selector de últimas imágenes -->
-                <div class="images-count-control">
-                  <mat-form-field appearance="fill" class="images-count-select">
-                    <mat-select
-                      [value]="lastImagesCount()"
-                      (selectionChange)="onLastImagesCountChange($event.value)"
-                      panelClass="layer-select-panel"
-                    >
-                      @for (option of lastImagesOptions(); track option) {
-                        <mat-option [value]="option">{{ option }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
+              <!-- Contenido condicional según estado -->
+              @if (hasTimeControl()) {
+                <!-- Slider de tiempo con play -->
+                <div class="time-slider-container">
+                  <span class="time-min">{{ getTimeOnly(minTimeIndex()) }}</span>
+                  <mat-slider
+                    [min]="minTimeIndex()"
+                    [max]="maxTimeIndex()"
+                    step="1"
+                    discrete
+                    class="control-slider"
+                    [displayWith]="formatTimeIndex"
+                  >
+                    <input
+                      matSliderThumb
+                      [value]="currentTimeIndex()"
+                      (valueChange)="onTimeIndexChange($event)"
+                    />
+                  </mat-slider>
+                  <span class="time-max">{{ getTimeOnly(maxTimeIndex()) }}</span>
+                  <button
+                    mat-icon-button
+                    (click)="canPlayback() && togglePlayback()"
+                    [disabled]="!canPlayback()"
+                    [matTooltip]="isPlaying() ? 'Pausar' : 'Reproducir'"
+                    class="play-btn"
+                  >
+                    <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+                  </button>
                 </div>
 
-                <!-- Velocidad -->
-                <div class="speed-control">
-                  <input
-                    type="number"
-                    [value]="playSpeed()"
-                    (change)="onPlaySpeedChange(+$any($event.target).value)"
-                    min="0.4"
-                    max="10"
-                    step="0.1"
-                    class="speed-input"
-                    placeholder="1.0"
-                  />
-                  <span class="speed-label">s</span>
+                <!-- Time - Last imgs - Speed -->
+                <div class="time-controls-row">
+                  <!-- Tiempo actual -->
+                  <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
+
+                  <!-- Selector de últimas imágenes -->
+                  <div class="images-count-control">
+                    <mat-form-field appearance="fill" class="images-count-select">
+                      <mat-select
+                        [value]="lastImagesCount()"
+                        (selectionChange)="onLastImagesCountChange($event.value)"
+                        panelClass="layer-select-panel"
+                      >
+                        @for (option of lastImagesOptions(); track option) {
+                          <mat-option [value]="option">{{ option }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Velocidad -->
+                  <div class="speed-control">
+                    <input
+                      type="number"
+                      [value]="playSpeed()"
+                      (change)="onPlaySpeedChange(+$any($event.target).value)"
+                      min="0.4"
+                      max="10"
+                      step="0.1"
+                      class="speed-input"
+                      placeholder="1.0"
+                    />
+                    <span class="speed-label">s</span>
+                  </div>
                 </div>
-              </div>
+              } @else if (isLoadingConfig()) {
+                <div class="loading-config">
+                  <mat-icon class="loading-icon">hourglass_empty</mat-icon>
+                  <span>Cargando períodos disponibles...</span>
+                </div>
+              } @else if (hasNoPeriodsAvailable()) {
+                <div class="no-periods-message">
+                  <mat-icon class="info-icon">info</mat-icon>
+                  <span>No hay períodos disponibles</span>
+                </div>
+              }
             </div>
-          } @else if (isLoadingConfig()) {
-            <div class="loading-config">
-              <mat-icon class="loading-icon">hourglass_empty</mat-icon>
-              <span>Cargando períodos disponibles...</span>
-            </div>
-          }
-        </div>
+          </div>
+        }
       }
     </div>
   }

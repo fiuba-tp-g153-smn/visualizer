@@ -51,7 +51,7 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
   },
 
   satellite: {
-    id: 'goes-19',
+    id: 'satellite',
     name: 'Satélite (ESRI)',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     attribution:

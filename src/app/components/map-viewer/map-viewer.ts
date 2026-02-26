@@ -166,15 +166,12 @@ export class MapViewer implements OnInit, OnDestroy {
 
       if (!layer || !controls || !controls.visible) continue;
 
-      // Create tile layer using the refactored service API
+      // Create tile layer using the refactored service API (with pooling)
+      // The service now handles opacity internally
       const tileLayer = this.layerRendererService.createTileLayer(layerId, controls);
       desiredLayersOnMap.set(layerId, tileLayer);
 
-      // Configure visual state
-      const opacity = controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity;
-      tileLayer.setOpacity(opacity / 100);
-
-      // Set z-index if defined
+      // Set z-index if defined (always update, even for cached layers)
       if (controls.zIndex !== undefined) {
         const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
         if (absoluteZIndex !== null) {
