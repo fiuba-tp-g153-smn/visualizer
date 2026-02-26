@@ -11,10 +11,22 @@ import {
   GoesLayerControls,
 } from '../../models';
 import { LayersService } from './layers.service';
-import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../config/layers/active-groups.config';
-import { DEFAULT_ACTIVE_LAYERS } from '../../config/layers/default';
+import { ACTIVE_LAYER_GROUP_DEFINITIONS, DEFAULT_ACTIVE_LAYERS } from '../../config/layers';
 import { LayerConfigService } from './layer-config.service';
 
+/**
+ * Service responsible for managing layer controls, visibility, and playback state.
+ *
+ * This service handles:
+ * - Layer activation/deactivation and visibility
+ * - Opacity, zIndex, and layer ordering
+ * - Tile layer playback controls (time index, speed, animation)
+ * - Radar elevation selection
+ * - Persistence of control state to localStorage
+ *
+ * The service maintains a reactive signal of layer controls that other components
+ * can subscribe to for updates.
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -25,7 +37,7 @@ export class LayerControlService {
   private readonly layerConfigService = inject(LayerConfigService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
-  private readonly playIntervals = new Map<string, number>(); // Map of layerId to interval ID for playback
+  private readonly playbackIntervals = new Map<string, number>();
 
   constructor() {
     this.initializeControls();
@@ -35,7 +47,15 @@ export class LayerControlService {
     });
   }
 
-  public readonly activeLayers = computed(() => {
+  // ============================================================================
+  // Public Computed Signals
+  // ============================================================================
+
+  /**
+   * Computed signal containing all currently active (visible) layers,
+   * sorted by zIndex in descending order (highest on top).
+   */
+  readonly activeLayers = computed(() => {
     const allLayers = this.layersService.getAllLayers();
     return allLayers
       .map((layer) => {
@@ -46,25 +66,53 @@ export class LayerControlService {
       .sort((a, b) => (b.controls.zIndex ?? 0) - (a.controls.zIndex ?? 0));
   });
 
+  // ============================================================================
+  // Public Getters
+  // ============================================================================
+
+  /**
+   * Gets active layers filtered by their z-index group.
+   */
   getActiveLayersForGroup(
     groupId: ActiveLayerGroupId,
   ): { layer: Layer; controls: LayerControls }[] {
     return this.activeLayers().filter(({ layer }) => layer.zIndexGroup === groupId);
   }
 
-  getLayerById(layerId: string): Layer | null {
-    return this.layersService.getLayerById(layerId);
-  }
-
+  /**
+   * Gets the controls for a specific layer.
+   */
   getControls(layerId: string): LayerControls | null {
     return this.controls().get(layerId) ?? null;
   }
 
-  private isActive(layerId: string): boolean {
-    const controls = this.getControls(layerId);
-    return controls?.visible ?? false;
+  /**
+   * Calculates the absolute z-index for a layer based on its group and relative position.
+   */
+  getAbsoluteZIndex(layerId: string, controls: LayerControls): number | null {
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer) return null;
+    if (controls.zIndex === undefined) return null;
+    const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
+    return baseOffset + controls.zIndex;
   }
 
+  /**
+   * Checks if a layer is currently playing back.
+   */
+  isPlaying(layerId: string): boolean {
+    const controls = this.getControls(layerId);
+    if (!controls || controls.type !== LayerType.TILE) return false;
+    return controls.playback?.isPlaying ?? false;
+  }
+
+  // ============================================================================
+  // Public Actions - Layer Visibility
+  // ============================================================================
+
+  /**
+   * Toggles a layer's visibility on/off.
+   */
   toggleLayer(layerId: string): void {
     if (this.isActive(layerId)) {
       this.deactivateLayer(layerId);
@@ -73,6 +121,9 @@ export class LayerControlService {
     }
   }
 
+  /**
+   * Activates (makes visible) a layer and assigns it a z-index.
+   */
   activateLayer(layerId: string): void {
     if (this.isActive(layerId)) return;
 
@@ -85,6 +136,9 @@ export class LayerControlService {
     });
   }
 
+  /**
+   * Deactivates (hides) a layer and stops playback if running.
+   */
   deactivateLayer(layerId: string): void {
     if (!this.isActive(layerId)) return;
 
@@ -97,6 +151,9 @@ export class LayerControlService {
     });
   }
 
+  /**
+   * Deactivates all active layers and activates only the specified layer.
+   */
   replaceAllWithLayer(layerId: string): void {
     this.activeLayers().forEach(({ layer }) => {
       if (layer.id !== layerId) {
@@ -107,14 +164,13 @@ export class LayerControlService {
     this.activateLayer(layerId);
   }
 
-  getAbsoluteZIndex(layerId: string, controls: LayerControls): number | null {
-    const layer = this.layersService.getLayerById(layerId);
-    if (!layer) return null;
-    if (controls.zIndex === undefined) return null;
-    const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
-    return baseOffset + controls.zIndex;
-  }
+  // ============================================================================
+  // Public Actions - Layer Properties
+  // ============================================================================
 
+  /**
+   * Sets the opacity for a layer (0-100).
+   */
   setOpacity(layerId: string, opacity: number): void {
     const clampedOpacity = Math.max(0, Math.min(100, opacity));
     this.updateControls(layerId, (controls) => {
@@ -122,6 +178,9 @@ export class LayerControlService {
     });
   }
 
+  /**
+   * Sets the active time index for tile layers with time series data.
+   */
   setTimeIndex(layerId: string, timeIndex: number): void {
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.playback) {
@@ -130,6 +189,9 @@ export class LayerControlService {
     });
   }
 
+  /**
+   * Sets the elevation angle index for radar layers.
+   */
   setElevationIndex(layerId: string, elevationIndex: number): void {
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.category === LayerCategory.RADAR) {
@@ -138,18 +200,64 @@ export class LayerControlService {
     });
   }
 
-  isPlaying(layerId: string): boolean {
-    const controls = this.getControls(layerId);
-    if (!controls || controls.type !== LayerType.TILE) return false;
-    return controls.playback?.isPlaying ?? false;
+  /**
+   * Sets the number of most recent images to display in playback mode.
+   */
+  setLastImagesCount(layerId: string, count: number): void {
+    this.updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE) {
+        if (!controls.playback) {
+          controls.playback = {
+            isPlaying: false,
+            speed: 1.0,
+            timeIndex: 0,
+            lastImagesCount: count,
+          };
+        } else {
+          controls.playback.lastImagesCount = count;
+        }
+      }
+    });
   }
 
-  // getPlaySpeed(layerId: string): number | null {
-  //   const controls = this.getControls(layerId);
-  //   if (!controls || controls.type !== LayerType.TILE) return null;
-  //   return controls.playback.speed ?? null;
-  // }
+  /**
+   * Reorders layers within a group after drag and drop.
+   * Receives the complete layer order for the group and recalculates z-indices.
+   */
+  setActiveGroupLayersOrder(
+    activeLayerGroupId: ActiveLayerGroupId,
+    orderedLayerIds: string[],
+  ): void {
+    // First deactivate layers in the group not specified in the new order
+    this.getActiveLayersForGroup(activeLayerGroupId).forEach(({ layer }) => {
+      if (this.isActive(layer.id)) {
+        this.updateControls(layer.id, (controls) => {
+          controls.zIndex = undefined;
+          controls.visible = false;
+        });
+      }
+    });
 
+    // Filter to only active layers and assign new z-indices according to order
+    const filteredIds = orderedLayerIds.filter((id) => this.isActive(id));
+    const maxIndex = filteredIds.length - 1;
+
+    filteredIds.forEach((layerId: string, uiIndex: number) => {
+      this.updateControls(layerId, (controls) => {
+        if (controls.visible) {
+          controls.zIndex = maxIndex - uiIndex;
+        }
+      });
+    });
+  }
+
+  // ============================================================================
+  // Public Actions - Playback
+  // ============================================================================
+
+  /**
+   * Sets the playback speed for tile layers (0.4-10 seconds per frame).
+   */
   setPlaySpeed(layerId: string, speed: number): void {
     const clampedSpeed = Math.max(0.4, Math.min(10, speed));
 
@@ -164,6 +272,9 @@ export class LayerControlService {
     }
   }
 
+  /**
+   * Toggles playback on/off for tile layers.
+   */
   togglePlayback(layerId: string): void {
     if (this.isPlaying(layerId)) {
       this.stopPlayback(layerId);
@@ -172,27 +283,31 @@ export class LayerControlService {
     }
   }
 
+  /**
+   * Starts automatic playback for a tile layer, cycling through available time periods.
+   */
   startPlayback(layerId: string): void {
     if (!this.isActive(layerId)) return;
+
+    // Clear existing interval if playing
     if (this.isPlaying(layerId)) {
-      const interval = this.playIntervals.get(layerId);
+      const interval = this.playbackIntervals.get(layerId);
       if (interval) {
         clearInterval(interval);
-        this.playIntervals.delete(layerId);
+        this.playbackIntervals.delete(layerId);
       }
     }
 
     const controls = this.getControls(layerId);
     if (!controls || controls.type !== LayerType.TILE) return;
 
-    let lastImagesCount = controls.playback.lastImagesCount;
-
-    const availablePeriods = this.availablePeriodsForLayer(layerId);
+    const lastImagesCount = controls.playback.lastImagesCount;
+    const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
     if (availablePeriods.length === 0) return;
 
-    // El índice inicial debe ser:
-    // si el largo de períodos disponibles es mayor que la cantidad de últimas imágenes a mostrar, entonces el índice inicial es la cantidad de períodos menos la cantidad de últimas imágenes a mostrar para mostrar solo las últimas imágenes disponibles
-    // si no, el índice inicial es 0 para mostrar desde el primer período disponible
+    // Calculate playback range:
+    // If available periods > last images count, start from (total - count) to show only recent images
+    // Otherwise, start from 0 to show all available periods
     const maxTimeIndex = availablePeriods.length - 1;
     const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
 
@@ -219,7 +334,7 @@ export class LayerControlService {
       });
     }, speed * 1000);
 
-    this.playIntervals.set(layerId, interval);
+    this.playbackIntervals.set(layerId, interval);
 
     this.updateControls(layerId, (controls) => {
       switch (controls.type) {
@@ -232,14 +347,17 @@ export class LayerControlService {
     });
   }
 
+  /**
+   * Stops automatic playback for a tile layer.
+   */
   stopPlayback(layerId: string): void {
     if (!this.isActive(layerId)) return;
     if (!this.isPlaying(layerId)) return;
 
-    const interval = this.playIntervals.get(layerId);
+    const interval = this.playbackIntervals.get(layerId);
     if (interval) {
       clearInterval(interval);
-      this.playIntervals.delete(layerId);
+      this.playbackIntervals.delete(layerId);
     }
 
     this.updateControls(layerId, (controls) => {
@@ -249,107 +367,113 @@ export class LayerControlService {
     });
   }
 
-  private availablePeriodsForLayer(layerId: string): string[] {
-    const config = this.layerConfigService.getConfig(layerId);
-    if (!config) return [];
+  // ============================================================================
+  // Private Helpers
+  // ============================================================================
 
-    switch (config.type) {
+  /**
+   * Checks if a layer is currently active (visible).
+   */
+  private isActive(layerId: string): boolean {
+    const controls = this.getControls(layerId);
+    return controls?.visible ?? false;
+  }
+
+  /**
+   * Gets the elevation key for a radar layer based on the selected elevation index.
+   */
+  private getElevationKeyForLayer(layerId: string): string | null {
+    const controls = this.getControls(layerId);
+    if (
+      !controls ||
+      controls.type !== LayerType.TILE ||
+      controls.category !== LayerCategory.RADAR
+    ) {
+      return null;
+    }
+
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.RADAR) {
+      return null;
+    }
+
+    const elevationIndex = controls.elevation.elevationIndex;
+    if (elevationIndex === undefined) {
+      return null;
+    }
+
+    return layer.availableElevations[elevationIndex] ?? null;
+  }
+
+  /**
+   * Gets the available time periods for a layer based on its type and configuration.
+   */
+  private getAvailablePeriodsForLayer(layerId: string): string[] {
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer) return [];
+
+    switch (layer.type) {
       case LayerType.TILE:
-        switch (config.category) {
+        switch (layer.category) {
           case LayerCategory.GOES_19:
-            return config.availableTilesets;
+            return this.layerConfigService.getAvailableTilesets(layerId) ?? [];
           case LayerCategory.RADAR:
-            const controls = this.getControls(layerId);
-            if (
-              !controls ||
-              controls.type !== LayerType.TILE ||
-              controls.category !== LayerCategory.RADAR
-            ) {
-              throw new Error(`Expected radar tile layer controls for radar tile layer config`);
-            }
-
-            if (controls.elevation.elevationIndex === undefined) {
-              throw new Error(
-                `Elevation index must be selected for radar layers to determine available periods`,
-              );
-            }
-
-            const layer = this.layersService.getLayerById(layerId);
-            if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.RADAR) {
-              throw new Error(`Expected radar tile layer for radar tile layer config`);
-            }
-
-            const elevationKey = layer.availableElevations[controls.elevation.elevationIndex];
-
-            if (!elevationKey) {
-              throw new Error(
-                `Selected elevation index ${controls.elevation.elevationIndex} is out of bounds for available elevations in layer definition`,
-              );
-            }
-
-            const tilesetsForElevation = config.availableTilesetsByElevation[elevationKey];
-
-            if (!tilesetsForElevation) {
-              throw new Error(
-                `No tilesets found for elevation ${elevationKey} in radar layer config`,
-              );
-            }
-
-            return tilesetsForElevation;
+            const elevationKey = this.getElevationKeyForLayer(layerId);
+            if (!elevationKey) return [];
+            const tilesetsByElevation =
+              this.layerConfigService.getAvailableTilesetsByElevation(layerId) ?? {};
+            return tilesetsByElevation[elevationKey] ?? [];
           default:
-            throw new Error(`Playback controls can only be applied to tile layers`);
+            throw new Error(`Unsupported tile layer category for playback`);
         }
       default:
         throw new Error(`Only tile layers have available periods for playback`);
     }
   }
 
-  setLastImagesCount(layerId: string, count: number): void {
-    this.updateControls(layerId, (controls) => {
-      if (controls.type === LayerType.TILE) {
-        if (!controls.playback) {
-          controls.playback = {
-            isPlaying: false,
-            speed: 1.0,
-            timeIndex: 0,
-            lastImagesCount: count,
-          };
-        } else {
-          controls.playback.lastImagesCount = count;
-        }
+  /**
+   * Gets the next available z-index for a layer in its group.
+   */
+  private getNextZIndex(activeLayerGroup: ActiveLayerGroupId): number {
+    const activeLayersInGroup = this.activeLayers().filter(
+      ({ layer }) => layer.zIndexGroup === activeLayerGroup,
+    );
+
+    if (activeLayersInGroup.length === 0) {
+      return 0;
+    }
+
+    const maxZIndexInGroup = Math.max(
+      ...activeLayersInGroup.map(({ controls }) => controls.zIndex ?? 0),
+    );
+
+    return maxZIndexInGroup + 1;
+  }
+
+  /**
+   * Updates a layer's controls using an update function.
+   * Creates a new immutable copy of the controls map to trigger reactive updates.
+   */
+  private updateControls(layerId: string, updateFn: (controls: LayerControls) => void): void {
+    this.controls.update((controlsMap) => {
+      const newMap = new Map(controlsMap);
+      const controls = newMap.get(layerId);
+      if (controls) {
+        const updatedControls = structuredClone(controls);
+        updateFn(updatedControls);
+        newMap.set(layerId, updatedControls);
       }
+      return newMap;
     });
   }
 
-  // Usado para el drap and drop dentro de un grupo, debe recibir el orden completo de capas del grupo luego del cambio para recalcular los zIndex
-  setActiveGroupLayersOrder(
-    activeLayerGroupId: ActiveLayerGroupId,
-    orderedLayerIds: string[],
-  ): void {
-    // Primero desactivo las capas del grupo ya que no debería estar prendido ninguna no especificada en el nuevo orden
-    this.getActiveLayersForGroup(activeLayerGroupId).forEach(({ layer }) => {
-      if (this.isActive(layer.id)) {
-        this.updateControls(layer.id, (controls) => {
-          controls.zIndex = undefined;
-          controls.visible = false;
-        });
-      }
-    });
+  // ============================================================================
+  // Private Initialization & Persistence
+  // ============================================================================
 
-    // A su vez ninguna que no esté prendida aún puede tener un zIndex asignado por lo que también se limpian los zIndex de las capas del grupo que no estén en el nuevo orden para evitar inconsistencias
-    const filteredIds = orderedLayerIds.filter((id) => this.isActive(id));
-    const maxIndex = filteredIds.length - 1;
-
-    // Luego se asignan los zIndex de acuerdo al nuevo orden
-    filteredIds.forEach((layerId: string, uiIndex: number) => {
-      this.updateControls(layerId, (controls) => {
-        if (controls.visible) {
-          controls.zIndex = maxIndex - uiIndex;
-        }
-      });
-    });
-  }
-
+  /**
+   * Initializes layer controls from saved state or defaults.
+   */
   private initializeControls(): void {
     const savedState = this.loadControls();
     if (savedState) {
@@ -399,7 +523,10 @@ export class LayerControlService {
     this.controls.set(controlsMap);
   }
 
-  private createDefaultControlsForLayer(layer: Layer): BaseLayerControls {
+  /**
+   * Creates default base controls for a layer.
+   */
+  private createDefaultBaseControls(layer: Layer): BaseLayerControls {
     return {
       id: layer.id,
       visible: false,
@@ -408,8 +535,11 @@ export class LayerControlService {
     };
   }
 
+  /**
+   * Creates appropriate controls for a layer based on its type and category.
+   */
   private createControlsForLayer(layer: Layer): LayerControls {
-    const baseControls = this.createDefaultControlsForLayer(layer);
+    const baseControls = this.createDefaultBaseControls(layer);
 
     switch (layer.type) {
       case LayerType.WMS:
@@ -450,11 +580,17 @@ export class LayerControlService {
     }
   }
 
+  /**
+   * Saves active layer controls to localStorage.
+   */
   private saveControls(): void {
     const state = this.activeLayers().map(({ controls }) => controls);
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
   }
 
+  /**
+   * Loads layer controls from localStorage.
+   */
   private loadControls(): LayerControls[] | null {
     try {
       const saved = localStorage.getItem(this.STORAGE_KEY);
@@ -462,34 +598,5 @@ export class LayerControlService {
     } catch {
       return null;
     }
-  }
-
-  private getNextZIndex(activeLayerGroup: ActiveLayerGroupId): number {
-    const activeLayersInGroup = this.activeLayers().filter(
-      ({ layer }) => layer.zIndexGroup === activeLayerGroup,
-    );
-
-    if (activeLayersInGroup.length === 0) {
-      return 0;
-    }
-
-    const maxZIndexInGroup = Math.max(
-      ...activeLayersInGroup.map(({ controls }) => controls.zIndex ?? 0),
-    );
-
-    return maxZIndexInGroup + 1;
-  }
-
-  private updateControls(layerId: string, updateFn: (controls: LayerControls) => void): void {
-    this.controls.update((controlsMap) => {
-      const newMap = new Map(controlsMap);
-      const controls = newMap.get(layerId);
-      if (controls) {
-        const updatedControls = structuredClone(controls);
-        updateFn(updatedControls);
-        newMap.set(layerId, updatedControls);
-      }
-      return newMap;
-    });
   }
 }

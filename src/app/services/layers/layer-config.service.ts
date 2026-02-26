@@ -1,349 +1,215 @@
-import { Injectable, inject, effect, Signal, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, catchError } from 'rxjs';
-import { buildChannelConfigUrl } from '../../config/backend.config';
-import { NotificationService } from '../notifications/notification.service';
-import { LayersService } from './layers.service';
-import { LayerControlService } from './layer-control.service';
-import { Layer, LayerConfig, LayerCategory, NotificationType } from '../../models';
+import { Observable, forkJoin, map, of, catchError } from 'rxjs';
+import { buildConfigUrl } from '../../config';
+import {
+  Layer,
+  LayerConfig,
+  LayerCategory,
+  RadarTileLayerConfig,
+  GoesTileLayer,
+  LayerType,
+  RadarTileLayer,
+  GoesTileLayerConfig,
+} from '../../models';
 
-interface RefreshState {
-  intervalId?: number;
-  isManualRefreshing: boolean;
-  lastRefreshTime: number;
-  initialCount?: number;
-}
-
+/**
+ * Service responsible for fetching and caching layer configurations.
+ *
+ * This service handles:
+ * - Fetching layer configurations from the backend API
+ * - Maintaining a reactive signal-based cache of configurations
+ * - Providing type-safe accessors for different layer types
+ * - Managing HTTP requests for GOES and Radar layers with different structures
+ *
+ * GOES layers have a single list of available tilesets, while Radar layers
+ * organize tilesets by elevation angle (0.5°, 1.0°, etc.).
+ */
 @Injectable({
   providedIn: 'root',
 })
 export class LayerConfigService {
-  private readonly layersService = inject(LayersService);
-  private readonly layerControl = inject(LayerControlService);
   private readonly http = inject(HttpClient);
-  private readonly notificationService = inject(NotificationService);
+  private readonly configMap = signal<Map<string, LayerConfig>>(new Map());
 
-  private readonly AUTO_REFRESH_INTERVAL_MS = 10 * 1000;
-  private configMap = signal<Map<string, LayerConfig>>(new Map());
-  private refreshStates = new Map<string, RefreshState>();
+  // ============================================================================
+  // Public Signals
+  // ============================================================================
 
-  constructor() {
-    effect(() => {
-      const activeLayers = this.layerControl.activeLayers();
-      const activeLayerIds = new Set(activeLayers.map((item) => item.layer.id));
+  /**
+   * Read-only signal containing all layer configurations.
+   * Other services can subscribe to this for reactive updates.
+   */
+  readonly configs = this.configMap.asReadonly();
 
-      for (const { layer } of activeLayers) {
-        if (this.hasConfig(layer.id) && !this.refreshStates.has(layer.id)) {
-          this.startAutoRefresh(layer.id);
-        }
-      }
+  // ============================================================================
+  // Public Methods - Fetching
+  // ============================================================================
 
-      for (const layerId of this.refreshStates.keys()) {
-        if (!activeLayerIds.has(layerId)) {
-          this.stopAutoRefresh(layerId);
-        }
-      }
+  /**
+   * Fetches and updates the configuration for a GOES satellite layer.
+   * Makes a single HTTP request to get available tilesets.
+   */
+  fetchGoesLayerConfig(layer: GoesTileLayer): Observable<GoesTileLayerConfig> {
+    const configUrl = buildConfigUrl(layer.id);
+    return this.http.get<GoesTileLayerConfig>(configUrl).pipe(
+      map((config) => {
+        const layerConfig: GoesTileLayerConfig = {
+          layerId: layer.id,
+          type: LayerType.TILE,
+          category: LayerCategory.GOES_19,
+          availableTilesets: config.availableTilesets,
+        };
+
+        this.updateConfigMap(layer.id, layerConfig);
+        return layerConfig;
+      }),
+      catchError((error) => {
+        console.error(`Failed to fetch config for layer ${layer.id}:`, error);
+        throw error;
+      }),
+    );
+  }
+
+  /**
+   * Fetches and updates the configuration for a radar layer.
+   * Makes parallel HTTP requests (one per elevation angle) and combines results.
+   * Returns an empty configuration if no elevations are available.
+   */
+  fetchRadarLayerConfig(layer: RadarTileLayer): Observable<RadarTileLayerConfig> {
+    if (!layer.availableElevations || layer.availableElevations.length === 0) {
+      const emptyConfig: RadarTileLayerConfig = {
+        layerId: layer.id,
+        type: LayerType.TILE,
+        category: LayerCategory.RADAR,
+        availableTilesetsByElevation: {},
+      };
+      return of(emptyConfig);
+    }
+
+    const elevationRequests = layer.availableElevations.map((elevation) => {
+      const pathToProduct = `${layer.id}/${elevation}`;
+      const configUrl = buildConfigUrl(pathToProduct);
+      return this.http.get<{ tilesets: string[] }>(configUrl).pipe(
+        map((response) => ({ elevation, tilesets: response.tilesets })),
+        catchError((error) => {
+          console.error(`Failed to fetch radar config for ${pathToProduct}:`, error);
+          throw error;
+        }),
+      );
     });
-  }
 
-  loadConfig(layer: Layer): Observable<any> {
-    const layer_category = layer.category;
-
-    if (layer_category === LayerCategory.RADAR) {
-      const [radarPart, variable] = layer.id.split('-');
-      const radarId = radarPart.toUpperCase();
-      const variableId = variable.toUpperCase();
-      const elevationId = 'elev0';
-      return this.loadRadarConfig(layer.id, radarId, variableId, elevationId);
-    }
-
-    if (layer_category === LayerCategory.GOES_19) {
-      const [instrument, channelPart] = layer.id.split('-');
-      const product = 'goes-19';
-      let channel: string;
-
-      if (instrument === 'abi') {
-        const channelNumber = channelPart;
-        channel = `ch-${channelNumber.replace('ch', '')}`;
-      } else if (instrument === 'glm') {
-        channel = layer.id;
-      } else {
-        throw new Error(`Unknown instrument: ${instrument}`);
-      }
-
-      return this.loadChannelConfig(layer.id, product, instrument, channel);
-    }
-
-    throw new Error(`Layer category ${layer_category} does not require tileset configuration`);
-  }
-
-  loadChannelConfig(
-    layerId: string,
-    product: string,
-    instrument: string,
-    channel: string,
-  ): Observable<any> {
-    const productPath = `${product}/${instrument}/${channel}`;
-    const url = buildChannelConfigUrl(productPath);
-
-    return this.http.get<any>(url).pipe(
-      tap((config: any) => {
-        if (config.tilesets && config.tilesets.length > 0) {
-          config.tilesets.sort((a: any, b: any) => {
-            const matchA = a.id.match(/_s(\d+)/);
-            const matchB = b.id.match(/_s(\d+)/);
-            if (matchA && matchB) {
-              return matchA[1].localeCompare(matchB[1]);
-            }
-            return a.id.localeCompare(b.id);
-          });
-        }
-
-        this.configMap.set(layerId, config);
-      }),
-      catchError((error: any) => {
-        console.error(`Error loading config for ${layerId}:`, error);
-        const layerName = this.layersService.getLayerDisplayName(layerId);
-        this.notificationService.error(
-          `Error loading ${layerName}: could not retrieve server configuration`,
-        );
-        throw error;
-      }),
-    );
-  }
-
-  loadRadarConfig(
-    layerId: string,
-    radarId: string,
-    variableId: string,
-    elevationId: string,
-  ): Observable<any> {
-    const productPath = `radar/${radarId}/${variableId}/${elevationId}`;
-    const url = buildChannelConfigUrl(productPath);
-
-    return this.http.get<any>(url).pipe(
-      tap((config: any) => {
-        if (config.tilesets && config.tilesets.length > 0) {
-          config.tilesets.sort((a: any, b: any) => {
-            const matchA = a.id.match(/_s(\d+)/);
-            const matchB = b.id.match(/_s(\d+)/);
-            if (matchA && matchB) {
-              return matchA[1].localeCompare(matchB[1]);
-            }
-            return a.id.localeCompare(b.id);
-          });
-        }
-
-        this.configMap.set(layerId, config);
-      }),
-      catchError((error: any) => {
-        console.error(`Error loading radar config for ${layerId}:`, error);
-        const layerName = this.layersService.getLayerDisplayName(layerId);
-        this.notificationService.error(
-          `Error loading ${layerName}: could not retrieve server configuration`,
-        );
-        throw error;
-      }),
-    );
-  }
-
-  manualRefresh(layerId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const state = this.refreshStates.get(layerId);
-      if (!state) {
-        this.performRefreshAndCompare(layerId, true).then(resolve).catch(reject);
-        return;
-      }
-
-      if (state.isManualRefreshing) {
-        resolve();
-        return;
-      }
-
-      state.isManualRefreshing = true;
-
-      if (state.intervalId !== undefined) {
-        window.clearInterval(state.intervalId);
-      }
-
-      this.performRefreshAndCompare(layerId, true)
-        .then(() => {
-          if (state) {
-            state.isManualRefreshing = false;
-            state.lastRefreshTime = Date.now();
-            state.intervalId = window.setInterval(() => {
-              this.performAutoRefresh(layerId);
-            }, this.AUTO_REFRESH_INTERVAL_MS);
-          }
-          resolve();
-        })
-        .catch((err) => {
-          if (state) {
-            state.isManualRefreshing = false;
-            state.intervalId = window.setInterval(() => {
-              this.performAutoRefresh(layerId);
-            }, this.AUTO_REFRESH_INTERVAL_MS);
-          }
-          reject(err);
+    return forkJoin(elevationRequests).pipe(
+      map((results) => {
+        const availableTilesetsByElevation: Record<string, string[]> = {};
+        results.forEach(({ elevation, tilesets }) => {
+          availableTilesetsByElevation[elevation] = tilesets;
         });
-    });
+
+        const config: RadarTileLayerConfig = {
+          layerId: layer.id,
+          type: LayerType.TILE,
+          category: LayerCategory.RADAR,
+          availableTilesetsByElevation,
+        };
+
+        this.updateConfigMap(layer.id, config);
+        return config;
+      }),
+    );
   }
 
-  getConfig(layerId: string): LayerConfig | null {
-    return this.configMap().get(layerId) || null;
-  }
-
-  getTilesets(layerId: string): any[] {
-    return this.getConfig(layerId)?.tilesets || [];
-  }
-
-  buildTileUrl(layerId: string, tilesetIndex: number): string | null {
-    const config = this.getConfig(layerId);
-    if (!config || !config.tilesets[tilesetIndex]) {
-      return null;
+  /**
+   * Main entry point to fetch layer configuration.
+   * Dispatches to the appropriate method based on layer category.
+   *
+   * @throws Error if the layer category doesn't require tileset configuration
+   */
+  fetchLayerConfig(layer: Layer): Observable<LayerConfig> {
+    switch (layer.category) {
+      case LayerCategory.GOES_19:
+        return this.fetchGoesLayerConfig(layer as GoesTileLayer);
+      case LayerCategory.RADAR:
+        return this.fetchRadarLayerConfig(layer as RadarTileLayer);
+      default:
+        throw new Error(`Layer category ${layer.category} does not require tileset configuration`);
     }
-
-    const tileset = config.tilesets[tilesetIndex];
-    const pattern = config.tile_url_pattern;
-
-    if (!pattern) {
-      return null;
-    }
-
-    return pattern.replace('{tileset_id}', tileset.id);
   }
 
+  // ============================================================================
+  // Public Methods - Getters
+  // ============================================================================
+
+  /**
+   * Gets the configuration for a specific layer from the cache.
+   * Returns undefined if the configuration hasn't been fetched yet.
+   */
+  getConfig(layerId: string): LayerConfig | undefined {
+    return this.configMap().get(layerId);
+  }
+
+  /**
+   * Checks if a configuration exists for the given layer in the cache.
+   */
   hasConfig(layerId: string): boolean {
-    return this.configMap.has(layerId);
+    return this.configMap().has(layerId);
   }
 
-  private getMaxSelectablePeriods(layerId: string): number {
-    const layer = this.layersService.getLayerById(layerId);
-    if (
-      layer &&
-      layer.type === 'tile' &&
-      layer.availablePeriods &&
-      layer.availablePeriods.length > 0
-    ) {
-      return Math.max(...layer.availablePeriods);
-    }
-    return 1;
-  }
+  /**
+   * Gets available tilesets for GOES layers.
+   * Returns undefined if the layer is not a GOES layer or hasn't been configured.
+   */
+  getAvailableTilesets(layerId: string): string[] | undefined {
+    const config = this.getConfig(layerId);
+    if (!config) return undefined;
 
-  private startAutoRefresh(layerId: string): void {
-    if (this.refreshStates.has(layerId)) {
-      return;
-    }
-
-    const initialTilesets = this.getTilesets(layerId);
-    const initialCount = initialTilesets.length;
-
-    const state: RefreshState = {
-      isManualRefreshing: false,
-      lastRefreshTime: Date.now(),
-      initialCount: initialCount,
-    };
-
-    const maxSelectable = this.getMaxSelectablePeriods(layerId);
-    const displayCount = Math.min(initialCount, maxSelectable);
-    const layerName = this.layersService.getLayerDisplayName(layerId);
-    const message = `${displayCount} periods available for ${layerName}`;
-    this.notificationService.show(NotificationType.SUCCESS, message);
-
-    state.intervalId = window.setInterval(() => {
-      this.performAutoRefresh(layerId);
-    }, this.AUTO_REFRESH_INTERVAL_MS);
-
-    this.refreshStates.set(layerId, state);
-  }
-
-  private stopAutoRefresh(layerId: string): void {
-    const state = this.refreshStates.get(layerId);
-    if (!state) {
-      return;
-    }
-
-    if (state.intervalId !== undefined) {
-      window.clearInterval(state.intervalId);
-    }
-
-    this.refreshStates.delete(layerId);
-  }
-
-  private async performAutoRefresh(layerId: string): Promise<void> {
-    const state = this.refreshStates.get(layerId);
-    if (!state || state.isManualRefreshing) {
-      return;
-    }
-
-    try {
-      await this.performRefreshAndCompare(layerId, false);
-      if (state) {
-        state.lastRefreshTime = Date.now();
-      }
-    } catch (err) {
-      // Silently handle errors
+    switch (config.type) {
+      case LayerType.TILE:
+        switch (config.category) {
+          case LayerCategory.GOES_19:
+            return config.availableTilesets;
+          default:
+            return undefined;
+        }
+      default:
+        return undefined;
     }
   }
 
-  private performRefreshAndCompare(layerId: string, showNoChanges: boolean = false): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const layer = this.layersService.getLayerById(layerId);
-      if (!layer) {
-        reject(new Error('Layer not found'));
-        return;
-      }
+  /**
+   * Gets available tilesets organized by elevation angle for radar layers.
+   * Returns undefined if the layer is not a radar layer or hasn't been configured.
+   */
+  getAvailableTilesetsByElevation(layerId: string): Record<string, string[]> | undefined {
+    const config = this.getConfig(layerId);
+    if (!config) return undefined;
 
-      const maxSelectable = this.getMaxSelectablePeriods(layerId);
-      const beforeAllTilesets = this.getTilesets(layerId);
-      const beforeTilesets = beforeAllTilesets.slice(-maxSelectable);
+    switch (config.type) {
+      case LayerType.TILE:
+        switch (config.category) {
+          case LayerCategory.RADAR:
+            return config.availableTilesetsByElevation;
+          default:
+            return undefined;
+        }
+      default:
+        return undefined;
+    }
+  }
 
-      this.loadConfig(layer).subscribe({
-        next: () => {
-          const afterAllTilesets = this.getTilesets(layerId);
-          const afterTilesets = afterAllTilesets.slice(-maxSelectable);
+  // ============================================================================
+  // Private Helpers
+  // ============================================================================
 
-          const beforeIds = new Set(beforeTilesets.map((t: any) => t.id));
-          const afterIds = new Set(afterTilesets.map((t: any) => t.id));
-
-          const added = afterTilesets.filter((t: any) => !beforeIds.has(t.id));
-          const removed = beforeTilesets.filter((t: any) => !afterIds.has(t.id));
-
-          const layerName = this.layersService.getLayerDisplayName(layerId);
-
-          if (added.length > 0 || removed.length > 0) {
-            let message: string;
-
-            if (added.length > 0 && removed.length === 0) {
-              message =
-                added.length === 1
-                  ? `1 period added for ${layerName}`
-                  : `${added.length} periods added for ${layerName}`;
-            } else if (removed.length > 0 && added.length === 0) {
-              message =
-                removed.length === 1
-                  ? `1 period removed for ${layerName}`
-                  : `${removed.length} periods removed for ${layerName}`;
-            } else if (added.length === removed.length) {
-              message =
-                added.length === 1
-                  ? `1 period modified for ${layerName}`
-                  : `${added.length} periods modified for ${layerName}`;
-            } else {
-              message = `${added.length} periods added, ${removed.length} removed for ${layerName}`;
-            }
-
-            this.notificationService.show(NotificationType.INFO, message);
-          } else if (showNoChanges) {
-            this.notificationService.show(NotificationType.INFO, `No changes for ${layerName}`);
-          }
-
-          resolve();
-        },
-        error: (err) => {
-          reject(err);
-        },
-      });
+  /**
+   * Updates the configuration map with a new configuration.
+   * Creates a new immutable map to trigger reactive updates.
+   */
+  private updateConfigMap(layerId: string, config: LayerConfig): void {
+    this.configMap.update((map) => {
+      const newMap = new Map(map);
+      newMap.set(layerId, config);
+      return newMap;
     });
   }
 }

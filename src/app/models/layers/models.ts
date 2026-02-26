@@ -27,8 +27,6 @@ interface BaseLayer {
   name: string;
   description?: string;
   category: LayerCategory;
-  groupId: string;
-  subgroupId: string;
   zIndexGroup: ActiveLayerGroupId;
   boundingBox?: BoundingBox;
 }
@@ -44,15 +42,23 @@ interface BoundingBox {
  * Unión discriminada de todos los tipos de capas
  * TypeScript puede inferir el tipo correcto basándose en la propiedad 'type'
  */
-export type Layer = SatelliteTileLayer | RadarTileLayer | WmsLayer;
+export type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
 }
 
-export interface SatelliteTileLayer extends TileLayer {
+export interface GoesTileLayer extends TileLayer {
   category: LayerCategory.GOES_19;
   availablePeriods?: readonly number[]; // Períodos disponibles para selección (ej: [1, 6, 12, 24])
+}
+
+export interface ABIGoesTileLayer extends GoesTileLayer {
+  channel: string; // Canal específico del satélite (ej: 'ch-02', 'ch-09', etc.)
+}
+
+export interface GLMGoesTileLayer extends GoesTileLayer {
+  variable: string; // Variable específica del GLM (ej: 'fed' para Flash Extent Density)
 }
 
 export interface RadarTileLayer extends TileLayer {

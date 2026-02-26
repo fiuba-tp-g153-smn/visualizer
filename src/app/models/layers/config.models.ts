@@ -4,13 +4,13 @@ export interface BaseLayerConfig {
   layerId: string;
 }
 
-export type LayerConfig = SatelliteTileLayerConfig | RadarTileLayerConfig | WmsLayerConfig;
+export type LayerConfig = GoesTileLayerConfig | RadarTileLayerConfig | WmsLayerConfig;
 
 export interface TileLayerConfig extends BaseLayerConfig {
   type: LayerType.TILE;
 }
 
-export interface SatelliteTileLayerConfig extends TileLayerConfig {
+export interface GoesTileLayerConfig extends TileLayerConfig {
   category: LayerCategory.GOES_19;
   availableTilesets: string[];
 }

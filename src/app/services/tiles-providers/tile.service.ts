@@ -1,6 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { MAP_CONFIG } from '../../config/map.config';
-import { getTileProvider, TILE_PROVIDERS } from '../../config/tile-providers.config';
+import { MAP_CONFIG, getTileProvider, TILE_PROVIDERS } from '../../config';
 import { TileProvider } from '../../models';
 
 /**

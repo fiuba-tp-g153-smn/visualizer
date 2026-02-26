@@ -1,4 +1,4 @@
-import { LayerType, LayerCategory, SatelliteTileLayer } from '../../../models';
+import { LayerType, LayerCategory, ABIGoesTileLayer } from '../../../models';
 import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups.models';
 
 /**
@@ -6,13 +6,15 @@ import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups
  * Sin repetir el mismo número en cada capa
  */
 const ABI_DEFAULTS = {
-  groupId: 'satellite',
+  groupId: 'goes-19',
   subgroupId: 'abi',
   zIndexGroup: ActiveLayerGroupId.BASE,
   availablePeriods: [1, 6, 12, 24] as const,
   category: LayerCategory.GOES_19,
   type: LayerType.TILE,
 };
+
+const idPrefix = 'goes-19/abi';
 
 /**
  * Definición de capas satelitales ABI (GOES-19)
@@ -22,32 +24,28 @@ export const ABI_SUBGROUP: LayerSubgroup = {
   id: 'abi',
   name: 'ABI',
   description: 'Advanced Baseline Imager',
-  groupId: 'satellite',
   expanded: true,
   layers: [
     {
       ...ABI_DEFAULTS,
-      id: 'abi-ch-02',
-      groupId: 'satellite',
-      subgroupId: 'abi',
+      id: `${idPrefix}/ch-02`,
+      channel: 'ch-02',
       name: 'Canal 2 (Visible)',
       description: 'Banda visible (0.64 μm)',
     },
     {
       ...ABI_DEFAULTS,
-      id: 'abi-ch-09',
-      groupId: 'satellite',
-      subgroupId: 'abi',
+      id: `${idPrefix}/ch-09`,
+      channel: 'ch-09',
       name: 'Canal 9 (Vapor de agua)',
       description: 'Banda de vapor de agua (6.9 μm)',
     },
     {
       ...ABI_DEFAULTS,
-      id: 'abi-ch-13',
-      groupId: 'satellite',
-      subgroupId: 'abi',
+      id: `${idPrefix}/ch-13`,
+      channel: 'ch-13',
       name: 'Canal 13 (Infrarrojo)',
       description: 'Banda infrarroja (10.3 μm)',
     },
-  ] as SatelliteTileLayer[],
+  ] as ABIGoesTileLayer[],
 };

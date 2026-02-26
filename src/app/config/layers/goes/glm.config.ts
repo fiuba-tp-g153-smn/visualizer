@@ -1,12 +1,10 @@
-import { LayerType, LayerCategory, SatelliteTileLayer } from '../../../models';
+import { LayerType, LayerCategory, GoesTileLayer, GLMGoesTileLayer } from '../../../models';
 import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups.models';
 
 /**
  * Valores por defecto para capas GLM
  */
 const GLM_DEFAULTS = {
-  groupId: 'satellite',
-  subgroupId: 'glm',
   visible: false,
   opacity: 80,
   zIndexGroup: ActiveLayerGroupId.BASE,
@@ -23,16 +21,14 @@ export const GLM_SUBGROUP: LayerSubgroup = {
   id: 'glm',
   name: 'GLM',
   description: 'Geostationary Lightning Mapper',
-  groupId: 'satellite',
   expanded: false,
   layers: [
     {
       ...GLM_DEFAULTS,
-      id: 'glm-fed',
-      groupId: 'satellite',
-      subgroupId: 'glm',
+      id: 'goes-19/glm/fed',
+      variable: 'fed',
       name: 'Flash Extent Density',
       description: 'Densidad de extensión de rayos',
     },
-  ] as SatelliteTileLayer[],
+  ] as GLMGoesTileLayer[],
 };

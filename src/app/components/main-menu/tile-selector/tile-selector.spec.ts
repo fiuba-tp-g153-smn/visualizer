@@ -30,7 +30,7 @@ describe('TileSelectorComponent', () => {
         maxZoom: 19,
       },
       {
-        id: 'satellite',
+        id: 'goes-19',
         name: 'Satélite',
         url: 'https://example.com/{z}/{x}/{y}.png',
         attribution: '© Esri',
@@ -59,11 +59,11 @@ describe('TileSelectorComponent', () => {
 
   it('should identify active provider', () => {
     expect(component.isActive('osm')).toBe(true);
-    expect(component.isActive('satellite')).toBe(false);
+    expect(component.isActive('goes-19')).toBe(false);
   });
 
   it('should select a provider', () => {
-    component.selectProvider('satellite');
-    expect(mockTileService.setProvider).toHaveBeenCalledWith('satellite');
+    component.selectProvider('goes-19');
+    expect(mockTileService.setProvider).toHaveBeenCalledWith('goes-19');
   });
 });

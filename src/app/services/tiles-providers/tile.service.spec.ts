@@ -37,10 +37,10 @@ describe('TileService', () => {
     });
 
     it('should change provider to satellite', () => {
-      service.setProvider('satellite');
+      service.setProvider('goes-19');
 
       const currentProvider = service.currentProvider();
-      expect(currentProvider.id).toBe('satellite');
+      expect(currentProvider.id).toBe('goes-19');
       expect(currentProvider.name).toBe('Satélite (ESRI)');
     });
 
@@ -89,7 +89,7 @@ describe('TileService', () => {
 
       expect(ids).toContain('argenmap');
       expect(ids).toContain('osm');
-      expect(ids).toContain('satellite');
+      expect(ids).toContain('goes-19');
       expect(ids).toContain('cartoDB');
       expect(ids).toContain('cartoDBDark');
     });

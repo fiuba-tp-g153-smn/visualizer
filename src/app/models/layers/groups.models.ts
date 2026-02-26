@@ -31,7 +31,6 @@ export interface LayerSubgroup {
   id: string;
   name: string;
   description?: string;
-  groupId: string;
   layers: Layer[];
   expanded: boolean;
 }
