@@ -28,15 +28,15 @@ export const ABI_SUBGROUP: LayerSubgroup = {
   layers: [
     {
       ...ABI_DEFAULTS,
-      id: `${idPrefix}/ch-02`,
-      channel: 'ch-02',
+      id: `${idPrefix}/ch-2`,
+      channel: 'ch-2',
       name: 'Canal 2 (Visible)',
       description: 'Banda visible (0.64 μm)',
     },
     {
       ...ABI_DEFAULTS,
-      id: `${idPrefix}/ch-09`,
-      channel: 'ch-09',
+      id: `${idPrefix}/ch-9`,
+      channel: 'ch-9',
       name: 'Canal 9 (Vapor de agua)',
       description: 'Banda de vapor de agua (6.9 μm)',
     },

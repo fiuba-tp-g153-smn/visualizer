@@ -14,8 +14,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  background: var(--mat-sys-surface);
+  padding: 6px 8px;
+  background: var(--mat-sys-surface, #ffffff);
+  color: var(--mat-sys-on-surface, #000000);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   pointer-events: auto;
@@ -23,15 +24,15 @@
   border-left: 4px solid;
 
   &.info {
-    border-left-color: var(--mat-sys-primary);
+    border-left-color: var(--mat-sys-primary, #1976d2);
   }
 
   &.warning {
-    border-left-color: var(--mat-sys-secondary);
+    border-left-color: var(--mat-sys-secondary, #ffa726);
   }
 
   &.error {
-    border-left-color: var(--mat-sys-error);
+    border-left-color: var(--mat-sys-error, #d32f2f);
   }
 
   &.success {
@@ -55,6 +56,7 @@
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 // Color icons based on notification type
@@ -76,12 +78,18 @@
   }
 }
 
+.notification-icon {
+  flex-shrink: 0;
+}
+
 .notification-message {
   color: var(--mat-sys-on-surface);
   font-size: 14px;
   line-height: 1.5;
-  display: flex;
-  align-items: center;
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .notification-close {

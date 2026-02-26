@@ -52,13 +52,16 @@ export class LayerConfigService {
    */
   fetchGoesLayerConfig(layer: GoesTileLayer): Observable<GoesTileLayerConfig> {
     const configUrl = buildConfigUrl(layer.id);
-    return this.http.get<GoesTileLayerConfig>(configUrl).pipe(
-      map((config) => {
+    return this.http.get<any>(configUrl).pipe(
+      map((response) => {
+        // Extract only the IDs from the tileset objects
+        const availableTilesets = response.tilesets.map((tileset: any) => tileset.id);
+
         const layerConfig: GoesTileLayerConfig = {
           layerId: layer.id,
           type: LayerType.TILE,
           category: LayerCategory.GOES_19,
-          availableTilesets: config.availableTilesets,
+          availableTilesets,
         };
 
         this.updateConfigMap(layer.id, layerConfig);
@@ -90,8 +93,12 @@ export class LayerConfigService {
     const elevationRequests = layer.availableElevations.map((elevation) => {
       const pathToProduct = `${layer.id}/${elevation}`;
       const configUrl = buildConfigUrl(pathToProduct);
-      return this.http.get<{ tilesets: string[] }>(configUrl).pipe(
-        map((response) => ({ elevation, tilesets: response.tilesets })),
+      return this.http.get<any>(configUrl).pipe(
+        map((response) => {
+          // Extract only the IDs from the tileset objects
+          const tilesets = response.tilesets.map((tileset: any) => tileset.id);
+          return { elevation, tilesets };
+        }),
         catchError((error) => {
           console.error(`Failed to fetch radar config for ${pathToProduct}:`, error);
           throw error;
@@ -203,13 +210,131 @@ export class LayerConfigService {
 
   /**
    * Updates the configuration map with a new configuration.
-   * Creates a new immutable map to trigger reactive updates.
+   * Only updates if the configuration has actually changed to avoid unnecessary reactive updates.
    */
   private updateConfigMap(layerId: string, config: LayerConfig): void {
+    const existingConfig = this.configMap().get(layerId);
+
+    // Compare configs to see if they're actually different
+    if (existingConfig && this.configsAreEqual(existingConfig, config)) return;
+
     this.configMap.update((map) => {
       const newMap = new Map(map);
       newMap.set(layerId, config);
       return newMap;
     });
+  }
+
+  /**
+   * Compares two layer configurations to determine if they're equal.
+   */
+  private configsAreEqual(a: LayerConfig, b: LayerConfig): boolean {
+    if (a.type !== b.type) return false;
+
+    switch (a.type) {
+      case LayerType.TILE:
+        if (a.category !== (b as any).category) return false;
+
+        switch (a.category) {
+          case LayerCategory.GOES_19: {
+            const bGoes = b as GoesTileLayerConfig;
+            return this.arraysAreEqual(a.availableTilesets, bGoes.availableTilesets);
+          }
+          case LayerCategory.RADAR: {
+            const bRadar = b as RadarTileLayerConfig;
+            // Compare elevation keys
+            const aKeys = Object.keys(a.availableTilesetsByElevation).sort();
+            const bKeys = Object.keys(bRadar.availableTilesetsByElevation).sort();
+            if (!this.arraysAreEqual(aKeys, bKeys)) return false;
+
+            // Compare tilesets for each elevation
+            for (const key of aKeys) {
+              if (
+                !this.arraysAreEqual(
+                  a.availableTilesetsByElevation[key],
+                  bRadar.availableTilesetsByElevation[key],
+                )
+              ) {
+                return false;
+              }
+            }
+            return true;
+          }
+          default:
+            return false;
+        }
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Compares two arrays for equality.
+   */
+  private arraysAreEqual(a: readonly string[], b: readonly string[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
+  // ============================================================================
+  // Public Methods - TimeIndex Calculation
+  // ============================================================================
+
+  /**
+   * Calculates the optimal timeIndex based on lastImagesCount and available periods.
+   * - If lastImagesCount = 1: returns the latest period (maxIndex)
+   * - If lastImagesCount > 1: returns the start of the range (maxIndex - lastImagesCount + 1) or 0
+   *
+   * @param layerId - The layer ID
+   * @param lastImagesCount - Number of recent images to display
+   * @param elevationKey - For radar layers, the elevation angle key (e.g., "0.5")
+   * @returns The calculated timeIndex, or undefined if config is not available
+   */
+  calculateTimeIndexForRange(
+    layerId: string,
+    lastImagesCount: number,
+    elevationKey?: string,
+  ): number | undefined {
+    const config = this.getConfig(layerId);
+    if (!config || config.type !== LayerType.TILE) {
+      return undefined;
+    }
+
+    let maxIndex = 0;
+
+    switch (config.category) {
+      case LayerCategory.GOES_19: {
+        maxIndex = config.availableTilesets.length - 1;
+        break;
+      }
+      case LayerCategory.RADAR: {
+        if (!elevationKey) {
+          return undefined;
+        }
+        const tilesets = config.availableTilesetsByElevation[elevationKey];
+        if (!tilesets || tilesets.length === 0) {
+          return undefined;
+        }
+        maxIndex = tilesets.length - 1;
+        break;
+      }
+      default:
+        return undefined;
+    }
+
+    if (maxIndex < 0) {
+      return undefined;
+    }
+
+    if (lastImagesCount === 1) {
+      // Go to the latest period
+      return maxIndex;
+    } else {
+      // Go to the start of the lastImagesCount range
+      return Math.max(0, maxIndex - lastImagesCount + 1);
+    }
   }
 }

@@ -157,6 +157,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
+   * Obtiene los índices de elevación como opciones para el selector
+   */
+  elevationIndexOptions = computed(() => {
+    return this.availableElevations().map((_, i) => i);
+  });
+
+  /**
    * Obtiene el índice de elevación actual
    */
   currentElevationIndex = computed(() => {
@@ -180,10 +187,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * Verifica si hay múltiples períodos (más de 1)
+   * Verifica si la capa tiene múltiples períodos disponibles para reproducción
    */
-  hasMultiplePeriods = computed(() => {
-    return this.maxTimeIndex() > 0;
+  canPlayback = computed(() => {
+    return this.maxTimeIndex() > 0 && this.lastImagesCount() > 1;
   });
 
   /**
@@ -264,7 +271,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita cargar configuración
    */
   private needsConfig(): boolean {
-    const isSatellite = this.layer.id.startsWith('abi-') || this.layer.id.startsWith('glm-');
+    const isSatellite = this.layer.category === LayerCategory.GOES_19;
     const isRadar = this.layer.category === LayerCategory.RADAR;
     return (isSatellite || isRadar) && !this.configService.hasConfig(this.layer.id);
   }
@@ -447,26 +454,23 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     const tileset = tilesets[timeIndex];
-    // Extraer información de fecha del ID
-    // ABI formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567 (11 dígitos: YYYYDDDHHMI)
-    // GLM formato: GLM_FED_s2026044013000 (13 dígitos: YYYYDDDHHMISS)
-    const match = tileset.match(/_s(\d+)/);
-    if (match) {
-      const dateStr = match[1];
-      const year = dateStr.substring(0, 4);
-      const dayOfYear = dateStr.substring(4, 7);
-      const hour = dateStr.substring(7, 9);
-      const minute = dateStr.substring(9, 11);
-      // Seconds only present in GLM format (13 digits)
-      const hasSeconds = dateStr.length >= 13;
 
-      // Convertir día juliano a fecha
+    // Parse timestamp format: YYYYJJJHHMMSSS (14 digits)
+    // YYYY = year, JJJ = day of year, HH = hour, MM = minute, SSS = seconds with tenth (e.g., 209 = 20.9s)
+    if (tileset.length >= 11) {
+      const year = tileset.substring(0, 4);
+      const dayOfYear = tileset.substring(4, 7);
+      const hour = tileset.substring(7, 9);
+      const minute = tileset.substring(9, 11);
+
+      // Convert Julian day to date
       const date = this.julianToDate(year, dayOfYear);
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
 
       return `${year}-${month}-${day} ${hour}:${minute}`;
     }
+
     return tileset;
   }
 
@@ -484,14 +488,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     const tileset = tilesets[timeIndex];
-    // Handle both ABI (11 digits) and GLM (13 digits) formats
-    const match = tileset.match(/_s(\d+)/);
-    if (match) {
-      const dateStr = match[1];
-      const hour = dateStr.substring(7, 9);
-      const minute = dateStr.substring(9, 11);
+
+    // Parse timestamp format: YYYYJJJHHMMSSS (14 digits)
+    if (tileset.length >= 11) {
+      const hour = tileset.substring(7, 9);
+      const minute = tileset.substring(9, 11);
       return `${hour}:${minute}`;
     }
+
     return '--:--';
   }
 
@@ -519,19 +523,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onLastImagesCountChange(count: number): void {
-    const wasPlaying = this.isPlaying();
-
     this.controlService.setLastImagesCount(this.layer.id, count);
-
-    if (count === 1 && wasPlaying) {
-      this.controlService.stopPlayback(this.layer.id);
-      return;
-    }
-
-    if (wasPlaying) {
-      setTimeout(() => {
-        this.controlService.startPlayback(this.layer.id);
-      }, 0);
-    }
   }
 }

@@ -18,7 +18,6 @@ import { TileService } from '../../services/tiles-providers/tile.service';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRendererService } from '../../services/layers/layer-renderer.service';
-import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TileProvider } from '../../models';
 
 @Component({
@@ -35,7 +34,6 @@ export class MapViewer implements OnInit, OnDestroy {
   private layersService = inject(LayersService);
   private controlService = inject(LayerControlService);
   private layerRendererService = inject(LayerRendererService);
-  private configService = inject(LayerConfigService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -49,7 +47,7 @@ export class MapViewer implements OnInit, OnDestroy {
         }
       });
 
-      // Effect: sincronizar capas satelitales (Reacciona a cambios en capas O en config)
+      // Effect: sincronizar capas satelitales
       effect(() => {
         const layers = this.controlService.activeLayers();
         const layerIds = layers.map((item) => item.layer.id);
@@ -185,16 +183,20 @@ export class MapViewer implements OnInit, OnDestroy {
       }
     }
 
-    // 1. Remove layers that are no longer desired
+    // 1. Remove layers that are no longer desired OR need to be replaced
     for (const [key, layer] of this.onMapLayers) {
-      if (!desiredLayersOnMap.has(key)) {
+      const newLayer = desiredLayersOnMap.get(key);
+      // Remove if layer is gone OR if it's a different instance (e.g., placeholder -> real layer)
+      if (!newLayer || newLayer !== layer) {
         this.map.removeLayer(layer);
       }
     }
 
-    // 2. Add new layers
+    // 2. Add new layers or layers that were replaced
     for (const [key, layer] of desiredLayersOnMap) {
-      if (!this.onMapLayers.has(key)) {
+      const oldLayer = this.onMapLayers.get(key);
+      // Add if it's a new layer OR if it's a different instance
+      if (!oldLayer || oldLayer !== layer) {
         layer.addTo(this.map!);
       }
     }

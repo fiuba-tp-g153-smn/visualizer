@@ -19,6 +19,8 @@ export class NotificationPanelComponent {
   readonly notificationService = inject(NotificationService);
   readonly NotificationType = NotificationType;
 
+  constructor() {}
+
   getIcon(type: NotificationType): string {
     switch (type) {
       case NotificationType.INFO:

@@ -123,6 +123,7 @@ export class LayerControlService {
 
   /**
    * Activates (makes visible) a layer and assigns it a z-index.
+   * If the layer has config and timeIndex is undefined, sets it to the latest period.
    */
   activateLayer(layerId: string): void {
     if (this.isActive(layerId)) return;
@@ -133,6 +134,14 @@ export class LayerControlService {
     this.updateControls(layerId, (controls) => {
       controls.visible = true;
       controls.zIndex = this.getNextZIndex(layer.zIndexGroup);
+
+      // For tile layers, set timeIndex to latest if undefined and config exists
+      if (controls.type === LayerType.TILE && controls.playback.timeIndex === undefined) {
+        const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
+        if (availablePeriods.length > 0) {
+          controls.playback.timeIndex = availablePeriods.length - 1;
+        }
+      }
     });
   }
 
@@ -202,8 +211,12 @@ export class LayerControlService {
 
   /**
    * Sets the number of most recent images to display in playback mode.
+   * Automatically adjusts timeIndex to the start of the selected range.
    */
   setLastImagesCount(layerId: string, count: number): void {
+    const wasPlaying = this.isPlaying(layerId);
+    const controls = this.getControls(layerId);
+
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE) {
         if (!controls.playback) {
@@ -218,6 +231,50 @@ export class LayerControlService {
         }
       }
     });
+
+    // Calculate and set the optimal timeIndex for the new range
+    if (controls && controls.type === LayerType.TILE) {
+      let elevationKey: string | undefined;
+
+      // Get elevation key for radar layers
+      switch (controls.category) {
+        case LayerCategory.RADAR: {
+          const layer = this.layersService.getLayerById(layerId);
+          if (layer && layer.type === LayerType.TILE && layer.category === LayerCategory.RADAR) {
+            const elevationIndex = controls.elevation.elevationIndex ?? 0;
+            elevationKey = layer.availableElevations[elevationIndex];
+          }
+          break;
+        }
+      }
+
+      const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
+        layerId,
+        count,
+        elevationKey,
+      );
+
+      if (newTimeIndex !== undefined) {
+        this.setTimeIndex(layerId, newTimeIndex);
+      }
+    }
+
+    // Handle playback state
+    if (count === 1) {
+      // Stop playback if it was playing (can't play with 1 image)
+      if (wasPlaying) {
+        this.stopPlayback(layerId);
+      }
+    } else {
+      // If playing, stop and restart to apply new range
+      if (wasPlaying) {
+        this.stopPlayback(layerId);
+        // Use setTimeout to ensure control update completes
+        setTimeout(() => {
+          this.startPlayback(layerId);
+        }, 0);
+      }
+    }
   }
 
   /**
@@ -230,11 +287,8 @@ export class LayerControlService {
   ): void {
     // First deactivate layers in the group not specified in the new order
     this.getActiveLayersForGroup(activeLayerGroupId).forEach(({ layer }) => {
-      if (this.isActive(layer.id)) {
-        this.updateControls(layer.id, (controls) => {
-          controls.zIndex = undefined;
-          controls.visible = false;
-        });
+      if (!orderedLayerIds.includes(layer.id)) {
+        this.deactivateLayer(layer.id);
       }
     });
 
@@ -310,6 +364,16 @@ export class LayerControlService {
     // Otherwise, start from 0 to show all available periods
     const maxTimeIndex = availablePeriods.length - 1;
     const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
+
+    // Don't start playback if there's only 1 period in range
+    if (maxTimeIndex - minTimeIndex < 1) return;
+
+    // Reset to first frame of the cycle
+    this.updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE && controls.playback) {
+        controls.playback.timeIndex = minTimeIndex;
+      }
+    });
 
     const speed = controls.playback.speed;
     const interval = setInterval(() => {
@@ -553,7 +617,7 @@ export class LayerControlService {
           type: LayerType.TILE,
           playback: {
             isPlaying: false,
-            timeIndex: 0,
+            timeIndex: undefined, // Will be set to latest when config loads
             speed: 1, // TODO: this should ideally come from layer definition or defaults based on category or environment configuration
             lastImagesCount: 1,
           },
