@@ -11,6 +11,7 @@ import {
   LayerType,
   RadarTileLayer,
   GoesTileLayerConfig,
+  RadarElevation,
 } from '../../models';
 
 /**
@@ -110,7 +111,7 @@ export class LayerConfigService {
       map((results) => {
         const availableTilesetsByElevation: Record<string, string[]> = {};
         results.forEach(({ elevation, tilesets }) => {
-          availableTilesetsByElevation[elevation] = tilesets;
+          availableTilesetsByElevation[elevation.id] = tilesets;
         });
 
         const config: RadarTileLayerConfig = {
@@ -296,7 +297,7 @@ export class LayerConfigService {
   calculateTimeIndexForRange(
     layerId: string,
     lastImagesCount: number,
-    elevationKey?: string,
+    elevation?: RadarElevation,
   ): number | undefined {
     const config = this.getConfig(layerId);
     if (!config || config.type !== LayerType.TILE) {
@@ -311,10 +312,10 @@ export class LayerConfigService {
         break;
       }
       case LayerCategory.RADAR: {
-        if (!elevationKey) {
+        if (!elevation) {
           return undefined;
         }
-        const tilesets = config.availableTilesetsByElevation[elevationKey];
+        const tilesets = config.availableTilesetsByElevation[elevation.id];
         if (!tilesets || tilesets.length === 0) {
           return undefined;
         }

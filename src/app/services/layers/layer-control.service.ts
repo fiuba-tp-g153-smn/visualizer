@@ -9,6 +9,7 @@ import {
   BaseLayerControls,
   TileLayerControls,
   GoesLayerControls,
+  RadarElevation,
 } from '../../models';
 import { LayersService } from './layers.service';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS, DEFAULT_ACTIVE_LAYERS } from '../../config/layers';
@@ -234,7 +235,7 @@ export class LayerControlService {
 
     // Calculate and set the optimal timeIndex for the new range
     if (controls && controls.type === LayerType.TILE) {
-      let elevationKey: string | undefined;
+      let elevation: RadarElevation | undefined;
 
       // Get elevation key for radar layers
       switch (controls.category) {
@@ -242,7 +243,7 @@ export class LayerControlService {
           const layer = this.layersService.getLayerById(layerId);
           if (layer && layer.type === LayerType.TILE && layer.category === LayerCategory.RADAR) {
             const elevationIndex = controls.elevation.elevationIndex ?? 0;
-            elevationKey = layer.availableElevations[elevationIndex];
+            elevation = layer.availableElevations[elevationIndex];
           }
           break;
         }
@@ -251,7 +252,7 @@ export class LayerControlService {
       const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
         layerId,
         count,
-        elevationKey,
+        elevation,
       );
 
       if (newTimeIndex !== undefined) {
@@ -446,7 +447,7 @@ export class LayerControlService {
   /**
    * Gets the elevation key for a radar layer based on the selected elevation index.
    */
-  private getElevationKeyForLayer(layerId: string): string | null {
+  private getSelectedElevationForLayer(layerId: string): RadarElevation | null {
     const controls = this.getControls(layerId);
     if (
       !controls ||
@@ -482,11 +483,11 @@ export class LayerControlService {
           case LayerCategory.GOES_19:
             return this.layerConfigService.getAvailableTilesets(layerId) ?? [];
           case LayerCategory.RADAR:
-            const elevationKey = this.getElevationKeyForLayer(layerId);
-            if (!elevationKey) return [];
+            const elevation = this.getSelectedElevationForLayer(layerId);
+            if (!elevation) return [];
             const tilesetsByElevation =
               this.layerConfigService.getAvailableTilesetsByElevation(layerId) ?? {};
-            return tilesetsByElevation[elevationKey] ?? [];
+            return tilesetsByElevation[elevation.id] ?? [];
           default:
             throw new Error(`Unsupported tile layer category for playback`);
         }

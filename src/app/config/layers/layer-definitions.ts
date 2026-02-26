@@ -75,7 +75,7 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
     subtitle: '(Radar, modelos numéricos)',
     description:
       'Capas de datos científicos: radar meteorológico, salidas de modelos numéricos, imágenes satelitales, etc.',
-    icon: 'goes-19',
+    icon: 'layers',
     zIndexRange: { min: 0, max: 999 },
   },
   [ActiveLayerGroupId.OVERLAY]: {

@@ -30,5 +30,19 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       name: 'Flash Extent Density',
       description: 'Densidad de extensión de rayos',
     },
+    {
+      ...GLM_DEFAULTS,
+      id: 'goes-19/glm/glm-toe',
+      variable: 'toe',
+      name: 'Total Optical Energy',
+      description: 'Energía óptica total de los rayos',
+    },
+    {
+      ...GLM_DEFAULTS,
+      id: 'goes-19/glm/glm-mfa',
+      variable: 'mfa',
+      name: 'Minimum Flash Area',
+      description: 'Área mínima de los rayos',
+    },
   ] as GLMGoesTileLayer[],
 };

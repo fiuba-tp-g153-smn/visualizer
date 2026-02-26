@@ -96,20 +96,37 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isExpanded = signal(false);
 
   isPlaying = computed(() => this.controlService.isPlaying(this.layer.id));
+
   playSpeed = computed(() => {
     const controls = this.controlService.getControls(this.layer.id);
-    return controls && controls.type === LayerType.TILE ? controls.playback.speed : 1;
+    switch (controls?.type) {
+      case LayerType.TILE:
+        return controls.playback.speed;
+      default:
+        return 1;
+    }
   });
+
   lastImagesCount = computed(() => {
     const controls = this.controlService.getControls(this.layer.id);
-    return controls && controls.type === LayerType.TILE ? controls.playback.lastImagesCount : 1;
+    switch (controls?.type) {
+      case LayerType.TILE:
+        return controls.playback.lastImagesCount;
+      default:
+        return 1;
+    }
   });
 
   /**
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
    */
   lastImagesOptions = computed(() => {
-    return this.layer.type === LayerType.TILE ? (this.layer.availablePeriods ?? [1]) : [1];
+    switch (this.layer.type) {
+      case LayerType.TILE:
+        return this.layer.availablePeriods ?? [1];
+      default:
+        return [1];
+    }
   });
 
   getActiveLayer = computed(() => {
@@ -132,28 +149,84 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   hasTimeControl = computed(() => {
-    return this.configService.hasConfig(this.layer.id);
+    // Debe tener configuración Y tilesets disponibles
+    if (!this.configService.hasConfig(this.layer.id)) return false;
+
+    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    return tilesets && tilesets.length > 0;
+  });
+
+  /**
+   * Verifica si la capa requiere control de tiempo pero no hay períodos disponibles
+   */
+  hasNoPeriodsAvailable = computed(() => {
+    // Solo aplica a capas TILE
+    if (this.layer.type !== LayerType.TILE) return false;
+
+    // No mostrar si está cargando
+    if (this.isLoadingConfig()) return false;
+
+    // Si no tiene config aún, no es un error (aún no se intentó cargar)
+    if (!this.configService.hasConfig(this.layer.id)) return false;
+
+    // Tiene config pero no hay tilesets disponibles
+    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    return !tilesets || tilesets.length === 0;
+  });
+
+  /**
+   * Verifica si la capa necesita control de período (TILE layers)
+   */
+  needsTimeControl = computed(() => {
+    switch (this.layer.type) {
+      case LayerType.TILE:
+        switch (this.layer.category) {
+          case LayerCategory.GOES_19:
+          case LayerCategory.RADAR:
+            return true;
+          default:
+            return false;
+        }
+      default:
+        return false;
+    }
   });
 
   /**
    * Verifica si la capa necesita control de elevación (solo RADAR)
    */
   hasElevationControl = computed(() => {
-    return (
-      this.layer.category === LayerCategory.RADAR &&
-      this.layer.type === LayerType.TILE &&
-      this.layer.availableElevations &&
-      this.layer.availableElevations.length > 0
-    );
+    switch (this.layer.type) {
+      case LayerType.TILE:
+        switch (this.layer.category) {
+          case LayerCategory.RADAR:
+            return (
+              this.layer.availableElevations !== undefined &&
+              this.layer.availableElevations.length > 0
+            );
+          default:
+            return false;
+        }
+      default:
+        return false;
+    }
   });
 
   /**
    * Obtiene las elevaciones disponibles
    */
   availableElevations = computed(() => {
-    return this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.RADAR
-      ? (this.layer.availableElevations ?? [])
-      : [];
+    switch (this.layer.type) {
+      case LayerType.TILE:
+        switch (this.layer.category) {
+          case LayerCategory.RADAR:
+            return this.layer.availableElevations ?? [];
+          default:
+            return [];
+        }
+      default:
+        return [];
+    }
   });
 
   /**
@@ -168,14 +241,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentElevationIndex = computed(() => {
     const activeItem = this.getActiveLayer();
-    if (
-      activeItem &&
-      activeItem.controls.type === LayerType.TILE &&
-      'elevation' in activeItem.controls
-    ) {
-      return activeItem.controls.elevation?.elevationIndex ?? 0;
+
+    if (!activeItem) return 0;
+
+    switch (activeItem.controls.type) {
+      case LayerType.TILE:
+        if ('elevation' in activeItem.controls) {
+          return activeItem.controls.elevation?.elevationIndex ?? 0;
+        }
+        return 0;
+      default:
+        return 0;
     }
-    return 0;
   });
 
   /**
@@ -197,15 +274,19 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa tiene controles avanzados (tiempo/animación)
    */
   hasAdvancedControls = computed(() => {
-    switch (this.layer.category) {
-      case LayerCategory.GOES_19:
-        return this.layer.type === LayerType.TILE && this.layer.availablePeriods !== undefined;
-      case LayerCategory.RADAR:
-        return (
-          this.layer.type === LayerType.TILE &&
-          this.layer.availablePeriods !== undefined &&
-          this.layer.availableElevations !== undefined
-        );
+    switch (this.layer.type) {
+      case LayerType.TILE:
+        switch (this.layer.category) {
+          case LayerCategory.GOES_19:
+            return this.layer.availablePeriods !== undefined;
+          case LayerCategory.RADAR:
+            return (
+              this.layer.availablePeriods !== undefined &&
+              this.layer.availableElevations !== undefined
+            );
+          default:
+            return false;
+        }
       default:
         return false;
     }
@@ -236,10 +317,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentTimeIndex = computed(() => {
     const activeItem = this.getActiveLayer();
-    const currentIndex =
-      activeItem && activeItem.controls.type === LayerType.TILE
-        ? (activeItem.controls.playback?.timeIndex ?? this.maxTimeIndex())
-        : this.maxTimeIndex();
+    let currentIndex: number;
+
+    switch (activeItem?.controls.type) {
+      case LayerType.TILE:
+        currentIndex = activeItem.controls.playback?.timeIndex ?? this.maxTimeIndex();
+        break;
+      default:
+        currentIndex = this.maxTimeIndex();
+        break;
+    }
+
     // Asegurar que el índice actual esté dentro del rango visible
     const min = this.minTimeIndex();
     const max = this.maxTimeIndex();
@@ -271,9 +359,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita cargar configuración
    */
   private needsConfig(): boolean {
-    const isSatellite = this.layer.category === LayerCategory.GOES_19;
-    const isRadar = this.layer.category === LayerCategory.RADAR;
-    return (isSatellite || isRadar) && !this.configService.hasConfig(this.layer.id);
+    if (this.configService.hasConfig(this.layer.id)) {
+      return false;
+    }
+
+    switch (this.layer.category) {
+      case LayerCategory.GOES_19:
+      case LayerCategory.RADAR:
+        return true;
+      default:
+        return false;
+    }
   }
 
   /**
@@ -431,13 +527,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   getElevationLabel(elevationIndex: number): string {
     const elevations = this.availableElevations();
-    if (elevationIndex >= 0 && elevationIndex < elevations.length) {
-      const elevation = elevations[elevationIndex];
-      // Convertir 'elev0' en 'Elevación 0'
-      const num = elevation.replace('elev', '');
-      return `Elevación ${num}`;
+    if (elevations && elevationIndex >= 0 && elevationIndex < elevations.length) {
+      return elevations[elevationIndex].name;
     }
-    return 'N/A';
+    throw new Error(
+      `Índice de elevación ${elevationIndex} fuera de rango para capa ${this.layer.id}`,
+    );
   }
 
   /**

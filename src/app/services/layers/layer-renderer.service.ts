@@ -47,12 +47,16 @@ export class LayerRendererService {
   private readonly errorTracker = new Map<string, number>();
   private readonly MAX_ERRORS_BEFORE_NOTIFY = 5;
 
+  // Tile Layer Pool: cache of L.TileLayer instances for reuse
+  private readonly layerPool = new Map<string, L.TileLayer>();
+
   // ============================================================================
   // Public Methods - Layer Creation
   // ============================================================================
 
   /**
    * Creates a Leaflet TileLayer for the given layer ID and controls.
+   * Uses a pool to reuse layer instances when only visual properties (opacity) change.
    * Returns a placeholder layer if configuration is not yet available or layer not found.
    *
    * @param layerId - The layer identifier
@@ -67,19 +71,110 @@ export class LayerRendererService {
       return this.createPlaceholderLayer();
     }
 
+    // Generate a unique key for the pool based on layer data (not visual properties)
+    const poolKey = this.generatePoolKey(layerId, controls);
+
+    // Check if we already have a layer instance in the pool
+    if (this.layerPool.has(poolKey)) {
+      const cachedLayer = this.layerPool.get(poolKey)!;
+      // Update only visual properties without recreating the layer
+      const opacity = (controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100;
+      cachedLayer.setOpacity(opacity);
+      return cachedLayer;
+    }
+
+    // Create new layer if not in pool
+    let tileLayer: L.TileLayer;
     switch (layer.type) {
       case LayerType.TILE:
-        return this.createDataTileLayer(layerId, controls as TileLayerControls);
+        tileLayer = this.createDataTileLayer(layerId, controls as TileLayerControls);
+        break;
       case LayerType.WMS:
-        return this.createWmsLayer(layerId, controls as WmsLayerControls);
+        tileLayer = this.createWmsLayer(layerId, controls as WmsLayerControls);
+        break;
       default:
         throw new Error(`Unsupported layer type for layer ${layerId}`);
+    }
+
+    // Store in pool for future reuse
+    this.layerPool.set(poolKey, tileLayer);
+    return tileLayer;
+  }
+
+  /**
+   * Cleans old layers from the pool that are not in use.
+   * @param activeKeys Set of keys (layerId-tilesetId) that MUST be kept
+   */
+  prunePool(activeKeys: Set<string>): void {
+    for (const [key] of this.layerPool) {
+      if (!activeKeys.has(key)) {
+        this.layerPool.delete(key);
+      }
     }
   }
 
   // ============================================================================
   // Private Methods - Tile Layer Factory
   // ============================================================================
+
+  /**
+   * Generates a unique pool key for a layer based on its data (not visual properties).
+   * The key should change only when the actual tile data changes, not when visual
+   * properties like opacity change.
+   */
+  private generatePoolKey(layerId: string, controls: TileLayerControls | WmsLayerControls): string {
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer) return layerId;
+
+    switch (layer.type) {
+      case LayerType.TILE: {
+        const tileControls = controls as TileLayerControls;
+        switch (layer.category) {
+          case LayerCategory.GOES_19: {
+            const goesControls = tileControls as GoesLayerControls;
+            const config = this.layerConfigService.getConfig(layerId) as
+              | GoesTileLayerConfig
+              | undefined;
+            if (!config) return `${layerId}-placeholder`;
+
+            const tilesets = config.availableTilesets;
+            const timeIndex =
+              goesControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+            const tilesetId = tilesets[timeIndex] ?? 'default';
+            return `${layerId}-${tilesetId}`;
+          }
+          case LayerCategory.RADAR: {
+            const radarControls = tileControls as RadarLayerControls;
+            const radarLayer = layer as RadarTileLayer;
+            const config = this.layerConfigService.getConfig(layerId) as
+              | RadarTileLayerConfig
+              | undefined;
+            if (!config) return `${layerId}-placeholder`;
+
+            const elevationIndex = radarControls.elevation.elevationIndex ?? 0;
+            const elevation = radarLayer.availableElevations?.[elevationIndex] ?? '0.5';
+
+            const tilesetsForElevation = config.availableTilesetsByElevation[elevation.id];
+            if (!tilesetsForElevation) return `${layerId}-${elevation}-placeholder`;
+
+            const timeIndex =
+              radarControls.playback.timeIndex ??
+              (tilesetsForElevation.length > 0 ? tilesetsForElevation.length - 1 : 0);
+            const tilesetId = tilesetsForElevation[timeIndex] ?? 'default';
+            return `${layerId}-${elevation}-${tilesetId}`;
+          }
+          default:
+            return layerId;
+        }
+      }
+      case LayerType.WMS: {
+        const wmsLayer = layer as WmsLayer;
+        return `${layerId}-${wmsLayer.wmsLayerName}`;
+      }
+      default:
+        return layerId;
+    }
+  }
 
   /**
    * Creates a data tile layer (GOES, Radar, etc.) based on category.
@@ -213,7 +308,7 @@ export class LayerRendererService {
 
     // Get tilesets for this specific elevation
     const tilesetsByElevation = config.availableTilesetsByElevation;
-    const tilesetsForElevation = tilesetsByElevation[elevation];
+    const tilesetsForElevation = tilesetsByElevation[elevation.id];
 
     if (!tilesetsForElevation || tilesetsForElevation.length === 0) {
       return this.createPlaceholderLayer();

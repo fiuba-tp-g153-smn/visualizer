@@ -12,6 +12,7 @@ import {
   GoesTileLayerConfig,
   RadarTileLayerConfig,
   NotificationType,
+  RadarElevation,
 } from '../../models';
 
 /**
@@ -37,7 +38,6 @@ export class LayerRefreshService {
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
-  private readonly INITIAL_NOTIFICATION_DELAY = 600; // Wait for app loader to finish (~500ms)
 
   constructor() {
     effect(() => {
@@ -300,7 +300,7 @@ export class LayerRefreshService {
     }
 
     const lastImagesCount = controls.playback.lastImagesCount;
-    let elevationKey: string | undefined;
+    let elevation: RadarElevation | undefined;
 
     // Get elevation key for radar layers
     switch (controls.category) {
@@ -308,7 +308,7 @@ export class LayerRefreshService {
         const layer = this.layersService.getLayerById(layerId);
         if (layer && layer.type === LayerType.TILE && layer.category === LayerCategory.RADAR) {
           const elevationIndex = controls.elevation.elevationIndex ?? 0;
-          elevationKey = layer.availableElevations[elevationIndex];
+          elevation = layer.availableElevations[elevationIndex];
         }
         break;
       }
@@ -317,7 +317,7 @@ export class LayerRefreshService {
     const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
       layerId,
       lastImagesCount,
-      elevationKey,
+      elevation,
     );
 
     if (newTimeIndex !== undefined) {
