@@ -22,7 +22,7 @@ export const LAYER_RENDERING_CONFIG = {
     /** Minimum native zoom level (tile resolution) */
     minNativeZoom: 4,
     /** Maximum native zoom level (tile resolution) */
-    maxNativeZoom: 8,
+    maxNativeZoom: 7,
     /** Geographic bounds for GOES tile coverage */
     bounds: [
       [-60.0, -110.0], // SW corner (South, West)

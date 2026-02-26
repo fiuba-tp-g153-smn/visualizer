@@ -25,7 +25,7 @@ export const GLM_SUBGROUP: LayerSubgroup = {
   layers: [
     {
       ...GLM_DEFAULTS,
-      id: 'goes-19/glm/fed',
+      id: 'goes-19/glm/glm-fed',
       variable: 'fed',
       name: 'Flash Extent Density',
       description: 'Densidad de extensión de rayos',

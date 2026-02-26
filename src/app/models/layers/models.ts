@@ -54,7 +54,7 @@ export interface GoesTileLayer extends TileLayer {
 }
 
 export interface ABIGoesTileLayer extends GoesTileLayer {
-  channel: string; // Canal específico del satélite (ej: 'ch-02', 'ch-09', etc.)
+  channel: string; // Canal específico del satélite (ej: 'ch-2', 'ch-9', etc.)
 }
 
 export interface GLMGoesTileLayer extends GoesTileLayer {

@@ -37,15 +37,37 @@ export class LayerRefreshService {
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
+  private readonly INITIAL_NOTIFICATION_DELAY = 600; // Wait for app loader to finish (~500ms)
 
   constructor() {
     effect(() => {
       const activeLayers = this.layerControlService.activeLayers();
       const activeLayerIds = new Set(activeLayers.map((item) => item.layer.id));
 
-      // Start auto-refresh for newly active layers that have configs
+      // Fetch config and start auto-refresh for newly active TILE layers
       for (const { layer } of activeLayers) {
-        if (this.layerConfigService.hasConfig(layer.id) && !this.refreshTimers.has(layer.id)) {
+        // Only TILE layers of GOES_19 and RADAR categories need config
+        const needsConfig =
+          layer.type === LayerType.TILE &&
+          (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.RADAR);
+
+        if (!needsConfig) {
+          continue; // Skip layers that don't need config (e.g., WMS layers)
+        }
+
+        // If layer doesn't have config yet, fetch it first
+        if (!this.layerConfigService.hasConfig(layer.id)) {
+          this.layerConfigService.fetchLayerConfig(layer).subscribe({
+            next: () => {
+              this.startAutoRefresh(layer.id);
+            },
+            error: (err) => {
+              console.error(`Failed to fetch config for ${layer.id}:`, err);
+            },
+          });
+        }
+        // If layer already has config and auto-refresh is not running, start it
+        else if (!this.refreshTimers.has(layer.id)) {
           this.startAutoRefresh(layer.id);
         }
       }
@@ -100,8 +122,6 @@ export class LayerRefreshService {
     }, this.AUTO_REFRESH_INTERVAL_MS);
 
     this.refreshTimers.set(layerId, timerId);
-
-    this.showInitialNotification(layerId);
   }
 
   /**
@@ -174,13 +194,14 @@ export class LayerRefreshService {
     }
 
     if (count > 0) {
-      const message = `${count} period${count !== 1 ? 's' : ''} available for ${layerName}`;
+      const message = `${count} período${count !== 1 ? 's' : ''} disponible${count !== 1 ? 's' : ''} para ${layerName}`;
       this.notificationService.show(NotificationType.SUCCESS, message);
     }
   }
 
   /**
    * Compares before and after configurations and shows appropriate notification.
+   * If there are changes, adjusts the timeIndex based on lastImagesCount.
    */
   private compareAndNotify(
     layerId: string,
@@ -193,6 +214,7 @@ export class LayerRefreshService {
     }
 
     const layerName = this.layersService.getLayerDisplayName(layerId);
+    let hasChanges = false;
 
     switch (after.type) {
       case LayerType.TILE: {
@@ -202,6 +224,7 @@ export class LayerRefreshService {
             const afterTilesets = after.availableTilesets;
             const diff = this.calculateDiff(beforeTilesets, afterTilesets);
             this.showDiffNotification(layerName, diff, showNoChanges);
+            hasChanges = diff.added > 0 || diff.removed > 0;
             break;
           }
           case LayerCategory.RADAR: {
@@ -209,11 +232,17 @@ export class LayerRefreshService {
             const afterByElevation = after.availableTilesetsByElevation;
             const diff = this.calculateRadarDiff(beforeByElevation, afterByElevation);
             this.showDiffNotification(layerName, diff, showNoChanges);
+            hasChanges = diff.added > 0 || diff.removed > 0;
             break;
           }
         }
         break;
       }
+    }
+
+    // If there were changes, adjust timeIndex based on lastImagesCount
+    if (hasChanges) {
+      this.adjustTimeIndexAfterConfigRefresh(layerId);
     }
   }
 
@@ -228,7 +257,7 @@ export class LayerRefreshService {
   ): void {
     if (diff.added === 0 && diff.removed === 0) {
       if (showNoChanges) {
-        this.notificationService.show(NotificationType.INFO, `No changes for ${layerName}`);
+        this.notificationService.show(NotificationType.INFO, `Sin cambios para ${layerName}`);
       }
       return;
     }
@@ -238,26 +267,62 @@ export class LayerRefreshService {
     switch (true) {
       case diff.added > 0 && diff.removed === 0: {
         const plural = diff.added !== 1 ? 's' : '';
-        message = `${diff.added} period${plural} added for ${layerName}`;
+        message = `${diff.added} período${plural} agregado${plural} para ${layerName}`;
         break;
       }
       case diff.removed > 0 && diff.added === 0: {
         const plural = diff.removed !== 1 ? 's' : '';
-        message = `${diff.removed} period${plural} removed for ${layerName}`;
+        message = `${diff.removed} período${plural} eliminado${plural} para ${layerName}`;
         break;
       }
       case diff.added === diff.removed: {
         const plural = diff.added !== 1 ? 's' : '';
-        message = `${diff.added} period${plural} modified for ${layerName}`;
+        message = `${diff.added} período${plural} modificado${plural} para ${layerName}`;
         break;
       }
       default: {
-        message = `${diff.added} period${diff.added !== 1 ? 's' : ''} added, ${diff.removed} removed for ${layerName}`;
+        message = `${diff.added} período${diff.added !== 1 ? 's' : ''} agregado${diff.added !== 1 ? 's' : ''}, ${diff.removed} eliminado${diff.removed !== 1 ? 's' : ''} para ${layerName}`;
         break;
       }
     }
 
     this.notificationService.show(NotificationType.INFO, message);
+  }
+
+  /**
+   * Adjusts the timeIndex after a config refresh based on lastImagesCount.
+   * Delegates calculation to LayerConfigService.
+   */
+  private adjustTimeIndexAfterConfigRefresh(layerId: string): void {
+    const controls = this.layerControlService.getControls(layerId);
+    if (!controls || controls.type !== LayerType.TILE) {
+      return;
+    }
+
+    const lastImagesCount = controls.playback.lastImagesCount;
+    let elevationKey: string | undefined;
+
+    // Get elevation key for radar layers
+    switch (controls.category) {
+      case LayerCategory.RADAR: {
+        const layer = this.layersService.getLayerById(layerId);
+        if (layer && layer.type === LayerType.TILE && layer.category === LayerCategory.RADAR) {
+          const elevationIndex = controls.elevation.elevationIndex ?? 0;
+          elevationKey = layer.availableElevations[elevationIndex];
+        }
+        break;
+      }
+    }
+
+    const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
+      layerId,
+      lastImagesCount,
+      elevationKey,
+    );
+
+    if (newTimeIndex !== undefined) {
+      this.layerControlService.setTimeIndex(layerId, newTimeIndex);
+    }
   }
 
   // ============================================================================

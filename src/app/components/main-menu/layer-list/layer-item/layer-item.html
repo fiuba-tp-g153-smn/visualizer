@@ -122,29 +122,29 @@
           </mat-slider>
           <span class="control-value">{{ currentOpacity() }}%</span>
         </div>
+
+        <!-- Control de elevación (solo para RADAR) -->
+        @if (hasElevationControl()) {
+          <div class="elevation-control">
+            <span class="control-label">Elevación</span>
+            <mat-form-field appearance="fill" class="elevation-select">
+              <mat-select
+                [value]="currentElevationIndex()"
+                (selectionChange)="onElevationChange($event.value)"
+                panelClass="layer-select-panel"
+              >
+                @for (elevation of availableElevations(); track elevation; let i = $index) {
+                  <mat-option [value]="i">{{ getElevationLabel(i) }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+        }
       </div>
 
       <!-- Controles de animación (solo si está activa Y expandida la animación) -->
       @if (isControlsExpanded()) {
         <div class="layer-controls">
-          <!-- Control de elevación (solo para RADAR) -->
-          @if (hasElevationControl()) {
-            <div class="elevation-control">
-              <span class="control-label">Elevación</span>
-              <mat-form-field appearance="fill" class="elevation-select">
-                <mat-select
-                  [value]="currentElevationIndex()"
-                  (selectionChange)="onElevationChange($event.value)"
-                  panelClass="layer-select-panel"
-                >
-                  @for (elevation of availableElevations(); track elevation; let i = $index) {
-                    <mat-option [value]="i">{{ getElevationLabel(i) }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
-            </div>
-          }
-
           <!-- Control de tiempo (solo si tiene configuración cargada) -->
           @if (hasTimeControl()) {
             <div class="time-control">
@@ -181,8 +181,8 @@
                 <span class="time-max">{{ getTimeOnly(maxTimeIndex()) }}</span>
                 <button
                   mat-icon-button
-                  (click)="togglePlayback()"
-                  [disabled]="!hasMultiplePeriods()"
+                  (click)="canPlayback() && togglePlayback()"
+                  [disabled]="!canPlayback()"
                   [matTooltip]="isPlaying() ? 'Pausar' : 'Reproducir'"
                   class="play-btn"
                 >
@@ -191,42 +191,40 @@
               </div>
 
               <!-- Time - Last imgs - Speed -->
-              @if (hasMultiplePeriods()) {
-                <div class="time-controls-row">
-                  <!-- Tiempo actual -->
-                  <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
+              <div class="time-controls-row">
+                <!-- Tiempo actual -->
+                <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
 
-                  <!-- Selector de últimas imágenes -->
-                  <div class="images-count-control">
-                    <mat-form-field appearance="fill" class="images-count-select">
-                      <mat-select
-                        [value]="lastImagesCount()"
-                        (selectionChange)="onLastImagesCountChange($event.value)"
-                        panelClass="layer-select-panel"
-                      >
-                        @for (option of lastImagesOptions(); track option) {
-                          <mat-option [value]="option">{{ option }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                  </div>
-
-                  <!-- Velocidad -->
-                  <div class="speed-control">
-                    <input
-                      type="number"
-                      [value]="playSpeed()"
-                      (input)="onPlaySpeedChange(+$any($event.target).value)"
-                      min="0.4"
-                      max="10"
-                      step="0.1"
-                      class="speed-input"
-                      placeholder="1.0"
-                    />
-                    <span class="speed-label">s</span>
-                  </div>
+                <!-- Selector de últimas imágenes -->
+                <div class="images-count-control">
+                  <mat-form-field appearance="fill" class="images-count-select">
+                    <mat-select
+                      [value]="lastImagesCount()"
+                      (selectionChange)="onLastImagesCountChange($event.value)"
+                      panelClass="layer-select-panel"
+                    >
+                      @for (option of lastImagesOptions(); track option) {
+                        <mat-option [value]="option">{{ option }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
                 </div>
-              }
+
+                <!-- Velocidad -->
+                <div class="speed-control">
+                  <input
+                    type="number"
+                    [value]="playSpeed()"
+                    (change)="onPlaySpeedChange(+$any($event.target).value)"
+                    min="0.4"
+                    max="10"
+                    step="0.1"
+                    class="speed-input"
+                    placeholder="1.0"
+                  />
+                  <span class="speed-label">s</span>
+                </div>
+              </div>
             </div>
           } @else if (isLoadingConfig()) {
             <div class="loading-config">

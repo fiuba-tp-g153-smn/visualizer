@@ -32,7 +32,7 @@ export class NotificationService {
       layerId: options?.layerId,
       timestamp: Date.now(),
       autoClose: options?.autoClose ?? true,
-      duration: options?.duration ?? 5000,
+      duration: options?.duration ?? 5_000,
     };
 
     this._notifications.update((notifications) => [...notifications, notification]);
@@ -65,22 +65,22 @@ export class NotificationService {
   error(message: string, layerId?: string): void {
     this.show(NotificationType.ERROR, message, {
       layerId,
-      autoClose: false, // Los errores no se cierran automáticamente
+      duration: 10_000,
     });
   }
 
   warning(message: string, layerId?: string): void {
     this.show(NotificationType.WARNING, message, {
       layerId,
-      duration: 7000,
+      duration: 7_000,
     });
   }
 
   info(message: string): void {
-    this.show(NotificationType.INFO, message, { duration: 4000 });
+    this.show(NotificationType.INFO, message, { duration: 4_000 });
   }
 
   success(message: string): void {
-    this.show(NotificationType.SUCCESS, message, { duration: 3000 });
+    this.show(NotificationType.SUCCESS, message, { duration: 3_000 });
   }
 }

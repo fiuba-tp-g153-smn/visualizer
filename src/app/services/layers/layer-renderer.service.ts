@@ -133,12 +133,22 @@ export class LayerRendererService {
     const config = this.layerConfigService.getConfig(layerId) as GoesTileLayerConfig | undefined;
 
     if (!config) {
+      const layer = this.layersService.getLayerById(layerId);
+      if (layer && layer.category === LayerCategory.GOES_19) {
+        // Trigger async config load - this will update the config map
+        this.layerConfigService.fetchLayerConfig(layer).subscribe({
+          next: () => console.debug('✅ [LayerRenderer] GOES config loaded for', layerId),
+          error: (err) => console.error('❌ [LayerRenderer] Failed to load GOES config:', err),
+        });
+      }
       return this.createPlaceholderLayer();
     }
 
     // Get the tileset ID for the current time index
-    const timeIndex = controls.playback.timeIndex ?? 0;
     const tilesets = config.availableTilesets;
+    // If timeIndex is undefined, use the latest period
+    const timeIndex =
+      controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
 
     if (!tilesets || tilesets.length === 0 || timeIndex >= tilesets.length) {
       return this.createPlaceholderLayer();
@@ -174,7 +184,18 @@ export class LayerRendererService {
     const layer = this.layersService.getLayerById(layerId);
     const config = this.layerConfigService.getConfig(layerId) as RadarTileLayerConfig | undefined;
 
-    if (!layer || layer.type !== LayerType.TILE || !config) {
+    if (!layer || layer.type !== LayerType.TILE) {
+      return this.createPlaceholderLayer();
+    }
+
+    if (!config) {
+      if (layer.category === LayerCategory.RADAR) {
+        // Trigger async config load - this will update the config map
+        this.layerConfigService.fetchLayerConfig(layer).subscribe({
+          next: () => console.debug('✅ [LayerRenderer] Radar config loaded for', layerId),
+          error: (err) => console.error('❌ [LayerRenderer] Failed to load Radar config:', err),
+        });
+      }
       return this.createPlaceholderLayer();
     }
 
@@ -199,7 +220,10 @@ export class LayerRendererService {
     }
 
     // Get the tileset ID for the current time index
-    const timeIndex = controls.playback.timeIndex ?? 0;
+    // If timeIndex is undefined, use the latest period
+    const timeIndex =
+      controls.playback.timeIndex ??
+      (tilesetsForElevation.length > 0 ? tilesetsForElevation.length - 1 : 0);
 
     if (timeIndex >= tilesetsForElevation.length) {
       return this.createPlaceholderLayer();
