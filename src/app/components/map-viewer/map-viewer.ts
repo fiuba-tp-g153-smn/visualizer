@@ -13,12 +13,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config';
+import { LAYER_RENDERING_CONFIG } from '../../config/layers';
 import { TileService } from '../../services/tiles-providers/tile.service';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRendererService } from '../../services/layers/layer-renderer.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
-import { Layer, TileProvider, LayerCategory, LayerType, LayerControls } from '../../models';
+import { TileProvider } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -51,8 +52,9 @@ export class MapViewer implements OnInit, OnDestroy {
       // Effect: sincronizar capas satelitales (Reacciona a cambios en capas O en config)
       effect(() => {
         const layers = this.controlService.activeLayers();
+        const layerIds = layers.map((item) => item.layer.id);
         if (this.map) {
-          this.syncLayers(layers);
+          this.syncLayers(layerIds);
         }
       });
 
@@ -155,87 +157,51 @@ export class MapViewer implements OnInit, OnDestroy {
 
   private onMapLayers = new Map<string, L.TileLayer>();
 
-  private syncLayers(items: { layer: Layer; controls: LayerControls }[]): void {
+  private syncLayers(layerIds: string[]): void {
     if (!this.map) return;
 
     const desiredLayersOnMap = new Map<string, L.TileLayer>();
-    const activeKeysForPool = new Set<string>();
 
-    for (const { layer, controls } of items) {
-      if (!controls.visible) continue;
+    for (const layerId of layerIds) {
+      const layer = this.layersService.getLayerById(layerId);
+      const controls = this.controlService.getControls(layerId);
 
-      const tilesets = this.configService.getTilesets(layer.id);
-      // Solo para capas con control temporal (TILE layers)
-      const currentTimeIndex = controls.type === LayerType.TILE ? (controls.playback?.timeIndex ?? 0) : 0;
+      if (!layer || !controls || !controls.visible) continue;
 
-      // Definir ventana de pre-fetching: [T-1, T, T+1]
-      // Si estamos en Mobile o memoria baja, podríamos reducir esto solo a T
-      const indicesToLoad = new Set<number>([currentTimeIndex]);
+      // Create tile layer using the refactored service API
+      const tileLayer = this.layerRendererService.createTileLayer(layerId, controls);
+      desiredLayersOnMap.set(layerId, tileLayer);
 
-      // Agregar vecinos si existen
-      if (tilesets.length > 0) {
-        if (currentTimeIndex < tilesets.length - 1) indicesToLoad.add(currentTimeIndex + 1);
-        if (currentTimeIndex > 0) indicesToLoad.add(currentTimeIndex - 1);
-      }
+      // Configure visual state
+      const opacity = controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity;
+      tileLayer.setOpacity(opacity / 100);
 
-      for (const tIndex of indicesToLoad) {
-        // Obtener ID del tileset para la clave única (duplicando lógica simple para consistencia)
-        let tilesetId = 'default';
-        if (tilesets && tilesets[tIndex]) {
-          tilesetId = tilesets[tIndex].id;
-        } else if (layer.category === LayerCategory.GOES_19) {
-          tilesetId = `placeholder-${tIndex}`;
-        }
-
-        const uniqueKey = `${layer.id}-${tilesetId}`;
-        activeKeysForPool.add(uniqueKey);
-
-        // Obtener instancia del pool
-        const tileLayer = this.layerRendererService.getTileLayerForTime(layer, controls, tIndex);
-        desiredLayersOnMap.set(uniqueKey, tileLayer);
-
-        // Configurar estado visual
-        const isTarget = tIndex === currentTimeIndex;
-
-        // Z-Index: Mantener orden relativo de capas.
-        // Capas ocultas (prefetch) van al fondo para no interferir eventos aunque tengan opacity 0
-        if (isTarget) {
-          tileLayer.setOpacity((controls.opacity ?? 100) / 100);
-          if (controls.zIndex !== undefined) {
-            const absoluteZIndex = this.controlService.getAbsoluteZIndex(layer, controls);
-            tileLayer.setZIndex(absoluteZIndex);
-          }
-        } else {
-          tileLayer.setOpacity(0);
-          tileLayer.setZIndex(0);
+      // Set z-index if defined
+      if (controls.zIndex !== undefined) {
+        const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
+        if (absoluteZIndex !== null) {
+          tileLayer.setZIndex(absoluteZIndex);
         }
       }
     }
 
-    // 1. Remover capas que ya no son deseadas
+    // 1. Remove layers that are no longer desired
     for (const [key, layer] of this.onMapLayers) {
       if (!desiredLayersOnMap.has(key)) {
         this.map.removeLayer(layer);
       }
     }
 
-    // 2. Agregar nuevas capas
+    // 2. Add new layers
     for (const [key, layer] of desiredLayersOnMap) {
       if (!this.onMapLayers.has(key)) {
         layer.addTo(this.map!);
       }
     }
 
-    // Actualizar estado local
+    // Update local state
     this.onMapLayers = desiredLayersOnMap;
-
-    // 3. Limpiar pool global de capas que ya no usamos
-    // Importante: No limpiamos inmediatamente si saltamos lejos, para dar chance al GC natural o LRU futuro.
-    // Pero por diseño actual, "prune" es explícito.
-    this.layerRendererService.prunePool(activeKeysForPool);
   }
-
-  // Métodos antiguos de transición eliminados en favor de pre-fetching simple
 
   zoomIn(): void {
     if (this.map) {

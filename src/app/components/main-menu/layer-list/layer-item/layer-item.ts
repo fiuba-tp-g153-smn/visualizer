@@ -23,6 +23,7 @@ import { Layer, LayerCategory, LayerType } from '../../../../models';
 import { LayersService } from '../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../../../services/layers/layer-config.service';
+import { LayerRefreshService } from '../../../../services/layers/layer-refresh.service';
 
 /**
  * Modo de visualización del componente
@@ -62,6 +63,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
   private readonly configService = inject(LayerConfigService);
+  private readonly refreshService = inject(LayerRefreshService);
 
   /**
    * Capa a renderizar (requerido)
@@ -94,8 +96,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isExpanded = signal(false);
 
   isPlaying = computed(() => this.controlService.isPlaying(this.layer.id));
-  playSpeed = computed(() => this.controlService.getPlaySpeed(this.layer.id));
-  lastImagesCount = computed(() => this.controlService.getLastImagesCount(this.layer.id));
+  playSpeed = computed(() => {
+    const controls = this.controlService.getControls(this.layer.id);
+    return controls && controls.type === LayerType.TILE ? controls.playback.speed : 1;
+  });
+  lastImagesCount = computed(() => {
+    const controls = this.controlService.getControls(this.layer.id);
+    return controls && controls.type === LayerType.TILE ? controls.playback.lastImagesCount : 1;
+  });
 
   /**
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
@@ -107,6 +115,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   getActiveLayer = computed(() => {
     return this.controlService.activeLayers().find((item) => item.layer.id === this.layer.id);
   });
+
+  /**
+   * Obtiene la opacidad actual de la capa activa
+   */
+  currentOpacity = computed(() => {
+    const activeLayer = this.getActiveLayer();
+    return activeLayer?.controls.opacity ?? 100;
+  });
+
   /**
    * Indica si la capa está activa (visible en el mapa)
    */
@@ -144,7 +161,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentElevationIndex = computed(() => {
     const activeItem = this.getActiveLayer();
-    if (activeItem && activeItem.controls.type === LayerType.TILE && 'elevation' in activeItem.controls) {
+    if (
+      activeItem &&
+      activeItem.controls.type === LayerType.TILE &&
+      'elevation' in activeItem.controls
+    ) {
       return activeItem.controls.elevation?.elevationIndex ?? 0;
     }
     return 0;
@@ -154,8 +175,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene el índice máximo de tiempo
    */
   maxTimeIndex = computed(() => {
-    const tilesets = this.configService.getTilesets(this.layer.id);
-    return Math.max(0, tilesets.length - 1);
+    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    return Math.max(0, (tilesets?.length ?? 1) - 1);
   });
 
   /**
@@ -167,10 +188,20 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   /**
    * Verifica si la capa tiene controles avanzados (tiempo/animación)
-   * Actualmente solo las capas ABI (satélite) tienen control de tiempo
    */
   hasAdvancedControls = computed(() => {
-    return this.layer.category !== LayerCategory.IGN_WMS;
+    switch (this.layer.category) {
+      case LayerCategory.GOES_19:
+        return this.layer.type === LayerType.TILE && this.layer.availablePeriods !== undefined;
+      case LayerCategory.RADAR:
+        return (
+          this.layer.type === LayerType.TILE &&
+          this.layer.availablePeriods !== undefined &&
+          this.layer.availableElevations !== undefined
+        );
+      default:
+        return false;
+    }
   });
 
   /**
@@ -244,60 +275,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private loadChannelConfig(): void {
     if (this.isLoadingConfig()) return;
 
-    // Si es RADAR, cargar configuración de radar
-    if (this.layer.category === LayerCategory.RADAR) {
-      const parts = this.layer.id.split('-');
-      if (parts.length >= 2) {
-        const radarId = parts[0].toUpperCase(); // RMA1
-        const variableId = parts[1].toUpperCase(); // DBZH
-        const elevationIndex = this.currentElevationIndex();
-        const elevations = this.availableElevations();
-        const elevationId = elevations[elevationIndex] || 'elev0';
-
-        this.isLoadingConfig.set(true);
-        this.configService
-          .loadRadarConfig(this.layer.id, radarId, variableId, elevationId)
-          .subscribe({
-            next: () => {
-              this.isLoadingConfig.set(false);
-            },
-            error: (err) => {
-              this.isLoadingConfig.set(false);
-              console.error(`❌ [LayerItem] Error cargando config de radar ${this.layer.id}:`, err);
-            },
-          });
-      }
-      return;
-    }
-
-    // Si es satélite, cargar configuración de satélite
-    const parts = this.layer.id.split('-');
-    if (parts.length < 2) return;
-
-    const instrument = parts[0]; // 'abi' or 'glm'
-    const product = 'goes-19';
-    let channel: string;
-
-    // Handle different layer ID formats
-    if (instrument === 'abi') {
-      // ABI format: abi-ch2 → ch-2
-      const channelNumber = parts[1];
-      channel = `ch-${channelNumber.replace('ch', '')}`;
-    } else if (instrument === 'glm') {
-      // GLM format: glm-fed → glm-fed
-      channel = this.layer.id; // Use full ID as channel name
-    } else {
-      console.warn(`Unknown instrument: ${instrument}`);
-      return;
-    }
-
     this.isLoadingConfig.set(true);
-
-    this.configService.loadChannelConfig(this.layer.id, product, instrument, channel).subscribe({
-      next: (config) => {
+    this.configService.fetchLayerConfig(this.layer).subscribe({
+      next: () => {
         this.isLoadingConfig.set(false);
       },
-      error: (err) => {
+      error: (err: Error) => {
         this.isLoadingConfig.set(false);
         console.error(`❌ [LayerItem] Error cargando config de ${this.layer.id}:`, err);
       },
@@ -305,7 +288,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   reloadChannelConfig(): void {
-    this.configService.manualRefresh(this.layer.id);
+    this.refreshService.manualRefresh(this.layer.id).subscribe({
+      next: () => {},
+      error: (err: Error) => {
+        console.error(`❌ [LayerItem] Error refrescando config de ${this.layer.id}:`, err);
+      },
+    });
   }
 
   // ==========================================================================
@@ -416,29 +404,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   onElevationChange(elevationIndex: number): void {
     this.controlService.setElevationIndex(this.layer.id, elevationIndex);
 
-    // Recargar configuración del radar con la nueva elevación
+    // Reload configuration when elevation changes
     if (this.layer.category === LayerCategory.RADAR) {
-      // Extraer radar_id y variable_id del layer.id (formato: rma1-dbzh)
-      const parts = this.layer.id.split('-');
-      if (parts.length >= 2) {
-        const radarId = parts[0].toUpperCase(); // RMA1
-        const variableId = parts[1].toUpperCase(); // DBZH
-        const elevations = this.availableElevations();
-        const elevationId = elevations[elevationIndex] || 'elev0';
-
-        this.isLoadingConfig.set(true);
-        this.configService
-          .loadRadarConfig(this.layer.id, radarId, variableId, elevationId)
-          .subscribe({
-            next: () => {
-              this.isLoadingConfig.set(false);
-            },
-            error: (err) => {
-              this.isLoadingConfig.set(false);
-              console.error(`❌ [LayerItem] Error cargando config de radar ${this.layer.id}:`, err);
-            },
-          });
-      }
+      this.isLoadingConfig.set(true);
+      this.configService.fetchLayerConfig(this.layer).subscribe({
+        next: () => {
+          this.isLoadingConfig.set(false);
+        },
+        error: (err: Error) => {
+          this.isLoadingConfig.set(false);
+          console.error(`❌ [LayerItem] Error cargando config de radar ${this.layer.id}:`, err);
+        },
+      });
     }
   }
 
@@ -464,32 +441,33 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return 'Cargando...';
     }
 
-    const tilesets = this.configService.getTilesets(this.layer.id);
-    if (timeIndex >= 0 && timeIndex < tilesets.length) {
-      const tileset = tilesets[timeIndex];
-      // Extraer información de fecha del ID
-      // ABI formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567 (11 dígitos: YYYYDDDHHMI)
-      // GLM formato: GLM_FED_s2026044013000 (13 dígitos: YYYYDDDHHMISS)
-      const match = tileset.id.match(/_s(\d+)/);
-      if (match) {
-        const dateStr = match[1];
-        const year = dateStr.substring(0, 4);
-        const dayOfYear = dateStr.substring(4, 7);
-        const hour = dateStr.substring(7, 9);
-        const minute = dateStr.substring(9, 11);
-        // Seconds only present in GLM format (13 digits)
-        const hasSeconds = dateStr.length >= 13;
-
-        // Convertir día juliano a fecha
-        const date = this.julianToDate(year, dayOfYear);
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-
-        return `${year}-${month}-${day} ${hour}:${minute}`;
-      }
-      return tileset.id;
+    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) {
+      return 'Sin datos';
     }
-    return 'Sin datos';
+
+    const tileset = tilesets[timeIndex];
+    // Extraer información de fecha del ID
+    // ABI formato: OR_ABI-L1b-RadF-M6C13_G19_s20261234567 (11 dígitos: YYYYDDDHHMI)
+    // GLM formato: GLM_FED_s2026044013000 (13 dígitos: YYYYDDDHHMISS)
+    const match = tileset.match(/_s(\d+)/);
+    if (match) {
+      const dateStr = match[1];
+      const year = dateStr.substring(0, 4);
+      const dayOfYear = dateStr.substring(4, 7);
+      const hour = dateStr.substring(7, 9);
+      const minute = dateStr.substring(9, 11);
+      // Seconds only present in GLM format (13 digits)
+      const hasSeconds = dateStr.length >= 13;
+
+      // Convertir día juliano a fecha
+      const date = this.julianToDate(year, dayOfYear);
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    }
+    return tileset;
   }
 
   /**
@@ -500,17 +478,19 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return '--:--';
     }
 
-    const tilesets = this.configService.getTilesets(this.layer.id);
-    if (timeIndex >= 0 && timeIndex < tilesets.length) {
-      const tileset = tilesets[timeIndex];
-      // Handle both ABI (11 digits) and GLM (13 digits) formats
-      const match = tileset.id.match(/_s(\d+)/);
-      if (match) {
-        const dateStr = match[1];
-        const hour = dateStr.substring(7, 9);
-        const minute = dateStr.substring(9, 11);
-        return `${hour}:${minute}`;
-      }
+    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) {
+      return '--:--';
+    }
+
+    const tileset = tilesets[timeIndex];
+    // Handle both ABI (11 digits) and GLM (13 digits) formats
+    const match = tileset.match(/_s(\d+)/);
+    if (match) {
+      const dateStr = match[1];
+      const hour = dateStr.substring(7, 9);
+      const minute = dateStr.substring(9, 11);
+      return `${hour}:${minute}`;
     }
     return '--:--';
   }
@@ -531,11 +511,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   togglePlayback(): void {
-    this.controlService.togglePlayback(
-      this.layer.id,
-      this.maxTimeIndex(),
-      this.playbackMinTimeIndex(),
-    );
+    this.controlService.togglePlayback(this.layer.id);
   }
 
   onPlaySpeedChange(speed: number): void {
@@ -554,11 +530,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     if (wasPlaying) {
       setTimeout(() => {
-        this.controlService.startPlayback(
-          this.layer.id,
-          this.maxTimeIndex(),
-          this.playbackMinTimeIndex(),
-        );
+        this.controlService.startPlayback(this.layer.id);
       }, 0);
     }
   }
