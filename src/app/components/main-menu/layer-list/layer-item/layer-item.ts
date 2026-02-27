@@ -377,18 +377,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene los tilesets disponibles según la categoría de la capa.
    * Para GOES_19 y RADAR: devuelve todos los tilesets.
    */
-  private getAvailableTilesetsForLayer(): string[] | null {
+  private getAvailableTilesetsForLayer(): string[] | undefined {
     switch (this.layer.type) {
       case LayerType.TILE:
         switch (this.layer.category) {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
-            return this.configService.getAvailableTilesets(this.layer.id) ?? null;
+            return this.configService.getAvailableTilesets(this.layer.id);
           default:
-            return null;
+            return undefined;
         }
       default:
-        return null;
+        return undefined;
     }
   }
 
