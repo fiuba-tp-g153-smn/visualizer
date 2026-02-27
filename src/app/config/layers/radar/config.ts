@@ -62,7 +62,7 @@ export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   expanded: false,
   layers: products.map((product) => ({
     ...RADAR_DEFAULTS,
-    id: `${satelitePrefix}/${radar.id}/${radar.id}-${product.toLowerCase()}`,
+    id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
     name: `${product} - ${radar.ubi}`,
     description: `Producto ${product} del radar meteorológico ${radar.number} de ${radar.ubi}`,
   })) as RadarTileLayer[],

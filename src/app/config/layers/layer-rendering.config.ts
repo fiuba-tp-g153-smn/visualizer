@@ -40,8 +40,9 @@ export const LAYER_RENDERING_CONFIG = {
     maxNativeZoom: 10,
     /** Geographic bounds for radar coverage */
     bounds: [
-      [-60.0, -75.0], // SW corner (radar coverage area)
-      [-20.0, -50.0], // NE corner
+      //  boundingBox: {[-66.78, -33.60, -61.60, -29.26],
+      [-33.60, -66.78], // SW corner (lat, lng)
+      [-29.26, -61.60], // NE corner (lat, lng)
     ] as L.LatLngBoundsExpression,
   },
 } as const;

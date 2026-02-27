@@ -152,7 +152,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     // Debe tener configuración Y tilesets disponibles
     if (!this.configService.hasConfig(this.layer.id)) return false;
 
-    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    const tilesets = this.getAvailableTilesetsForLayer();
     return tilesets && tilesets.length > 0;
   });
 
@@ -170,7 +170,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.configService.hasConfig(this.layer.id)) return false;
 
     // Tiene config pero no hay tilesets disponibles
-    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    const tilesets = this.getAvailableTilesetsForLayer();
     return !tilesets || tilesets.length === 0;
   });
 
@@ -259,7 +259,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene el índice máximo de tiempo
    */
   maxTimeIndex = computed(() => {
-    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    const tilesets = this.getAvailableTilesetsForLayer();
     return Math.max(0, (tilesets?.length ?? 1) - 1);
   });
 
@@ -369,6 +369,38 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         return true;
       default:
         return false;
+    }
+  }
+
+  /**
+   * Obtiene los tilesets disponibles según la categoría de la capa.
+   * Para GOES_19: devuelve todos los tilesets.
+   * Para RADAR: devuelve los tilesets de la elevación actualmente seleccionada.
+   */
+  private getAvailableTilesetsForLayer(): string[] | null {
+    switch (this.layer.type) {
+      case LayerType.TILE:
+        switch (this.layer.category) {
+          case LayerCategory.GOES_19:
+            return this.configService.getAvailableTilesets(this.layer.id) ?? null;
+          case LayerCategory.RADAR: {
+            const tilesetsByElevation = this.configService.getAvailableTilesetsByElevation(
+              this.layer.id,
+            );
+            if (!tilesetsByElevation) return null;
+
+            const elevations = this.availableElevations();
+            const elevationIndex = this.currentElevationIndex();
+            if (elevationIndex < 0 || elevationIndex >= elevations.length) return null;
+
+            const elevation = elevations[elevationIndex];
+            return tilesetsByElevation[elevation.id] ?? null;
+          }
+          default:
+            return null;
+        }
+      default:
+        return null;
     }
   }
 
@@ -543,15 +575,53 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return 'Cargando...';
     }
 
-    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
+    const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) {
       return 'Sin datos';
     }
 
     const tileset = tilesets[timeIndex];
 
-    // Parse timestamp format: YYYYJJJHHMMSSS (14 digits)
-    // YYYY = year, JJJ = day of year, HH = hour, MM = minute, SSS = seconds with tenth (e.g., 209 = 20.9s)
+    switch (this.layer.category) {
+      case LayerCategory.GOES_19:
+        return this.parseGoesTimestamp(tileset);
+      case LayerCategory.RADAR:
+        return this.parseRadarTimestamp(tileset);
+      default:
+        return tileset;
+    }
+  }
+
+  /**
+   * Obtiene solo la hora de un período (HH:MM)
+   */
+  getTimeOnly(timeIndex: number): string {
+    if (!this.hasTimeControl()) {
+      return '--:--';
+    }
+
+    const tilesets = this.getAvailableTilesetsForLayer();
+    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) {
+      return '--:--';
+    }
+
+    const tileset = tilesets[timeIndex];
+
+    switch (this.layer.category) {
+      case LayerCategory.GOES_19:
+        return this.parseGoesTimeOnly(tileset);
+      case LayerCategory.RADAR:
+        return this.parseRadarTimeOnly(tileset);
+      default:
+        return '--:--';
+    }
+  }
+
+  /**
+   * Parsea timestamp GOES en formato juliano YYYYJJJHHMMSSS
+   * YYYY = year, JJJ = day of year, HH = hour, MM = minute, SSS = seconds with tenth
+   */
+  private parseGoesTimestamp(tileset: string): string {
     if (tileset.length >= 11) {
       const year = tileset.substring(0, 4);
       const dayOfYear = tileset.substring(4, 7);
@@ -565,32 +635,49 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
       return `${year}-${month}-${day} ${hour}:${minute}`;
     }
-
     return tileset;
   }
 
   /**
-   * Obtiene solo la hora de un período (HH:MM)
+   * Parsea solo la hora de timestamp GOES (HH:MM)
    */
-  getTimeOnly(timeIndex: number): string {
-    if (!this.hasTimeControl()) {
-      return '--:--';
-    }
-
-    const tilesets = this.configService.getAvailableTilesets(this.layer.id);
-    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) {
-      return '--:--';
-    }
-
-    const tileset = tilesets[timeIndex];
-
-    // Parse timestamp format: YYYYJJJHHMMSSS (14 digits)
+  private parseGoesTimeOnly(tileset: string): string {
     if (tileset.length >= 11) {
       const hour = tileset.substring(7, 9);
       const minute = tileset.substring(9, 11);
       return `${hour}:${minute}`;
     }
+    return '--:--';
+  }
 
+  /**
+   * Parsea timestamp RADAR en formato ISO-like YYYYMMDDTHHMMSSZ
+   * Ejemplo: 20260114T174815Z
+   */
+  private parseRadarTimestamp(tileset: string): string {
+    // Format: YYYYMMDDTHHMMSSZ (17 characters)
+    if (tileset.length >= 15) {
+      const year = tileset.substring(0, 4);
+      const month = tileset.substring(4, 6);
+      const day = tileset.substring(6, 8);
+      const hour = tileset.substring(9, 11);
+      const minute = tileset.substring(11, 13);
+
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    }
+    return tileset;
+  }
+
+  /**
+   * Parsea solo la hora de timestamp RADAR (HH:MM)
+   */
+  private parseRadarTimeOnly(tileset: string): string {
+    // Format: YYYYMMDDTHHMMSSZ
+    if (tileset.length >= 15) {
+      const hour = tileset.substring(9, 11);
+      const minute = tileset.substring(11, 13);
+      return `${hour}:${minute}`;
+    }
     return '--:--';
   }
 

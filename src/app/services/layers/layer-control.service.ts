@@ -107,6 +107,32 @@ export class LayerControlService {
     return controls.playback?.isPlaying ?? false;
   }
 
+  /**
+   * Gets the elevation key for a radar layer based on the selected elevation index.
+   */
+  getSelectedElevationForLayer(layerId: string): RadarElevation | null {
+    const controls = this.getControls(layerId);
+    if (
+      !controls ||
+      controls.type !== LayerType.TILE ||
+      controls.category !== LayerCategory.RADAR
+    ) {
+      return null;
+    }
+
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.RADAR) {
+      return null;
+    }
+
+    const elevationIndex = controls.elevation.elevationIndex;
+    if (elevationIndex === undefined) {
+      return null;
+    }
+
+    return layer.availableElevations[elevationIndex] ?? null;
+  }
+
   // ============================================================================
   // Public Actions - Layer Visibility
   // ============================================================================
@@ -442,32 +468,6 @@ export class LayerControlService {
   private isActive(layerId: string): boolean {
     const controls = this.getControls(layerId);
     return controls?.visible ?? false;
-  }
-
-  /**
-   * Gets the elevation key for a radar layer based on the selected elevation index.
-   */
-  private getSelectedElevationForLayer(layerId: string): RadarElevation | null {
-    const controls = this.getControls(layerId);
-    if (
-      !controls ||
-      controls.type !== LayerType.TILE ||
-      controls.category !== LayerCategory.RADAR
-    ) {
-      return null;
-    }
-
-    const layer = this.layersService.getLayerById(layerId);
-    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.RADAR) {
-      return null;
-    }
-
-    const elevationIndex = controls.elevation.elevationIndex;
-    if (elevationIndex === undefined) {
-      return null;
-    }
-
-    return layer.availableElevations[elevationIndex] ?? null;
   }
 
   /**

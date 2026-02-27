@@ -13,6 +13,7 @@ import {
   GoesTileLayerConfig,
   RadarElevation,
 } from '../../models';
+import { LayerControlService } from './layer-control.service';
 
 /**
  * Service responsible for fetching and caching layer configurations.
@@ -55,8 +56,10 @@ export class LayerConfigService {
     const configUrl = buildConfigUrl(layer.id);
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
-        // Extract only the IDs from the tileset objects
-        const availableTilesets = response.tilesets.map((tileset: any) => tileset.id);
+        // Extract only the IDs from the tileset objects and sort chronologically
+        const availableTilesets = response.tilesets
+          .map((tileset: any) => tileset.id)
+          .sort();
 
         const layerConfig: GoesTileLayerConfig = {
           layerId: layer.id,
@@ -92,14 +95,10 @@ export class LayerConfigService {
     }
 
     const elevationRequests = layer.availableElevations.map((elevation) => {
-      const pathToProduct = `${layer.id}/${elevation}`;
+      const pathToProduct = `${layer.id}/${elevation.id}`;
       const configUrl = buildConfigUrl(pathToProduct);
       return this.http.get<any>(configUrl).pipe(
-        map((response) => {
-          // Extract only the IDs from the tileset objects
-          const tilesets = response.tilesets.map((tileset: any) => tileset.id);
-          return { elevation, tilesets };
-        }),
+        map((response) => ({ elevation, tilesets: response.tilesets })),
         catchError((error) => {
           console.error(`Failed to fetch radar config for ${pathToProduct}:`, error);
           throw error;
@@ -111,7 +110,8 @@ export class LayerConfigService {
       map((results) => {
         const availableTilesetsByElevation: Record<string, string[]> = {};
         results.forEach(({ elevation, tilesets }) => {
-          availableTilesetsByElevation[elevation.id] = tilesets;
+          // Sort tilesets chronologically
+          availableTilesetsByElevation[elevation.id] = tilesets.sort();
         });
 
         const config: RadarTileLayerConfig = {
@@ -120,7 +120,6 @@ export class LayerConfigService {
           category: LayerCategory.RADAR,
           availableTilesetsByElevation,
         };
-
         this.updateConfigMap(layer.id, config);
         return config;
       }),
@@ -176,6 +175,9 @@ export class LayerConfigService {
         switch (config.category) {
           case LayerCategory.GOES_19:
             return config.availableTilesets;
+          case LayerCategory.RADAR: {
+            return undefined; // For radar layers, use getAvailableTilesetsByElevation instead
+          }
           default:
             return undefined;
         }
