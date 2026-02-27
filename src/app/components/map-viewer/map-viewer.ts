@@ -184,7 +184,7 @@ export class MapViewer implements OnInit, OnDestroy {
           // Set z-index if defined
           if (controls.zIndex !== undefined) {
             const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-            if (absoluteZIndex !== null) {
+            if (absoluteZIndex !== undefined) {
               tileLayer.setZIndex(absoluteZIndex);
             }
           }
@@ -197,7 +197,7 @@ export class MapViewer implements OnInit, OnDestroy {
         // Set z-index if defined (always update, even for cached layers)
         if (controls.zIndex !== undefined) {
           const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-          if (absoluteZIndex !== null) {
+          if (absoluteZIndex !== undefined) {
             tileLayer.setZIndex(absoluteZIndex);
           }
         }
