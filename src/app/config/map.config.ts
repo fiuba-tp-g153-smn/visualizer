@@ -1,5 +1,3 @@
-import * as L from 'leaflet';
-
 /**
  * Configuración inicial del mapa
  */

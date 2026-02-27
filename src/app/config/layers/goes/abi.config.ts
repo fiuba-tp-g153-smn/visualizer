@@ -6,12 +6,16 @@ import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups
  * Sin repetir el mismo número en cada capa
  */
 const ABI_DEFAULTS = {
-  groupId: 'goes-19',
-  subgroupId: 'abi',
   zIndexGroup: ActiveLayerGroupId.BASE,
   availablePeriods: [1, 6, 12, 24] as const,
   category: LayerCategory.GOES_19,
   type: LayerType.TILE,
+  minNativeZoom: 4,
+  maxNativeZoom: 7,
+  boundingBox: [
+    [-60.0, -110.0],
+    [-15.0, -30.0],
+  ] as const,
 };
 
 const idPrefix = 'goes-19/abi';

@@ -31,7 +31,7 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     name: 'ArgenMAP (IGN)',
     url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',
     attribution:
-      '<a href="http://leafletjs.com">Leaflet</a> | <a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">IGN</a>',
+      '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">IGN</a>',
     maxZoom: 19,
     previewZ: TILE_PREVIEW_CONFIG.z,
     previewX: TILE_PREVIEW_CONFIG.x,

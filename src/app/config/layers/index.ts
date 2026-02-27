@@ -8,10 +8,10 @@
 export { LAYER_DEFINITIONS, ACTIVE_LAYER_GROUP_DEFINITIONS } from './layer-definitions';
 
 // Layer setup (defaults and filtering)
-export { DEFAULT_ACTIVE_LAYERS, filterDisabledLayers } from './layers-setup.config';
+export { DEFAULT_ACTIVE_LAYERS } from './layers-setup.config';
 
-// Layer rendering configuration
-export { LAYER_RENDERING_CONFIG } from './layer-render.config';
+// Default layer control values
+export { DEFAULT_LAYER_CONTROLS } from './layer-controls.config';
 
 // IGN WMS configuration
 export { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from './ign-wms/config';

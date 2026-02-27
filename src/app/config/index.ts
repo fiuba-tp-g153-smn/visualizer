@@ -17,9 +17,8 @@ export { TILE_PROVIDERS, getTileProvider } from './tile-providers.config';
 export {
   LAYER_DEFINITIONS,
   ACTIVE_LAYER_GROUP_DEFINITIONS,
-  LAYER_RENDERING_CONFIG,
+  DEFAULT_LAYER_CONTROLS,
   DEFAULT_ACTIVE_LAYERS,
-  filterDisabledLayers,
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
 } from './layers';

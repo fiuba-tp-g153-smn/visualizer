@@ -5,12 +5,16 @@ import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups
  * Valores por defecto para capas GLM
  */
 const GLM_DEFAULTS = {
-  visible: false,
-  opacity: 80,
   zIndexGroup: ActiveLayerGroupId.BASE,
   availablePeriods: [1, 6, 12, 24] as const,
-  category: LayerCategory.GOES_19,
   type: LayerType.TILE,
+  category: LayerCategory.GOES_19,
+  minNativeZoom: 4,
+  maxNativeZoom: 7,
+  boundingBox: [
+    [-60.0, -110.0],
+    [-15.0, -30.0],
+  ] as const,
 };
 
 /**

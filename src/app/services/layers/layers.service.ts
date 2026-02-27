@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Layer, LayerGroup } from '../../models';
-import { LAYER_DEFINITIONS, filterDisabledLayers } from '../../config/layers';
+import { LAYER_DEFINITIONS } from '../../config/layers';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -22,7 +22,10 @@ export class LayersService {
   private readonly layerDefinitions: LayerGroup[];
 
   constructor() {
-    this.layerDefinitions = filterDisabledLayers(LAYER_DEFINITIONS, environment.ui.disabledLayers);
+    this.layerDefinitions = this.filterDisabledLayers(
+      LAYER_DEFINITIONS,
+      environment.ui.disabledLayers,
+    );
   }
 
   // ============================================================================
@@ -66,5 +69,46 @@ export class LayersService {
   getLayerDisplayName(layerId: string): string {
     const layer = this.getLayerById(layerId);
     return layer?.name ?? layerId;
+  }
+
+  // ============================================================================
+  // Private Methods - Layer Filtering
+  // ============================================================================
+
+  /**
+   * Recursively filters layer groups, subgroups, and layers based on disabled IDs.
+   * Removes empty groups and subgroups after filtering.
+   *
+   * @param groups - Array of layer groups to filter
+   * @param disabledIds - Array of IDs (groups, subgroups, or layers) to exclude
+   * @returns Filtered array of groups, without empty groups or subgroups
+   */
+  private filterDisabledLayers(groups: LayerGroup[], disabledIds: string[]): LayerGroup[] {
+    if (!disabledIds || disabledIds.length === 0) {
+      return groups;
+    }
+
+    const disabledSet = new Set(disabledIds);
+
+    return (
+      groups
+        // Filter disabled groups
+        .filter((group) => !disabledSet.has(group.id))
+        .map((group) => ({
+          ...group,
+          subgroups: group.subgroups
+            // Filter disabled subgroups
+            .filter((subgroup) => !disabledSet.has(subgroup.id))
+            .map((subgroup) => ({
+              ...subgroup,
+              // Filter disabled layers
+              layers: subgroup.layers.filter((layer) => !disabledSet.has(layer.id)),
+            }))
+            // Remove empty subgroups
+            .filter((subgroup) => subgroup.layers.length > 0),
+        }))
+        // Remove empty groups
+        .filter((group) => group.subgroups.length > 0)
+    );
   }
 }

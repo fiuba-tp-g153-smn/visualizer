@@ -76,7 +76,7 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
     description:
       'Capas de datos científicos: radar meteorológico, salidas de modelos numéricos, imágenes satelitales, etc.',
     icon: 'layers',
-    zIndexRange: { min: 0, max: 999 },
+    zIndexRange: { min: 1, max: 1000 },
   },
   [ActiveLayerGroupId.OVERLAY]: {
     id: ActiveLayerGroupId.OVERLAY,
@@ -85,6 +85,6 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
     description:
       'Capas de referencia cartográfica del IGN. Siempre se muestran por encima de las capas de datos.',
     icon: 'layers',
-    zIndexRange: { min: 1000, max: 1999 },
+    zIndexRange: { min: 1001, max: 2000 },
   },
 };

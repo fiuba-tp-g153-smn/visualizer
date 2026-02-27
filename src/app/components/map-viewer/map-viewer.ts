@@ -13,7 +13,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config';
-import { LAYER_RENDERING_CONFIG } from '../../config/layers';
 import { TileService } from '../../services/tiles-providers/tile.service';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
@@ -130,13 +129,9 @@ export class MapViewer implements OnInit, OnDestroy {
       }
     });
 
+    // Initialize base tile layer
     const initialProvider = this.tileService.getCurrentProvider();
-
-    this.currentTileLayer = L.tileLayer(initialProvider.url, {
-      attribution: initialProvider.attribution,
-      maxZoom: initialProvider.maxZoom,
-      zIndex: 0,
-    }).addTo(this.map);
+    this.changeTileProvider(initialProvider);
   }
 
   private changeTileProvider(provider: TileProvider): void {
