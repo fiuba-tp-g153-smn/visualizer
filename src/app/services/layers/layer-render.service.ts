@@ -38,7 +38,7 @@ import {
 @Injectable({
   providedIn: 'root',
 })
-export class LayerRendererService {
+export class LayerRenderService {
   private readonly notificationService = inject(NotificationService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly layersService = inject(LayersService);

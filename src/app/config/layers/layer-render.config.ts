@@ -41,8 +41,8 @@ export const LAYER_RENDERING_CONFIG = {
     /** Geographic bounds for radar coverage */
     bounds: [
       //  boundingBox: {[-66.78, -33.60, -61.60, -29.26],
-      [-33.60, -66.78], // SW corner (lat, lng)
-      [-29.26, -61.60], // NE corner (lat, lng)
+      [-33.6, -66.78], // SW corner (lat, lng)
+      [-29.26, -61.6], // NE corner (lat, lng)
     ] as L.LatLngBoundsExpression,
   },
 } as const;
