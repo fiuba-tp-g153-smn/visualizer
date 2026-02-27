@@ -155,13 +155,13 @@ export class LayerRenderService {
             const elevation = radarLayer.availableElevations?.[elevationIndex] ?? '0.5';
 
             const tilesetsForElevation = config.availableTilesetsByElevation[elevation.id];
-            if (!tilesetsForElevation) return `${layerId}-${elevation}-placeholder`;
+            if (!tilesetsForElevation) return `${layerId}-${elevation.id}-placeholder`;
 
             const timeIndex =
               radarControls.playback.timeIndex ??
               (tilesetsForElevation.length > 0 ? tilesetsForElevation.length - 1 : 0);
             const tilesetId = tilesetsForElevation[timeIndex] ?? 'default';
-            return `${layerId}-${elevation}-${tilesetId}`;
+            return `${layerId}-${elevation.id}-${tilesetId}`;
           }
           default:
             return layerId;
@@ -334,6 +334,7 @@ export class LayerRenderService {
       minNativeZoom: LAYER_RENDERING_CONFIG.radar.minNativeZoom,
       maxNativeZoom: LAYER_RENDERING_CONFIG.radar.maxNativeZoom,
       bounds: LAYER_RENDERING_CONFIG.radar.bounds,
+      tms: true,
     });
 
     this.attachErrorHandlers(tileLayer, layerId);
