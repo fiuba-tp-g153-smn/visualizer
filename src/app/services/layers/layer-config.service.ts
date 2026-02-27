@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, map, of, catchError } from 'rxjs';
+import { Observable, map, of, catchError } from 'rxjs';
 import { buildConfigUrl } from '../../config';
 import {
   Layer,
@@ -11,9 +11,7 @@ import {
   LayerType,
   RadarTileLayer,
   GoesTileLayerConfig,
-  RadarElevation,
 } from '../../models';
-import { LayerControlService } from './layer-control.service';
 
 /**
  * Service responsible for fetching and caching layer configurations.
