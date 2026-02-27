@@ -57,9 +57,7 @@ export class LayerConfigService {
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
         // Extract only the IDs from the tileset objects and sort chronologically
-        const availableTilesets = response.tilesets
-          .map((tileset: any) => tileset.id)
-          .sort();
+        const availableTilesets = response.tilesets.map((tileset: any) => tileset.id).sort();
 
         const layerConfig: GoesTileLayerConfig = {
           layerId: layer.id,
@@ -80,7 +78,7 @@ export class LayerConfigService {
 
   /**
    * Fetches and updates the configuration for a radar layer.
-   * Makes parallel HTTP requests (one per elevation angle) and combines results.
+   * Makes a single HTTP request (tilesets are now shared across elevations).
    * Returns an empty configuration if no elevations are available.
    */
   fetchRadarLayerConfig(layer: RadarTileLayer): Observable<RadarTileLayerConfig> {
@@ -89,39 +87,33 @@ export class LayerConfigService {
         layerId: layer.id,
         type: LayerType.TILE,
         category: LayerCategory.RADAR,
-        availableTilesetsByElevation: {},
+        availableTilesets: [],
       };
       return of(emptyConfig);
     }
 
-    const elevationRequests = layer.availableElevations.map((elevation) => {
-      const pathToProduct = `${layer.id}/${elevation.id}`;
-      const configUrl = buildConfigUrl(pathToProduct);
-      return this.http.get<any>(configUrl).pipe(
-        map((response) => ({ elevation, tilesets: response.tilesets })),
-        catchError((error) => {
-          console.error(`Failed to fetch radar config for ${pathToProduct}:`, error);
-          throw error;
-        }),
-      );
-    });
+    // Fetch from first elevation (tilesets are shared across all elevations now)
+    const firstElevation = layer.availableElevations[0];
+    const pathToProduct = `${layer.id}/${firstElevation.id}`;
+    const configUrl = buildConfigUrl(pathToProduct);
 
-    return forkJoin(elevationRequests).pipe(
-      map((results) => {
-        const availableTilesetsByElevation: Record<string, string[]> = {};
-        results.forEach(({ elevation, tilesets }) => {
-          // Sort tilesets chronologically
-          availableTilesetsByElevation[elevation.id] = tilesets.sort();
-        });
+    return this.http.get<any>(configUrl).pipe(
+      map((response) => {
+        // Sort tilesets chronologically
+        const availableTilesets = (response.tilesets || []).sort();
 
         const config: RadarTileLayerConfig = {
           layerId: layer.id,
           type: LayerType.TILE,
           category: LayerCategory.RADAR,
-          availableTilesetsByElevation,
+          availableTilesets,
         };
         this.updateConfigMap(layer.id, config);
         return config;
+      }),
+      catchError((error) => {
+        console.error(`Failed to fetch radar config for ${pathToProduct}:`, error);
+        throw error;
       }),
     );
   }
@@ -163,8 +155,8 @@ export class LayerConfigService {
   }
 
   /**
-   * Gets available tilesets for GOES layers.
-   * Returns undefined if the layer is not a GOES layer or hasn't been configured.
+   * Gets available tilesets for tile layers.
+   * Returns undefined if the layer hasn't been configured.
    */
   getAvailableTilesets(layerId: string): string[] | undefined {
     const config = this.getConfig(layerId);
@@ -172,36 +164,7 @@ export class LayerConfigService {
 
     switch (config.type) {
       case LayerType.TILE:
-        switch (config.category) {
-          case LayerCategory.GOES_19:
-            return config.availableTilesets;
-          case LayerCategory.RADAR: {
-            return undefined; // For radar layers, use getAvailableTilesetsByElevation instead
-          }
-          default:
-            return undefined;
-        }
-      default:
-        return undefined;
-    }
-  }
-
-  /**
-   * Gets available tilesets organized by elevation angle for radar layers.
-   * Returns undefined if the layer is not a radar layer or hasn't been configured.
-   */
-  getAvailableTilesetsByElevation(layerId: string): Record<string, string[]> | undefined {
-    const config = this.getConfig(layerId);
-    if (!config) return undefined;
-
-    switch (config.type) {
-      case LayerType.TILE:
-        switch (config.category) {
-          case LayerCategory.RADAR:
-            return config.availableTilesetsByElevation;
-          default:
-            return undefined;
-        }
+        return config.availableTilesets;
       default:
         return undefined;
     }
@@ -237,35 +200,8 @@ export class LayerConfigService {
     switch (a.type) {
       case LayerType.TILE:
         if (a.category !== (b as any).category) return false;
-
-        switch (a.category) {
-          case LayerCategory.GOES_19: {
-            const bGoes = b as GoesTileLayerConfig;
-            return this.arraysAreEqual(a.availableTilesets, bGoes.availableTilesets);
-          }
-          case LayerCategory.RADAR: {
-            const bRadar = b as RadarTileLayerConfig;
-            // Compare elevation keys
-            const aKeys = Object.keys(a.availableTilesetsByElevation).sort();
-            const bKeys = Object.keys(bRadar.availableTilesetsByElevation).sort();
-            if (!this.arraysAreEqual(aKeys, bKeys)) return false;
-
-            // Compare tilesets for each elevation
-            for (const key of aKeys) {
-              if (
-                !this.arraysAreEqual(
-                  a.availableTilesetsByElevation[key],
-                  bRadar.availableTilesetsByElevation[key],
-                )
-              ) {
-                return false;
-              }
-            }
-            return true;
-          }
-          default:
-            return false;
-        }
+        const bTile = b as GoesTileLayerConfig | RadarTileLayerConfig;
+        return this.arraysAreEqual(a.availableTilesets, bTile.availableTilesets);
       default:
         return false;
     }
@@ -287,46 +223,18 @@ export class LayerConfigService {
   // ============================================================================
 
   /**
-   * Calculates the optimal timeIndex based on lastImagesCount and available periods.
-   * - If lastImagesCount = 1: returns the latest period (maxIndex)
-   * - If lastImagesCount > 1: returns the start of the range (maxIndex - lastImagesCount + 1) or 0
-   *
+   * Calculates the optimal timeIndex for a given range of images.
    * @param layerId - The layer ID
-   * @param lastImagesCount - Number of recent images to display
-   * @param elevationKey - For radar layers, the elevation angle key (e.g., "0.5")
+   * @param lastImagesCount - Number of most recent images to include
    * @returns The calculated timeIndex, or undefined if config is not available
    */
-  calculateTimeIndexForRange(
-    layerId: string,
-    lastImagesCount: number,
-    elevation?: RadarElevation,
-  ): number | undefined {
+  calculateTimeIndexForRange(layerId: string, lastImagesCount: number): number | undefined {
     const config = this.getConfig(layerId);
     if (!config || config.type !== LayerType.TILE) {
       return undefined;
     }
 
-    let maxIndex = 0;
-
-    switch (config.category) {
-      case LayerCategory.GOES_19: {
-        maxIndex = config.availableTilesets.length - 1;
-        break;
-      }
-      case LayerCategory.RADAR: {
-        if (!elevation) {
-          return undefined;
-        }
-        const tilesets = config.availableTilesetsByElevation[elevation.id];
-        if (!tilesets || tilesets.length === 0) {
-          return undefined;
-        }
-        maxIndex = tilesets.length - 1;
-        break;
-      }
-      default:
-        return undefined;
-    }
+    const maxIndex = config.availableTilesets.length - 1;
 
     if (maxIndex < 0) {
       return undefined;

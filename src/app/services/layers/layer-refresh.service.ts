@@ -175,22 +175,9 @@ export class LayerRefreshService {
     let count = 0;
 
     switch (config.type) {
-      case LayerType.TILE: {
-        switch (config.category) {
-          case LayerCategory.GOES_19: {
-            count = config.availableTilesets.length;
-            break;
-          }
-          case LayerCategory.RADAR: {
-            count = Object.values(config.availableTilesetsByElevation).reduce(
-              (total, tilesets) => total + tilesets.length,
-              0,
-            );
-            break;
-          }
-        }
+      case LayerType.TILE:
+        count = config.availableTilesets.length;
         break;
-      }
     }
 
     if (count > 0) {
@@ -217,27 +204,14 @@ export class LayerRefreshService {
     let hasChanges = false;
 
     switch (after.type) {
-      case LayerType.TILE: {
-        switch (after.category) {
-          case LayerCategory.GOES_19: {
-            const beforeTilesets = (before as GoesTileLayerConfig).availableTilesets;
-            const afterTilesets = after.availableTilesets;
-            const diff = this.calculateDiff(beforeTilesets, afterTilesets);
-            this.showDiffNotification(layerName, diff, showNoChanges);
-            hasChanges = diff.added > 0 || diff.removed > 0;
-            break;
-          }
-          case LayerCategory.RADAR: {
-            const beforeByElevation = (before as RadarTileLayerConfig).availableTilesetsByElevation;
-            const afterByElevation = after.availableTilesetsByElevation;
-            const diff = this.calculateRadarDiff(beforeByElevation, afterByElevation);
-            this.showDiffNotification(layerName, diff, showNoChanges);
-            hasChanges = diff.added > 0 || diff.removed > 0;
-            break;
-          }
-        }
+      case LayerType.TILE:
+        const beforeTilesets = (before as GoesTileLayerConfig | RadarTileLayerConfig)
+          .availableTilesets;
+        const afterTilesets = after.availableTilesets;
+        const diff = this.calculateDiff(beforeTilesets, afterTilesets);
+        this.showDiffNotification(layerName, diff, showNoChanges);
+        hasChanges = diff.added > 0 || diff.removed > 0;
         break;
-      }
     }
 
     // If there were changes, adjust timeIndex based on lastImagesCount
@@ -300,24 +274,10 @@ export class LayerRefreshService {
     }
 
     const lastImagesCount = controls.playback.lastImagesCount;
-    let elevation: RadarElevation | undefined;
-
-    // Get elevation key for radar layers
-    switch (controls.category) {
-      case LayerCategory.RADAR: {
-        const layer = this.layersService.getLayerById(layerId);
-        if (layer && layer.type === LayerType.TILE && layer.category === LayerCategory.RADAR) {
-          const elevationIndex = controls.elevation.elevationIndex ?? 0;
-          elevation = layer.availableElevations[elevationIndex];
-        }
-        break;
-      }
-    }
 
     const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
       layerId,
       lastImagesCount,
-      elevation,
     );
 
     if (newTimeIndex !== undefined) {
@@ -340,28 +300,5 @@ export class LayerRefreshService {
     const removed = before.filter((id) => !afterSet.has(id)).length;
 
     return { added, removed };
-  }
-
-  /**
-   * Calculates the difference for radar layers across all elevation angles.
-   */
-  private calculateRadarDiff(
-    before: Record<string, string[]>,
-    after: Record<string, string[]>,
-  ): { added: number; removed: number } {
-    let totalAdded = 0;
-    let totalRemoved = 0;
-
-    const allElevations = new Set([...Object.keys(before), ...Object.keys(after)]);
-
-    for (const elevation of allElevations) {
-      const beforeTilesets = before[elevation] || [];
-      const afterTilesets = after[elevation] || [];
-      const diff = this.calculateDiff(beforeTilesets, afterTilesets);
-      totalAdded += diff.added;
-      totalRemoved += diff.removed;
-    }
-
-    return { added: totalAdded, removed: totalRemoved };
   }
 }

@@ -102,6 +102,46 @@ export class LayerRenderService {
   }
 
   /**
+   * Creates a Leaflet TileLayer for a radar layer with a specific elevation.
+   * This is used when multiple elevations are selected.
+   *
+   * @param layerId - The radar layer identifier
+   * @param controls - Current layer control state
+   * @param elevationId - The specific elevation ID to create a layer for
+   * @returns A configured Leaflet TileLayer for that elevation
+   */
+  createRadarTileLayerForElevation(
+    layerId: string,
+    controls: RadarLayerControls,
+    elevationId: string,
+  ): L.TileLayer {
+    // Generate pool key including the specific elevation
+    const config = this.layerConfigService.getConfig(layerId) as RadarTileLayerConfig | undefined;
+    if (!config) {
+      return this.createPlaceholderLayer();
+    }
+
+    const tilesets = config.availableTilesets;
+    const timeIndex =
+      controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+    const tilesetId = tilesets[timeIndex] ?? 'default';
+    const poolKey = `${layerId}-${elevationId}-${tilesetId}`;
+
+    // Check pool
+    if (this.layerPool.has(poolKey)) {
+      const cachedLayer = this.layerPool.get(poolKey)!;
+      const opacity = (controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100;
+      cachedLayer.setOpacity(opacity);
+      return cachedLayer;
+    }
+
+    // Create new layer
+    const tileLayer = this.createRadarTileLayer(layerId, controls, elevationId);
+    this.layerPool.set(poolKey, tileLayer);
+    return tileLayer;
+  }
+
+  /**
    * Cleans old layers from the pool that are not in use.
    * @param activeKeys Set of keys (layerId-tilesetId) that MUST be kept
    */
@@ -145,23 +185,20 @@ export class LayerRenderService {
           }
           case LayerCategory.RADAR: {
             const radarControls = tileControls as RadarLayerControls;
-            const radarLayer = layer as RadarTileLayer;
             const config = this.layerConfigService.getConfig(layerId) as
               | RadarTileLayerConfig
               | undefined;
             if (!config) return `${layerId}-placeholder`;
 
-            const elevationIndex = radarControls.elevation.elevationIndex ?? 0;
-            const elevation = radarLayer.availableElevations?.[elevationIndex] ?? '0.5';
+            const selectedElevationIds = radarControls.elevation.selectedElevationIds;
+            // Pool key includes all selected elevations to detect changes
+            const elevationsKey = selectedElevationIds.sort().join(',');
 
-            const tilesetsForElevation = config.availableTilesetsByElevation[elevation.id];
-            if (!tilesetsForElevation) return `${layerId}-${elevation.id}-placeholder`;
-
+            const tilesets = config.availableTilesets;
             const timeIndex =
-              radarControls.playback.timeIndex ??
-              (tilesetsForElevation.length > 0 ? tilesetsForElevation.length - 1 : 0);
-            const tilesetId = tilesetsForElevation[timeIndex] ?? 'default';
-            return `${layerId}-${elevation.id}-${tilesetId}`;
+              radarControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+            const tilesetId = tilesets[timeIndex] ?? 'default';
+            return `${layerId}-[${elevationsKey}]-${tilesetId}`;
           }
           default:
             return layerId;
@@ -178,6 +215,7 @@ export class LayerRenderService {
 
   /**
    * Creates a data tile layer (GOES, Radar, etc.) based on category.
+   * Note: For radar layers with multiple elevations, use createRadarTileLayerForElevation instead.
    */
   private createDataTileLayer(layerId: string, controls: TileLayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
@@ -189,7 +227,9 @@ export class LayerRenderService {
       case LayerCategory.GOES_19:
         return this.createGoesTileLayer(layerId, controls as GoesLayerControls);
       case LayerCategory.RADAR:
-        return this.createRadarTileLayer(layerId, controls as RadarLayerControls);
+        // Radar layers should be created via createRadarTileLayerForElevation in map-viewer
+        console.warn('Radar layer should use createRadarTileLayerForElevation');
+        return this.createPlaceholderLayer();
       default:
         throw new Error(`Unsupported tile layer category for layer ${layerId}`);
     }
@@ -270,12 +310,16 @@ export class LayerRenderService {
   // ============================================================================
 
   /**
-   * Creates a tile layer for radar imagery.
-   * Reads configuration from LayerConfigService to get available tilesets by elevation.
+   * Creates a tile layer for radar imagery with a specific elevation.
+   * Reads configuration from LayerConfigService to get available tilesets (shared across elevations).
    *
    * Returns a placeholder layer if configuration is not yet loaded.
    */
-  private createRadarTileLayer(layerId: string, controls: RadarLayerControls): L.TileLayer {
+  private createRadarTileLayer(
+    layerId: string,
+    controls: RadarLayerControls,
+    elevationId: string,
+  ): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
     const config = this.layerConfigService.getConfig(layerId) as RadarTileLayerConfig | undefined;
 
@@ -296,35 +340,29 @@ export class LayerRenderService {
 
     const radarLayer = layer as RadarTileLayer;
 
-    // Get elevation index from controls
-    const elevationIndex = controls.elevation.elevationIndex ?? 0;
-    const availableElevations = radarLayer.availableElevations;
-
-    if (!availableElevations || elevationIndex >= availableElevations.length) {
+    // Find the elevation object by ID
+    const elevation = radarLayer.availableElevations.find((e) => e.id === elevationId);
+    if (!elevation) {
+      console.warn(`Elevation ${elevationId} not found for layer ${layerId}`);
       return this.createPlaceholderLayer();
     }
 
-    const elevation = availableElevations[elevationIndex];
-
-    // Get tilesets for this specific elevation
-    const tilesetsByElevation = config.availableTilesetsByElevation;
-    const tilesetsForElevation = tilesetsByElevation[elevation.id];
-
-    if (!tilesetsForElevation || tilesetsForElevation.length === 0) {
+    // Get tilesets (now shared across all elevations)
+    const tilesets = config.availableTilesets;
+    if (!tilesets || tilesets.length === 0) {
       return this.createPlaceholderLayer();
     }
 
     // Get the tileset ID for the current time index
     // If timeIndex is undefined, use the latest period
     const timeIndex =
-      controls.playback.timeIndex ??
-      (tilesetsForElevation.length > 0 ? tilesetsForElevation.length - 1 : 0);
+      controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
 
-    if (timeIndex >= tilesetsForElevation.length) {
+    if (timeIndex >= tilesets.length) {
       return this.createPlaceholderLayer();
     }
 
-    const tilesetId = tilesetsForElevation[timeIndex];
+    const tilesetId = tilesets[timeIndex];
     const pathToTileset = `${layerId}/${elevation.id}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
@@ -334,10 +372,10 @@ export class LayerRenderService {
       minNativeZoom: LAYER_RENDERING_CONFIG.radar.minNativeZoom,
       maxNativeZoom: LAYER_RENDERING_CONFIG.radar.maxNativeZoom,
       bounds: LAYER_RENDERING_CONFIG.radar.bounds,
-      tms: true,
+      tms: true, // Use TMS tile scheme (Y axis inverted compared to XYZ)
     });
 
-    this.attachErrorHandlers(tileLayer, layerId);
+    this.attachErrorHandlers(tileLayer, layerId + '#' + elevationId);
     return tileLayer;
   }
 

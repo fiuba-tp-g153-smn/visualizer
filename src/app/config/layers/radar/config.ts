@@ -16,15 +16,15 @@ const RADAR_DEFAULTS = {
   availableElevations: [
     {
       id: 'elev0',
-      name: 'Elevación 0.6°',
+      name: '0.6°',
     },
     {
       id: 'elev1',
-      name: 'Elevación 0.9°',
+      name: '0.9°',
     },
     {
       id: 'elev2',
-      name: 'Elevación 1.3°',
+      name: '1.3°',
     },
   ] as const,
   category: LayerCategory.RADAR,

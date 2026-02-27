@@ -166,16 +166,45 @@ export class MapViewer implements OnInit, OnDestroy {
 
       if (!layer || !controls || !controls.visible) continue;
 
-      // Create tile layer using the refactored service API (with pooling)
-      // The service now handles opacity internally
-      const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
-      desiredLayersOnMap.set(layerId, tileLayer);
+      // Special handling for radar layers with multiple elevations
+      if (
+        layer.type === 'tile' &&
+        layer.category === 'radar' &&
+        controls.type === 'tile' &&
+        'elevation' in controls
+      ) {
+        const radarControls = controls as any; // RadarLayerControls
+        const selectedElevationIds = radarControls.elevation.selectedElevationIds || [];
 
-      // Set z-index if defined (always update, even for cached layers)
-      if (controls.zIndex !== undefined) {
-        const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-        if (absoluteZIndex !== null) {
-          tileLayer.setZIndex(absoluteZIndex);
+        // Create one layer per selected elevation
+        for (const elevationId of selectedElevationIds) {
+          const compositeKey = `${layerId}#${elevationId}`;
+          const tileLayer = this.layerRenderService.createRadarTileLayerForElevation(
+            layerId,
+            radarControls,
+            elevationId,
+          );
+          desiredLayersOnMap.set(compositeKey, tileLayer);
+
+          // Set z-index if defined
+          if (controls.zIndex !== undefined) {
+            const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
+            if (absoluteZIndex !== null) {
+              tileLayer.setZIndex(absoluteZIndex);
+            }
+          }
+        }
+      } else {
+        // Standard layer creation for non-radar layers
+        const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
+        desiredLayersOnMap.set(layerId, tileLayer);
+
+        // Set z-index if defined (always update, even for cached layers)
+        if (controls.zIndex !== undefined) {
+          const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
+          if (absoluteZIndex !== null) {
+            tileLayer.setZIndex(absoluteZIndex);
+          }
         }
       }
     }

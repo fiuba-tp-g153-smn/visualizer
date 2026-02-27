@@ -17,7 +17,7 @@ export interface GoesTileLayerConfig extends TileLayerConfig {
 
 export interface RadarTileLayerConfig extends TileLayerConfig {
   category: LayerCategory.RADAR;
-  availableTilesetsByElevation: Record<string, string[]>;
+  availableTilesets: string[];
 }
 
 export interface WmsLayerConfig extends BaseLayerConfig {

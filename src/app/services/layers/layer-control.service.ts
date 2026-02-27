@@ -108,29 +108,25 @@ export class LayerControlService {
   }
 
   /**
-   * Gets the elevation key for a radar layer based on the selected elevation index.
+   * Gets the selected elevations for a radar layer.
    */
-  getSelectedElevationForLayer(layerId: string): RadarElevation | null {
+  getSelectedElevationsForLayer(layerId: string): RadarElevation[] {
     const controls = this.getControls(layerId);
     if (
       !controls ||
       controls.type !== LayerType.TILE ||
       controls.category !== LayerCategory.RADAR
     ) {
-      return null;
+      return [];
     }
 
     const layer = this.layersService.getLayerById(layerId);
     if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.RADAR) {
-      return null;
+      return [];
     }
 
-    const elevationIndex = controls.elevation.elevationIndex;
-    if (elevationIndex === undefined) {
-      return null;
-    }
-
-    return layer.availableElevations[elevationIndex] ?? null;
+    const selectedIds = controls.elevation.selectedElevationIds;
+    return layer.availableElevations.filter((elev) => selectedIds.includes(elev.id));
   }
 
   // ============================================================================
@@ -226,12 +222,54 @@ export class LayerControlService {
   }
 
   /**
-   * Sets the elevation angle index for radar layers.
+   * Toggles an elevation for radar layers (adds if not present, removes if present).
    */
-  setElevationIndex(layerId: string, elevationIndex: number): void {
+  toggleElevation(layerId: string, elevationId: string): void {
     this.updateControls(layerId, (controls) => {
-      if (controls.type === LayerType.TILE && controls.category === LayerCategory.RADAR) {
-        controls.elevation.elevationIndex = elevationIndex;
+      switch (controls.type) {
+        case LayerType.TILE:
+          switch (controls.category) {
+            case LayerCategory.RADAR:
+              const currentSelected = controls.elevation.selectedElevationIds;
+              const index = currentSelected.indexOf(elevationId);
+
+              if (index === -1) {
+                // Add elevation if not present
+                controls.elevation.selectedElevationIds = [...currentSelected, elevationId];
+              } else {
+                // Remove elevation if present
+                controls.elevation.selectedElevationIds = currentSelected.filter(
+                  (id) => id !== elevationId,
+                );
+              }
+              break;
+            default:
+              throw new Error(`Elevation control only applies to radar layers`);
+          }
+          break;
+        default:
+          throw new Error(`Elevation control only applies to tile layers`);
+      }
+    });
+  }
+
+  /**
+   * Sets the selected elevations for radar layers.
+   */
+  setSelectedElevations(layerId: string, elevationIds: string[]): void {
+    this.updateControls(layerId, (controls) => {
+      switch (controls.type) {
+        case LayerType.TILE:
+          switch (controls.category) {
+            case LayerCategory.RADAR:
+              controls.elevation.selectedElevationIds = [...elevationIds];
+              break;
+            default:
+              throw new Error(`Elevation control only applies to radar layers`);
+          }
+          break;
+        default:
+          throw new Error(`Elevation control only applies to tile layers`);
       }
     });
   }
@@ -261,25 +299,7 @@ export class LayerControlService {
 
     // Calculate and set the optimal timeIndex for the new range
     if (controls && controls.type === LayerType.TILE) {
-      let elevation: RadarElevation | undefined;
-
-      // Get elevation key for radar layers
-      switch (controls.category) {
-        case LayerCategory.RADAR: {
-          const layer = this.layersService.getLayerById(layerId);
-          if (layer && layer.type === LayerType.TILE && layer.category === LayerCategory.RADAR) {
-            const elevationIndex = controls.elevation.elevationIndex ?? 0;
-            elevation = layer.availableElevations[elevationIndex];
-          }
-          break;
-        }
-      }
-
-      const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
-        layerId,
-        count,
-        elevation,
-      );
+      const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(layerId, count);
 
       if (newTimeIndex !== undefined) {
         this.setTimeIndex(layerId, newTimeIndex);
@@ -481,13 +501,8 @@ export class LayerControlService {
       case LayerType.TILE:
         switch (layer.category) {
           case LayerCategory.GOES_19:
-            return this.layerConfigService.getAvailableTilesets(layerId) ?? [];
           case LayerCategory.RADAR:
-            const elevation = this.getSelectedElevationForLayer(layerId);
-            if (!elevation) return [];
-            const tilesetsByElevation =
-              this.layerConfigService.getAvailableTilesetsByElevation(layerId) ?? {};
-            return tilesetsByElevation[elevation.id] ?? [];
+            return this.layerConfigService.getAvailableTilesets(layerId) ?? [];
           default:
             throw new Error(`Unsupported tile layer category for playback`);
         }
@@ -634,7 +649,7 @@ export class LayerControlService {
               ...baseTileControls,
               category: layer.category!,
               elevation: {
-                elevationIndex: 0,
+                selectedElevationIds: [],
               },
             } as RadarLayerControls;
           default:
