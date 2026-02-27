@@ -325,7 +325,7 @@ export class LayerRendererService {
     }
 
     const tilesetId = tilesetsForElevation[timeIndex];
-    const pathToTileset = `${layerId}/${elevation}/${tilesetId}`;
+    const pathToTileset = `${layerId}/${elevation.id}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
     const baseOptions = this.createBaseTileLayerOptions(controls.opacity);
