@@ -56,10 +56,10 @@ export class LayersService {
 
   /**
    * Finds a layer by its unique identifier.
-   * Returns null if no layer with the given ID exists.
+   * Returns undefined if no layer with the given ID exists.
    */
-  getLayerById(layerId: string): Layer | null {
-    return this.getAllLayers().find((layer) => layer.id === layerId) ?? null;
+  getLayerById(layerId: string): Layer | undefined {
+    return this.getAllLayers().find((layer) => layer.id === layerId);
   }
 
   /**

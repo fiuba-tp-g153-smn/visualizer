@@ -88,17 +88,17 @@ export class LayerControlService {
   /**
    * Gets the controls for a specific layer.
    */
-  getControls(layerId: string): LayerControls | null {
-    return this.controls().get(layerId) ?? null;
+  getControls(layerId: string): LayerControls | undefined {
+    return this.controls().get(layerId);
   }
 
   /**
    * Calculates the absolute z-index for a layer based on its group and relative position.
    */
-  getAbsoluteZIndex(layerId: string, controls: LayerControls): number | null {
+  getAbsoluteZIndex(layerId: string, controls: LayerControls): number | undefined {
     const layer = this.layersService.getLayerById(layerId);
-    if (!layer) return null;
-    if (controls.zIndex === undefined) return null;
+    if (!layer) return undefined;
+    if (controls.zIndex === undefined) return undefined;
     const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
     return baseOffset + controls.zIndex;
   }
@@ -715,12 +715,12 @@ export class LayerControlService {
   /**
    * Loads layer controls from localStorage.
    */
-  private loadControls(): LayerControls[] | null {
+  private loadControls(): LayerControls[] | undefined {
     try {
       const saved = localStorage.getItem(this.STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
+      return saved ? JSON.parse(saved) : undefined;
     } catch {
-      return null;
+      return undefined;
     }
   }
 }
