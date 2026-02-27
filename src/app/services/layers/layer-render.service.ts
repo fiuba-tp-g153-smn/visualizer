@@ -11,13 +11,15 @@ import {
   GoesLayerControls,
   RadarLayerControls,
   WmsLayerControls,
+  TileLayer,
+  Layer,
 } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
 import {
-  LAYER_RENDERING_CONFIG,
+  DEFAULT_LAYER_CONTROLS,
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
 } from '../../config/layers';
@@ -78,7 +80,7 @@ export class LayerRenderService {
     if (this.layerPool.has(poolKey)) {
       const cachedLayer = this.layerPool.get(poolKey)!;
       // Update only visual properties without recreating the layer
-      const opacity = (controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100;
+      const opacity = (controls.opacity ?? DEFAULT_LAYER_CONTROLS.opacity) / 100;
       cachedLayer.setOpacity(opacity);
       return cachedLayer;
     }
@@ -130,7 +132,7 @@ export class LayerRenderService {
     // Check pool
     if (this.layerPool.has(poolKey)) {
       const cachedLayer = this.layerPool.get(poolKey)!;
-      const opacity = (controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100;
+      const opacity = (controls.opacity ?? DEFAULT_LAYER_CONTROLS.opacity) / 100;
       cachedLayer.setOpacity(opacity);
       return cachedLayer;
     }
@@ -265,42 +267,19 @@ export class LayerRenderService {
    * Returns a placeholder layer if configuration is not yet loaded.
    */
   private createGoesTileLayer(layerId: string, controls: GoesLayerControls): L.TileLayer {
-    const config = this.layerConfigService.getConfig(layerId) as GoesTileLayerConfig | undefined;
+    const layer = this.layersService.getLayerById(layerId);
 
-    if (!config) {
-      const layer = this.layersService.getLayerById(layerId);
-      if (layer && layer.category === LayerCategory.GOES_19) {
-        // Trigger async config load - this will update the config map
-        this.layerConfigService.fetchLayerConfig(layer).subscribe({
-          next: () => console.debug('✅ [LayerRenderer] GOES config loaded for', layerId),
-          error: (err) => console.error('❌ [LayerRenderer] Failed to load GOES config:', err),
-        });
-      }
+    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.GOES_19) {
       return this.createPlaceholderLayer();
     }
 
-    // Get the tileset ID for the current time index
-    const tilesets = config.availableTilesets;
-    // If timeIndex is undefined, use the latest period
-    const timeIndex =
-      controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+    const tilesetId = this.getTilesetId(layerId, layer, controls.playback.timeIndex);
+    if (!tilesetId) return this.createPlaceholderLayer();
 
-    if (!tilesets || tilesets.length === 0 || timeIndex >= tilesets.length) {
-      return this.createPlaceholderLayer();
-    }
-
-    const tilesetId = tilesets[timeIndex];
     const pathToTileset = `${layerId}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
-    const baseOptions = this.createBaseTileLayerOptions(controls.opacity);
-    const tileLayer = L.tileLayer(tileUrl, {
-      ...baseOptions,
-      minNativeZoom: LAYER_RENDERING_CONFIG.goes.minNativeZoom,
-      maxNativeZoom: LAYER_RENDERING_CONFIG.goes.maxNativeZoom,
-      bounds: LAYER_RENDERING_CONFIG.goes.bounds,
-    });
-
+    const tileLayer = this.buildTileLayer(tileUrl, layer, controls.opacity);
     this.attachErrorHandlers(tileLayer, layerId);
     return tileLayer;
   }
@@ -321,20 +300,8 @@ export class LayerRenderService {
     elevationId: string,
   ): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
-    const config = this.layerConfigService.getConfig(layerId) as RadarTileLayerConfig | undefined;
 
     if (!layer || layer.type !== LayerType.TILE) {
-      return this.createPlaceholderLayer();
-    }
-
-    if (!config) {
-      if (layer.category === LayerCategory.RADAR) {
-        // Trigger async config load - this will update the config map
-        this.layerConfigService.fetchLayerConfig(layer).subscribe({
-          next: () => console.debug('✅ [LayerRenderer] Radar config loaded for', layerId),
-          error: (err) => console.error('❌ [LayerRenderer] Failed to load Radar config:', err),
-        });
-      }
       return this.createPlaceholderLayer();
     }
 
@@ -347,34 +314,13 @@ export class LayerRenderService {
       return this.createPlaceholderLayer();
     }
 
-    // Get tilesets (now shared across all elevations)
-    const tilesets = config.availableTilesets;
-    if (!tilesets || tilesets.length === 0) {
-      return this.createPlaceholderLayer();
-    }
+    const tilesetId = this.getTilesetId(layerId, layer, controls.playback.timeIndex);
+    if (!tilesetId) return this.createPlaceholderLayer();
 
-    // Get the tileset ID for the current time index
-    // If timeIndex is undefined, use the latest period
-    const timeIndex =
-      controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
-
-    if (timeIndex >= tilesets.length) {
-      return this.createPlaceholderLayer();
-    }
-
-    const tilesetId = tilesets[timeIndex];
     const pathToTileset = `${layerId}/${elevation.id}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
-    const baseOptions = this.createBaseTileLayerOptions(controls.opacity);
-    const tileLayer = L.tileLayer(tileUrl, {
-      ...baseOptions,
-      minNativeZoom: LAYER_RENDERING_CONFIG.radar.minNativeZoom,
-      maxNativeZoom: LAYER_RENDERING_CONFIG.radar.maxNativeZoom,
-      bounds: LAYER_RENDERING_CONFIG.radar.bounds,
-      tms: true, // Use TMS tile scheme (Y axis inverted compared to XYZ)
-    });
-
+    const tileLayer = this.buildTileLayer(tileUrl, layer, controls.opacity, { tms: true });
     this.attachErrorHandlers(tileLayer, layerId + '#' + elevationId);
     return tileLayer;
   }
@@ -398,7 +344,7 @@ export class LayerRenderService {
       transparent: IGN_WMS_BASE_CONFIG.transparent,
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
-      opacity: (controls.opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100,
+      opacity: (controls.opacity ?? DEFAULT_LAYER_CONTROLS.opacity) / 100,
     });
 
     this.attachErrorHandlers(wmsLayer, layer.id);
@@ -410,6 +356,73 @@ export class LayerRenderService {
   // ============================================================================
 
   /**
+   * Gets the tilesetId for the current playback state and handles fetching config if not available.
+   *
+   * @returns The tilesetId or undefined if not available (triggers async fetch)
+   */
+  private getTilesetId(
+    layerId: string,
+    layer: TileLayer,
+    timeIndex: number | undefined,
+  ): string | undefined {
+    const config = this.layerConfigService.getConfig(layerId) as
+      | RadarTileLayerConfig
+      | GoesTileLayerConfig
+      | undefined;
+
+    if (!config) {
+      // Trigger async config load - this will update the config map
+      const categoryName = layer.category === LayerCategory.RADAR ? 'Radar' : 'GOES';
+      this.layerConfigService.fetchLayerConfig(layer as Layer).subscribe({
+        next: () => console.debug(`✅ [LayerRenderer] ${categoryName} config loaded for`, layerId),
+        error: (err) =>
+          console.error(`❌ [LayerRenderer] Failed to load ${categoryName} config:`, err),
+      });
+      return undefined;
+    }
+
+    // Get the tileset ID for the current time index
+    const tilesets = config.availableTilesets;
+    if (!tilesets || tilesets.length === 0) {
+      return undefined;
+    }
+
+    // If timeIndex is undefined, use the latest period
+    const resolvedTimeIndex = timeIndex ?? tilesets.length - 1;
+
+    if (resolvedTimeIndex >= tilesets.length) {
+      return undefined;
+    }
+
+    return tilesets[resolvedTimeIndex];
+  }
+
+  /**
+   * Builds a Leaflet TileLayer with common options and layer-specific configuration.
+   *
+   * @param tileUrl - The URL template for tiles
+   * @param layer - The layer configuration
+   * @param opacity - Optional opacity override (0-100)
+   * @param extraOptions - Additional Leaflet tile layer options
+   * @returns Configured Leaflet TileLayer
+   */
+  private buildTileLayer(
+    tileUrl: string,
+    layer: TileLayer,
+    opacity?: number,
+    extraOptions?: L.TileLayerOptions,
+  ): L.TileLayer {
+    const baseOptions = this.createBaseTileLayerOptions(opacity);
+    return L.tileLayer(tileUrl, {
+      ...baseOptions,
+      minNativeZoom: layer.minNativeZoom,
+      maxNativeZoom: layer.maxNativeZoom,
+      bounds: layer.boundingBox as L.LatLngBoundsExpression | undefined,
+      ...extraOptions,
+    });
+  }
+
+  /**
    * Creates base tile layer options using global map configuration.
    * These options are common to all tile layers.
    */
@@ -418,7 +431,7 @@ export class LayerRenderService {
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
       noWrap: true,
-      opacity: (opacity ?? LAYER_RENDERING_CONFIG.defaultOpacity) / 100,
+      opacity: (opacity ?? DEFAULT_LAYER_CONTROLS.opacity) / 100,
     };
   }
 

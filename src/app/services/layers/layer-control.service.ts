@@ -10,9 +10,14 @@ import {
   TileLayerControls,
   GoesLayerControls,
   RadarElevation,
+  RadarTileLayer,
 } from '../../models';
 import { LayersService } from './layers.service';
-import { ACTIVE_LAYER_GROUP_DEFINITIONS, DEFAULT_ACTIVE_LAYERS } from '../../config/layers';
+import {
+  ACTIVE_LAYER_GROUP_DEFINITIONS,
+  DEFAULT_ACTIVE_LAYERS,
+  DEFAULT_LAYER_CONTROLS,
+} from '../../config/layers';
 import { LayerConfigService } from './layer-config.service';
 
 /**
@@ -147,6 +152,7 @@ export class LayerControlService {
   /**
    * Activates (makes visible) a layer and assigns it a z-index.
    * If the layer has config and timeIndex is undefined, sets it to the latest period.
+   * For radar layers, sets default elevations if none are selected.
    */
   activateLayer(layerId: string): void {
     if (this.isActive(layerId)) return;
@@ -158,12 +164,44 @@ export class LayerControlService {
       controls.visible = true;
       controls.zIndex = this.getNextZIndex(layer.zIndexGroup);
 
-      // For tile layers, set timeIndex to latest if undefined and config exists
-      if (controls.type === LayerType.TILE && controls.playback.timeIndex === undefined) {
-        const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
-        if (availablePeriods.length > 0) {
-          controls.playback.timeIndex = availablePeriods.length - 1;
-        }
+      // Initialize layer-specific defaults
+      switch (controls.type) {
+        case LayerType.TILE:
+          // Set timeIndex to latest if undefined and config exists
+          if (controls.playback.timeIndex === undefined) {
+            const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
+            if (availablePeriods.length > 0) {
+              controls.playback.timeIndex = availablePeriods.length - 1;
+            }
+          }
+
+          // Handle category-specific initialization
+          switch (controls.category) {
+            case LayerCategory.RADAR:
+              // Set default elevations if none are selected
+              if (
+                controls.elevation.selectedElevationIds.length === 0 &&
+                layer.type === LayerType.TILE &&
+                layer.category === LayerCategory.RADAR
+              ) {
+                const radarLayer = layer as RadarTileLayer;
+                const defaultElevations = radarLayer.availableElevations
+                  .filter((elev) => elev.activeByDefault)
+                  .map((elev) => elev.id);
+
+                if (defaultElevations.length > 0) {
+                  controls.elevation.selectedElevationIds = defaultElevations;
+                }
+              }
+              break;
+            case LayerCategory.GOES_19:
+              // No special initialization needed for GOES layers
+              break;
+          }
+          break;
+        case LayerType.WMS:
+          // No special initialization needed for WMS layers
+          break;
       }
     });
   }
@@ -610,7 +648,7 @@ export class LayerControlService {
     return {
       id: layer.id,
       visible: false,
-      opacity: 100, // TODO: this should ideally come from layer definition or defaults based on category or environment configuration
+      opacity: DEFAULT_LAYER_CONTROLS.opacity,
       zIndex: 0,
     };
   }
@@ -634,8 +672,8 @@ export class LayerControlService {
           playback: {
             isPlaying: false,
             timeIndex: undefined, // Will be set to latest when config loads
-            speed: 1, // TODO: this should ideally come from layer definition or defaults based on category or environment configuration
-            lastImagesCount: 1,
+            speed: DEFAULT_LAYER_CONTROLS.playbackSpeed,
+            lastImagesCount: DEFAULT_LAYER_CONTROLS.lastImagesCount,
           },
         };
         switch (layer.category) {
@@ -645,11 +683,17 @@ export class LayerControlService {
               category: layer.category!,
             } as GoesLayerControls;
           case LayerCategory.RADAR:
+            // Find elevation(s) marked as default
+            const radarLayer = layer as RadarTileLayer;
+            const defaultElevations = radarLayer.availableElevations
+              .filter((elev) => elev.activeByDefault)
+              .map((elev) => elev.id);
+
             return {
               ...baseTileControls,
               category: layer.category!,
               elevation: {
-                selectedElevationIds: [],
+                selectedElevationIds: defaultElevations,
               },
             } as RadarLayerControls;
           default:

@@ -138,7 +138,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   currentOpacity = computed(() => {
     const activeLayer = this.getActiveLayer();
-    return activeLayer?.controls.opacity ?? 100;
+    if (!activeLayer) return;
+    return activeLayer.controls.opacity;
   });
 
   /**

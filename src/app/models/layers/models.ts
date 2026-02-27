@@ -22,6 +22,13 @@ export enum LayerCategory {
   IGN_WMS = 'ign_wms', // IGN WMS layers
 }
 
+/**
+ * Representa los límites geográficos de una capa en el formato de Leaflet.
+ * Definido como [[latitud_sur, longitud_oeste], [latitud_norte, longitud_este]]
+ * Compatible directamente con L.LatLngBoundsExpression de Leaflet.
+ */
+export type BoundingBox = readonly [readonly [number, number], readonly [number, number]];
+
 interface BaseLayer {
   id: string;
   name: string;
@@ -29,13 +36,6 @@ interface BaseLayer {
   category: LayerCategory;
   zIndexGroup: ActiveLayerGroupId;
   boundingBox?: BoundingBox;
-}
-
-interface BoundingBox {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
 }
 
 /**
@@ -46,6 +46,8 @@ export type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLa
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
+  minNativeZoom: number; // Zoom mínimo nativo de la capa (nivel más alejado con datos disponibles)
+  maxNativeZoom: number; // Zoom máximo nativo de la capa (nivel más cercano con datos disponibles)
 }
 
 export interface GoesTileLayer extends TileLayer {
@@ -70,6 +72,7 @@ export interface RadarTileLayer extends TileLayer {
 export interface RadarElevation {
   id: string;
   name: string;
+  activeByDefault: boolean; // Indica si esta elevación debe seleccionarse por defecto al activar la capa
 }
 
 /**
