@@ -237,21 +237,21 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * Obtiene el índice de elevación actual
+   * Obtiene los IDs de las elevaciones seleccionadas
    */
-  currentElevationIndex = computed(() => {
+  selectedElevationIds = computed(() => {
     const activeItem = this.getActiveLayer();
 
-    if (!activeItem) return 0;
+    if (!activeItem) return [];
 
     switch (activeItem.controls.type) {
       case LayerType.TILE:
         if ('elevation' in activeItem.controls) {
-          return activeItem.controls.elevation?.elevationIndex ?? 0;
+          return activeItem.controls.elevation?.selectedElevationIds ?? [];
         }
-        return 0;
+        return [];
       default:
-        return 0;
+        return [];
     }
   });
 
@@ -374,28 +374,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   /**
    * Obtiene los tilesets disponibles según la categoría de la capa.
-   * Para GOES_19: devuelve todos los tilesets.
-   * Para RADAR: devuelve los tilesets de la elevación actualmente seleccionada.
+   * Para GOES_19 y RADAR: devuelve todos los tilesets.
    */
   private getAvailableTilesetsForLayer(): string[] | null {
     switch (this.layer.type) {
       case LayerType.TILE:
         switch (this.layer.category) {
           case LayerCategory.GOES_19:
+          case LayerCategory.RADAR:
             return this.configService.getAvailableTilesets(this.layer.id) ?? null;
-          case LayerCategory.RADAR: {
-            const tilesetsByElevation = this.configService.getAvailableTilesetsByElevation(
-              this.layer.id,
-            );
-            if (!tilesetsByElevation) return null;
-
-            const elevations = this.availableElevations();
-            const elevationIndex = this.currentElevationIndex();
-            if (elevationIndex < 0 || elevationIndex >= elevations.length) return null;
-
-            const elevation = elevations[elevationIndex];
-            return tilesetsByElevation[elevation.id] ?? null;
-          }
           default:
             return null;
         }
@@ -536,35 +523,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // Control de Elevación (RADAR)
   // ==========================================================================
 
-  onElevationChange(elevationIndex: number): void {
-    this.controlService.setElevationIndex(this.layer.id, elevationIndex);
-
-    // Reload configuration when elevation changes
-    if (this.layer.category === LayerCategory.RADAR) {
-      this.isLoadingConfig.set(true);
-      this.configService.fetchLayerConfig(this.layer).subscribe({
-        next: () => {
-          this.isLoadingConfig.set(false);
-        },
-        error: (err: Error) => {
-          this.isLoadingConfig.set(false);
-          console.error(`❌ [LayerItem] Error cargando config de radar ${this.layer.id}:`, err);
-        },
-      });
-    }
+  /**
+   * Verifica si una elevación está seleccionada
+   */
+  isElevationSelected(elevationId: string): boolean {
+    return this.selectedElevationIds().includes(elevationId);
   }
 
   /**
-   * Obtiene la etiqueta de elevación para mostrar
+   * Maneja el toggle de una elevación (activar/desactivar)
    */
-  getElevationLabel(elevationIndex: number): string {
-    const elevations = this.availableElevations();
-    if (elevations && elevationIndex >= 0 && elevationIndex < elevations.length) {
-      return elevations[elevationIndex].name;
-    }
-    throw new Error(
-      `Índice de elevación ${elevationIndex} fuera de rango para capa ${this.layer.id}`,
-    );
+  onElevationToggle(elevationId: string): void {
+    this.controlService.toggleElevation(this.layer.id, elevationId);
   }
 
   /**

@@ -126,18 +126,18 @@
         <!-- Control de elevación (solo para RADAR) -->
         @if (hasElevationControl()) {
           <div class="elevation-control">
-            <span class="control-label">Elevación</span>
-            <mat-form-field appearance="fill" class="elevation-select">
-              <mat-select
-                [value]="currentElevationIndex()"
-                (selectionChange)="onElevationChange($event.value)"
-                panelClass="layer-select-panel"
-              >
-                @for (elevation of availableElevations(); track elevation; let i = $index) {
-                  <mat-option [value]="i">{{ getElevationLabel(i) }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <span class="control-label">Elevaciones</span>
+            <div class="elevation-checkboxes">
+              @for (elevation of availableElevations(); track elevation.id) {
+                <mat-checkbox
+                  [checked]="isElevationSelected(elevation.id)"
+                  (change)="onElevationToggle(elevation.id)"
+                  class="elevation-checkbox"
+                >
+                  {{ elevation.name }}
+                </mat-checkbox>
+              }
+            </div>
           </div>
         }
       </div>

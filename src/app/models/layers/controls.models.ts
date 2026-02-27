@@ -32,7 +32,7 @@ export interface PlaybackControls {
 }
 
 export interface ElevationControls {
-  elevationIndex?: number; // Índice de elevación seleccionado, puede ser null si no se ha seleccionado ninguno o si la capa no tiene elevaciones disponibles
+  selectedElevationIds: string[]; // IDs de elevaciones seleccionadas (puede estar vacío si no se ha seleccionado ninguna)
 }
 
 export interface WmsLayerControls extends BaseLayerControls {
