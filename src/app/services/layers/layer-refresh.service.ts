@@ -12,7 +12,6 @@ import {
   GoesTileLayerConfig,
   RadarTileLayerConfig,
   NotificationType,
-  RadarElevation,
 } from '../../models';
 
 /**
