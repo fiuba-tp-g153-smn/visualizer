@@ -36,7 +36,6 @@ export class MapViewer implements OnInit, OnDestroy {
   private layerRenderService = inject(LayerRenderService);
 
   private currentTileLayer: L.TileLayer | null = null;
-  private radarBoundsLayer: L.Layer | null = null;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -92,12 +91,6 @@ export class MapViewer implements OnInit, OnDestroy {
     this.onMapLayers.forEach((layer) => layer.remove());
     this.onMapLayers.clear();
 
-    // Remove radar bounds rectangle if present
-    if (this.radarBoundsLayer) {
-      this.radarBoundsLayer.remove();
-      this.radarBoundsLayer = null;
-    }
-
     if (this.map) {
       this.map.remove();
     }
@@ -144,33 +137,6 @@ export class MapViewer implements OnInit, OnDestroy {
       maxZoom: initialProvider.maxZoom,
       zIndex: 0,
     }).addTo(this.map);
-
-    // Create a dedicated pane for the radar bounds rectangle with a very high z-index
-    if (this.map) {
-      const paneName = 'radarBoundsPane';
-      if (!this.map.getPane(paneName)) {
-        this.map.createPane(paneName);
-      }
-      const pane = this.map.getPane(paneName)!;
-      // Ensure it's on top and non-interactive
-      pane.style.zIndex = '10000';
-      pane.style.pointerEvents = 'none';
-
-      // Add rectangle using configured radar bounds
-      try {
-        const radarBounds = LAYER_RENDERING_CONFIG.radar.bounds as L.LatLngBoundsExpression;
-        const rect = L.rectangle(radarBounds, {
-          color: '#ff0000',
-          weight: 2,
-          fill: false,
-          pane: paneName,
-        }).addTo(this.map);
-
-        this.radarBoundsLayer = rect;
-      } catch (e) {
-        console.warn('Failed to add radar bounds rectangle:', e);
-      }
-    }
   }
 
   private changeTileProvider(provider: TileProvider): void {
