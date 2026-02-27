@@ -26,11 +26,6 @@ export const IGN_WMS_WORKSPACE_URLS: Record<string, string> = {
   'relieve-suelo': 'https://wms.ign.gob.ar/geoserver/relieve-suelo/wms',
 };
 
-const IGN_WMS_LIMITS_DEFAULTS = {
-  ...IGN_WMS_DEFAULTS,
-  wmsWorkspace: 'limites',
-} as const;
-
 export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-limits',
@@ -43,7 +38,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Línea que constituye la representación de la traza demarcadora que delimita la jurisdicción de un departamento o partido de otro.',
       wmsLayerName: 'ign:linea_de_limite_070110',
-      ...IGN_WMS_LIMITS_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-limite-interprovincial',
@@ -51,7 +46,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Línea que constituye la representación de la traza demarcadora que delimita una provincia de otra.',
       wmsLayerName: 'ign:linea_de_limite_070111',
-      ...IGN_WMS_LIMITS_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-limite-de-area-protegida',
@@ -59,7 +54,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Línea que delimita el área de tierra y/o mar destinada a la protección y mantenimiento de la diversidad biológica y de los recursos naturales y culturales asociados.',
       wmsLayerName: 'ign:linea_de_limite_070114',
-      ...IGN_WMS_LIMITS_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-hitos-internacionales',
@@ -67,7 +62,8 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Obra destinada a marcar o señalar la posición de un punto que constituya el deslinde del territorio internacional ',
       wmsLayerName: 'hitos_internacionales',
-      ...IGN_WMS_LIMITS_DEFAULTS,
+      wmsWorkspace: 'limites',
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-hitos-interprovinciales',
@@ -75,7 +71,8 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Obra destinada a marcar o señalar la posición de un punto que constituya el deslinde del territorio interprovincial.',
       wmsLayerName: 'hitos_interprovinciales',
-      ...IGN_WMS_LIMITS_DEFAULTS,
+      wmsWorkspace: 'limites',
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-limite-internacional',
@@ -83,7 +80,8 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Línea que constituye la representación de la traza demarcadora que delimita un país.',
       wmsLayerName: 'linea_de_limite_FA004',
-      ...IGN_WMS_LIMITS_DEFAULTS,
+      wmsWorkspace: 'limites',
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-limites-de-espacios-maritimos',
@@ -91,15 +89,11 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
       description:
         'Líneas que representan los diferentes espacíos marítimos en su límite exterior.',
       wmsLayerName: 'linea_limite_maritimos',
-      ...IGN_WMS_LIMITS_DEFAULTS,
+      wmsWorkspace: 'limites',
+      ...IGN_WMS_DEFAULTS,
     },
   ],
 };
-
-// Administrativo
-const IGN_WMS_ADMINISTRATIVE_DEFAULTS = {
-  ...IGN_WMS_DEFAULTS,
-} as const;
 
 export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
@@ -113,28 +107,28 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
       description:
         'Superficie terrestre caracterizada por la continuidad de áreas edificadas y no edificadas conectadas entre sí por una red de calles donde se concentra población.',
       wmsLayerName: 'ign:localidad_bahra',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-pais',
       name: 'País',
       description: 'Nación jurídicamente organizada.',
       wmsLayerName: 'ign:pais',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-red-geodesica-provincial',
       name: 'Red geodésica Provincial',
       description: 'Red geodésica Provincial',
       wmsLayerName: 'ign:red_provincial',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-sublocalidad',
       name: 'Sublocalidad',
       description: 'Subdivisión de una localidad según legislación del gobierno local.',
       wmsLayerName: 'ign:sublocalidad_entidad_bahra',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-red-vial-provincial',
@@ -142,7 +136,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
       description:
         'Representa los objetos geográficos relativos a vías de circulación de jurisdicción provincial.',
       wmsLayerName: 'ign:vial_provincial',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-departamento',
@@ -150,7 +144,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
       description: 'División político administrativa de segundo orden.',
       wmsLayerName: 'departamento_FA001',
       wmsWorkspace: 'limites',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-gobierno-local',
@@ -159,7 +153,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
         'Jurisdicción político-administrativa de tercer o cuarto orden. Incluye Municipios, Comunas, Juntas y Comisiones.',
       wmsLayerName: 'gobiernoslocales_2022',
       wmsWorkspace: 'limites',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-provincia',
@@ -168,7 +162,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
         'División político territorial de primer orden. Incluye la Ciudad Autónoma de Buenos Aires (CABA).',
       wmsLayerName: 'provincia_FA003',
       wmsWorkspace: 'limites',
-      ...IGN_WMS_ADMINISTRATIVE_DEFAULTS,
+      ...IGN_WMS_DEFAULTS,
     },
   ],
 };
