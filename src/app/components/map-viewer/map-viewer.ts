@@ -17,7 +17,7 @@ import { LAYER_RENDERING_CONFIG } from '../../config/layers';
 import { TileService } from '../../services/tiles-providers/tile.service';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
-import { LayerRendererService } from '../../services/layers/layer-renderer.service';
+import { LayerRenderService } from '../../services/layers/layer-render.service';
 import { TileProvider } from '../../models';
 
 @Component({
@@ -33,7 +33,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private tileService = inject(TileService);
   private layersService = inject(LayersService);
   private controlService = inject(LayerControlService);
-  private layerRendererService = inject(LayerRendererService);
+  private layerRenderService = inject(LayerRenderService);
 
   private currentTileLayer: L.TileLayer | null = null;
   private radarBoundsLayer: L.Layer | null = null;
@@ -202,7 +202,7 @@ export class MapViewer implements OnInit, OnDestroy {
 
       // Create tile layer using the refactored service API (with pooling)
       // The service now handles opacity internally
-      const tileLayer = this.layerRendererService.createTileLayer(layerId, controls);
+      const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
       desiredLayersOnMap.set(layerId, tileLayer);
 
       // Set z-index if defined (always update, even for cached layers)
