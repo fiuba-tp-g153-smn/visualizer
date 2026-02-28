@@ -2,125 +2,69 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
-
-Visualizer is an Angular 21 web application for visualizing interactive maps with multiple layers, tile providers, and satellite imagery (SMN - Argentine National Weather Service). Uses Leaflet for mapping and Angular Signals for state management.
-
 ## Commands
 
 ```bash
-# Development (Docker with hot-reload)
-make up              # Start dev server at http://localhost:4200
-make down            # Stop containers
+npm start          # Dev server (ng serve)
+npm run build      # Production build
+npm test           # Run unit tests (Vitest)
 
-# Production
-make prod            # Build and run production Docker
-
-# NPM commands (inside container or local)
-npm start            # ng serve
-npm run build        # ng build --configuration production
-npm test             # Run tests (Vitest)
+make up            # Start dev environment in Docker with hot-reload
+make down          # Stop dev containers
+make prod          # Build and run production Docker environment
 ```
 
 ## Architecture
 
-### Signal-Based State Management
-
-The app uses Angular Signals for reactive state. Core state lives in `LayerService`:
-
-```typescript
-// src/app/services/layers/layer.service.ts
-private readonly _layerGroups = signal<LayerGroup[]>(...)
-public readonly layerGroups = this._layerGroups.asReadonly()
-public readonly activeLayers = computed(() => ...)  // Filtered/sorted active layers
-```
-
-State auto-persists to localStorage via `effect()`.
+**Visualizer** is an Angular 21 standalone-component app for interactive map visualization, supporting GOES-19 satellite imagery, weather radar, and IGN WMS layers, rendered via Leaflet.
 
 ### Layer System
 
-Layers are organized hierarchically: **LayerGroup** → **LayerSubgroup** → **Layer**
+Layers use a **discriminated union** type system:
+- `LayerType` enum (`TILE` | `WMS`) — determines Leaflet rendering strategy
+- `LayerCategory` enum (`GOES_19` | `RADAR` | `IGN_WMS`) — determines behavioral config
+- Union type: `type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLayer`
 
-Two z-index groups ensure proper layering:
+Layer hierarchy: `LayerGroup → LayerSubgroup → Layer`
 
-- `ActiveLayerGroup.BASE` (z-index 0-999): Satellite, model data
-- `ActiveLayerGroup.OVERLAY` (z-index 1000-1999): IGN reference layers (always on top)
+Z-index groups:
+- `BASE` (1–1000): Data layers (radar, satellite)
+- `OVERLAY` (1001–2000): Reference layers (IGN WMS), always on top
 
-Layers have relative z-index within their group; `getAbsoluteZIndex()` converts to absolute.
+### Service Responsibilities
 
-### Tile Layer Rendering
+| Service | Responsibility |
+|---|---|
+| `LayersService` | Stateless provider of layer definitions and metadata |
+| `LayerControlService` | Stateful manager of visibility/opacity/playback; persists to `localStorage` (`smn-active-layers-v2`) |
+| `LayerConfigService` | Fetches dynamic tile configs from backend; reactive caching |
+| `LayerRenderService` | Creates Leaflet layers; implements a pool to reuse layers when only opacity changes |
+| `LayerRefreshService` | Auto-refresh polling for time-based layers |
+| `TileService` | Base map tile provider management |
 
-`LayerRendererService` is a factory that creates Leaflet layers based on type/category:
+### Reactivity
 
-- `LayerType.TILE` → standard tile layer
-- `LayerType.WMS` → WMS layer
-- `LayerCategory.SATELLITE_ABI` → uses backend tile URLs
-- `LayerCategory.IGN_WMS` → uses IGN WMS endpoint
+The app uses **Angular signals and effects** (migrating away from RxJS). State changes in services propagate to components via computed signals; `MapViewer` reacts to provider/layer changes through `effect()`.
 
-Tile layers are pooled by `${layerId}-${tilesetId}` key. For time-based layers, adjacent indices (T-1, T, T+1) are pre-fetched.
+### Configuration & Environment
 
-### Time Control
+Environment variables are injected at build time via a custom webpack `DefinePlugin` (`custom-webpack.config.js`). The `$ENV` global is typed and used in `src/environments/environment*.ts`.
 
-ABI satellite layers support time-based playback:
+Key variables:
+- `BACKEND_BASE_URL` — API base (default: `https://data.mapasmn.com`)
+- `TILE_FORMAT` — `webp` or `png` (default: `webp`)
+- `APP_HOST_PORT` — Docker host port (default: `6010`)
 
-```typescript
-interface TimeBasedLayerConfig {
-  timeIndex?: number;
-  playback?: LayerPlaybackConfig; // { isPlaying, speed, minTimeIndex, maxTimeIndex }
-  availablePeriods?: readonly number[]; // [1, 6, 12, 24] hours
-}
-```
+Layer definitions live in `src/app/config/layers/` organized by product (goes/, radar/, ign-wms/).
 
-`LayerService` manages playback intervals with automatic frame advancement.
+### Code Style
 
-### Configuration Loading
+- Prettier: 100-char width, single quotes
+- Strict TypeScript
+- Standalone components (no NgModules)
+- SCSS for styles
+- Conventional commits: `feat:`, `fix:`, `refactor:`, `rm:`, `wip:`
 
-`LayerConfigService` lazily loads channel configs from backend:
-
-```
-GET /products/{product}/{instrument}/{channel}
-```
-
-Returns tilesets (available time steps) and URL patterns for tile construction.
-
-## Key Files
-
-| Path                                                | Purpose                                      |
-| --------------------------------------------------- | -------------------------------------------- |
-| `src/app/services/layers/layer.service.ts`          | Core state management for all layers         |
-| `src/app/services/layers/layer-renderer.service.ts` | Tile layer factory with pooling              |
-| `src/app/services/layers/layer-config.service.ts`   | Backend config fetching                      |
-| `src/app/components/map/map-viewer.ts`              | Leaflet map initialization and layer effects |
-| `src/app/config/layers/`                            | Layer definitions (ABI, IGN WMS)             |
-| `src/app/config/tile-providers.config.ts`           | Base map tile providers                      |
-| `src/app/models/layer.models.ts`                    | Layer type definitions                       |
-
-## Testing
-
-Tests use Vitest with jsdom. Test files follow `*.spec.ts` pattern.
-
-```bash
-npm test                    # Run all tests
-npm test -- --run           # Single run (no watch)
-```
-
-## Environment Variables
-
-Configured via `.env` and injected through `custom-webpack.config.js`:
-
-- `BACKEND_BASE_URL`: API endpoint for channel configs
-- `USE_MOCK_TILES`: Use mock tile URLs for development
-- `TILE_FORMAT`: "png" or "webp"
-
-## Patterns
-
-- **Standalone components**: No NgModules; all components are standalone
-- **Configuration composition**: Layer defaults spread into definitions to reduce repetition
-- **Search normalization**: Uses NFD normalization for accent-insensitive search (Spanish UI)
-- **TMS handling**: ArgenMAP uses TMS (Y inverted), OSM uses standard coordinates
-- **Error deduplication**: LayerRendererService tracks consecutive tile failures (threshold: 5) before notifying
-
----
 
 ## Best Practices
 
