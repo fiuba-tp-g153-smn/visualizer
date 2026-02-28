@@ -78,11 +78,8 @@ export class LayerRenderService {
 
     // Check if we already have a layer instance in the pool
     if (this.layerPool.has(poolKey)) {
-      const cachedLayer = this.layerPool.get(poolKey)!;
-      // Update only visual properties without recreating the layer
-      const opacity = (controls.opacity ?? DEFAULT_LAYER_CONTROLS.opacity) / 100;
-      cachedLayer.setOpacity(opacity);
-      return cachedLayer;
+      // Return cached layer as-is; caller (map-viewer) manages opacity
+      return this.layerPool.get(poolKey)!;
     }
 
     // Create new layer if not in pool
@@ -131,16 +128,35 @@ export class LayerRenderService {
 
     // Check pool
     if (this.layerPool.has(poolKey)) {
-      const cachedLayer = this.layerPool.get(poolKey)!;
-      const opacity = (controls.opacity ?? DEFAULT_LAYER_CONTROLS.opacity) / 100;
-      cachedLayer.setOpacity(opacity);
-      return cachedLayer;
+      // Return cached layer as-is; caller (map-viewer) manages opacity
+      return this.layerPool.get(poolKey)!;
     }
 
     // Create new layer
     const tileLayer = this.createRadarTileLayer(layerId, controls, elevationId);
     this.layerPool.set(poolKey, tileLayer);
     return tileLayer;
+  }
+
+  /**
+   * Returns the number of available tilesets for a GOES layer.
+   * Used by map-viewer to determine valid prefetch index bounds.
+   */
+  getAvailableTilesetsCount(layerId: string): number {
+    const config = this.layerConfigService.getConfig(layerId) as GoesTileLayerConfig | undefined;
+    return config?.availableTilesets.length ?? 0;
+  }
+
+  /**
+   * Creates or retrieves a GOES tile layer for a specific timeIndex, ignoring opacity.
+   * Used for pre-fetching adjacent frames without affecting the displayed opacity.
+   */
+  createTileLayerForTimeIndex(layerId: string, controls: GoesLayerControls, timeIndex: number): L.TileLayer {
+    const overrideControls: GoesLayerControls = {
+      ...controls,
+      playback: { ...controls.playback, timeIndex },
+    };
+    return this.createTileLayer(layerId, overrideControls);
   }
 
   /**
