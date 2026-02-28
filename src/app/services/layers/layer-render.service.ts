@@ -139,11 +139,14 @@ export class LayerRenderService {
   }
 
   /**
-   * Returns the number of available tilesets for a GOES layer.
+   * Returns the number of available tilesets for a TILE layer (GOES or Radar).
    * Used by map-viewer to determine valid prefetch index bounds.
    */
   getAvailableTilesetsCount(layerId: string): number {
-    const config = this.layerConfigService.getConfig(layerId) as GoesTileLayerConfig | undefined;
+    const config = this.layerConfigService.getConfig(layerId) as
+      | GoesTileLayerConfig
+      | RadarTileLayerConfig
+      | undefined;
     return config?.availableTilesets.length ?? 0;
   }
 
@@ -157,6 +160,23 @@ export class LayerRenderService {
       playback: { ...controls.playback, timeIndex },
     };
     return this.createTileLayer(layerId, overrideControls);
+  }
+
+  /**
+   * Creates or retrieves a radar tile layer for a specific elevation and timeIndex, ignoring opacity.
+   * Used for pre-fetching adjacent frames without affecting the displayed opacity.
+   */
+  createRadarTileLayerForElevationAtTimeIndex(
+    layerId: string,
+    controls: RadarLayerControls,
+    elevationId: string,
+    timeIndex: number,
+  ): L.TileLayer {
+    const overrideControls: RadarLayerControls = {
+      ...controls,
+      playback: { ...controls.playback, timeIndex },
+    };
+    return this.createRadarTileLayerForElevation(layerId, overrideControls, elevationId);
   }
 
   /**
