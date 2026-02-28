@@ -189,12 +189,14 @@ export class MapViewer implements OnInit, OnDestroy {
         controls.type === LayerType.TILE &&
         'elevation' in controls
       ) {
-        // Radar: one layer per selected elevation, keyed by layerId#elevationId
+        // Radar: one layer per selected elevation, keyed by layerId#elevationId#timeIndex
         const radarControls = controls as any;
         const selectedElevationIds = radarControls.elevation.selectedElevationIds || [];
+        const currentTimeIndex = radarControls.playback.timeIndex ?? 0;
+        const totalFrames = this.layerRenderService.getAvailableTilesetsCount(layerId);
 
         for (const elevationId of selectedElevationIds) {
-          const compositeKey = `${layerId}#${elevationId}`;
+          const compositeKey = `${layerId}#${elevationId}#${currentTimeIndex}`;
           const tileLayer = this.layerRenderService.createRadarTileLayerForElevation(
             layerId,
             radarControls,
@@ -205,6 +207,25 @@ export class MapViewer implements OnInit, OnDestroy {
           if (controls.zIndex !== undefined) {
             const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
             if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
+          }
+
+          // Pre-fetch T±DOM_PREFETCH_RADIUS: keep adjacent radar frames on map at opacity=0
+          if (totalFrames > 0) {
+            for (let offset = -MapViewer.DOM_PREFETCH_RADIUS; offset <= MapViewer.DOM_PREFETCH_RADIUS; offset++) {
+              if (offset === 0) continue;
+              const adjIndex = currentTimeIndex + offset;
+              if (adjIndex < 0 || adjIndex >= totalFrames) continue;
+              const adjLayer = this.layerRenderService.createRadarTileLayerForElevationAtTimeIndex(
+                layerId,
+                radarControls,
+                elevationId,
+                adjIndex,
+              );
+              desiredLayersOnMap.set(`${layerId}#${elevationId}#${adjIndex}`, {
+                tileLayer: adjLayer,
+                targetOpacity: 0,
+              });
+            }
           }
         }
       } else if (
