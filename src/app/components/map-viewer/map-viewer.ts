@@ -88,6 +88,13 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Cancel fading-out timers and remove their layers
+    this.fadingOutLayers.forEach(({ layer, timerId }) => {
+      clearTimeout(timerId);
+      layer.remove();
+    });
+    this.fadingOutLayers.clear();
+
     // Limpiar capas
     this.onMapLayers.forEach((layer) => layer.remove());
     this.onMapLayers.clear();
@@ -154,18 +161,26 @@ export class MapViewer implements OnInit, OnDestroy {
     }).addTo(this.map);
   }
 
+  private static readonly FRAME_TRANSITION_MS = 300;
+  private readonly fadingOutLayers = new Map<
+    string,
+    { layer: L.TileLayer; timerId: ReturnType<typeof setTimeout> }
+  >();
+
   private onMapLayers = new Map<string, L.TileLayer>();
 
   private syncLayers(layerIds: string[]): void {
     if (!this.map) return;
 
-    const desiredLayersOnMap = new Map<string, L.TileLayer>();
+    const desiredLayersOnMap = new Map<string, { tileLayer: L.TileLayer; targetOpacity: number }>();
 
     for (const layerId of layerIds) {
       const layer = this.layersService.getLayerById(layerId);
       const controls = this.controlService.getControls(layerId);
 
       if (!layer || !controls || !controls.visible) continue;
+
+      const targetOpacity = (controls.opacity ?? 100) / 100;
 
       // Special handling for radar layers with multiple elevations
       if (
@@ -185,7 +200,7 @@ export class MapViewer implements OnInit, OnDestroy {
             radarControls,
             elevationId,
           );
-          desiredLayersOnMap.set(compositeKey, tileLayer);
+          desiredLayersOnMap.set(compositeKey, { tileLayer, targetOpacity });
 
           // Set z-index if defined
           if (controls.zIndex !== undefined) {
@@ -198,7 +213,7 @@ export class MapViewer implements OnInit, OnDestroy {
       } else {
         // Standard layer creation for non-radar layers
         const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
-        desiredLayersOnMap.set(layerId, tileLayer);
+        desiredLayersOnMap.set(layerId, { tileLayer, targetOpacity });
 
         // Set z-index if defined (always update, even for cached layers)
         if (controls.zIndex !== undefined) {
@@ -210,26 +225,46 @@ export class MapViewer implements OnInit, OnDestroy {
       }
     }
 
-    // 1. Remove layers that are no longer desired OR need to be replaced
-    for (const [key, layer] of this.onMapLayers) {
-      const newLayer = desiredLayersOnMap.get(key);
-      // Remove if layer is gone OR if it's a different instance (e.g., placeholder -> real layer)
-      if (!newLayer || newLayer !== layer) {
-        this.map.removeLayer(layer);
+    // 1. Fade out layers that are no longer desired OR need to be replaced
+    for (const [key, oldLayer] of this.onMapLayers) {
+      const desired = desiredLayersOnMap.get(key);
+      if (!desired || desired.tileLayer !== oldLayer) {
+        // Cancel any existing fade-out for this key
+        const existing = this.fadingOutLayers.get(key);
+        if (existing) {
+          clearTimeout(existing.timerId);
+        }
+        // Apply CSS transition and fade to 0
+        const el = (oldLayer as any)._container as HTMLElement | undefined;
+        if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
+        oldLayer.setOpacity(0);
+        // Schedule removal after transition
+        const timerId = setTimeout(() => {
+          this.map?.removeLayer(oldLayer);
+          this.fadingOutLayers.delete(key);
+        }, MapViewer.FRAME_TRANSITION_MS);
+        this.fadingOutLayers.set(key, { layer: oldLayer, timerId });
       }
     }
 
-    // 2. Add new layers or layers that were replaced
-    for (const [key, layer] of desiredLayersOnMap) {
+    // 2. Fade in new or replaced layers
+    for (const [key, { tileLayer, targetOpacity }] of desiredLayersOnMap) {
       const oldLayer = this.onMapLayers.get(key);
-      // Add if it's a new layer OR if it's a different instance
-      if (!oldLayer || oldLayer !== layer) {
-        layer.addTo(this.map!);
+      if (!oldLayer || oldLayer !== tileLayer) {
+        // Add at opacity 0, then transition to target opacity
+        tileLayer.setOpacity(0);
+        tileLayer.addTo(this.map!);
+        const el = (tileLayer as any)._container as HTMLElement | undefined;
+        if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
+        // Use microtask so the browser paints opacity-0 before starting the transition
+        Promise.resolve().then(() => tileLayer.setOpacity(targetOpacity));
       }
     }
 
     // Update local state
-    this.onMapLayers = desiredLayersOnMap;
+    this.onMapLayers = new Map(
+      [...desiredLayersOnMap.entries()].map(([key, { tileLayer }]) => [key, tileLayer]),
+    );
   }
 
   zoomIn(): void {
