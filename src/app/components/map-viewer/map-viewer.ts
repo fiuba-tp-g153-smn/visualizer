@@ -18,7 +18,7 @@ import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRenderService } from '../../services/layers/layer-render.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import { TileProvider } from '../../models';
+import { TileProvider, LayerType, LayerCategory, GoesLayerControls } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -182,17 +182,16 @@ export class MapViewer implements OnInit, OnDestroy {
 
       const targetOpacity = (controls.opacity ?? 100) / 100;
 
-      // Special handling for radar layers with multiple elevations
       if (
-        layer.type === 'tile' &&
-        layer.category === 'radar' &&
-        controls.type === 'tile' &&
+        layer.type === LayerType.TILE &&
+        layer.category === LayerCategory.RADAR &&
+        controls.type === LayerType.TILE &&
         'elevation' in controls
       ) {
-        const radarControls = controls as any; // RadarLayerControls
+        // Radar: one layer per selected elevation, keyed by layerId#elevationId
+        const radarControls = controls as any;
         const selectedElevationIds = radarControls.elevation.selectedElevationIds || [];
 
-        // Create one layer per selected elevation
         for (const elevationId of selectedElevationIds) {
           const compositeKey = `${layerId}#${elevationId}`;
           const tileLayer = this.layerRenderService.createRadarTileLayerForElevation(
@@ -202,25 +201,52 @@ export class MapViewer implements OnInit, OnDestroy {
           );
           desiredLayersOnMap.set(compositeKey, { tileLayer, targetOpacity });
 
-          // Set z-index if defined
           if (controls.zIndex !== undefined) {
             const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-            if (absoluteZIndex !== undefined) {
-              tileLayer.setZIndex(absoluteZIndex);
-            }
+            if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
+          }
+        }
+      } else if (
+        layer.type === LayerType.TILE &&
+        layer.category === LayerCategory.GOES_19 &&
+        controls.type === LayerType.TILE
+      ) {
+        // GOES: use stable keys per timeIndex so pre-fetched adjacent frames can transition
+        // smoothly without reloading tiles (no flash).
+        const goesControls = controls as GoesLayerControls;
+        const currentTimeIndex = goesControls.playback.timeIndex ?? 0;
+        const totalFrames = this.layerRenderService.getAvailableTilesetsCount(layerId);
+
+        // Current frame
+        const tileLayer = this.layerRenderService.createTileLayer(layerId, goesControls);
+        const mainKey = `${layerId}#${currentTimeIndex}`;
+        desiredLayersOnMap.set(mainKey, { tileLayer, targetOpacity });
+
+        if (controls.zIndex !== undefined) {
+          const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
+          if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
+        }
+
+        // Pre-fetch T-1 and T+1: keep on map at opacity=0 so tiles are ready when needed
+        if (totalFrames > 0) {
+          for (const adjIndex of [currentTimeIndex - 1, currentTimeIndex + 1]) {
+            if (adjIndex < 0 || adjIndex >= totalFrames) continue;
+            const adjLayer = this.layerRenderService.createTileLayerForTimeIndex(
+              layerId,
+              goesControls,
+              adjIndex,
+            );
+            desiredLayersOnMap.set(`${layerId}#${adjIndex}`, { tileLayer: adjLayer, targetOpacity: 0 });
           }
         }
       } else {
-        // Standard layer creation for non-radar layers
+        // WMS and other non-animated layers
         const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
         desiredLayersOnMap.set(layerId, { tileLayer, targetOpacity });
 
-        // Set z-index if defined (always update, even for cached layers)
         if (controls.zIndex !== undefined) {
           const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-          if (absoluteZIndex !== undefined) {
-            tileLayer.setZIndex(absoluteZIndex);
-          }
+          if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
         }
       }
     }
@@ -231,14 +257,11 @@ export class MapViewer implements OnInit, OnDestroy {
       if (!desired || desired.tileLayer !== oldLayer) {
         // Cancel any existing fade-out for this key
         const existing = this.fadingOutLayers.get(key);
-        if (existing) {
-          clearTimeout(existing.timerId);
-        }
-        // Apply CSS transition and fade to 0
+        if (existing) clearTimeout(existing.timerId);
+
         const el = (oldLayer as any)._container as HTMLElement | undefined;
         if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
         oldLayer.setOpacity(0);
-        // Schedule removal after transition
         const timerId = setTimeout(() => {
           this.map?.removeLayer(oldLayer);
           this.fadingOutLayers.delete(key);
@@ -247,17 +270,28 @@ export class MapViewer implements OnInit, OnDestroy {
       }
     }
 
-    // 2. Fade in new or replaced layers
+    // 2. Add new layers or update opacity on same-instance layers
     for (const [key, { tileLayer, targetOpacity }] of desiredLayersOnMap) {
       const oldLayer = this.onMapLayers.get(key);
       if (!oldLayer || oldLayer !== tileLayer) {
-        // Add at opacity 0, then transition to target opacity
+        // New or replaced layer: cancel any pending removal, then fade in from 0
+        const pendingRemoval = this.fadingOutLayers.get(key);
+        if (pendingRemoval) {
+          clearTimeout(pendingRemoval.timerId);
+          this.fadingOutLayers.delete(key);
+        }
         tileLayer.setOpacity(0);
         tileLayer.addTo(this.map!);
         const el = (tileLayer as any)._container as HTMLElement | undefined;
         if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
-        // Use microtask so the browser paints opacity-0 before starting the transition
+        // Microtask lets browser paint opacity-0 before starting transition
         Promise.resolve().then(() => tileLayer.setOpacity(targetOpacity));
+      } else {
+        // Same layer instance (e.g. frame transition via pre-fetch, or opacity slider change):
+        // apply opacity with CSS transition so the change is smooth
+        const el = (tileLayer as any)._container as HTMLElement | undefined;
+        if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
+        tileLayer.setOpacity(targetOpacity);
       }
     }
 
