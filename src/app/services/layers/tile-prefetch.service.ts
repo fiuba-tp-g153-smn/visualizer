@@ -8,7 +8,7 @@ import { buildTileUrl } from '../../config/backend.config';
 import { MAP_CONFIG } from '../../config';
 import { calcTileRange, TileRange } from '../../utils/tile-math';
 
-const MAX_CONCURRENT = 6;
+const MAX_CONCURRENT = 10;
 const MAX_TILES_PER_LAYER = 300;
 
 /**
@@ -22,8 +22,8 @@ const MAX_TILES_PER_LAYER = 300;
  * - Deduplicates requests so that periodic config refreshes do not re-fetch already-cached tiles
  * - Clears the queue and in-flight tracking when the zoom changes (tile coordinates change)
  *
- * Frames are enqueued latest-first so that the most recent frame (where the user typically lands)
- * is cached first. Layers with more than 300 tiles at the clamped zoom are skipped to prevent
+ * Frames are enqueued by proximity to the current playback position (forward-biased), so the
+ * frames the user will see next are cached first. Layers with more than 300 tiles at the clamped zoom are skipped to prevent
  * hammering the server at high zoom levels with large bounding boxes.
  */
 @Injectable({ providedIn: 'root' })
@@ -89,15 +89,26 @@ export class TilePrefetchService {
       const tileControls = controls as TileLayerControls;
       const lastImagesCount = tileControls.playback.lastImagesCount;
 
-      // Latest-first so the most recent frame is cached first
-      const frameWindow = [...tileConfig.availableTilesets].slice(-lastImagesCount).reverse();
+      // Sort frames by proximity to current playback position, forward-biased (ahead first)
+      const currentTimeIndex =
+        tileControls.playback.timeIndex ?? tileConfig.availableTilesets.length - 1;
+      const windowStart = tileConfig.availableTilesets.length - lastImagesCount;
+      const posInWindow = Math.max(0, currentTimeIndex - windowStart);
+      const frameWindow = [...tileConfig.availableTilesets].slice(-lastImagesCount);
+      const ordered = Array.from({ length: frameWindow.length }, (_, i) => i)
+        .sort((a, b) => {
+          const da = a > posInWindow ? a - posInWindow : (posInWindow - a) * 1.1;
+          const db = b > posInWindow ? b - posInWindow : (posInWindow - b) * 1.1;
+          return da - db;
+        })
+        .map((i) => frameWindow[i]);
 
       // Clamp zoom to native zoom range to avoid requesting non-existent tiles
       const clampedZoom = Math.min(Math.max(zoom, layer.minNativeZoom), layer.maxNativeZoom);
       const tileRange = calcTileRange(layer.boundingBox, clampedZoom);
 
       if (layer.category === LayerCategory.GOES_19) {
-        for (const tilesetId of frameWindow) {
+        for (const tilesetId of ordered) {
           const urls = this.buildUrls(`${layer.id}/${tilesetId}`, clampedZoom, tileRange);
           if (urls.length > MAX_TILES_PER_LAYER) continue;
           this.enqueue(urls);
@@ -105,7 +116,7 @@ export class TilePrefetchService {
       } else if (layer.category === LayerCategory.RADAR) {
         const radarControls = controls as RadarLayerControls;
         for (const elevationId of radarControls.elevation.selectedElevationIds) {
-          for (const tilesetId of frameWindow) {
+          for (const tilesetId of ordered) {
             const urls = this.buildUrls(
               `${layer.id}/${elevationId}/${tilesetId}`,
               clampedZoom,

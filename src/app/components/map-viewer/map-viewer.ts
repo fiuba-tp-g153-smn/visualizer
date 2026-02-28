@@ -162,6 +162,7 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   private static readonly FRAME_TRANSITION_MS = 300;
+  private static readonly DOM_PREFETCH_RADIUS = 2;
   private readonly fadingOutLayers = new Map<
     string,
     { layer: L.TileLayer; timerId: ReturnType<typeof setTimeout> }
@@ -227,9 +228,11 @@ export class MapViewer implements OnInit, OnDestroy {
           if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
         }
 
-        // Pre-fetch T-1 and T+1: keep on map at opacity=0 so tiles are ready when needed
+        // Pre-fetch T±DOM_PREFETCH_RADIUS: keep adjacent frames on map at opacity=0 so tiles are ready when needed
         if (totalFrames > 0) {
-          for (const adjIndex of [currentTimeIndex - 1, currentTimeIndex + 1]) {
+          for (let offset = -MapViewer.DOM_PREFETCH_RADIUS; offset <= MapViewer.DOM_PREFETCH_RADIUS; offset++) {
+            if (offset === 0) continue;
+            const adjIndex = currentTimeIndex + offset;
             if (adjIndex < 0 || adjIndex >= totalFrames) continue;
             const adjLayer = this.layerRenderService.createTileLayerForTimeIndex(
               layerId,
