@@ -17,6 +17,7 @@ import { TileService } from '../../services/tiles-providers/tile.service';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRenderService } from '../../services/layers/layer-render.service';
+import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
 import { TileProvider } from '../../models';
 
 @Component({
@@ -33,6 +34,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private layersService = inject(LayersService);
   private controlService = inject(LayerControlService);
   private layerRenderService = inject(LayerRenderService);
+  private prefetchService = inject(TilePrefetchService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -126,6 +128,10 @@ export class MapViewer implements OnInit, OnDestroy {
       } else if (mapZoom !== undefined && Math.round(mapZoom) !== targetZoom && this.map) {
         // Map didn't reach target - trigger another zoom
         this.ignoreNextMapEvents = false;
+      }
+
+      if (mapZoom !== undefined) {
+        this.prefetchService.setZoom(Math.round(mapZoom));
       }
     });
 
@@ -231,6 +237,7 @@ export class MapViewer implements OnInit, OnDestroy {
       this.ignoreNextMapEvents = true;
       const newZoom = Math.min(this.currentZoom() + 1, MAP_CONFIG.maxZoom);
       this.currentZoom.set(newZoom);
+      this.prefetchService.setZoom(newZoom);
     }
   }
 
@@ -239,6 +246,7 @@ export class MapViewer implements OnInit, OnDestroy {
       this.ignoreNextMapEvents = true;
       const newZoom = Math.max(this.currentZoom() - 1, MAP_CONFIG.minZoom);
       this.currentZoom.set(newZoom);
+      this.prefetchService.setZoom(newZoom);
     }
   }
 }
