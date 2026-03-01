@@ -147,8 +147,8 @@ const RADARES_SMN = [
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
-      [-38.35, -63.82],
-      [-34.0, -58.32],
+      [-40.89, -65.02],
+      [-36.54, -59.31],
     ] as const,
   },
   {
@@ -180,8 +180,8 @@ const RADARES_SMN = [
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
-      [-40.89, -65.02],
-      [-36.54, -59.31],
+      [-29.78, -59.33],
+      [-25.44, -54.36],
     ] as const,
   },
   {
@@ -191,8 +191,8 @@ const RADARES_SMN = [
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
-      [-29.78, -59.33],
-      [-25.44, -54.36],
+      [-38.35, -63.82],
+      [-34.0, -58.32],
     ] as const,
   },
   {
