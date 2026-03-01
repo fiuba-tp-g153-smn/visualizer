@@ -203,10 +203,15 @@ export class MapViewer implements OnInit, OnDestroy {
           const radarMinTimeIndex = Math.max(0, totalFrames - radarLastImagesCount);
           const radarWindowSize = totalFrames - radarMinTimeIndex;
           if (radarWindowSize > 1) {
-            for (let offset = -MapViewer.DOM_PREFETCH_RADIUS; offset <= MapViewer.DOM_PREFETCH_RADIUS; offset++) {
+            for (
+              let offset = -MapViewer.DOM_PREFETCH_RADIUS;
+              offset <= MapViewer.DOM_PREFETCH_RADIUS;
+              offset++
+            ) {
               if (offset === 0) continue;
               const posInWindow = currentTimeIndex - radarMinTimeIndex;
-              const adjPosInWindow = ((posInWindow + offset) % radarWindowSize + radarWindowSize) % radarWindowSize;
+              const adjPosInWindow =
+                (((posInWindow + offset) % radarWindowSize) + radarWindowSize) % radarWindowSize;
               const adjIndex = radarMinTimeIndex + adjPosInWindow;
               const adjLayer = this.layerRenderService.createRadarTileLayerForElevationAtTimeIndex(
                 layerId,
@@ -249,13 +254,25 @@ export class MapViewer implements OnInit, OnDestroy {
         const goesMinTimeIndex = Math.max(0, totalFrames - goesLastImagesCount);
         const goesWindowSize = totalFrames - goesMinTimeIndex;
         if (goesWindowSize > 1) {
-          for (let offset = -MapViewer.DOM_PREFETCH_RADIUS; offset <= MapViewer.DOM_PREFETCH_RADIUS; offset++) {
+          for (
+            let offset = -MapViewer.DOM_PREFETCH_RADIUS;
+            offset <= MapViewer.DOM_PREFETCH_RADIUS;
+            offset++
+          ) {
             if (offset === 0) continue;
             const posInWindow = currentTimeIndex - goesMinTimeIndex;
-            const adjPosInWindow = ((posInWindow + offset) % goesWindowSize + goesWindowSize) % goesWindowSize;
+            const adjPosInWindow =
+              (((posInWindow + offset) % goesWindowSize) + goesWindowSize) % goesWindowSize;
             const adjIndex = goesMinTimeIndex + adjPosInWindow;
-            const adjLayer = this.layerRenderService.createTileLayerForTimeIndex(layerId, goesControls, adjIndex);
-            desiredLayersOnMap.set(`${layerId}#${adjIndex}`, { tileLayer: adjLayer, targetOpacity: 0 });
+            const adjLayer = this.layerRenderService.createTileLayerForTimeIndex(
+              layerId,
+              goesControls,
+              adjIndex,
+            );
+            desiredLayersOnMap.set(`${layerId}#${adjIndex}`, {
+              tileLayer: adjLayer,
+              targetOpacity: 0,
+            });
           }
         }
       } else {
