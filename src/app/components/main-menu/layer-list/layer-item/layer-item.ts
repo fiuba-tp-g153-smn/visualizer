@@ -143,6 +143,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
+   * Obtiene la opacidad actual como porcentaje entero (0-100)
+   */
+  currentOpacityPercent = computed(() => {
+    const opacity = this.currentOpacity();
+    if (opacity === undefined) return 0;
+    return Math.round(opacity * 100);
+  });
+
+  /**
    * Indica si la capa está activa (visible en el mapa)
    */
   isActive = computed(() => {
@@ -495,10 +504,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Formatea el valor de opacidad para el slider
+   * Formatea el valor de opacidad para el slider (convierte 0-1 a porcentaje entero)
    */
   formatOpacity = (value: number): string => {
-    return `${value}%`;
+    return `${Math.round(value * 100)}%`;
   };
 
   /**

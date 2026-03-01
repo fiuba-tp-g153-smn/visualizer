@@ -108,8 +108,8 @@
           <span class="control-label">Opacidad</span>
           <mat-slider
             min="0"
-            max="100"
-            step="1"
+            max="1"
+            step="0.01"
             discrete
             class="control-slider"
             [displayWith]="formatOpacity"
@@ -120,7 +120,7 @@
               (input)="onOpacityChange(+$any($event.target).value)"
             />
           </mat-slider>
-          <span class="control-value">{{ currentOpacity() }}%</span>
+          <span class="control-value">{{ currentOpacityPercent() }}%</span>
         </div>
 
         <!-- Control de elevación (solo para RADAR) -->

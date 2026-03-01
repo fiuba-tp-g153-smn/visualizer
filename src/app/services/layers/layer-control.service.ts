@@ -239,10 +239,10 @@ export class LayerControlService {
   // ============================================================================
 
   /**
-   * Sets the opacity for a layer (0-100).
+   * Sets the opacity for a layer (0-1).
    */
   setOpacity(layerId: string, opacity: number): void {
-    const clampedOpacity = Math.max(0, Math.min(100, opacity));
+    const clampedOpacity = Math.max(0, Math.min(1, opacity));
     this.updateControls(layerId, (controls) => {
       controls.opacity = clampedOpacity;
     });
