@@ -158,7 +158,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private syncLayers(layerIds: string[]): void {
     if (!this.map) return;
 
-    const desiredLayersOnMap = new Map<string, { tileLayer: L.TileLayer; targetOpacity: number }>();
+    const desiredLayersOnMap = new Map<string, L.TileLayer>();
 
     for (const layerId of layerIds) {
       const layer = this.layersService.getLayerById(layerId);
@@ -166,10 +166,7 @@ export class MapViewer implements OnInit, OnDestroy {
 
       if (!layer || !controls || !controls.visible) continue;
 
-      const absoluteZIndex =
-        controls.zIndex !== undefined
-          ? this.controlService.getAbsoluteZIndex(layerId, controls)
-          : undefined;
+      const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
 
       switch (layer.category) {
         case LayerCategory.RADAR: {
@@ -180,7 +177,7 @@ export class MapViewer implements OnInit, OnDestroy {
             controls.opacity,
             absoluteZIndex,
           );
-          layers.forEach((value, key) => desiredLayersOnMap.set(key, value));
+          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
           break;
         }
 
@@ -192,18 +189,16 @@ export class MapViewer implements OnInit, OnDestroy {
             controls.opacity,
             absoluteZIndex,
           );
-          layers.forEach((value, key) => desiredLayersOnMap.set(key, value));
+          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
           break;
         }
 
         default: {
           // WMS and other non-animated layers
           const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
-          desiredLayersOnMap.set(layerId, { tileLayer, targetOpacity: controls.opacity });
-
-          if (absoluteZIndex !== undefined) {
-            tileLayer.setZIndex(absoluteZIndex);
-          }
+          tileLayer.setOpacity(controls.opacity);
+          tileLayer.setZIndex(absoluteZIndex);
+          desiredLayersOnMap.set(layerId, tileLayer);
           break;
         }
       }
@@ -212,24 +207,21 @@ export class MapViewer implements OnInit, OnDestroy {
     // 1. Remove stale/replaced layers
     for (const [key, oldLayer] of this.onMapLayers) {
       const desired = desiredLayersOnMap.get(key);
-      if (!desired || desired.tileLayer !== oldLayer) {
+      if (!desired || desired !== oldLayer) {
         this.map?.removeLayer(oldLayer);
       }
     }
 
     // 2. Add new or update existing layers
-    for (const [key, { tileLayer, targetOpacity }] of desiredLayersOnMap) {
+    for (const [key, tileLayer] of desiredLayersOnMap) {
       const oldLayer = this.onMapLayers.get(key);
-      tileLayer.setOpacity(targetOpacity);
       if (!oldLayer || oldLayer !== tileLayer) {
         tileLayer.addTo(this.map!);
       }
     }
 
     // Update local state
-    this.onMapLayers = new Map(
-      [...desiredLayersOnMap.entries()].map(([key, { tileLayer }]) => [key, tileLayer]),
-    );
+    this.onMapLayers = desiredLayersOnMap;
   }
 
   zoomIn(): void {

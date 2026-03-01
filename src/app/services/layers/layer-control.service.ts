@@ -95,10 +95,9 @@ export class LayerControlService {
   /**
    * Calculates the absolute z-index for a layer based on its group and relative position.
    */
-  getAbsoluteZIndex(layerId: string, controls: LayerControls): number | undefined {
+  getAbsoluteZIndex(layerId: string, controls: LayerControls): number {
     const layer = this.layersService.getLayerById(layerId);
-    if (!layer) return undefined;
-    if (controls.zIndex === undefined) return undefined;
+    if (!layer) return 0;
     const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
     return baseOffset + controls.zIndex;
   }
@@ -605,10 +604,7 @@ export class LayerControlService {
 
     // Find max zIndex from saved visible layers to avoid conflicts
     const maxSavedZIndex = savedState
-      ? Math.max(
-          -1,
-          ...savedState.filter((c) => c.visible && c.zIndex !== undefined).map((c) => c.zIndex!),
-        )
+      ? Math.max(-1, ...savedState.filter((c) => c.visible).map((c) => c.zIndex ?? 0))
       : -1;
     let initialZIndex = maxSavedZIndex + 1;
 
@@ -617,8 +613,8 @@ export class LayerControlService {
       const savedControls = stateMap.get(layer.id);
 
       if (savedControls) {
-        // Restore saved state, but ensure isPlaying is false
-        controls = { ...savedControls };
+        // Restore saved state, but ensure isPlaying is false and zIndex is defined
+        controls = { ...savedControls, zIndex: savedControls.zIndex ?? 0 };
         if (controls.type === LayerType.TILE) {
           controls.playback = {
             ...controls.playback,

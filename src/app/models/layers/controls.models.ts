@@ -4,7 +4,11 @@ export interface BaseLayerControls {
   id: string;
   visible: boolean;
   opacity: number;
-  zIndex?: number; // When layer is active, it has a zIndex for ordering; when inactive, it may be undefined
+  /**
+   * Z-index for layer ordering (higher values appear on top)
+   * Active layers have values > 0, inactive layers have 0
+   */
+  zIndex: number;
 }
 
 export type LayerControls = GoesLayerControls | RadarLayerControls | WmsLayerControls;
