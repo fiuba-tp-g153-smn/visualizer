@@ -104,7 +104,6 @@ export class MapViewer implements OnInit, OnDestroy {
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
       zoomControl: false,
-      fadeAnimation: false, // Desactivar fade para evitar flash en transiciones
     });
 
     // Update zoom signal from map events (user scrolling or programmatic changes)
