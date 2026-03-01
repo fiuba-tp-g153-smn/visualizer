@@ -18,7 +18,7 @@ import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRenderService } from '../../services/layers/layer-render.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import { TileProvider, LayerType, LayerCategory, GoesLayerControls } from '../../models';
+import { TileProvider, LayerCategory, GoesLayerControls, RadarLayerControls } from '../../models';
 
 @Component({
   selector: 'app-map-viewer',
@@ -153,8 +153,6 @@ export class MapViewer implements OnInit, OnDestroy {
     }).addTo(this.map);
   }
 
-  private static readonly DOM_PREFETCH_RADIUS = 2;
-
   private onMapLayers = new Map<string, L.TileLayer>();
 
   private syncLayers(layerIds: string[]): void {
@@ -168,121 +166,45 @@ export class MapViewer implements OnInit, OnDestroy {
 
       if (!layer || !controls || !controls.visible) continue;
 
-      const targetOpacity = (controls.opacity ?? 100) / 100;
+      const absoluteZIndex =
+        controls.zIndex !== undefined
+          ? this.controlService.getAbsoluteZIndex(layerId, controls)
+          : undefined;
 
-      if (
-        layer.type === LayerType.TILE &&
-        layer.category === LayerCategory.RADAR &&
-        controls.type === LayerType.TILE &&
-        'elevation' in controls
-      ) {
-        // Radar: one layer per selected elevation, keyed by layerId#elevationId#timeIndex
-        const radarControls = controls as any;
-        const selectedElevationIds = radarControls.elevation.selectedElevationIds || [];
-        const currentTimeIndex = radarControls.playback.timeIndex ?? 0;
-        const totalFrames = this.layerRenderService.getAvailableTilesetsCount(layerId);
-
-        for (const elevationId of selectedElevationIds) {
-          const compositeKey = `${layerId}#${elevationId}#${currentTimeIndex}`;
-          const tileLayer = this.layerRenderService.createRadarTileLayerForElevation(
+      switch (layer.category) {
+        case LayerCategory.RADAR: {
+          const radarControls = controls as RadarLayerControls;
+          const layers = this.layerRenderService.createRadarLayersForPlayback(
             layerId,
             radarControls,
-            elevationId,
+            controls.opacity,
+            absoluteZIndex,
           );
-          desiredLayersOnMap.set(compositeKey, { tileLayer, targetOpacity });
-
-          if (controls.zIndex !== undefined) {
-            const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-            if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
-          }
-
-          // Pre-fetch T±DOM_PREFETCH_RADIUS: keep adjacent radar frames on map at opacity=0
-          // Uses modular wrap-around within the playback window to also pre-render frame 0
-          // when at the last frame, preventing a flash on loop.
-          const radarLastImagesCount = radarControls.playback.lastImagesCount;
-          const radarMinTimeIndex = Math.max(0, totalFrames - radarLastImagesCount);
-          const radarWindowSize = totalFrames - radarMinTimeIndex;
-          if (radarWindowSize > 1) {
-            for (
-              let offset = -MapViewer.DOM_PREFETCH_RADIUS;
-              offset <= MapViewer.DOM_PREFETCH_RADIUS;
-              offset++
-            ) {
-              if (offset === 0) continue;
-              const posInWindow = currentTimeIndex - radarMinTimeIndex;
-              const adjPosInWindow =
-                (((posInWindow + offset) % radarWindowSize) + radarWindowSize) % radarWindowSize;
-              const adjIndex = radarMinTimeIndex + adjPosInWindow;
-              const adjLayer = this.layerRenderService.createRadarTileLayerForElevationAtTimeIndex(
-                layerId,
-                radarControls,
-                elevationId,
-                adjIndex,
-              );
-              desiredLayersOnMap.set(`${layerId}#${elevationId}#${adjIndex}`, {
-                tileLayer: adjLayer,
-                targetOpacity: 0,
-              });
-            }
-          }
-        }
-      } else if (
-        layer.type === LayerType.TILE &&
-        layer.category === LayerCategory.GOES_19 &&
-        controls.type === LayerType.TILE
-      ) {
-        // GOES: use stable keys per timeIndex so pre-fetched adjacent frames can transition
-        // smoothly without reloading tiles (no flash).
-        const goesControls = controls as GoesLayerControls;
-        const currentTimeIndex = goesControls.playback.timeIndex ?? 0;
-        const totalFrames = this.layerRenderService.getAvailableTilesetsCount(layerId);
-
-        // Current frame
-        const tileLayer = this.layerRenderService.createTileLayer(layerId, goesControls);
-        const mainKey = `${layerId}#${currentTimeIndex}`;
-        desiredLayersOnMap.set(mainKey, { tileLayer, targetOpacity });
-
-        if (controls.zIndex !== undefined) {
-          const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-          if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
+          layers.forEach((value, key) => desiredLayersOnMap.set(key, value));
+          break;
         }
 
-        // Pre-fetch T±DOM_PREFETCH_RADIUS: keep adjacent frames on map at opacity=0 so tiles are ready when needed
-        // Uses modular wrap-around within the playback window to also pre-render frame 0
-        // when at the last frame, preventing a flash on loop.
-        const goesLastImagesCount = goesControls.playback.lastImagesCount;
-        const goesMinTimeIndex = Math.max(0, totalFrames - goesLastImagesCount);
-        const goesWindowSize = totalFrames - goesMinTimeIndex;
-        if (goesWindowSize > 1) {
-          for (
-            let offset = -MapViewer.DOM_PREFETCH_RADIUS;
-            offset <= MapViewer.DOM_PREFETCH_RADIUS;
-            offset++
-          ) {
-            if (offset === 0) continue;
-            const posInWindow = currentTimeIndex - goesMinTimeIndex;
-            const adjPosInWindow =
-              (((posInWindow + offset) % goesWindowSize) + goesWindowSize) % goesWindowSize;
-            const adjIndex = goesMinTimeIndex + adjPosInWindow;
-            const adjLayer = this.layerRenderService.createTileLayerForTimeIndex(
-              layerId,
-              goesControls,
-              adjIndex,
-            );
-            desiredLayersOnMap.set(`${layerId}#${adjIndex}`, {
-              tileLayer: adjLayer,
-              targetOpacity: 0,
-            });
-          }
+        case LayerCategory.GOES_19: {
+          const goesControls = controls as GoesLayerControls;
+          const layers = this.layerRenderService.createGoesLayersForPlayback(
+            layerId,
+            goesControls,
+            controls.opacity,
+            absoluteZIndex,
+          );
+          layers.forEach((value, key) => desiredLayersOnMap.set(key, value));
+          break;
         }
-      } else {
-        // WMS and other non-animated layers
-        const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
-        desiredLayersOnMap.set(layerId, { tileLayer, targetOpacity });
 
-        if (controls.zIndex !== undefined) {
-          const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-          if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
+        default: {
+          // WMS and other non-animated layers
+          const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
+          desiredLayersOnMap.set(layerId, { tileLayer, targetOpacity: controls.opacity });
+
+          if (absoluteZIndex !== undefined) {
+            tileLayer.setZIndex(absoluteZIndex);
+          }
+          break;
         }
       }
     }

@@ -4,10 +4,10 @@
  */
 export const DEFAULT_LAYER_CONTROLS = {
   /**
-   * Default opacity percentage for layers (0-100).
+   * Default opacity for layers (0-1).
    * Used when no specific opacity is set in layer controls.
    */
-  opacity: 100,
+  opacity: 1,
 
   /**
    * Default playback speed in seconds per frame.

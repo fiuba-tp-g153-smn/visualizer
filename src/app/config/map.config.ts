@@ -14,4 +14,8 @@ export const MAP_CONFIG = {
 
   // Proveedor de tiles por defecto
   defaultTileProviderId: 'argenmap',
+
+  // Número de frames siguientes a pre-renderizar en el DOM con opacity=0
+  // para animaciones suaves sin flashes durante playback
+  prerenderNextFrames: 2,
 };
