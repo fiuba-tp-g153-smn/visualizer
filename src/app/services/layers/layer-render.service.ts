@@ -13,16 +13,13 @@ import {
   WmsLayerControls,
   TileLayer,
   Layer,
+  LayerControls,
 } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
-import {
-  DEFAULT_LAYER_CONTROLS,
-  IGN_WMS_BASE_CONFIG,
-  IGN_WMS_WORKSPACE_URLS,
-} from '../../config/layers';
+import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
 
 /**
  * Service responsible for creating and managing Leaflet tile layers.
@@ -65,7 +62,7 @@ export class LayerRenderService {
    * @param controls - Current layer control state (opacity, timeIndex, elevation, etc.)
    * @returns A configured Leaflet TileLayer
    */
-  createTileLayer(layerId: string, controls: TileLayerControls | WmsLayerControls): L.TileLayer {
+  createTileLayer(layerId: string, controls: LayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
 
     if (!layer) {
@@ -185,106 +182,129 @@ export class LayerRenderService {
 
   /**
    * Creates GOES layers for playback including current frame and prerendered next frames.
-   * Returns a map of composite keys to layers with their target opacities.
+   * Returns a map of composite keys to layers with opacity already set.
    *
    * @param layerId - The GOES layer identifier
    * @param controls - Current layer control state
    * @param targetOpacity - Target opacity for the current visible frame (0-1)
-   * @param absoluteZIndex - Optional z-index to apply to all layers
-   * @returns Map of composite keys (layerId#timeIndex) to layer objects with opacity
+   * @param absoluteZIndex - Z-index to apply to all layers
+   * @returns Map of composite keys (layerId#timeIndex) to layer objects
    */
   createGoesLayersForPlayback(
     layerId: string,
     controls: GoesLayerControls,
     targetOpacity: number,
-    absoluteZIndex?: number,
-  ): Map<string, { tileLayer: L.TileLayer; targetOpacity: number }> {
-    const result = new Map<string, { tileLayer: L.TileLayer; targetOpacity: number }>();
+    absoluteZIndex: number,
+  ): Map<string, L.TileLayer> {
+    const result = new Map<string, L.TileLayer>();
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
     const totalFrames = this.getAvailableTilesetsCount(layerId);
 
     // Current visible frame
     const tileLayer = this.createTileLayer(layerId, controls);
-    if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
-    const mainKey = `${layerId}#${currentTimeIndex}`;
-    result.set(mainKey, { tileLayer, targetOpacity });
+    this.applyLayerStyles(tileLayer, targetOpacity, absoluteZIndex);
+    result.set(`${layerId}#${currentTimeIndex}`, tileLayer);
 
     // Pre-render next N frames at opacity=0
-    const goesLastImagesCount = controls.playback.lastImagesCount;
-    const goesMinTimeIndex = Math.max(0, totalFrames - goesLastImagesCount);
-    const goesWindowSize = totalFrames - goesMinTimeIndex;
-
-    if (goesWindowSize > 1) {
-      for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {
-        const posInWindow = currentTimeIndex - goesMinTimeIndex;
-        const adjPosInWindow =
-          (((posInWindow + offset) % goesWindowSize) + goesWindowSize) % goesWindowSize;
-        const adjIndex = goesMinTimeIndex + adjPosInWindow;
+    this.prerenderNextFrames(
+      result,
+      currentTimeIndex,
+      totalFrames,
+      controls.playback.lastImagesCount,
+      absoluteZIndex,
+      (adjIndex) => {
         const adjLayer = this.createTileLayerForTimeIndex(layerId, controls, adjIndex);
-        if (absoluteZIndex !== undefined) adjLayer.setZIndex(absoluteZIndex);
-        result.set(`${layerId}#${adjIndex}`, { tileLayer: adjLayer, targetOpacity: 0 });
-      }
-    }
+        return { layer: adjLayer, key: `${layerId}#${adjIndex}` };
+      },
+    );
 
     return result;
   }
 
   /**
    * Creates radar layers for playback including current frame and prerendered next frames.
-   * Returns a map of composite keys to layers with their target opacities.
+   * Returns a map of composite keys to layers with opacity already set.
    * One layer per selected elevation.
    *
    * @param layerId - The radar layer identifier
    * @param controls - Current layer control state
    * @param targetOpacity - Target opacity for the current visible frames (0-1)
-   * @param absoluteZIndex - Optional z-index to apply to all layers
-   * @returns Map of composite keys (layerId#elevationId#timeIndex) to layer objects with opacity
+   * @param absoluteZIndex - Z-index to apply to all layers
+   * @returns Map of composite keys (layerId#elevationId#timeIndex) to layer objects
    */
   createRadarLayersForPlayback(
     layerId: string,
     controls: RadarLayerControls,
     targetOpacity: number,
-    absoluteZIndex?: number,
-  ): Map<string, { tileLayer: L.TileLayer; targetOpacity: number }> {
-    const result = new Map<string, { tileLayer: L.TileLayer; targetOpacity: number }>();
+    absoluteZIndex: number,
+  ): Map<string, L.TileLayer> {
+    const result = new Map<string, L.TileLayer>();
     const selectedElevationIds = controls.elevation.selectedElevationIds || [];
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
     const totalFrames = this.getAvailableTilesetsCount(layerId);
 
     for (const elevationId of selectedElevationIds) {
       // Current visible frame for this elevation
-      const compositeKey = `${layerId}#${elevationId}#${currentTimeIndex}`;
       const tileLayer = this.createRadarTileLayerForElevation(layerId, controls, elevationId);
-      if (absoluteZIndex !== undefined) tileLayer.setZIndex(absoluteZIndex);
-      result.set(compositeKey, { tileLayer, targetOpacity });
+      this.applyLayerStyles(tileLayer, targetOpacity, absoluteZIndex);
+      result.set(`${layerId}#${elevationId}#${currentTimeIndex}`, tileLayer);
 
       // Pre-render next N frames at opacity=0 for this elevation
-      const radarLastImagesCount = controls.playback.lastImagesCount;
-      const radarMinTimeIndex = Math.max(0, totalFrames - radarLastImagesCount);
-      const radarWindowSize = totalFrames - radarMinTimeIndex;
-
-      if (radarWindowSize > 1) {
-        for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {
-          const posInWindow = currentTimeIndex - radarMinTimeIndex;
-          const adjPosInWindow =
-            (((posInWindow + offset) % radarWindowSize) + radarWindowSize) % radarWindowSize;
-          const adjIndex = radarMinTimeIndex + adjPosInWindow;
+      this.prerenderNextFrames(
+        result,
+        currentTimeIndex,
+        totalFrames,
+        controls.playback.lastImagesCount,
+        absoluteZIndex,
+        (adjIndex) => {
           const adjLayer = this.createRadarTileLayerForElevationAtTimeIndex(
             layerId,
             controls,
             elevationId,
             adjIndex,
           );
-          if (absoluteZIndex !== undefined) adjLayer.setZIndex(absoluteZIndex);
-          result.set(`${layerId}#${elevationId}#${adjIndex}`, {
-            tileLayer: adjLayer,
-            targetOpacity: 0,
-          });
-        }
-      }
+          return { layer: adjLayer, key: `${layerId}#${elevationId}#${adjIndex}` };
+        },
+      );
     }
 
     return result;
+  }
+
+  /**
+   * Applies opacity and z-index styles to a tile layer.
+   */
+  private applyLayerStyles(layer: L.TileLayer, opacity: number, zIndex: number): void {
+    layer.setOpacity(opacity);
+    layer.setZIndex(zIndex);
+  }
+
+  /**
+   * Pre-renders next N frames at opacity=0 for smooth playback transitions.
+   * Uses modular arithmetic to wrap around the animation window.
+   */
+  private prerenderNextFrames(
+    result: Map<string, L.TileLayer>,
+    currentTimeIndex: number,
+    totalFrames: number,
+    lastImagesCount: number,
+    absoluteZIndex: number,
+    createLayer: (timeIndex: number) => { layer: L.TileLayer; key: string },
+  ): void {
+    const minTimeIndex = Math.max(0, totalFrames - lastImagesCount);
+    const windowSize = totalFrames - minTimeIndex;
+
+    if (windowSize > 1) {
+      for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {
+        const posInWindow = currentTimeIndex - minTimeIndex;
+        const adjPosInWindow = (((posInWindow + offset) % windowSize) + windowSize) % windowSize;
+        const adjIndex = minTimeIndex + adjPosInWindow;
+
+        const { layer, key } = createLayer(adjIndex);
+        this.applyLayerStyles(layer, 0, absoluteZIndex);
+        result.set(key, layer);
+      }
+    }
   }
 
   /**
@@ -308,7 +328,7 @@ export class LayerRenderService {
    * The key should change only when the actual tile data changes, not when visual
    * properties like opacity change.
    */
-  private generatePoolKey(layerId: string, controls: TileLayerControls | WmsLayerControls): string {
+  private generatePoolKey(layerId: string, controls: LayerControls): string {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer) return layerId;
 
