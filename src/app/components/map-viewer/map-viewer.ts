@@ -88,13 +88,6 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Cancel fading-out timers and remove their layers
-    this.fadingOutLayers.forEach(({ layer, timerId }) => {
-      clearTimeout(timerId);
-      layer.remove();
-    });
-    this.fadingOutLayers.clear();
-
     // Limpiar capas
     this.onMapLayers.forEach((layer) => layer.remove());
     this.onMapLayers.clear();
@@ -161,12 +154,7 @@ export class MapViewer implements OnInit, OnDestroy {
     }).addTo(this.map);
   }
 
-  private static readonly FRAME_TRANSITION_MS = 300;
   private static readonly DOM_PREFETCH_RADIUS = 2;
-  private readonly fadingOutLayers = new Map<
-    string,
-    { layer: L.TileLayer; timerId: ReturnType<typeof setTimeout> }
-  >();
 
   private onMapLayers = new Map<string, L.TileLayer>();
 
@@ -210,11 +198,17 @@ export class MapViewer implements OnInit, OnDestroy {
           }
 
           // Pre-fetch T±DOM_PREFETCH_RADIUS: keep adjacent radar frames on map at opacity=0
-          if (totalFrames > 0) {
+          // Uses modular wrap-around within the playback window to also pre-render frame 0
+          // when at the last frame, preventing a flash on loop.
+          const radarLastImagesCount = radarControls.playback.lastImagesCount;
+          const radarMinTimeIndex = Math.max(0, totalFrames - radarLastImagesCount);
+          const radarWindowSize = totalFrames - radarMinTimeIndex;
+          if (radarWindowSize > 1) {
             for (let offset = -MapViewer.DOM_PREFETCH_RADIUS; offset <= MapViewer.DOM_PREFETCH_RADIUS; offset++) {
               if (offset === 0) continue;
-              const adjIndex = currentTimeIndex + offset;
-              if (adjIndex < 0 || adjIndex >= totalFrames) continue;
+              const posInWindow = currentTimeIndex - radarMinTimeIndex;
+              const adjPosInWindow = ((posInWindow + offset) % radarWindowSize + radarWindowSize) % radarWindowSize;
+              const adjIndex = radarMinTimeIndex + adjPosInWindow;
               const adjLayer = this.layerRenderService.createRadarTileLayerForElevationAtTimeIndex(
                 layerId,
                 radarControls,
@@ -250,16 +244,18 @@ export class MapViewer implements OnInit, OnDestroy {
         }
 
         // Pre-fetch T±DOM_PREFETCH_RADIUS: keep adjacent frames on map at opacity=0 so tiles are ready when needed
-        if (totalFrames > 0) {
+        // Uses modular wrap-around within the playback window to also pre-render frame 0
+        // when at the last frame, preventing a flash on loop.
+        const goesLastImagesCount = goesControls.playback.lastImagesCount;
+        const goesMinTimeIndex = Math.max(0, totalFrames - goesLastImagesCount);
+        const goesWindowSize = totalFrames - goesMinTimeIndex;
+        if (goesWindowSize > 1) {
           for (let offset = -MapViewer.DOM_PREFETCH_RADIUS; offset <= MapViewer.DOM_PREFETCH_RADIUS; offset++) {
             if (offset === 0) continue;
-            const adjIndex = currentTimeIndex + offset;
-            if (adjIndex < 0 || adjIndex >= totalFrames) continue;
-            const adjLayer = this.layerRenderService.createTileLayerForTimeIndex(
-              layerId,
-              goesControls,
-              adjIndex,
-            );
+            const posInWindow = currentTimeIndex - goesMinTimeIndex;
+            const adjPosInWindow = ((posInWindow + offset) % goesWindowSize + goesWindowSize) % goesWindowSize;
+            const adjIndex = goesMinTimeIndex + adjPosInWindow;
+            const adjLayer = this.layerRenderService.createTileLayerForTimeIndex(layerId, goesControls, adjIndex);
             desiredLayersOnMap.set(`${layerId}#${adjIndex}`, { tileLayer: adjLayer, targetOpacity: 0 });
           }
         }
@@ -275,47 +271,20 @@ export class MapViewer implements OnInit, OnDestroy {
       }
     }
 
-    // 1. Fade out layers that are no longer desired OR need to be replaced
+    // 1. Remove stale/replaced layers
     for (const [key, oldLayer] of this.onMapLayers) {
       const desired = desiredLayersOnMap.get(key);
       if (!desired || desired.tileLayer !== oldLayer) {
-        // Cancel any existing fade-out for this key
-        const existing = this.fadingOutLayers.get(key);
-        if (existing) clearTimeout(existing.timerId);
-
-        const el = (oldLayer as any)._container as HTMLElement | undefined;
-        if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
-        oldLayer.setOpacity(0);
-        const timerId = setTimeout(() => {
-          this.map?.removeLayer(oldLayer);
-          this.fadingOutLayers.delete(key);
-        }, MapViewer.FRAME_TRANSITION_MS);
-        this.fadingOutLayers.set(key, { layer: oldLayer, timerId });
+        this.map?.removeLayer(oldLayer);
       }
     }
 
-    // 2. Add new layers or update opacity on same-instance layers
+    // 2. Add new or update existing layers
     for (const [key, { tileLayer, targetOpacity }] of desiredLayersOnMap) {
       const oldLayer = this.onMapLayers.get(key);
+      tileLayer.setOpacity(targetOpacity);
       if (!oldLayer || oldLayer !== tileLayer) {
-        // New or replaced layer: cancel any pending removal, then fade in from 0
-        const pendingRemoval = this.fadingOutLayers.get(key);
-        if (pendingRemoval) {
-          clearTimeout(pendingRemoval.timerId);
-          this.fadingOutLayers.delete(key);
-        }
-        tileLayer.setOpacity(0);
         tileLayer.addTo(this.map!);
-        const el = (tileLayer as any)._container as HTMLElement | undefined;
-        if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
-        // Microtask lets browser paint opacity-0 before starting transition
-        Promise.resolve().then(() => tileLayer.setOpacity(targetOpacity));
-      } else {
-        // Same layer instance (e.g. frame transition via pre-fetch, or opacity slider change):
-        // apply opacity with CSS transition so the change is smooth
-        const el = (tileLayer as any)._container as HTMLElement | undefined;
-        if (el) el.style.transition = `opacity ${MapViewer.FRAME_TRANSITION_MS}ms ease-in-out`;
-        tileLayer.setOpacity(targetOpacity);
       }
     }
 
