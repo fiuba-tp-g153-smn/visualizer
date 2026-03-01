@@ -36,6 +36,7 @@ interface BaseLayer {
   category: LayerCategory;
   zIndexGroup: ActiveLayerGroupId;
   boundingBox?: BoundingBox;
+  tms?: boolean;
 }
 
 /**

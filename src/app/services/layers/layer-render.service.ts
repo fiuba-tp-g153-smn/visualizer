@@ -154,7 +154,11 @@ export class LayerRenderService {
    * Creates or retrieves a GOES tile layer for a specific timeIndex, ignoring opacity.
    * Used for pre-fetching adjacent frames without affecting the displayed opacity.
    */
-  createTileLayerForTimeIndex(layerId: string, controls: GoesLayerControls, timeIndex: number): L.TileLayer {
+  createTileLayerForTimeIndex(
+    layerId: string,
+    controls: GoesLayerControls,
+    timeIndex: number,
+  ): L.TileLayer {
     const overrideControls: GoesLayerControls = {
       ...controls,
       playback: { ...controls.playback, timeIndex },
@@ -356,7 +360,7 @@ export class LayerRenderService {
     const pathToTileset = `${layerId}/${elevation.id}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
-    const tileLayer = this.buildTileLayer(tileUrl, layer, controls.opacity, { tms: true });
+    const tileLayer = this.buildTileLayer(tileUrl, layer, controls.opacity);
     this.attachErrorHandlers(tileLayer, layerId + '#' + elevationId);
     return tileLayer;
   }
@@ -454,6 +458,7 @@ export class LayerRenderService {
       minNativeZoom: layer.minNativeZoom,
       maxNativeZoom: layer.maxNativeZoom,
       bounds: layer.boundingBox as L.LatLngBoundsExpression | undefined,
+      tms: layer.tms ?? false,
       ...extraOptions,
     });
   }
