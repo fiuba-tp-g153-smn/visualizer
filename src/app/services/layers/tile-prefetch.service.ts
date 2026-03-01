@@ -21,6 +21,8 @@ const MAX_TILES_PER_LAYER = 300;
  * - Limits concurrency to avoid overwhelming the network
  * - Deduplicates requests so that periodic config refreshes do not re-fetch already-cached tiles
  * - Clears the queue and in-flight tracking when the zoom changes (tile coordinates change)
+ * - Rebuilds the queue from scratch on each schedule so that removed layers' pending URLs are
+ *   discarded immediately; in-flight Image loads (already started) complete normally
  *
  * Frames are enqueued by proximity to the current playback position (forward-biased), so the
  * frames the user will see next are cached first. Layers with more than 300 tiles at the clamped zoom are skipped to prevent
@@ -71,12 +73,20 @@ export class TilePrefetchService {
   /**
    * Builds and enqueues tile URLs for all active TILE layers across their animation window.
    * Skips WMS layers, layers without a bounding box, and layers exceeding the tile count guard.
+   *
+   * The queue is rebuilt from scratch on every call so that URLs added by layers no longer active
+   * are discarded before they are started. In-flight Image loads (up to MAX_CONCURRENT) are
+   * unaffected — they cannot be cancelled and will complete normally.
    */
   private schedulePrefetch(
     activeLayers: { layer: Layer; controls: LayerControls }[],
     configs: Map<string, LayerConfig>,
     zoom: number,
   ): void {
+    // Rebuild queue from scratch so removed layers' pending URLs are discarded.
+    // In-flight Image loads (already started) complete normally and are unaffected.
+    this.queue.length = 0;
+
     for (const { layer, controls } of activeLayers) {
       if (layer.type !== LayerType.TILE || !layer.boundingBox) continue;
 
