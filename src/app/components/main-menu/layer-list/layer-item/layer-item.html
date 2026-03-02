@@ -70,45 +70,43 @@
   <!-- Contenido colapsable (Opacidad + Período) -->
   @if (isActive() && isExpanded()) {
     <div class="layer-content">
-      <div class="always-visible-controls">
-        <!-- Control de Opacidad -->
-        <div class="opacity-control">
-          <span class="control-label">Opacidad</span>
-          <mat-slider
-            min="0"
-            max="1"
-            step="0.01"
-            discrete
-            class="control-slider"
-            [displayWith]="formatOpacity"
-          >
-            <input
-              matSliderThumb
-              [value]="currentOpacity()"
-              (input)="onOpacityChange(+$any($event.target).value)"
-            />
-          </mat-slider>
-          <span class="control-value">{{ currentOpacityPercent() }}%</span>
-        </div>
-
-        <!-- Control de elevación (solo para RADAR) -->
-        @if (hasElevationControl()) {
-          <div class="elevation-control">
-            <span class="control-label">Elevaciones</span>
-            <div class="elevation-checkboxes">
-              @for (elevation of availableElevations(); track elevation.id) {
-                <mat-checkbox
-                  [checked]="isElevationSelected(elevation.id)"
-                  (change)="onElevationToggle(elevation.id)"
-                  class="elevation-checkbox"
-                >
-                  {{ elevation.name }}
-                </mat-checkbox>
-              }
-            </div>
-          </div>
-        }
+      <!-- Control de Opacidad -->
+      <div class="opacity-control">
+        <span class="control-label">Opacidad</span>
+        <mat-slider
+          min="0"
+          max="1"
+          step="0.01"
+          discrete
+          class="control-slider"
+          [displayWith]="formatOpacity"
+        >
+          <input
+            matSliderThumb
+            [value]="currentOpacity()"
+            (input)="onOpacityChange(+$any($event.target).value)"
+          />
+        </mat-slider>
+        <span class="control-value">{{ currentOpacityPercent() }}%</span>
       </div>
+
+      <!-- Control de elevación (solo para RADAR) -->
+      @if (hasElevationControl()) {
+        <div class="elevation-control">
+          <span class="control-label">Elevaciones</span>
+          <div class="elevation-checkboxes">
+            @for (elevation of availableElevations(); track elevation.id) {
+              <mat-checkbox
+                [checked]="isElevationSelected(elevation.id)"
+                (change)="onElevationToggle(elevation.id)"
+                class="elevation-checkbox"
+              >
+                {{ elevation.name }}
+              </mat-checkbox>
+            }
+          </div>
+        </div>
+      }
 
       <!-- Control de Período -->
       @if (needsTimeControl()) {

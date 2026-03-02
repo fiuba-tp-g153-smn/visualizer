@@ -84,17 +84,11 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
-  .always-visible-controls {
-    padding-left: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
     .opacity-control {
+    padding: 0 8px;
       display: flex;
       align-items: center;
       gap: 8px;
-      width: 100%;
 
       .drag-handle {
         cursor: grab;
@@ -133,6 +127,7 @@
     }
 
     .elevation-control {
+    padding: 0 8px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -154,7 +149,6 @@
           ::ng-deep {
             .mdc-form-field {
               font-size: 0.875rem;
-            }
           }
         }
       }
