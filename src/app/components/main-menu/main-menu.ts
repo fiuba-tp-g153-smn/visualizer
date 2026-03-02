@@ -9,6 +9,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayerListComponent } from './layer-list/layer-list';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
+import { PolygonManagerComponent } from './polygon-manager/polygon-manager';
 import { MenuSection } from './menu-section.model';
 
 /**
@@ -21,6 +22,13 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: 'layers',
     tooltip: 'Capas del mapa',
     component: LayerListComponent,
+  },
+  {
+    id: 'polygons',
+    title: 'Polígonos',
+    icon: 'polyline',
+    tooltip: 'Gestionar polígonos',
+    component: PolygonManagerComponent,
   },
   {
     id: 'basemaps',
