@@ -345,41 +345,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   ngOnInit(): void {
-    // Si la capa está activa y necesita configuración, cargarla
-    if (this.isActive() && this.needsConfig()) {
-      this.loadChannelConfig();
-    }
+    // Layer refresh service will handle config fetching for active layers
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Si cambia la capa, verificar si necesita configuración
-    if (changes['layer']) {
-      if (this.isActive() && this.needsConfig()) {
-        this.loadChannelConfig();
-      }
-    }
+    // Layer refresh service will handle config fetching
   }
 
   ngOnDestroy(): void {
     // Don't stop playback on destroy - let it continue in the background
     // The layer service will manage playback lifecycle independently
-  }
-
-  /**
-   * Verifica si la capa necesita cargar configuración
-   */
-  private needsConfig(): boolean {
-    if (this.configService.hasConfig(this.layer.id)) {
-      return false;
-    }
-
-    switch (this.layer.category) {
-      case LayerCategory.GOES_19:
-      case LayerCategory.RADAR:
-        return true;
-      default:
-        return false;
-    }
   }
 
   /**
@@ -399,24 +374,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       default:
         return undefined;
     }
-  }
-
-  /**
-   * Carga la configuración del canal desde el backend
-   */
-  private loadChannelConfig(): void {
-    if (this.isLoadingConfig()) return;
-
-    this.isLoadingConfig.set(true);
-    this.configService.fetchLayerConfig(this.layer).subscribe({
-      next: () => {
-        this.isLoadingConfig.set(false);
-      },
-      error: (err: Error) => {
-        this.isLoadingConfig.set(false);
-        console.error(`❌ [LayerItem] Error cargando config de ${this.layer.id}:`, err);
-      },
-    });
   }
 
   reloadChannelConfig(): void {
@@ -479,15 +436,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Activa la capa
    */
   private activateLayer(): void {
-    // Si necesita config, cargarla primero
-    if (this.needsConfig()) {
-      this.loadChannelConfig();
-      setTimeout(() => {
-        this.controlService.activateLayer(this.layer.id);
-      }, 100);
-    } else {
-      this.controlService.activateLayer(this.layer.id);
-    }
+    this.controlService.activateLayer(this.layer.id);
   }
 
   deactivateLayer(): void {

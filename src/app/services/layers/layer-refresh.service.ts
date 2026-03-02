@@ -264,6 +264,7 @@ export class LayerRefreshService {
 
   /**
    * Adjusts the timeIndex after a config refresh based on lastImagesCount.
+   * Also handles clamping if the timeIndex is out of bounds.
    * Delegates calculation to LayerConfigService.
    */
   private adjustTimeIndexAfterConfigRefresh(layerId: string): void {
@@ -272,8 +273,23 @@ export class LayerRefreshService {
       return;
     }
 
-    const lastImagesCount = controls.playback.lastImagesCount;
+    const config = this.layerConfigService.getConfig(layerId);
+    if (!config || config.type !== LayerType.TILE) {
+      return;
+    }
 
+    const maxIndex = config.availableTilesets.length - 1;
+    const currentIndex = controls.playback.timeIndex;
+
+    // If current timeIndex is out of bounds, clamp it
+    if (currentIndex !== undefined && (currentIndex > maxIndex || currentIndex < 0)) {
+      const clampedIndex = Math.max(0, Math.min(currentIndex, maxIndex));
+      this.layerControlService.setTimeIndex(layerId, clampedIndex);
+      return;
+    }
+
+    // Otherwise, recalculate based on lastImagesCount
+    const lastImagesCount = controls.playback.lastImagesCount;
     const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
       layerId,
       lastImagesCount,

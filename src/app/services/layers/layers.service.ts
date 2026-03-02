@@ -64,11 +64,12 @@ export class LayersService {
 
   /**
    * Gets the user-friendly display name for a layer.
-   * Falls back to the layer ID if the layer is not found.
+   * @throws Error if layer not found
    */
   getLayerDisplayName(layerId: string): string {
     const layer = this.getLayerById(layerId);
-    return layer?.name ?? layerId;
+    if (!layer) throw new Error(`Layer '${layerId}' not found`);
+    return layer.name;
   }
 
   // ============================================================================
