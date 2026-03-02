@@ -92,10 +92,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   // Estado local
   isLoadingConfig = signal(false);
-  isControlsExpanded = signal(false);
   isExpanded = signal(false);
-
-  isPlaying = computed(() => this.controlService.isPlaying(this.layer.id));
 
   playSpeed = computed(() => {
     const controls = this.controlService.getControls(this.layer.id);
@@ -127,6 +124,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       default:
         return [1];
     }
+  });
+
+  isPlaying = computed(() => this.controlService.isPlaying(this.layer.id));
+
+  canPlayback = computed(() => {
+    return this.maxTimeIndex() > 0 && this.lastImagesCount() > 1;
   });
 
   getActiveLayer = computed(() => {
@@ -274,36 +277,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * Verifica si la capa tiene múltiples períodos disponibles para reproducción
-   */
-  canPlayback = computed(() => {
-    return this.maxTimeIndex() > 0 && this.lastImagesCount() > 1;
-  });
-
-  /**
-   * Verifica si la capa tiene controles avanzados (tiempo/animación)
-   */
-  hasAdvancedControls = computed(() => {
-    switch (this.layer.type) {
-      case LayerType.TILE:
-        switch (this.layer.category) {
-          case LayerCategory.GOES_19:
-            return this.layer.availablePeriods !== undefined;
-          case LayerCategory.RADAR:
-            return (
-              this.layer.availablePeriods !== undefined &&
-              this.layer.availableElevations !== undefined
-            );
-          default:
-            return false;
-        }
-      default:
-        return false;
-    }
-  });
-
-  /**
-   * Obtiene el índice mínimo para el slider (limitado por el máximo del dropdown)
+   * Obtiene el índice mínimo para el slider (limitado por el selector de últimas imágenes)
    */
   minTimeIndex = computed(() => {
     const max = this.maxTimeIndex();
@@ -311,15 +285,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const maxSelectableCount = options.length > 0 ? Math.max(...options) : 1;
     const effectiveCount = Math.min(max + 1, maxSelectableCount);
     return Math.max(0, max - effectiveCount + 1);
-  });
-
-  /**
-   * Obtiene el índice mínimo para reproducción (basado en la selección del usuario)
-   */
-  playbackMinTimeIndex = computed(() => {
-    const max = this.maxTimeIndex();
-    const count = this.lastImagesCount();
-    return Math.max(0, max - count + 1);
   });
 
   /**
@@ -438,41 +403,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   toggleActive(checked: boolean): void {
     if (checked) {
       this.activateLayer();
-      // Controls remain collapsed by default
-      // this.isControlsExpanded.set(true);
+      // Expand details by default when activating
+      this.isExpanded.set(true);
     } else {
       this.deactivateLayer();
     }
   }
 
   /**
-   * Alterna la expansión de los controles
-   */
-  toggleControls(): void {
-    if (this.isControlsExpanded()) {
-      // Si ya está abierto, solo cerramos los controles de animación
-      this.isControlsExpanded.set(false);
-      // Mantenemos isExpanded en true (opacidad visible)
-    } else {
-      // Si está cerrado, abrimos animación Y aseguramos que el contenedor esté expandido
-      this.isExpanded.set(true);
-      this.isControlsExpanded.set(true);
-    }
-  }
-
-  /**
-   * Alterna la expansión del card completo (opacidad + controles)
+   * Alterna la expansión del card completo (opacidad + período)
    */
   toggleExpansion(): void {
-    if (this.isExpanded()) {
-      // Si colapsamos, cerramos TODO (incluida la animación)
-      this.isExpanded.set(false);
-      this.isControlsExpanded.set(false);
-    } else {
-      // Si expandimos, mostramos solo opacidad inicialmente (animación cerrada)
-      this.isExpanded.set(true);
-      this.isControlsExpanded.set(false);
-    }
+    this.isExpanded.set(!this.isExpanded());
   }
 
   /**
