@@ -37,7 +37,7 @@ const RADAR_DEFAULTS = {
 const satelitePrefix = 'radar';
 const products = ['DBZH']; // 'KDP', 'VRAD', 'RHOHV', 'ZDR'
 const MIN_ZOOM = 4;
-const MAX_ZOOM = 10;
+const MAX_ZOOM = 9;
 
 // Ubicaciones y configuraciones de los 17 radares de la red SINARAME (SMN/INTA)
 const RADARES_SMN = [
