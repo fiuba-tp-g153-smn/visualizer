@@ -56,18 +56,17 @@ export class LayerRenderService {
   /**
    * Creates a Leaflet TileLayer for the given layer ID and controls.
    * Uses a pool to reuse layer instances when only visual properties (opacity) change.
-   * Returns a placeholder layer if configuration is not yet available or layer not found.
    *
    * @param layerId - The layer identifier
    * @param controls - Current layer control state (opacity, timeIndex, elevation, etc.)
    * @returns A configured Leaflet TileLayer
+   * @throws Error if layer not found or unsupported type
    */
   createTileLayer(layerId: string, controls: LayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
 
     if (!layer) {
-      console.warn(`Layer ${layerId} not found`);
-      return this.createPlaceholderLayer();
+      throw new Error(`Layer '${layerId}' not found`);
     }
 
     // Generate a unique key for the pool based on layer data (not visual properties)
@@ -114,13 +113,24 @@ export class LayerRenderService {
     // Generate pool key including the specific elevation
     const config = this.layerConfigService.getConfig(layerId) as RadarTileLayerConfig | undefined;
     if (!config) {
-      return this.createPlaceholderLayer();
+      throw new Error(`Configuration not loaded for radar layer '${layerId}'`);
     }
 
     const tilesets = config.availableTilesets;
+    if (tilesets.length === 0) {
+      throw new Error(`No tilesets available for radar layer '${layerId}'`);
+    }
+
     const timeIndex =
       controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
-    const tilesetId = tilesets[timeIndex] ?? 'default';
+    
+    if (timeIndex < 0 || timeIndex >= tilesets.length) {
+      throw new Error(
+        `Time index ${timeIndex} out of bounds for layer '${layerId}' (available: 0-${tilesets.length - 1})`,
+      );
+    }
+
+    const tilesetId = tilesets[timeIndex];
     const poolKey = `${layerId}-${elevationId}-${tilesetId}`;
 
     // Check pool
@@ -138,13 +148,17 @@ export class LayerRenderService {
   /**
    * Returns the number of available tilesets for a TILE layer (GOES or Radar).
    * Used by map-viewer to determine valid prefetch index bounds.
+   * @throws Error if configuration not loaded
    */
   getAvailableTilesetsCount(layerId: string): number {
     const config = this.layerConfigService.getConfig(layerId) as
       | GoesTileLayerConfig
       | RadarTileLayerConfig
       | undefined;
-    return config?.availableTilesets.length ?? 0;
+    if (!config) {
+      throw new Error(`Configuration not loaded for layer '${layerId}'`);
+    }
+    return config.availableTilesets.length;
   }
 
   /**
@@ -239,7 +253,7 @@ export class LayerRenderService {
     absoluteZIndex: number,
   ): Map<string, L.TileLayer> {
     const result = new Map<string, L.TileLayer>();
-    const selectedElevationIds = controls.elevation.selectedElevationIds || [];
+    const selectedElevationIds = controls.elevation.selectedElevationIds;
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
     const totalFrames = this.getAvailableTilesetsCount(layerId);
 
@@ -344,9 +358,14 @@ export class LayerRenderService {
             if (!config) return `${layerId}-placeholder`;
 
             const tilesets = config.availableTilesets;
+            if (tilesets.length === 0) return `${layerId}-empty`;
+
             const timeIndex =
               goesControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
-            const tilesetId = tilesets[timeIndex] ?? 'default';
+            
+            // Clamp timeIndex to valid range for pool key generation
+            const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
+            const tilesetId = tilesets[clampedIndex];
             return `${layerId}-${tilesetId}`;
           }
           case LayerCategory.RADAR: {
@@ -361,9 +380,14 @@ export class LayerRenderService {
             const elevationsKey = selectedElevationIds.sort().join(',');
 
             const tilesets = config.availableTilesets;
+            if (tilesets.length === 0) return `${layerId}-empty`;
+
             const timeIndex =
               radarControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
-            const tilesetId = tilesets[timeIndex] ?? 'default';
+            
+            // Clamp timeIndex to valid range for pool key generation
+            const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
+            const tilesetId = tilesets[clampedIndex];
             return `${layerId}-[${elevationsKey}]-${tilesetId}`;
           }
           default:
@@ -386,7 +410,7 @@ export class LayerRenderService {
   private createDataTileLayer(layerId: string, controls: TileLayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer || layer.type !== LayerType.TILE) {
-      return this.createPlaceholderLayer();
+      throw new Error(`Layer ${layerId} is not a TILE layer`);
     }
 
     switch (layer.category) {
@@ -394,8 +418,9 @@ export class LayerRenderService {
         return this.createGoesTileLayer(layerId, controls as GoesLayerControls);
       case LayerCategory.RADAR:
         // Radar layers should be created via createRadarTileLayerForElevation in map-viewer
-        console.warn('Radar layer should use createRadarTileLayerForElevation');
-        return this.createPlaceholderLayer();
+        throw new Error(
+          `Radar layer ${layerId} should be created using createRadarTileLayerForElevation`,
+        );
       default:
         throw new Error(`Unsupported tile layer category for layer ${layerId}`);
     }
@@ -434,11 +459,10 @@ export class LayerRenderService {
     const layer = this.layersService.getLayerById(layerId);
 
     if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.GOES_19) {
-      return this.createPlaceholderLayer();
+      throw new Error(`Invalid GOES layer: '${layerId}'`);
     }
 
     const tilesetId = this.getTilesetId(layerId, layer, controls.playback.timeIndex);
-    if (!tilesetId) return this.createPlaceholderLayer();
 
     const pathToTileset = `${layerId}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
@@ -456,7 +480,7 @@ export class LayerRenderService {
    * Creates a tile layer for radar imagery with a specific elevation.
    * Reads configuration from LayerConfigService to get available tilesets (shared across elevations).
    *
-   * Returns a placeholder layer if configuration is not yet loaded.
+   * @throws Error if layer not found or not a TILE layer
    */
   private createRadarTileLayer(
     layerId: string,
@@ -466,7 +490,7 @@ export class LayerRenderService {
     const layer = this.layersService.getLayerById(layerId);
 
     if (!layer || layer.type !== LayerType.TILE) {
-      return this.createPlaceholderLayer();
+      throw new Error(`Layer ${layerId} is not a TILE layer`);
     }
 
     const radarLayer = layer as RadarTileLayer;
@@ -474,18 +498,15 @@ export class LayerRenderService {
     // Find the elevation object by ID
     const elevation = radarLayer.availableElevations.find((e) => e.id === elevationId);
     if (!elevation) {
-      console.warn(`Elevation ${elevationId} not found for layer ${layerId}`);
-      return this.createPlaceholderLayer();
+      throw new Error(`Elevation '${elevationId}' not found for layer '${layerId}'`);
     }
 
     const tilesetId = this.getTilesetId(layerId, layer, controls.playback.timeIndex);
-    if (!tilesetId) return this.createPlaceholderLayer();
-
     const pathToTileset = `${layerId}/${elevation.id}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
     const tileLayer = this.buildTileLayer(tileUrl, layer, controls.opacity);
-    this.attachErrorHandlers(tileLayer, layerId + '#' + elevationId);
+    this.attachErrorHandlers(tileLayer, layerId, elevationId, elevation.name);
     return tileLayer;
   }
 
@@ -522,40 +543,38 @@ export class LayerRenderService {
   /**
    * Gets the tilesetId for the current playback state and handles fetching config if not available.
    *
-   * @returns The tilesetId or undefined if not available (triggers async fetch)
+  /**
+   * Gets the tileset ID for a tile layer at a specific time index.
+   * @throws Error if config not loaded or invalid time index
    */
   private getTilesetId(
     layerId: string,
     layer: TileLayer,
     timeIndex: number | undefined,
-  ): string | undefined {
+  ): string {
     const config = this.layerConfigService.getConfig(layerId) as
       | RadarTileLayerConfig
       | GoesTileLayerConfig
       | undefined;
 
     if (!config) {
-      // Trigger async config load - this will update the config map
       const categoryName = layer.category === LayerCategory.RADAR ? 'Radar' : 'GOES';
-      this.layerConfigService.fetchLayerConfig(layer as Layer).subscribe({
-        next: () => console.debug(`✅ [LayerRenderer] ${categoryName} config loaded for`, layerId),
-        error: (err) =>
-          console.error(`❌ [LayerRenderer] Failed to load ${categoryName} config:`, err),
-      });
-      return undefined;
+      throw new Error(`Configuration not loaded for ${categoryName} layer '${layerId}'`);
     }
 
     // Get the tileset ID for the current time index
     const tilesets = config.availableTilesets;
     if (!tilesets || tilesets.length === 0) {
-      return undefined;
+      throw new Error(`No tilesets available for layer '${layerId}'`);
     }
 
     // If timeIndex is undefined, use the latest period
     const resolvedTimeIndex = timeIndex ?? tilesets.length - 1;
 
-    if (resolvedTimeIndex >= tilesets.length) {
-      return undefined;
+    if (resolvedTimeIndex >= tilesets.length || resolvedTimeIndex < 0) {
+      throw new Error(
+        `Invalid time index ${resolvedTimeIndex} for layer '${layerId}' (available: 0-${tilesets.length - 1})`,
+      );
     }
 
     return tilesets[resolvedTimeIndex];
@@ -601,25 +620,30 @@ export class LayerRenderService {
   }
 
   /**
-   * Creates a placeholder layer shown while configuration is loading.
-   * Uses a transparent blank tile to avoid errors.
-   */
-  private createPlaceholderLayer(): L.TileLayer {
-    const placeholder = L.tileLayer('about:blank', {
-      opacity: 0,
-    });
-
-    // Mark as placeholder so we don't attach error handlers
-    (placeholder as any)._isPlaceholder = true;
-    return placeholder;
-  }
-
-  /**
    * Attaches error and success handlers to a tile layer for monitoring.
    * Tracks errors and shows user notifications after repeated failures.
+   * @param tileLayer - The Leaflet tile layer to attach handlers to
+   * @param layerId - The base layer ID
+   * @param elevationId - Optional elevation ID for radar layers (used for error tracking)
+   * @param elevationName - Optional elevation name for display in error messages
    */
-  private attachErrorHandlers(tileLayer: L.TileLayer, layerId: string): void {
-    const layerName = this.layersService.getLayerDisplayName(layerId);
+  private attachErrorHandlers(
+    tileLayer: L.TileLayer,
+    layerId: string,
+    elevationId?: string,
+    elevationName?: string,
+  ): void {
+    // Use base layerId for display name lookup
+    const baseLayerName = this.layersService.getLayerDisplayName(layerId);
+    
+    // Construct display name with elevation info if provided
+    const layerName = elevationName
+      ? `${baseLayerName} (${elevationName})`
+      : baseLayerName;
+    
+    // Use composite key for error tracking when elevation is provided
+    const trackingKey = elevationId ? `${layerId}#${elevationId}` : layerId;
+    
     let errorCount = 0;
 
     tileLayer.on('tileerror', (error: L.TileErrorEvent) => {
@@ -632,17 +656,17 @@ export class LayerRenderService {
 
       // After several consecutive errors, notify the user
       if (errorCount >= this.MAX_ERRORS_BEFORE_NOTIFY) {
-        const currentErrors = this.errorTracker.get(layerId) || 0;
+        const currentErrors = this.errorTracker.get(trackingKey) || 0;
 
         // Only notify once to avoid spam
         if (currentErrors === 0) {
           this.notificationService.error(
             `La capa "${layerName}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
-            layerId,
+            trackingKey,
           );
         }
 
-        this.errorTracker.set(layerId, currentErrors + 1);
+        this.errorTracker.set(trackingKey, currentErrors + 1);
         errorCount = 0; // Reset for next batch
       }
     });
@@ -654,9 +678,9 @@ export class LayerRenderService {
       }
 
       // If there were previous errors, clear them and log recovery
-      if (this.errorTracker.has(layerId)) {
+      if (this.errorTracker.has(trackingKey)) {
         console.info(`✅ Layer ${layerName} recovered`);
-        this.errorTracker.delete(layerId);
+        this.errorTracker.delete(trackingKey);
       }
     });
   }
