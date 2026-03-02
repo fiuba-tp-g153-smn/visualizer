@@ -228,6 +228,17 @@ const RADARES_SMN = [
       [-31.17, -61.05],
     ] as const,
   },
+  // {
+  //   id: 'rma18',
+  //   number: 18,
+  //   ubi: 'Santa Isabel',
+  //   minNativeZoom: MIN_ZOOM,
+  //   maxNativeZoom: MAX_ZOOM,
+  //   boundingBox: [
+  //     [0, 0], // TODO: if needed, set real bounding box for this radar when available
+  //     [0, 0],
+  //   ] as const,
+  // }
 ];
 
 export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
