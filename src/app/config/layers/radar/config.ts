@@ -16,7 +16,7 @@ const RADAR_DEFAULTS = {
   availableElevations: [
     {
       id: 'elev0',
-      name: '0.6°',
+      name: '0.5°',
       activeByDefault: true,
     },
     // {
@@ -165,7 +165,7 @@ const RADARES_SMN = [
   {
     id: 'rma12',
     number: 12,
-    ubi: 'Villa Reynolds',
+    ubi: 'Las Grutas',
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -176,7 +176,7 @@ const RADARES_SMN = [
   {
     id: 'rma13',
     number: 13,
-    ubi: 'Las Lajitas',
+    ubi: 'Ituzaingó',
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -187,7 +187,7 @@ const RADARES_SMN = [
   {
     id: 'rma14',
     number: 14,
-    ubi: 'Las Catitas',
+    ubi: 'Bolívar',
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -198,7 +198,7 @@ const RADARES_SMN = [
   {
     id: 'rma15',
     number: 15,
-    ubi: 'Bolívar',
+    ubi: 'Patquía',
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -209,7 +209,7 @@ const RADARES_SMN = [
   {
     id: 'rma16',
     number: 16,
-    ubi: 'Tostado',
+    ubi: 'Villa Reynolds',
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -220,7 +220,7 @@ const RADARES_SMN = [
   {
     id: 'rma17',
     number: 17,
-    ubi: 'Patquia',
+    ubi: 'Alejandro Roca',
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
