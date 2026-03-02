@@ -13,12 +13,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config';
-import { TileService } from '../../services/tiles-providers/tile.service';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRenderService } from '../../services/layers/layer-render.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import { TileProvider, LayerCategory, GoesLayerControls, RadarLayerControls } from '../../models';
+import { BaseMap, LayerCategory, GoesLayerControls, RadarLayerControls } from '../../models';
+import { BaseMapService } from '../../services/base-maps/base-map.service';
 
 @Component({
   selector: 'app-map-viewer',
@@ -30,7 +30,7 @@ import { TileProvider, LayerCategory, GoesLayerControls, RadarLayerControls } fr
 export class MapViewer implements OnInit, OnDestroy {
   private map: L.Map | null = null;
   private platformId = inject(PLATFORM_ID);
-  private tileService = inject(TileService);
+  private baseMapService = inject(BaseMapService);
   private layersService = inject(LayersService);
   private controlService = inject(LayerControlService);
   private layerRenderService = inject(LayerRenderService);
@@ -40,11 +40,11 @@ export class MapViewer implements OnInit, OnDestroy {
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      // Effect: cambiar mapa base
+      // Effect: change base map
       effect(() => {
-        const provider = this.tileService.currentProvider();
+        const baseMap = this.baseMapService.currentBaseMap();
         if (this.map) {
-          this.changeTileProvider(provider);
+          this.changeBaseMap(baseMap);
         }
       });
 
@@ -134,21 +134,21 @@ export class MapViewer implements OnInit, OnDestroy {
       }
     });
 
-    // Initialize base tile layer
-    const initialProvider = this.tileService.getCurrentProvider();
-    this.changeTileProvider(initialProvider);
+    // Initialize base map layer
+    const initialBaseMap = this.baseMapService.getCurrentBaseMap();
+    this.changeBaseMap(initialBaseMap);
   }
 
-  private changeTileProvider(provider: TileProvider): void {
+  private changeBaseMap(baseMap: BaseMap): void {
     if (!this.map) return;
 
     if (this.currentTileLayer) {
       this.map.removeLayer(this.currentTileLayer);
     }
 
-    this.currentTileLayer = L.tileLayer(provider.url, {
-      attribution: provider.attribution,
-      maxZoom: provider.maxZoom,
+    this.currentTileLayer = L.tileLayer(baseMap.url, {
+      attribution: baseMap.attribution,
+      maxZoom: baseMap.maxZoom,
       zIndex: 0,
     }).addTo(this.map);
   }

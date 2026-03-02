@@ -21,6 +21,7 @@ make prod          # Build and run production Docker environment
 ### Layer System
 
 Layers use a **discriminated union** type system:
+
 - `LayerType` enum (`TILE` | `WMS`) — determines Leaflet rendering strategy
 - `LayerCategory` enum (`GOES_19` | `RADAR` | `IGN_WMS`) — determines behavioral config
 - Union type: `type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLayer`
@@ -28,6 +29,7 @@ Layers use a **discriminated union** type system:
 Layer hierarchy: `LayerGroup → LayerSubgroup → Layer`
 
 Z-index groups:
+
 - `BASE` (1–1000): Data layers (radar, satellite)
 - `OVERLAY` (1001–2000): Reference layers (IGN WMS), always on top
 
@@ -40,7 +42,7 @@ Z-index groups:
 | `LayerConfigService` | Fetches dynamic tile configs from backend; reactive caching |
 | `LayerRenderService` | Creates Leaflet layers; implements a pool to reuse layers when only opacity changes |
 | `LayerRefreshService` | Auto-refresh polling for time-based layers |
-| `TileService` | Base map tile provider management |
+| `BaseMapService` | Base map selection and persistence; stores selection in `localStorage` (`mapasmn_selected_base_map`) |
 
 ### Reactivity
 
@@ -51,6 +53,7 @@ The app uses **Angular signals and effects** (migrating away from RxJS). State c
 Environment variables are injected at build time via a custom webpack `DefinePlugin` (`custom-webpack.config.js`). The `$ENV` global is typed and used in `src/environments/environment*.ts`.
 
 Key variables:
+
 - `BACKEND_BASE_URL` — API base (default: `https://data.mapasmn.com`)
 - `TILE_FORMAT` — `webp` or `png` (default: `webp`)
 - `APP_HOST_PORT` — Docker host port (default: `6010`)
@@ -64,7 +67,6 @@ Layer definitions live in `src/app/config/layers/` organized by product (goes/, 
 - Standalone components (no NgModules)
 - SCSS for styles
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `rm:`, `wip:`
-
 
 ## Best Practices
 

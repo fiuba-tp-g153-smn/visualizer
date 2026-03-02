@@ -8,7 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayerListComponent } from './layer-list/layer-list';
-import { TileSelectorComponent } from './tile-selector/tile-selector';
+import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
 import { MenuSection } from './menu-section.model';
 
 /**
@@ -23,11 +23,11 @@ const MENU_SECTIONS: MenuSection[] = [
     component: LayerListComponent,
   },
   {
-    id: 'tiles',
+    id: 'basemaps',
     title: 'Mapa Base',
     icon: 'map',
-    tooltip: 'Configurar mapa base',
-    component: TileSelectorComponent,
+    tooltip: 'Seleccionar mapa base',
+    component: BaseMapSelectorComponent,
   },
 ];
 
