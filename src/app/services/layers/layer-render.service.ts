@@ -123,7 +123,7 @@ export class LayerRenderService {
 
     const timeIndex =
       controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
-    
+
     if (timeIndex < 0 || timeIndex >= tilesets.length) {
       throw new Error(
         `Time index ${timeIndex} out of bounds for layer '${layerId}' (available: 0-${tilesets.length - 1})`,
@@ -362,7 +362,7 @@ export class LayerRenderService {
 
             const timeIndex =
               goesControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
-            
+
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
             const tilesetId = tilesets[clampedIndex];
@@ -384,7 +384,7 @@ export class LayerRenderService {
 
             const timeIndex =
               radarControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
-            
+
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
             const tilesetId = tilesets[clampedIndex];
@@ -547,11 +547,7 @@ export class LayerRenderService {
    * Gets the tileset ID for a tile layer at a specific time index.
    * @throws Error if config not loaded or invalid time index
    */
-  private getTilesetId(
-    layerId: string,
-    layer: TileLayer,
-    timeIndex: number | undefined,
-  ): string {
+  private getTilesetId(layerId: string, layer: TileLayer, timeIndex: number | undefined): string {
     const config = this.layerConfigService.getConfig(layerId) as
       | RadarTileLayerConfig
       | GoesTileLayerConfig
@@ -635,15 +631,13 @@ export class LayerRenderService {
   ): void {
     // Use base layerId for display name lookup
     const baseLayerName = this.layersService.getLayerDisplayName(layerId);
-    
+
     // Construct display name with elevation info if provided
-    const layerName = elevationName
-      ? `${baseLayerName} (${elevationName})`
-      : baseLayerName;
-    
+    const layerName = elevationName ? `${baseLayerName} (${elevationName})` : baseLayerName;
+
     // Use composite key for error tracking when elevation is provided
     const trackingKey = elevationId ? `${layerId}#${elevationId}` : layerId;
-    
+
     let errorCount = 0;
 
     tileLayer.on('tileerror', (error: L.TileErrorEvent) => {
