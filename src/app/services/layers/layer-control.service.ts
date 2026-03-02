@@ -48,6 +48,7 @@ export class LayerControlService {
   constructor() {
     this.initializeControls();
 
+    // Auto-save controls when they change
     effect(() => {
       this.saveControls();
     });
@@ -87,17 +88,21 @@ export class LayerControlService {
 
   /**
    * Gets the controls for a specific layer.
+   * @throws Error if controls not found (all layers should have initialized controls)
    */
-  getControls(layerId: string): LayerControls | undefined {
-    return this.controls().get(layerId);
+  getControls(layerId: string): LayerControls {
+    const controls = this.controls().get(layerId);
+    if (!controls) throw new Error(`Controls for layer '${layerId}' not found`);
+    return controls;
   }
 
   /**
    * Calculates the absolute z-index for a layer based on its group and relative position.
+   * @throws Error if layer not found
    */
   getAbsoluteZIndex(layerId: string, controls: LayerControls): number {
     const layer = this.layersService.getLayerById(layerId);
-    if (!layer) return 0;
+    if (!layer) throw new Error(`Layer '${layerId}' not found`);
     const baseOffset = ACTIVE_LAYER_GROUP_DEFINITIONS[layer.zIndexGroup].zIndexRange.min;
     return baseOffset + controls.zIndex;
   }
@@ -107,7 +112,7 @@ export class LayerControlService {
    */
   isPlaying(layerId: string): boolean {
     const controls = this.getControls(layerId);
-    if (!controls || controls.type !== LayerType.TILE) return false;
+    if (controls.type !== LayerType.TILE) return false;
     return controls.playback?.isPlaying ?? false;
   }
 
@@ -116,11 +121,7 @@ export class LayerControlService {
    */
   getSelectedElevationsForLayer(layerId: string): RadarElevation[] {
     const controls = this.getControls(layerId);
-    if (
-      !controls ||
-      controls.type !== LayerType.TILE ||
-      controls.category !== LayerCategory.RADAR
-    ) {
+    if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.RADAR) {
       return [];
     }
 
@@ -169,7 +170,7 @@ export class LayerControlService {
           // Set timeIndex to latest if undefined and config exists
           if (controls.playback.timeIndex === undefined) {
             const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
-            if (availablePeriods.length > 0) {
+            if (availablePeriods && availablePeriods.length > 0) {
               controls.playback.timeIndex = availablePeriods.length - 1;
             }
           }
@@ -337,7 +338,6 @@ export class LayerControlService {
     // Calculate and set the optimal timeIndex for the new range
     if (controls && controls.type === LayerType.TILE) {
       const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(layerId, count);
-
       if (newTimeIndex !== undefined) {
         this.setTimeIndex(layerId, newTimeIndex);
       }
@@ -437,11 +437,12 @@ export class LayerControlService {
     }
 
     const controls = this.getControls(layerId);
-    if (!controls || controls.type !== LayerType.TILE) return;
+    if (controls.type !== LayerType.TILE) return;
+
+    const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
+    if (!availablePeriods || availablePeriods.length === 0) return;
 
     const lastImagesCount = controls.playback.lastImagesCount;
-    const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
-    if (availablePeriods.length === 0) return;
 
     // Calculate playback range:
     // If available periods > last images count, start from (total - count) to show only recent images
@@ -529,17 +530,19 @@ export class LayerControlService {
 
   /**
    * Gets the available time periods for a layer based on its type and configuration.
+   * Returns undefined if config not yet loaded.
+   * @throws Error if layer not found or unsupported layer type
    */
-  private getAvailablePeriodsForLayer(layerId: string): string[] {
+  private getAvailablePeriodsForLayer(layerId: string): string[] | undefined {
     const layer = this.layersService.getLayerById(layerId);
-    if (!layer) return [];
+    if (!layer) throw new Error(`Layer '${layerId}' not found`);
 
     switch (layer.type) {
       case LayerType.TILE:
         switch (layer.category) {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
-            return this.layerConfigService.getAvailableTilesets(layerId) ?? [];
+            return this.layerConfigService.getAvailableTilesets(layerId);
           default:
             throw new Error(`Unsupported tile layer category for playback`);
         }
@@ -593,11 +596,6 @@ export class LayerControlService {
    */
   private initializeControls(): void {
     const savedState = this.loadControls();
-    if (savedState) {
-      console.debug('Visualizer: Loaded layer state from storage', savedState.length, 'controls');
-    } else {
-      console.debug('Visualizer: No saved state, applying defaults');
-    }
 
     const stateMap = new Map(savedState ? savedState.map((s) => [s.id, s]) : []);
     const controlsMap = new Map<string, LayerControls>();
@@ -620,6 +618,38 @@ export class LayerControlService {
             ...controls.playback,
             isPlaying: false,
           };
+
+          // Validate timeIndex against current config if available (config might not be loaded yet)
+          if (controls.playback.timeIndex !== undefined) {
+            try {
+              const availablePeriods = this.getAvailablePeriodsForLayer(layer.id);
+              if (availablePeriods && availablePeriods.length > 0) {
+                // Clamp timeIndex to valid range
+                const maxIndex = availablePeriods.length - 1;
+                if (controls.playback.timeIndex > maxIndex) {
+                  controls.playback.timeIndex = maxIndex;
+                } else if (controls.playback.timeIndex < 0) {
+                  controls.playback.timeIndex = 0;
+                }
+              }
+            } catch {
+              // Config not loaded yet, will be validated when config arrives
+            }
+          }
+
+          // Migrate old data: ensure radar layers have selectedElevationIds
+          if (controls.category === LayerCategory.RADAR) {
+            const radarControls = controls as RadarLayerControls;
+            if (!radarControls.elevation?.selectedElevationIds) {
+              const radarLayer = layer as RadarTileLayer;
+              const defaultElevations = radarLayer.availableElevations
+                .filter((elev) => elev.activeByDefault)
+                .map((elev) => elev.id);
+              radarControls.elevation = {
+                selectedElevationIds: defaultElevations,
+              };
+            }
+          }
         }
       } else if (DEFAULT_ACTIVE_LAYERS.includes(layer.id)) {
         // Apply default active layers

@@ -16,8 +16,15 @@ import { MAP_CONFIG } from '../../config';
 import { LayersService } from '../../services/layers/layers.service';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerRenderService } from '../../services/layers/layer-render.service';
+import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import { BaseMap, LayerCategory, GoesLayerControls, RadarLayerControls } from '../../models';
+import {
+  BaseMap,
+  LayerCategory,
+  GoesLayerControls,
+  RadarLayerControls,
+  LayerType,
+} from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
 
 @Component({
@@ -33,6 +40,7 @@ export class MapViewer implements OnInit, OnDestroy {
   private baseMapService = inject(BaseMapService);
   private layersService = inject(LayersService);
   private controlService = inject(LayerControlService);
+  private layerConfigService = inject(LayerConfigService);
   private layerRenderService = inject(LayerRenderService);
   private prefetchService = inject(TilePrefetchService);
 
@@ -52,6 +60,10 @@ export class MapViewer implements OnInit, OnDestroy {
       effect(() => {
         const layers = this.controlService.activeLayers();
         const layerIds = layers.map((item) => item.layer.id);
+
+        // Also track config signal to re-trigger when configs are loaded
+        this.layerConfigService.configs();
+
         if (this.map) {
           this.syncLayers(layerIds);
         }
@@ -162,12 +174,31 @@ export class MapViewer implements OnInit, OnDestroy {
 
     for (const layerId of layerIds) {
       const layer = this.layersService.getLayerById(layerId);
-      const controls = this.controlService.getControls(layerId);
+      if (!layer) {
+        console.error(`Layer '${layerId}' not found, skipping`);
+        continue;
+      }
 
-      if (!layer || !controls || !controls.visible) continue;
+      const controls = this.controlService.getControls(layerId);
+      if (!controls.visible) continue;
 
       const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
 
+      // Skip tile layers that need config if config not loaded yet (will render on next sync)
+      switch (layer.type) {
+        case LayerType.TILE:
+          switch (layer.category) {
+            case LayerCategory.RADAR:
+            case LayerCategory.GOES_19:
+              if (!this.layerConfigService.hasConfig(layerId)) {
+                continue;
+              }
+              break;
+          }
+          break;
+      }
+
+      // Render layer based on category
       switch (layer.category) {
         case LayerCategory.RADAR: {
           const radarControls = controls as RadarLayerControls;
