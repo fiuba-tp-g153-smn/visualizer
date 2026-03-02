@@ -1,0 +1,206 @@
+<div class="polygon-manager">
+  <!-- Drawing controls - always visible -->
+  <div class="drawing-controls">
+    <div class="control-buttons">
+      <button
+        mat-raised-button
+        [color]="isDrawing() ? 'primary' : undefined"
+        (click)="toggleDrawMode()"
+        matTooltip="Dibujar nuevo polígono"
+        class="control-button"
+      >
+        <mat-icon>{{ isDrawing() ? 'close' : 'draw' }}</mat-icon>
+        {{ isDrawing() ? 'Cancelar' : 'Dibujar' }}
+      </button>
+      <button
+        mat-raised-button
+        [color]="isEditing() ? 'primary' : undefined"
+        (click)="toggleEditMode()"
+        [disabled]="polygonCount() === 0"
+        matTooltip="Editar polígonos existentes"
+        class="control-button"
+      >
+        <mat-icon>{{ isEditing() ? 'close' : 'edit' }}</mat-icon>
+        {{ isEditing() ? 'Cancelar' : 'Editar' }}
+      </button>
+      <button
+        mat-raised-button
+        [color]="isDeleting() ? 'warn' : undefined"
+        (click)="toggleDeleteMode()"
+        [disabled]="polygonCount() === 0"
+        matTooltip="Eliminar polígonos del mapa"
+        class="control-button"
+      >
+        <mat-icon>{{ isDeleting() ? 'close' : 'delete' }}</mat-icon>
+        {{ isDeleting() ? 'Cancelar' : 'Borrar' }}
+      </button>
+    </div>
+
+    <!-- Active mode indicator -->
+    @if (drawingMode() !== 'none') {
+      <div
+        class="mode-indicator"
+        [class.draw-mode]="isDrawing()"
+        [class.edit-mode]="isEditing()"
+        [class.delete-mode]="isDeleting()"
+      >
+        <mat-icon>info</mat-icon>
+        <div class="mode-content">
+          <span class="mode-text">
+            @if (isDrawing()) {
+              Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o
+              doble-click en el último.
+            }
+            @if (isEditing()) {
+              Click en un polígono para editarlo. Arrastra los puntos o el polígono completo. Click
+              "Guardar" cuando termines.
+            }
+            @if (isDeleting()) {
+              Click en los polígonos que quieres eliminar, luego click "Guardar" para confirmar.
+            }
+          </span>
+          @if (isEditing() || isDeleting()) {
+            <div class="mode-actions">
+              <button mat-raised-button color="primary" (click)="saveChanges()">
+                <mat-icon>check</mat-icon>
+                Guardar
+              </button>
+              <button mat-stroked-button (click)="stopDrawing()">
+                <mat-icon>close</mat-icon>
+                Cancelar
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <mat-divider />
+
+  <!-- Empty state -->
+  @if (polygonCount() === 0) {
+    <div class="empty-state-container">
+      <mat-icon class="empty-icon">polyline</mat-icon>
+      <h3>Sin polígonos</h3>
+      <p>Usa el botón "Dibujar" arriba para crear polígonos en el mapa.</p>
+    </div>
+  } @else {
+    <!-- Action buttons -->
+    <div class="action-bar">
+      <button
+        mat-stroked-button
+        color="primary"
+        (click)="showAll()"
+        matTooltip="Mostrar todos los polígonos"
+      >
+        <mat-icon>visibility</mat-icon>
+        Mostrar todos
+      </button>
+      <button
+        mat-stroked-button
+        color="primary"
+        (click)="hideAll()"
+        matTooltip="Ocultar todos los polígonos"
+      >
+        <mat-icon>visibility_off</mat-icon>
+        Ocultar todos
+      </button>
+      <button
+        mat-stroked-button
+        color="warn"
+        (click)="deleteAll()"
+        matTooltip="Eliminar todos los polígonos"
+      >
+        <mat-icon>delete_sweep</mat-icon>
+        Borrar todos
+      </button>
+    </div>
+
+    <mat-divider />
+
+    <!-- Polygon list -->
+    <div class="polygon-list-container">
+      <mat-list class="polygon-list">
+        @for (polygon of polygons(); track polygon.id) {
+          <mat-list-item class="polygon-item" [class.hidden]="!polygon.visible">
+            <div class="polygon-card">
+              <!-- Header -->
+              <div class="polygon-header">
+                <!-- Color indicator -->
+                <div class="color-indicator-wrapper">
+                  <input
+                    type="color"
+                    [value]="polygon.color"
+                    (change)="updateColor(polygon.id, $any($event.target).value)"
+                    class="color-picker"
+                    matTooltip="Cambiar color"
+                  />
+                  <div class="color-indicator" [style.background-color]="polygon.color"></div>
+                </div>
+
+                <!-- Name -->
+                <div class="polygon-name-section">
+                  @if (editingNameId === polygon.id) {
+                    <mat-form-field appearance="outline" class="name-input">
+                      <input
+                        matInput
+                        [value]="polygon.name"
+                        (keyup.enter)="finishEditingName(polygon, $any($event.target).value)"
+                        (keyup.escape)="cancelEditingName()"
+                        (blur)="finishEditingName(polygon, $any($event.target).value)"
+                        [placeholder]="polygon.name || 'Nombre del polígono'"
+                        autofocus
+                      />
+                    </mat-form-field>
+                  } @else {
+                    <div class="polygon-name" (click)="startEditingName(polygon.id)">
+                      <span class="name-text">{{ polygon.name || 'Sin nombre' }}</span>
+                      <mat-icon class="edit-icon">edit</mat-icon>
+                    </div>
+                  }
+                </div>
+
+                <!-- Actions -->
+                <div class="polygon-actions">
+                  <button
+                    mat-icon-button
+                    (click)="toggleVisibility(polygon.id)"
+                    [matTooltip]="polygon.visible ? 'Ocultar' : 'Mostrar'"
+                  >
+                    <mat-icon>{{ polygon.visible ? 'visibility' : 'visibility_off' }}</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="deletePolygon(polygon.id)"
+                    matTooltip="Eliminar"
+                  >
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Details -->
+              <div class="polygon-details">
+                <div class="detail-item">
+                  <mat-icon class="detail-icon">straighten</mat-icon>
+                  <span class="detail-label">Vértices:</span>
+                  <span class="detail-value">{{ getCoordinatesCount(polygon) }}</span>
+                </div>
+                <div class="detail-item">
+                  <mat-icon class="detail-icon">schedule</mat-icon>
+                  <span class="detail-label">Modificado:</span>
+                  <span class="detail-value">{{ formatDate(polygon.updatedAt) }}</span>
+                </div>
+              </div>
+            </div>
+          </mat-list-item>
+          @if (!$last) {
+            <mat-divider />
+          }
+        }
+      </mat-list>
+    </div>
+  }
+</div>
