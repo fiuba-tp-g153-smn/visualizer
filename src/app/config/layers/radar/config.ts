@@ -31,7 +31,7 @@ const RADAR_DEFAULTS = {
     // },
   ] as const,
   category: LayerCategory.RADAR,
-  tms: true,
+  tms: false,
 };
 
 const satelitePrefix = 'radar';

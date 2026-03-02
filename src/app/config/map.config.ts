@@ -12,10 +12,10 @@ export const MAP_CONFIG = {
   minZoom: 2,
   maxZoom: 18,
 
-  // Proveedor de tiles por defecto
-  defaultTileProviderId: 'argenmap',
+  // Default base map ID
+  defaultBaseMapId: 'argenmap',
 
-  // Número de frames siguientes a pre-renderizar en el DOM con opacity=0
+  // Number of next frames to pre-render in the DOM with opacity=0
   // para animaciones suaves sin flashes durante playback
   prerenderNextFrames: 2,
 };

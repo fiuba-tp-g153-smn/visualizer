@@ -1,0 +1,25 @@
+<div class="base-map-selector">
+  <div class="base-map-grid">
+    @for (baseMap of baseMaps; track baseMap.id) {
+      <div
+        class="base-map-card"
+        [class.active]="isActive(baseMap.id)"
+        (click)="selectBaseMap(baseMap.id)"
+      >
+        <div class="base-map-preview">
+          @if (getPreviewUrl(baseMap)) {
+            <img [src]="getPreviewUrl(baseMap)" [alt]="baseMap.name" class="preview-image" />
+          } @else {
+            <mat-icon class="preview-icon">map</mat-icon>
+          }
+        </div>
+        <div class="base-map-info">
+          <h4 class="base-map-name">{{ baseMap.name }}</h4>
+          <span class="base-map-zoom"
+            >Zoom: {{ baseMap.minZoom || 0 }} - {{ baseMap.maxZoom }}</span
+          >
+        </div>
+      </div>
+    }
+  </div>
+</div>

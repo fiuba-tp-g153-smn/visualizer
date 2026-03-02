@@ -1,31 +1,34 @@
 /**
- * Configuración de proveedores de tiles (mapas base)
+ * Base map configuration
+ *
+ * Defines available base map styles and their tile sources.
+ * Each base map provides different visualizations (street maps, satellite imagery, etc.)
  */
 
-import { TileProvider } from '../models';
+import { BaseMap } from '../models';
 
 /**
- * Configuración de coordenadas para las previews de tiles
- * Ajustar estos valores para centrar las previews en Argentina
+ * Preview tile coordinates configuration
+ * Adjust these values to center previews on Argentina
  */
-export const TILE_PREVIEW_CONFIG = {
+export const BASE_MAP_PREVIEW_CONFIG = {
   z: 2,
   x: 1,
   y: 2,
 };
 
 /**
- * Convierte coordenadas Y estándar a coordenadas Y de TMS
- * En TMS, Y está invertido: tms_y = (2^zoom - 1) - y
+ * Converts standard Y coordinates to TMS Y coordinates
+ * In TMS, Y is inverted: tms_y = (2^zoom - 1) - y
  */
 function getTmsY(y: number, zoom: number): number {
   return Math.pow(2, zoom) - 1 - y;
 }
 
 /**
- * Proveedores de tiles disponibles
+ * Available base map configurations
  */
-export const TILE_PROVIDERS: Record<string, TileProvider> = {
+export const BASE_MAPS: Record<string, BaseMap> = {
   argenmap: {
     id: 'argenmap',
     name: 'ArgenMAP (IGN)',
@@ -33,9 +36,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">IGN</a>',
     maxZoom: 19,
-    previewZ: TILE_PREVIEW_CONFIG.z,
-    previewX: TILE_PREVIEW_CONFIG.x,
-    previewY: getTmsY(TILE_PREVIEW_CONFIG.y, TILE_PREVIEW_CONFIG.z), // Convierte Y estándar a TMS
+    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
+    previewX: BASE_MAP_PREVIEW_CONFIG.x,
+    previewY: getTmsY(BASE_MAP_PREVIEW_CONFIG.y, BASE_MAP_PREVIEW_CONFIG.z),
   },
 
   osm: {
@@ -45,9 +48,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
-    previewZ: TILE_PREVIEW_CONFIG.z,
-    previewX: TILE_PREVIEW_CONFIG.x,
-    previewY: TILE_PREVIEW_CONFIG.y,
+    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
+    previewX: BASE_MAP_PREVIEW_CONFIG.x,
+    previewY: BASE_MAP_PREVIEW_CONFIG.y,
   },
 
   satellite: {
@@ -57,9 +60,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
     maxZoom: 18,
-    previewZ: TILE_PREVIEW_CONFIG.z,
-    previewX: TILE_PREVIEW_CONFIG.x,
-    previewY: TILE_PREVIEW_CONFIG.y,
+    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
+    previewX: BASE_MAP_PREVIEW_CONFIG.x,
+    previewY: BASE_MAP_PREVIEW_CONFIG.y,
   },
 
   cartoDB: {
@@ -69,9 +72,9 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 19,
-    previewZ: TILE_PREVIEW_CONFIG.z,
-    previewX: TILE_PREVIEW_CONFIG.x,
-    previewY: TILE_PREVIEW_CONFIG.y,
+    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
+    previewX: BASE_MAP_PREVIEW_CONFIG.x,
+    previewY: BASE_MAP_PREVIEW_CONFIG.y,
   },
 
   cartoDBDark: {
@@ -81,26 +84,27 @@ export const TILE_PROVIDERS: Record<string, TileProvider> = {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     maxZoom: 19,
-    previewZ: TILE_PREVIEW_CONFIG.z,
-    previewX: TILE_PREVIEW_CONFIG.x,
-    previewY: TILE_PREVIEW_CONFIG.y,
+    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
+    previewX: BASE_MAP_PREVIEW_CONFIG.x,
+    previewY: BASE_MAP_PREVIEW_CONFIG.y,
   },
 } as const;
 
 /**
- * Obtener un proveedor por su ID
+ * Get a base map configuration by ID
+ * @throws {Error} If base map ID is not found
  */
-export function getTileProvider(id: string): TileProvider {
-  const provider = TILE_PROVIDERS[id];
-  if (!provider) {
-    throw new Error(`Tile provider '${id}' not found`);
+export function getBaseMap(id: string): BaseMap {
+  const baseMap = BASE_MAPS[id];
+  if (!baseMap) {
+    throw new Error(`Base map '${id}' not found`);
   }
-  return provider;
+  return baseMap;
 }
 
 /**
- * Obtener lista de todos los proveedores
+ * Get all available base map configurations
  */
-export function getAllTileProviders(): TileProvider[] {
-  return Object.values(TILE_PROVIDERS);
+export function getAllBaseMaps(): BaseMap[] {
+  return Object.values(BASE_MAPS);
 }

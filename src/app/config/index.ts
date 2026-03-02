@@ -10,8 +10,8 @@ export { buildConfigUrl, buildTileUrl } from './backend.config';
 // Map configuration
 export { MAP_CONFIG } from './map.config';
 
-// Tile provider configuration
-export { TILE_PROVIDERS, getTileProvider } from './tile-providers.config';
+// Base map configuration
+export { BASE_MAPS, getBaseMap, getAllBaseMaps } from './base-maps.config';
 
 // Layer definitions and setup (re-export from layers folder)
 export {
