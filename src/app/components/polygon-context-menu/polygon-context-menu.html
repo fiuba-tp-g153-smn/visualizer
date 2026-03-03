@@ -1,0 +1,14 @@
+<mat-nav-list class="polygon-context-menu">
+  <mat-list-item (click)="onEdit()">
+    <mat-icon matListItemIcon>edit_location</mat-icon>
+    <span matListItemTitle>Editar geometría</span>
+  </mat-list-item>
+  <mat-list-item (click)="onToggleVisibility()">
+    <mat-icon matListItemIcon>{{ polygonVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
+    <span matListItemTitle>{{ polygonVisible ? 'Ocultar' : 'Mostrar' }}</span>
+  </mat-list-item>
+  <mat-list-item (click)="onDelete()">
+    <mat-icon matListItemIcon color="warn">delete</mat-icon>
+    <span matListItemTitle>Eliminar</span>
+  </mat-list-item>
+</mat-nav-list>

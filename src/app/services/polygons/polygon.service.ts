@@ -162,16 +162,32 @@ export class PolygonService {
    * Genera un nombre por defecto
    */
   private generateDefaultName(): string {
-    const count = this.polygons().length + 1;
-    return `Polígono ${count}`;
+    return 'Polígono sin nombrar';
   }
 
   /**
    * Obtiene el siguiente color disponible
+   * Busca el primer color no usado, o rota si todos están en uso
    */
   private getNextColor(): string {
-    const currentCount = this.polygons().length;
-    return this.defaultColors[currentCount % this.defaultColors.length];
+    const usedColors = new Set(this.polygons().map((p) => p.color));
+
+    // Buscar el primer color no usado
+    for (const color of this.defaultColors) {
+      if (!usedColors.has(color)) {
+        return color;
+      }
+    }
+
+    // Si todos están en uso, rotar basado en la cantidad de polígonos
+    return this.defaultColors[this.polygons().length % this.defaultColors.length];
+  }
+
+  /**
+   * Obtiene el siguiente color disponible (método público)
+   */
+  getNextAvailableColor(): string {
+    return this.getNextColor();
   }
 
   /**
