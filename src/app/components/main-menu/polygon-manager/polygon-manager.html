@@ -3,8 +3,7 @@
   <div class="drawing-controls">
     <div class="control-buttons">
       <button
-        mat-raised-button
-        [color]="isDrawing() ? 'primary' : undefined"
+        mat-button
         (click)="toggleDrawMode()"
         matTooltip="Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último."
         class="control-button"
@@ -13,7 +12,7 @@
         {{ isDrawing() ? 'Cancelar' : 'Dibujar' }}
       </button>
       <button
-        mat-raised-button
+        mat-button
         (click)="deleteAll()"
         [disabled]="polygonCount() === 0"
         matTooltip="Eliminar todos los polígonos"
@@ -58,7 +57,11 @@
 
                 <!-- Name -->
                 <div class="polygon-name-section">
-                  <mat-form-field appearance="outline" class="name-input" [class.readonly]="editingNameId !== polygon.id">
+                  <mat-form-field
+                    appearance="outline"
+                    class="name-input"
+                    [class.readonly]="editingNameId !== polygon.id"
+                  >
                     <input
                       matInput
                       [value]="polygon.name || 'Sin nombre'"
@@ -66,7 +69,10 @@
                       (click)="editingNameId !== polygon.id && startEditingName(polygon.id)"
                       (keyup.enter)="finishEditingName(polygon, $any($event.target).value)"
                       (keyup.escape)="cancelEditingName()"
-                      (blur)="editingNameId === polygon.id && finishEditingName(polygon, $any($event.target).value)"
+                      (blur)="
+                        editingNameId === polygon.id &&
+                          finishEditingName(polygon, $any($event.target).value)
+                      "
                       placeholder="Nombre del polígono"
                     />
                   </mat-form-field>
