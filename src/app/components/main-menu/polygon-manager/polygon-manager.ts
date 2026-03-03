@@ -9,7 +9,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { PolygonService } from '../../../services/polygons/polygon.service';
-import { PolygonDrawingService } from '../../../services/polygons/polygon-drawing.service';
+import {
+  DrawingMode,
+  PolygonDrawingService,
+} from '../../../services/polygons/polygon-drawing.service';
 import { Polygon } from '../../../models/polygon.model';
 import { MenuPanelComponent } from '../menu-section.model';
 
@@ -56,37 +59,20 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
 
   // Drawing controls
   toggleDrawMode(): void {
-    this.drawingService.toggleDrawMode('draw');
-  }
-
-  toggleEditMode(): void {
-    this.drawingService.toggleDrawMode('edit');
-  }
-
-  toggleDeleteMode(): void {
-    this.drawingService.toggleDrawMode('delete');
+    this.drawingService.toggleDrawMode(DrawingMode.DRAW);
   }
 
   stopDrawing(): void {
     this.drawingService.stopDrawing();
   }
 
-  saveChanges(): void {
-    // The changes are automatically saved by the event handlers
-    // Just stop the current mode
-    this.drawingService.stopDrawing();
-  }
-
   isDrawing(): boolean {
-    return this.drawingMode() === 'draw';
+    return this.drawingMode() === DrawingMode.DRAW;
   }
 
-  isEditing(): boolean {
-    return this.drawingMode() === 'edit';
-  }
-
-  isDeleting(): boolean {
-    return this.drawingMode() === 'delete';
+  editPolygon(id: string): void {
+    // Set the polygon to edit mode
+    this.drawingService.startEditMode(id);
   }
 
   toggleVisibility(id: string): void {
@@ -94,23 +80,12 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   }
 
   deletePolygon(id: string): void {
-    if (confirm('¿Estás seguro de que deseas eliminar este polígono?')) {
-      this.polygonService.deletePolygon(id);
-    }
+    this.polygonService.deletePolygon(id);
   }
 
   deleteAll(): void {
-    if (confirm('¿Estás seguro de que deseas eliminar TODOS los polígonos?')) {
-      this.polygonService.deleteAll();
-    }
-  }
-
-  hideAll(): void {
-    this.polygonService.hideAll();
-  }
-
-  showAll(): void {
-    this.polygonService.showAll();
+    // Delete without confirmation for now (can add modal later)
+    this.polygonService.deleteAll();
   }
 
   startEditingName(id: string): void {

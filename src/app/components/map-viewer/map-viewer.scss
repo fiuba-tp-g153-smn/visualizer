@@ -1,7 +1,6 @@
 // Reset específico para Leaflet
 :host {
   * {
-    margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
@@ -39,12 +38,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
 
   &:hover:not(:disabled) {
     background-color: var(--mat-sys-surface-container-high);
@@ -91,4 +84,64 @@
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   background-color: var(--mat-sys-surface-container-low);
   user-select: none;
+}
+
+// Edit controls container - posicionamiento
+.edit-controls-container {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+}
+
+// Leaflet Draw customizations
+::ng-deep {
+  // Contenedor de markers customizados - sin estilos propios para no interferir
+  .custom-polygon-marker-container {
+    background: transparent;
+    border: none;
+    overflow: visible;
+    border-radius: 50%;
+  }
+
+  // Markers customizados para polígonos
+  .custom-polygon-marker {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    // El color de fondo se aplica dinámicamente via style attribute
+    // NO definimos opacity aquí - Leaflet la controla para diferenciar vértices de midpoints
+  }
+
+  // Forzar todos los íconos de edición a ser redondos con el color del polígono
+  .leaflet-editing-icon {
+    border-radius: 50%;
+    background-color: var(--polygon-color, #3388ff);
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  // Midpoints (puntos de inserción) - más pequeños y con opacidad reducida
+  .leaflet-marker-icon.custom-polygon-marker-container.leaflet-touch-icon {
+    .custom-polygon-marker {
+      width: 8px;
+      height: 8px;
+    }
+    opacity: 0.6; // Leaflet aplica esto a los midpoints
+  }
+
+  // Líneas de guía mientras se dibuja
+  .leaflet-draw-guide-dash {
+    stroke-dasharray: 8, 8;
+  }
+
+  // Vértices de polígono durante la creación
+  .leaflet-marker-pane .leaflet-marker-icon {
+    &[src*='marker-icon'] {
+      display: none;
+    }
+  }
 }
