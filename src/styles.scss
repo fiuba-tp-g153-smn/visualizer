@@ -30,6 +30,20 @@ html {
 @import 'leaflet/dist/leaflet.css';
 @import 'leaflet-draw/dist/leaflet.draw.css';
 
+/* 
+ * No interpolation for scientific data tiles - preserve pixel accuracy
+ * pixelated: Modern standard, maximum sharpness
+ * crisp-edges: Fallback for older browsers
+ * nearest-neighbor: IE compatibility
+ */
+.leaflet-tile {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
 html,
 body {
   margin: 0;

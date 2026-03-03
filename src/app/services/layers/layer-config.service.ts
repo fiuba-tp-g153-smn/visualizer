@@ -12,6 +12,7 @@ import {
   RadarTileLayer,
   GoesTileLayerConfig,
 } from '../../models';
+import { LayersService } from './layers.service';
 
 /**
  * Service responsible for fetching and caching layer configurations.
@@ -30,6 +31,7 @@ import {
 })
 export class LayerConfigService {
   private readonly http = inject(HttpClient);
+  private readonly layersService = inject(LayersService);
   private readonly configMap = signal<Map<string, LayerConfig>>(new Map());
 
   // ============================================================================
@@ -154,7 +156,8 @@ export class LayerConfigService {
 
   /**
    * Gets available tilesets for tile layers.
-   * Returns undefined if the layer hasn't been configured.
+   * Returns undefined if config not yet loaded.
+   * @throws Error if called on non-TILE layer
    */
   getAvailableTilesets(layerId: string): string[] | undefined {
     const config = this.getConfig(layerId);
@@ -164,7 +167,9 @@ export class LayerConfigService {
       case LayerType.TILE:
         return config.availableTilesets;
       default:
-        return undefined;
+        throw new Error(
+          `Cannot get available tilesets for non-TILE layer '${layerId}' (type: ${config.type})`,
+        );
     }
   }
 
@@ -224,26 +229,33 @@ export class LayerConfigService {
    * Calculates the optimal timeIndex for a given range of images.
    * @param layerId - The layer ID
    * @param lastImagesCount - Number of most recent images to include
-   * @returns The calculated timeIndex, or undefined if config is not available
+   * @returns The calculated timeIndex, or undefined if config not available
+   * @throws Error if called on non-TILE layer or no tilesets available
    */
   calculateTimeIndexForRange(layerId: string, lastImagesCount: number): number | undefined {
     const config = this.getConfig(layerId);
-    if (!config || config.type !== LayerType.TILE) {
-      return undefined;
-    }
+    if (!config) return undefined;
 
-    const maxIndex = config.availableTilesets.length - 1;
+    switch (config.type) {
+      case LayerType.TILE: {
+        const maxIndex = config.availableTilesets.length - 1;
 
-    if (maxIndex < 0) {
-      return undefined;
-    }
+        if (maxIndex < 0) {
+          throw new Error(`No tilesets available for layer '${layerId}'`);
+        }
 
-    if (lastImagesCount === 1) {
-      // Go to the latest period
-      return maxIndex;
-    } else {
-      // Go to the start of the lastImagesCount range
-      return Math.max(0, maxIndex - lastImagesCount + 1);
+        if (lastImagesCount === 1) {
+          // Go to the latest period
+          return maxIndex;
+        } else {
+          // Go to the start of the lastImagesCount range
+          return Math.max(0, maxIndex - lastImagesCount + 1);
+        }
+      }
+      default:
+        throw new Error(
+          `Cannot calculate time index for non-TILE layer '${layerId}' (type: ${config.type})`,
+        );
     }
   }
 }
