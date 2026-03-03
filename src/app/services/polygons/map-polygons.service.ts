@@ -100,8 +100,13 @@ export class MapPolygonsService {
   handleDrawingModeChange(mode: DrawingMode, editingPolygonId: string | null): void {
     if (!this.map) return;
 
-    // Stop any active drawing
+    // Cancel any active drawing (removes the incomplete polygon)
     if (this.currentDrawingPolygon) {
+      // Remove the incomplete polygon from the map
+      if (this.map.hasLayer(this.currentDrawingPolygon)) {
+        this.map.removeLayer(this.currentDrawingPolygon);
+      }
+      // Stop the drawing process
       this.map.editTools.stopDrawing();
       this.currentDrawingPolygon = null;
     }
@@ -162,6 +167,31 @@ export class MapPolygonsService {
       fillOpacity: 0.2,
     };
 
+    // Configure editOptions on the map before starting drawing
+    // This ensures the line guide gets the correct options from the start
+    const editTools = (this.map as any).editTools;
+    if (editTools) {
+      const lineGuideStyle = {
+        color: nextColor,
+        weight: 2,
+        opacity: 0.6,
+        dashArray: '5, 5',
+      };
+
+      // Configure in editTools options
+      editTools.options = editTools.options || {};
+      editTools.options.lineGuideOptions = lineGuideStyle;
+
+      // CRITICAL: Apply style directly to the line guide polylines
+      // These are reused objects that need to be styled before drawing starts
+      if (editTools.forwardLineGuide) {
+        editTools.forwardLineGuide.setStyle(lineGuideStyle);
+      }
+      if (editTools.backwardLineGuide) {
+        editTools.backwardLineGuide.setStyle(lineGuideStyle);
+      }
+    }
+
     // Start drawing a new polygon
     this.currentDrawingPolygon = this.map.editTools.startPolygon(undefined, polygonOptions);
 
@@ -175,7 +205,7 @@ export class MapPolygonsService {
         this.currentDrawingPolygon.addTo(this.map);
       }
 
-      // Configure the editor's line guide options to use the correct color
+      // Also set line guide options directly on the editor as a backup
       const editor = (this.currentDrawingPolygon as any).editor;
       if (editor) {
         editor.options.lineGuideOptions = {

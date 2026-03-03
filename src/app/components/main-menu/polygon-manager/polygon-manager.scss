@@ -1,12 +1,15 @@
 :host {
-  display: block;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .polygon-manager {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .empty-state-container {
@@ -18,7 +21,8 @@
   text-align: center;
   gap: 8px;
   color: var(--mat-sys-on-surface-variant);
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 
   .empty-icon {
     opacity: 0.5;
@@ -190,57 +194,61 @@
   display: flex;
   align-items: center;
 
-  .polygon-name {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-    width: 100%;
-
-    &:hover {
-      background-color: var(--mat-sys-surface-container);
-
-      .edit-icon {
-        opacity: 1;
-      }
-    }
-
-    .name-text {
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--mat-sys-on-surface);
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .edit-icon {
-      opacity: 0;
-      transition: opacity 0.2s ease;
-      color: var(--mat-sys-on-surface-variant);
-    }
-  }
-
   .name-input {
     width: 100%;
+    font-size: 14px;
 
     ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        padding-left: 0;
+        padding-right: 0;
+      }
+
       .mat-mdc-form-field-infix {
         padding-top: 8px;
         padding-bottom: 8px;
         min-height: auto;
       }
 
-      .mat-mdc-text-field-wrapper {
-        padding: 0;
-      }
-
       .mat-mdc-form-field-subscript-wrapper {
         display: none;
+      }
+
+      input.mat-mdc-input-element {
+        padding-left: 8px;
+        padding-right: 8px;
+        font-weight: 500;
+        font-size: 15px;
+      }
+
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-width: 2px;
+      }
+    }
+
+    &.readonly {
+      pointer-events: auto;
+
+      ::ng-deep {
+        input.mat-mdc-input-element {
+          cursor: pointer;
+        }
+
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: transparent;
+        }
+
+        &:hover {
+          .mdc-notched-outline__leading,
+          .mdc-notched-outline__notch,
+          .mdc-notched-outline__trailing {
+            border-color: var(--mat-sys-outline-variant);
+          }
+        }
       }
     }
   }

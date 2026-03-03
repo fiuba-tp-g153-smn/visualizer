@@ -58,23 +58,18 @@
 
                 <!-- Name -->
                 <div class="polygon-name-section">
-                  @if (editingNameId === polygon.id) {
-                    <mat-form-field appearance="outline" class="name-input">
-                      <input
-                        matInput
-                        [value]="polygon.name"
-                        (keyup.enter)="finishEditingName(polygon, $any($event.target).value)"
-                        (keyup.escape)="cancelEditingName()"
-                        (blur)="finishEditingName(polygon, $any($event.target).value)"
-                        [placeholder]="polygon.name || 'Nombre del polígono'"
-                        autofocus
-                      />
-                    </mat-form-field>
-                  } @else {
-                    <div class="polygon-name" (click)="startEditingName(polygon.id)">
-                      <span class="name-text">{{ polygon.name || 'Sin nombre' }}</span>
-                    </div>
-                  }
+                  <mat-form-field appearance="outline" class="name-input" [class.readonly]="editingNameId !== polygon.id">
+                    <input
+                      matInput
+                      [value]="polygon.name || 'Sin nombre'"
+                      [readonly]="editingNameId !== polygon.id"
+                      (click)="editingNameId !== polygon.id && startEditingName(polygon.id)"
+                      (keyup.enter)="finishEditingName(polygon, $any($event.target).value)"
+                      (keyup.escape)="cancelEditingName()"
+                      (blur)="editingNameId === polygon.id && finishEditingName(polygon, $any($event.target).value)"
+                      placeholder="Nombre del polígono"
+                    />
+                  </mat-form-field>
                 </div>
 
                 <!-- Actions -->
