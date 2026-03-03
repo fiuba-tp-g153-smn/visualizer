@@ -145,6 +145,11 @@ export class MapContainer implements OnInit, OnDestroy {
     this.layersService.destroy();
     this.polygonsService.destroy();
 
+    // Clear event blocking interval
+    if ((this as any)._eventBlockingInterval) {
+      clearInterval((this as any)._eventBlockingInterval);
+    }
+
     if (this.map) {
       this.map.remove();
     }
@@ -165,8 +170,8 @@ export class MapContainer implements OnInit, OnDestroy {
     this.layersService.initialize(this.map);
     this.polygonsService.initialize(this.map, this.viewContainerRef, this.injector);
 
-    // Prevent UI controls from interfering with map/polygon drawing
-    this.disableMapEventsOnUIElements();
+    // Prevent UI elements from propagating events to the map
+    this.preventUIEventPropagation();
 
     // Update zoom signal from map events (user scrolling or programmatic changes)
     this.map.on('zoom', () => {
@@ -202,37 +207,34 @@ export class MapContainer implements OnInit, OnDestroy {
   }
 
   /**
-   * Disable map events on UI elements to prevent interference with drawing
+   * Prevent UI elements from propagating events to the map and cancel drawing on button clicks
    */
-  private disableMapEventsOnUIElements(): void {
-    // Wait a bit for Angular to render the DOM
-    setTimeout(() => {
-      // Disable click propagation on zoom controls
-      const zoomControls = document.querySelector('.zoom-controls');
-      if (zoomControls) {
-        L.DomEvent.disableClickPropagation(zoomControls as HTMLElement);
-        L.DomEvent.disableScrollPropagation(zoomControls as HTMLElement);
+  private preventUIEventPropagation(): void {
+    // Apply L.DomEvent.disableClickPropagation to main UI containers
+    const applyEventBlocking = (selector: string) => {
+      const element = document.querySelector(selector) as HTMLElement;
+      if (element && !(element as any)._leaflet_disable_events) {
+        L.DomEvent.disableClickPropagation(element);
+        L.DomEvent.disableScrollPropagation(element);
+        (element as any)._leaflet_disable_events = true;
       }
+    };
 
-      // Disable click propagation on main menu
-      const mainMenu = document.querySelector('.main-menu-wrapper');
-      if (mainMenu) {
-        L.DomEvent.disableClickPropagation(mainMenu as HTMLElement);
-        L.DomEvent.disableScrollPropagation(mainMenu as HTMLElement);
-      }
+    // Check periodically for UI elements and apply event blocking
+    const checkAndApply = () => {
+      applyEventBlocking('.main-menu-wrapper');
+      applyEventBlocking('.zoom-controls');
+      applyEventBlocking('.edit-controls-container');
+    };
 
-      // Also check for edit controls periodically since they appear dynamically
-      const checkEditControls = () => {
-        const editControls = document.querySelector('.edit-controls-container');
-        if (editControls && !(editControls as any)._leaflet_disable_click) {
-          L.DomEvent.disableClickPropagation(editControls as HTMLElement);
-          L.DomEvent.disableScrollPropagation(editControls as HTMLElement);
-        }
-      };
+    // Initial check
+    setTimeout(checkAndApply, 100);
 
-      // Run check every second to catch edit controls when they appear
-      setInterval(checkEditControls, 1000);
-    }, 100);
+    // Periodic check for dynamically added elements
+    const intervalId = setInterval(checkAndApply, 1000);
+
+    // Store interval ID for cleanup
+    (this as any)._eventBlockingInterval = intervalId;
   }
 
   private changeBaseMap(baseMap: BaseMap): void {
