@@ -9,7 +9,7 @@ const GLM_DEFAULTS = {
   availablePeriods: [1, 6, 12, 24] as const,
   type: LayerType.TILE,
   category: LayerCategory.GOES_19,
-  minNativeZoom: 4,
+  minNativeZoom: 3,
   maxNativeZoom: 7,
   boundingBox: [
     [-60.0, -110.0],
