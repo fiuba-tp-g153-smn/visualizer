@@ -36,9 +36,9 @@
     "@angular/platform-browser-dynamic": "^21.0.0",
     "@angular/router": "^21.0.0",
     "@types/leaflet": "^1.9.21",
-    "@types/leaflet-draw": "^1.0.13",
+    "@types/leaflet-editable": "^1.2.6",
     "leaflet": "^1.9.4",
-    "leaflet-draw": "^1.0.4",
+    "leaflet-editable": "^1.2.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

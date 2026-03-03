@@ -95,50 +95,35 @@
   z-index: 10000;
 }
 
-// Leaflet Draw customizations
+// Leaflet Editable customizations
 ::ng-deep {
-  // Contenedor de markers customizados - sin estilos propios para no interferir
-  .custom-polygon-marker-container {
-    background: transparent;
-    border: none;
-    overflow: visible;
-    border-radius: 50%;
-  }
-
-  // Markers customizados para polígonos
-  .custom-polygon-marker {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    // El color de fondo se aplica dinámicamente via style attribute
-    // NO definimos opacity aquí - Leaflet la controla para diferenciar vértices de midpoints
-  }
-
-  // Forzar todos los íconos de edición a ser redondos con el color del polígono
-  .leaflet-editing-icon {
+  // Vertex markers while editing
+  .leaflet-vertex-icon {
     border-radius: 50%;
     background-color: var(--polygon-color, #3388ff);
     border: 2px solid white;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    width: 10px;
+    height: 10px;
   }
 
-  // Midpoints (puntos de inserción) - más pequeños y con opacidad reducida
-  .leaflet-marker-icon.custom-polygon-marker-container.leaflet-touch-icon {
-    .custom-polygon-marker {
-      width: 8px;
-      height: 8px;
-    }
-    opacity: 0.6; // Leaflet aplica esto a los midpoints
+  // Middle markers (insertion points)
+  .leaflet-middle-icon {
+    border-radius: 50%;
+    background-color: var(--polygon-color, #3388ff);
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    width: 8px;
+    height: 8px;
+    opacity: 0.6;
   }
 
-  // Líneas de guía mientras se dibuja
-  .leaflet-draw-guide-dash {
+  // Guide dashes while drawing
+  .leaflet-editable-guide-line {
     stroke-dasharray: 8, 8;
   }
 
-  // Vértices de polígono durante la creación
+  // Hide default Leaflet marker icons
   .leaflet-marker-pane .leaflet-marker-icon {
     &[src*='marker-icon'] {
       display: none;
