@@ -1,5 +1,7 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/polygon.model';
+import { AlertsService } from './alerts.service';
+import { firstValueFrom } from 'rxjs';
 
 /**
  * Servicio para gestionar polígonos en el mapa
@@ -10,7 +12,20 @@ import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/polygo
 })
 export class PolygonService {
   private readonly STORAGE_KEY = 'mapasmn_polygons';
+  private readonly SIMPLIFIED_STORAGE_KEY = 'mapasmn_use_simplified';
   private readonly polygons = signal<Polygon[]>([]);
+  private readonly alertsService = inject(AlertsService);
+
+  /**
+   * Loading states for polygon operations
+   */
+  private readonly loadingCut = signal<Set<string>>(new Set());
+  private readonly loadingDepartments = signal<Set<string>>(new Set());
+
+  /**
+   * Usar geometrías simplificadas (más rápido, menor detalle)
+   */
+  readonly useSimplified = signal<boolean>(this.loadSimplifiedSetting());
 
   /**
    * Lista de polígonos como signal readonly
@@ -30,6 +45,20 @@ export class PolygonService {
   readonly polygonCount = computed(() => {
     return this.polygons().length;
   });
+
+  /**
+   * Check if a polygon is being cut
+   */
+  isPolygonBeingCut(id: string): boolean {
+    return this.loadingCut().has(id);
+  }
+
+  /**
+   * Check if departments are being loaded for a polygon
+   */
+  isDepartmentsLoading(id: string): boolean {
+    return this.loadingDepartments().has(id);
+  }
 
   /**
    * Colores predeterminados para polígonos
@@ -86,8 +115,26 @@ export class PolygonService {
 
     this.polygons.update((polygons) => {
       const updated = [...polygons];
+      const current = updated[index];
+
+      // If coordinates are changing and departments/originalCoordinates are not explicitly provided,
+      // clear them to indicate geometry has changed
+      let clearData = {};
+      if (
+        dto.coordinates &&
+        dto.departments === undefined &&
+        dto.originalCoordinates === undefined
+      ) {
+        clearData = {
+          departments: undefined,
+          departmentsVisible: false,
+          originalCoordinates: undefined,
+        };
+      }
+
       updated[index] = {
-        ...updated[index],
+        ...current,
+        ...clearData,
         ...dto,
         updatedAt: new Date(),
       };
@@ -191,6 +238,134 @@ export class PolygonService {
   }
 
   /**
+   * Alterna el uso de geometrías simplificadas
+   */
+  toggleSimplified(): void {
+    this.useSimplified.update((val) => !val);
+  }
+
+  /**
+   * Corta un polígono con los límites de Argentina
+   */
+  async cutPolygon(id: string): Promise<boolean> {
+    const polygon = this.getPolygonById(id);
+    if (!polygon) return false;
+
+    // Set loading state
+    this.loadingCut.update((set) => {
+      const newSet = new Set(set);
+      newSet.add(id);
+      return newSet;
+    });
+
+    try {
+      const cutCoordinates = await firstValueFrom(
+        this.alertsService.intersectCountry(polygon.coordinates, this.useSimplified()),
+      );
+
+      if (cutCoordinates.length === 0) {
+        console.error('[PolygonService] El resultado del corte está vacío');
+        throw new Error('El resultado del corte está vacío');
+      }
+
+      // Guardar las coordenadas originales si no existen
+      const originalCoordinates = polygon.originalCoordinates || polygon.coordinates;
+
+      this.updatePolygon(id, {
+        coordinates: cutCoordinates,
+        originalCoordinates: originalCoordinates,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('[PolygonService] Error al recortar polígono:', error);
+      return false;
+    } finally {
+      // Clear loading state
+      this.loadingCut.update((set) => {
+        const newSet = new Set(set);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  }
+
+  /**
+   * Restaura el polígono a sus coordenadas originales
+   */
+  undoCut(id: string): boolean {
+    const polygon = this.getPolygonById(id);
+    if (!polygon || !polygon.originalCoordinates) return false;
+
+    return this.updatePolygon(id, {
+      coordinates: polygon.originalCoordinates,
+      originalCoordinates: undefined,
+    });
+  }
+
+  /**
+   * Carga los departamentos que intersectan con un polígono
+   */
+  async loadDepartments(id: string): Promise<boolean> {
+    const polygon = this.getPolygonById(id);
+    if (!polygon) return false;
+
+    // Set loading state
+    this.loadingDepartments.update((set) => {
+      const newSet = new Set(set);
+      newSet.add(id);
+      return newSet;
+    });
+
+    try {
+      const response = await firstValueFrom(
+        this.alertsService.intersectDepartments(polygon.coordinates, this.useSimplified()),
+      );
+
+      this.updatePolygon(id, {
+        departments: response.departments,
+        departmentsVisible: true,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error al cargar departamentos:', error);
+      return false;
+    } finally {
+      // Clear loading state
+      this.loadingDepartments.update((set) => {
+        const newSet = new Set(set);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  }
+
+  /**
+   * Alterna la visibilidad de los departamentos de un polígono
+   */
+  toggleDepartmentsVisibility(id: string): boolean {
+    const polygon = this.getPolygonById(id);
+    if (!polygon) return false;
+
+    return this.updatePolygon(id, {
+      departmentsVisible: !polygon.departmentsVisible,
+    });
+  }
+
+  /**
+   * Oculta los departamentos de un polígono
+   */
+  hideDepartments(id: string): boolean {
+    const polygon = this.getPolygonById(id);
+    if (!polygon) return false;
+
+    return this.updatePolygon(id, {
+      departmentsVisible: false,
+    });
+  }
+
+  /**
    * Guarda los polígonos en localStorage
    */
   private saveToStorage(): void {
@@ -222,5 +397,31 @@ export class PolygonService {
       console.error('Error al cargar polígonos desde localStorage:', error);
       this.polygons.set([]);
     }
+  }
+
+  /**
+   * Guarda la configuración de simplificado en localStorage
+   */
+  private saveSimplifiedSetting(): void {
+    try {
+      localStorage.setItem(this.SIMPLIFIED_STORAGE_KEY, JSON.stringify(this.useSimplified()));
+    } catch (error) {
+      console.error('Error al guardar configuración de simplificado:', error);
+    }
+  }
+
+  /**
+   * Carga la configuración de simplificado desde localStorage
+   */
+  private loadSimplifiedSetting(): boolean {
+    try {
+      const data = localStorage.getItem(this.SIMPLIFIED_STORAGE_KEY);
+      if (data) {
+        return JSON.parse(data) as boolean;
+      }
+    } catch (error) {
+      console.error('Error al cargar configuración de simplificado:', error);
+    }
+    return true; // Por defecto usar simplificado
   }
 }

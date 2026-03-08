@@ -31,6 +31,7 @@ export class MapPolygonsService {
 
   private map: L.Map | null = null;
   private polygonLayers = new Map<string, L.Polygon>();
+  private departmentLayers = new Map<string, L.GeoJSON[]>(); // polygonId -> array of department GeoJSON layers
   private currentDrawingPolygon: L.Polygon | null = null;
   private contextMenuOverlayRef: OverlayRef | null = null;
   private originalCoordinates: Array<[number, number]> | null = null;
@@ -379,6 +380,139 @@ export class MapPolygonsService {
         this.map.removeLayer(layer);
         this.polygonLayers.delete(oldId);
       }
+      // Also remove associated department layers
+      this.removeDepartmentLayers(oldId);
+    }
+
+    // Sync department layers
+    this.syncDepartmentLayers(polygons);
+  }
+
+  /**
+   * Sync department layers for all polygons
+   */
+  private syncDepartmentLayers(polygons: Polygon[]): void {
+    if (!this.map) return;
+
+    // Track which polygons should have departments visible
+    const visibleDepartments = new Set<string>();
+
+    for (const polygon of polygons) {
+      if (
+        polygon.visible &&
+        polygon.departments &&
+        polygon.departments.length > 0 &&
+        polygon.departmentsVisible
+      ) {
+        visibleDepartments.add(polygon.id);
+        this.renderDepartmentLayers(polygon);
+      } else {
+        // Remove department layers if they shouldn't be visible
+        this.removeDepartmentLayers(polygon.id);
+      }
+    }
+  }
+
+  /**
+   * Render department layers for a polygon
+   */
+  private renderDepartmentLayers(polygon: Polygon): void {
+    if (!this.map || !polygon.departments) return;
+
+    // Check if layers already exist
+    const existingLayers = this.departmentLayers.get(polygon.id);
+    if (existingLayers && existingLayers.length > 0) {
+      // Layers already rendered, just ensure they're on the map
+      existingLayers.forEach((layer) => {
+        if (!this.map!.hasLayer(layer)) {
+          layer.addTo(this.map!);
+        }
+      });
+      return;
+    }
+
+    // Create custom pane for departments if it doesn't exist
+    if (!this.map.getPane('departments')) {
+      const pane = this.map.createPane('departments');
+      pane.style.zIndex = '400';
+      pane.style.pointerEvents = 'none';
+    }
+
+    // Create new layers
+    const layers: L.GeoJSON[] = [];
+    const departmentColor = this.lightenColor(polygon.color, 30);
+
+    for (const dept of polygon.departments) {
+      // Render the FULL department geometry (not just intersection)
+      const geoJsonLayer = L.geoJSON(dept.geometry as any, {
+        pane: 'departments',
+        interactive: false,
+        style: {
+          color: departmentColor,
+          weight: 2,
+          opacity: 0.7,
+          fillColor: departmentColor,
+          fillOpacity: 0.15,
+          dashArray: '3, 6',
+        },
+      });
+
+      // Configure layer to be non-interactive
+      geoJsonLayer.eachLayer((l: any) => {
+        if (l._path) {
+          l._path.style.pointerEvents = 'none';
+        }
+      });
+
+      // Add tooltip with department info
+      if (dept.properties && dept.properties['nam']) {
+        geoJsonLayer.bindTooltip(dept.properties['nam'], {
+          permanent: false,
+          direction: 'center',
+          className: 'department-tooltip',
+        });
+      }
+
+      geoJsonLayer.addTo(this.map);
+      layers.push(geoJsonLayer);
+    }
+
+    this.departmentLayers.set(polygon.id, layers);
+  }
+
+  /**
+   * Lighten a hex color by a given percentage
+   */
+  private lightenColor(hex: string, percent: number): string {
+    // Remove # if present
+    const color = hex.replace('#', '');
+
+    // Convert to RGB
+    const r = parseInt(color.substring(0, 2), 16);
+    const g = parseInt(color.substring(2, 4), 16);
+    const b = parseInt(color.substring(4, 6), 16);
+
+    // Lighten each component
+    const newR = Math.min(255, Math.floor(r + (255 - r) * (percent / 100)));
+    const newG = Math.min(255, Math.floor(g + (255 - g) * (percent / 100)));
+    const newB = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
+
+    // Convert back to hex
+    return '#' + [newR, newG, newB].map((x) => x.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * Remove department layers for a polygon
+   */
+  private removeDepartmentLayers(polygonId: string): void {
+    if (!this.map) return;
+
+    const layers = this.departmentLayers.get(polygonId);
+    if (layers) {
+      layers.forEach((layer) => {
+        this.map!.removeLayer(layer);
+      });
+      this.departmentLayers.delete(polygonId);
     }
   }
 
@@ -504,6 +638,12 @@ export class MapPolygonsService {
     // Set component inputs
     componentRef.instance.polygonId = polygonId;
     componentRef.instance.polygonVisible = polygon.visible;
+    componentRef.instance.hasDepartments = !!polygon.departments && polygon.departments.length > 0;
+    componentRef.instance.departmentsVisible = polygon.departmentsVisible || false;
+    componentRef.instance.canUndoCut = !!polygon.originalCoordinates;
+    componentRef.instance.isLoadingCut = this.polygonService.isPolygonBeingCut(polygonId);
+    componentRef.instance.isLoadingDepartments =
+      this.polygonService.isDepartmentsLoading(polygonId);
 
     // Handle menu actions
     componentRef.instance.action.subscribe((action: PolygonContextMenuAction) => {
@@ -537,6 +677,41 @@ export class MapPolygonsService {
       case 'delete':
         setTimeout(() => {
           this.polygonService.deletePolygon(action.polygonId);
+        }, 100);
+        break;
+      case 'cut':
+        setTimeout(async () => {
+          const success = await this.polygonService.cutPolygon(action.polygonId);
+          if (!success) {
+            console.error('Error al recortar polígono');
+          }
+        }, 100);
+        break;
+      case 'undoCut':
+        setTimeout(() => {
+          this.polygonService.undoCut(action.polygonId);
+        }, 100);
+        break;
+      case 'toggleDepartments':
+        setTimeout(async () => {
+          const polygon = this.polygonService.getPolygonById(action.polygonId);
+          if (!polygon) return;
+
+          if (!polygon.departments || polygon.departments.length === 0) {
+            // Load departments
+            const success = await this.polygonService.loadDepartments(action.polygonId);
+            if (!success) {
+              console.error('Error al cargar departamentos');
+            }
+          } else {
+            // Toggle visibility
+            this.polygonService.toggleDepartmentsVisibility(action.polygonId);
+          }
+        }, 100);
+        break;
+      case 'hideDepartments':
+        setTimeout(() => {
+          this.polygonService.hideDepartments(action.polygonId);
         }, 100);
         break;
     }
@@ -654,6 +829,12 @@ export class MapPolygonsService {
   destroy(): void {
     this.polygonLayers.forEach((layer) => layer.remove());
     this.polygonLayers.clear();
+
+    // Clean up department layers
+    this.departmentLayers.forEach((layers) => {
+      layers.forEach((layer) => layer.remove());
+    });
+    this.departmentLayers.clear();
 
     if (this.contextMenuOverlayRef) {
       this.contextMenuOverlayRef.dispose();

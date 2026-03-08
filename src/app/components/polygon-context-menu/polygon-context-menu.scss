@@ -17,12 +17,31 @@ mat-list-item {
     background-color: var(--mat-sys-surface-container-highest);
   }
 
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
   mat-icon {
     color: var(--mat-sys-on-surface-variant);
+
+    &.spinning {
+      animation: spin 1s linear infinite;
+    }
   }
 
   span {
     color: var(--mat-sys-on-surface);
     font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }

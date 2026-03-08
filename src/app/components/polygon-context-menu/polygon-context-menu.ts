@@ -4,7 +4,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 
 export interface PolygonContextMenuAction {
-  type: 'edit' | 'visibility' | 'delete';
+  type:
+    | 'edit'
+    | 'visibility'
+    | 'delete'
+    | 'cut'
+    | 'undoCut'
+    | 'toggleDepartments'
+    | 'hideDepartments';
   polygonId: string;
 }
 
@@ -18,6 +25,11 @@ export interface PolygonContextMenuAction {
 export class PolygonContextMenuComponent {
   @Input() polygonId!: string;
   @Input() polygonVisible: boolean = true;
+  @Input() hasDepartments: boolean = false;
+  @Input() departmentsVisible: boolean = false;
+  @Input() canUndoCut: boolean = false;
+  @Input() isLoadingCut: boolean = false;
+  @Input() isLoadingDepartments: boolean = false;
   @Output() action = new EventEmitter<PolygonContextMenuAction>();
 
   onEdit(): void {
@@ -30,5 +42,21 @@ export class PolygonContextMenuComponent {
 
   onDelete(): void {
     this.action.emit({ type: 'delete', polygonId: this.polygonId });
+  }
+
+  onCut(): void {
+    this.action.emit({ type: 'cut', polygonId: this.polygonId });
+  }
+
+  onUndoCut(): void {
+    this.action.emit({ type: 'undoCut', polygonId: this.polygonId });
+  }
+
+  onToggleDepartments(): void {
+    this.action.emit({ type: 'toggleDepartments', polygonId: this.polygonId });
+  }
+
+  onHideDepartments(): void {
+    this.action.emit({ type: 'hideDepartments', polygonId: this.polygonId });
   }
 }

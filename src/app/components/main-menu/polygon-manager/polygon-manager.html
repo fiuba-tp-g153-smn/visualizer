@@ -22,6 +22,18 @@
         Borrar todos
       </button>
     </div>
+
+    <!-- Simplified toggle -->
+    <div class="simplified-toggle-container">
+      <mat-slide-toggle
+        [checked]="useSimplified()"
+        (change)="toggleSimplified()"
+        color="primary"
+        matTooltip="Usar geometrías simplificadas (más rápido, menor detalle) para los departamentos y el corte"
+      >
+        <span class="toggle-label">Geometrías simplificadas</span>
+      </mat-slide-toggle>
+    </div>
   </div>
 
   <mat-divider />
@@ -87,6 +99,29 @@
                   >
                     <mat-icon>edit_location</mat-icon>
                   </button>
+                  @if (!canUndoCut(polygon)) {
+                    <button
+                      mat-icon-button
+                      (click)="cutPolygon(polygon.id)"
+                      matTooltip="Recortar con Argentina"
+                      [disabled]="isLoadingCut(polygon)"
+                    >
+                      @if (isLoadingCut(polygon)) {
+                        <mat-icon class="spinning">sync</mat-icon>
+                      } @else {
+                        <mat-icon>content_cut</mat-icon>
+                      }
+                    </button>
+                  } @else {
+                    <button
+                      mat-icon-button
+                      color="accent"
+                      (click)="undoCut(polygon.id)"
+                      matTooltip="Deshacer recorte"
+                    >
+                      <mat-icon>undo</mat-icon>
+                    </button>
+                  }
                   <button
                     mat-icon-button
                     (click)="toggleVisibility(polygon.id)"
@@ -116,6 +151,46 @@
                   <mat-icon class="detail-icon">schedule</mat-icon>
                   <span class="detail-label">Modificado:</span>
                   <span class="detail-value">{{ formatDate(polygon.updatedAt) }}</span>
+                </div>
+                <div class="detail-item">
+                  <mat-icon class="detail-icon">map</mat-icon>
+                  <span class="detail-label">Departamentos:</span>
+                  @if (hasDepartments(polygon)) {
+                    <button
+                      mat-button
+                      [matMenuTriggerFor]="departmentMenu"
+                      class="departments-button"
+                      [disabled]="isLoadingDepartments(polygon)"
+                    >
+                      @if (isLoadingDepartments(polygon)) {
+                        <mat-icon class="spinning">sync</mat-icon>
+                      } @else {
+                        <mat-icon>location_city</mat-icon>
+                      }
+                      {{ getDepartmentsCount(polygon) }}
+                    </button>
+                    <mat-menu #departmentMenu="matMenu" class="departments-menu">
+                      @for (dept of polygon.departments; track dept.properties?.['nam'] || $index) {
+                        <button mat-menu-item disabled>
+                          {{ (dept.properties && dept.properties['nam']) || 'Desconocido' }}
+                        </button>
+                      }
+                    </mat-menu>
+                  } @else {
+                    <button
+                      mat-icon-button
+                      (click)="loadDepartments(polygon.id)"
+                      matTooltip="Cargar departamentos"
+                      class="load-departments-button"
+                      [disabled]="isLoadingDepartments(polygon)"
+                    >
+                      @if (isLoadingDepartments(polygon)) {
+                        <mat-icon class="spinning">sync</mat-icon>
+                      } @else {
+                        <mat-icon>help_outline</mat-icon>
+                      }
+                    </button>
+                  }
                 </div>
               </div>
             </div>
