@@ -4,8 +4,11 @@
  * This file re-exports all application configuration for cleaner imports.
  */
 
-// Backend configuration
+// Data Service configuration (tiles and product metadata)
 export { buildConfigUrl, buildTileUrl } from './backend.config';
+
+// Alerts Service configuration (polygon operations and departments)
+export { buildIntersectCountryUrl, buildIntersectDepartmentsUrl } from './alerts-service.config';
 
 // Map configuration
 export { MAP_CONFIG } from './map.config';
