@@ -3,8 +3,11 @@
  */
 export const environment = {
   production: true,
-  backend: {
-    baseUrl: $ENV.BACKEND_BASE_URL,
+  dataService: {
+    baseUrl: $ENV.DATA_SERVICE_BASE_URL,
+  },
+  alertsService: {
+    baseUrl: $ENV.ALERTS_SERVICE_BASE_URL,
   },
   tiles: {
     format: $ENV.TILE_FORMAT,

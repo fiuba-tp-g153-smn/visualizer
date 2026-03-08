@@ -1,9 +1,9 @@
 import { environment } from '../../environments/environment';
 
 /**
- * Configuración del backend basada en variables de entorno
+ * Configuración del servicio de datos basada en variables de entorno
  */
-const BACKEND_BASE_URL = environment.backend.baseUrl;
+const DATA_SERVICE_BASE_URL = environment.dataService.baseUrl;
 
 /**
  * Construye URL de configuración de canal para un producto específico
@@ -11,7 +11,7 @@ const BACKEND_BASE_URL = environment.backend.baseUrl;
  * @returns URL para obtener la configuración del canal
  */
 export function buildConfigUrl(pathToProduct: string): string {
-  return `${BACKEND_BASE_URL}/products/${pathToProduct}`;
+  return `${DATA_SERVICE_BASE_URL}/products/${pathToProduct}`;
 }
 
 /**
@@ -21,5 +21,5 @@ export function buildConfigUrl(pathToProduct: string): string {
  */
 export function buildTileUrl(pathToProduct: string): string {
   const format = environment.tiles.format;
-  return `${BACKEND_BASE_URL}/products/${pathToProduct}/{z}/{x}/{y}.${format}`;
+  return `${DATA_SERVICE_BASE_URL}/products/${pathToProduct}/{z}/{x}/{y}.${format}`;
 }
