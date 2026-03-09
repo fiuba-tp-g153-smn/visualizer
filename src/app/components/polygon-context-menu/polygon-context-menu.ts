@@ -2,18 +2,10 @@ import { Component, EventEmitter, Output, Input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-
-export interface PolygonContextMenuAction {
-  type:
-    | 'edit'
-    | 'visibility'
-    | 'delete'
-    | 'cut'
-    | 'undoCut'
-    | 'toggleDepartments'
-    | 'hideDepartments';
-  polygonId: string;
-}
+import {
+  PolygonContextMenuAction,
+  PolygonContextMenuActionType,
+} from '../../models/polygon-context-menu-action.model';
 
 @Component({
   selector: 'app-polygon-context-menu',
@@ -33,30 +25,39 @@ export class PolygonContextMenuComponent {
   @Output() action = new EventEmitter<PolygonContextMenuAction>();
 
   onEdit(): void {
-    this.action.emit({ type: 'edit', polygonId: this.polygonId });
+    this.action.emit({ type: PolygonContextMenuActionType.EDIT, polygonId: this.polygonId });
   }
 
   onToggleVisibility(): void {
-    this.action.emit({ type: 'visibility', polygonId: this.polygonId });
+    this.action.emit({
+      type: PolygonContextMenuActionType.VISIBILITY,
+      polygonId: this.polygonId,
+    });
   }
 
   onDelete(): void {
-    this.action.emit({ type: 'delete', polygonId: this.polygonId });
+    this.action.emit({ type: PolygonContextMenuActionType.DELETE, polygonId: this.polygonId });
   }
 
   onCut(): void {
-    this.action.emit({ type: 'cut', polygonId: this.polygonId });
+    this.action.emit({ type: PolygonContextMenuActionType.CUT, polygonId: this.polygonId });
   }
 
   onUndoCut(): void {
-    this.action.emit({ type: 'undoCut', polygonId: this.polygonId });
+    this.action.emit({ type: PolygonContextMenuActionType.UNDO_CUT, polygonId: this.polygonId });
   }
 
   onToggleDepartments(): void {
-    this.action.emit({ type: 'toggleDepartments', polygonId: this.polygonId });
+    this.action.emit({
+      type: PolygonContextMenuActionType.TOGGLE_DEPARTMENTS,
+      polygonId: this.polygonId,
+    });
   }
 
   onHideDepartments(): void {
-    this.action.emit({ type: 'hideDepartments', polygonId: this.polygonId });
+    this.action.emit({
+      type: PolygonContextMenuActionType.HIDE_DEPARTMENTS,
+      polygonId: this.polygonId,
+    });
   }
 }

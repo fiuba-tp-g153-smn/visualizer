@@ -5,11 +5,25 @@ import * as L from 'leaflet';
 import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
-import { Polygon } from '../../models/polygon.model';
+import { Polygon } from '../../models/geo';
+import { PolygonContextMenuComponent } from '../../components/polygon-context-menu/polygon-context-menu';
 import {
-  PolygonContextMenuComponent,
   PolygonContextMenuAction,
-} from '../../components/polygon-context-menu/polygon-context-menu';
+  PolygonContextMenuActionType,
+} from '../../models/polygon-context-menu-action.model';
+import {
+  LEAFLET_EDITABLE_EVENTS,
+  CSS_VARIABLES,
+  MAP_PANES,
+} from '../../constants/map-polygons.constants';
+import { Z_INDEX, EDIT_STYLE, DEPARTMENT_STYLE } from '../../config/map-polygons.config';
+import {
+  createPolygonOptions,
+  createLineGuideOptions,
+  createDepartmentStyle,
+  lightenColor,
+} from '../../utils/map-styles.utils';
+import { ACTION_DELAYS } from '../../config/timing.config';
 
 // Extended types for leaflet
 declare module 'leaflet' {
@@ -57,41 +71,20 @@ export class MapPolygonsService {
     if (!this.map) return;
 
     // Leaflet.Editable auto-initializes with the map
-    // Event handler when a polygon drawing is complete
-    this.map.on('editable:drawing:commit', (e: any) => {
+    this.map.on(LEAFLET_EDITABLE_EVENTS.DRAWING_COMMIT, (e: any) => {
       this.onPolygonCreated(e.layer);
     });
 
-    // Event handler when a polygon drawing is cancelled
-    this.map.on('editable:drawing:cancel', (e: any) => {
+    this.map.on(LEAFLET_EDITABLE_EVENTS.DRAWING_CANCEL, () => {
       this.onPolygonDrawingCancelled();
     });
 
-    // Event handler when a click happens during drawing (to configure line guide color)
-    this.map.on('editable:drawing:clicked', (e: any) => {
+    this.map.on(LEAFLET_EDITABLE_EVENTS.DRAWING_CLICKED, (e: any) => {
       const layer = e.layer;
-      if (layer && layer.options) {
-        const editor = (layer as any).editor;
-        if (editor) {
-          // Configure line guide with the polygon's color
-          editor.options.lineGuideOptions = {
-            color: layer.options.color,
-            weight: 2,
-            opacity: 0.6,
-            dashArray: '5, 5',
-          };
-        }
+      const editor = layer?.editor;
+      if (editor && layer.options) {
+        editor.options.lineGuideOptions = createLineGuideOptions(layer.options.color);
       }
-    });
-
-    // Event handler when polygon is being edited (vertex dragged)
-    this.map.on('editable:vertex:dragend', (e: any) => {
-      this.onPolygonEdited(e.layer);
-    });
-
-    // Event handler when a vertex is deleted during edit
-    this.map.on('editable:vertex:deleted', (e: any) => {
-      this.onPolygonEdited(e.layer);
     });
   }
 
@@ -157,27 +150,15 @@ export class MapPolygonsService {
 
     // Set the color CSS variable for this polygon's handlers
     const mapContainer = this.map.getContainer();
-    mapContainer.style.setProperty('--polygon-color', nextColor);
+    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, nextColor);
 
     // Create polygon options
-    const polygonOptions: L.PolylineOptions = {
-      color: nextColor,
-      weight: 3,
-      opacity: 0.8,
-      fillColor: nextColor,
-      fillOpacity: 0.2,
-    };
+    const polygonOptions = createPolygonOptions(nextColor);
 
     // Configure editOptions on the map before starting drawing
-    // This ensures the line guide gets the correct options from the start
     const editTools = (this.map as any).editTools;
     if (editTools) {
-      const lineGuideStyle = {
-        color: nextColor,
-        weight: 2,
-        opacity: 0.6,
-        dashArray: '5, 5',
-      };
+      const lineGuideStyle = createLineGuideOptions(nextColor);
 
       // Configure in editTools options
       editTools.options = editTools.options || {};
@@ -238,12 +219,12 @@ export class MapPolygonsService {
 
     // Apply dashed line style
     layer.setStyle({
-      dashArray: '5, 5',
+      dashArray: EDIT_STYLE.DASH_ARRAY,
     });
 
     // Set CSS variable on the map container for editing markers to use
     const mapContainer = this.map.getContainer();
-    mapContainer.style.setProperty('--polygon-color', polygonColor);
+    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, polygonColor);
 
     // Enable editing
     if (layer.enableEdit) {
@@ -265,7 +246,7 @@ export class MapPolygonsService {
 
     // Clear the polygon color CSS variable
     const mapContainer = this.map.getContainer();
-    mapContainer.style.removeProperty('--polygon-color');
+    mapContainer.style.removeProperty(CSS_VARIABLES.POLYGON_COLOR);
   }
 
   /**
@@ -288,7 +269,7 @@ export class MapPolygonsService {
     this.polygonLayers.set(polygon.id, layer);
 
     // Add context menu listener (right click)
-    layer.on('contextmenu', (e: L.LeafletMouseEvent) => {
+    layer.on(LEAFLET_EDITABLE_EVENTS.CONTEXT_MENU, (e: L.LeafletMouseEvent) => {
       L.DomEvent.stopPropagation(e);
       this.showPolygonContextMenu(polygon.id, e.containerPoint);
     });
@@ -298,24 +279,6 @@ export class MapPolygonsService {
 
     // Exit drawing mode after creating a polygon (this will re-enable double-click zoom)
     this.polygonDrawingService.stopDrawing();
-  }
-
-  /**
-   * Handler when a polygon is being edited
-   */
-  private onPolygonEdited(layer: L.Polygon): void {
-    if (!layer) return;
-
-    const polygonId = layer.options.polygonId;
-
-    if (polygonId) {
-      const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-      const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
-
-      // Note: We don't auto-save during editing anymore.
-      // Saving is done when the user clicks the save button.
-      // This just allows real-time visual updates if needed.
-    }
   }
 
   /**
@@ -432,29 +395,22 @@ export class MapPolygonsService {
     }
 
     // Create custom pane for departments if it doesn't exist
-    if (!this.map.getPane('departments')) {
-      const pane = this.map.createPane('departments');
-      pane.style.zIndex = '400';
+    if (!this.map.getPane(MAP_PANES.DEPARTMENTS)) {
+      const pane = this.map.createPane(MAP_PANES.DEPARTMENTS);
+      pane.style.zIndex = String(Z_INDEX.DEPARTMENTS);
       pane.style.pointerEvents = 'none';
     }
 
     // Create new layers
     const layers: L.GeoJSON[] = [];
-    const departmentColor = this.lightenColor(polygon.color, 30);
+    const departmentColor = lightenColor(polygon.color, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
 
     for (const dept of polygon.departments) {
-      // Render the FULL department geometry (not just intersection)
+      // Render the department geometry
       const geoJsonLayer = L.geoJSON(dept.geometry as any, {
-        pane: 'departments',
+        pane: MAP_PANES.DEPARTMENTS,
         interactive: false,
-        style: {
-          color: departmentColor,
-          weight: 2,
-          opacity: 0.7,
-          fillColor: departmentColor,
-          fillOpacity: 0.15,
-          dashArray: '3, 6',
-        },
+        style: createDepartmentStyle(departmentColor),
       });
 
       // Configure layer to be non-interactive
@@ -478,27 +434,6 @@ export class MapPolygonsService {
     }
 
     this.departmentLayers.set(polygon.id, layers);
-  }
-
-  /**
-   * Lighten a hex color by a given percentage
-   */
-  private lightenColor(hex: string, percent: number): string {
-    // Remove # if present
-    const color = hex.replace('#', '');
-
-    // Convert to RGB
-    const r = parseInt(color.substring(0, 2), 16);
-    const g = parseInt(color.substring(2, 4), 16);
-    const b = parseInt(color.substring(4, 6), 16);
-
-    // Lighten each component
-    const newR = Math.min(255, Math.floor(r + (255 - r) * (percent / 100)));
-    const newG = Math.min(255, Math.floor(g + (255 - g) * (percent / 100)));
-    const newB = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
-
-    // Convert back to hex
-    return '#' + [newR, newG, newB].map((x) => x.toString(16).padStart(2, '0')).join('');
   }
 
   /**
@@ -526,11 +461,7 @@ export class MapPolygonsService {
     existingLayer.off('edit');
 
     // Update existing layer style
-    existingLayer.setStyle({
-      color: polygon.color,
-      fillColor: polygon.color,
-      fillOpacity: 0.2,
-    });
+    existingLayer.setStyle(createPolygonOptions(polygon.color));
 
     // Check if coordinates actually changed before updating
     const currentLatLngs = existingLayer.getLatLngs()[0] as L.LatLng[];
@@ -577,14 +508,12 @@ export class MapPolygonsService {
       coord[1],
     ]);
     const layer = L.polygon(latlngs, {
-      color: polygon.color,
-      fillColor: polygon.color,
-      fillOpacity: 0.2,
+      ...createPolygonOptions(polygon.color),
       polygonId: polygon.id,
     });
 
     // Add context menu listener (right click)
-    layer.on('contextmenu', (e: L.LeafletMouseEvent) => {
+    layer.on(LEAFLET_EDITABLE_EVENTS.CONTEXT_MENU, (e: L.LeafletMouseEvent) => {
       if (e.originalEvent) {
         L.DomEvent.stopPropagation(e.originalEvent);
         L.DomEvent.preventDefault(e.originalEvent);
@@ -663,57 +592,64 @@ export class MapPolygonsService {
    * Handle context menu actions
    */
   private handleContextMenuAction(action: PolygonContextMenuAction): void {
-    switch (action.type) {
-      case 'edit':
-        setTimeout(() => {
+    // Small delay to ensure menu closes before action execution
+    setTimeout(() => {
+      switch (action.type) {
+        case PolygonContextMenuActionType.EDIT:
           this.polygonDrawingService.startEditMode(action.polygonId);
-        }, 100);
-        break;
-      case 'visibility':
-        setTimeout(() => {
-          this.polygonService.toggleVisibility(action.polygonId);
-        }, 50);
-        break;
-      case 'delete':
-        setTimeout(() => {
-          this.polygonService.deletePolygon(action.polygonId);
-        }, 100);
-        break;
-      case 'cut':
-        setTimeout(async () => {
-          const success = await this.polygonService.cutPolygon(action.polygonId);
-          if (!success) {
-            console.error('Error al recortar polígono');
-          }
-        }, 100);
-        break;
-      case 'undoCut':
-        setTimeout(() => {
-          this.polygonService.undoCut(action.polygonId);
-        }, 100);
-        break;
-      case 'toggleDepartments':
-        setTimeout(async () => {
-          const polygon = this.polygonService.getPolygonById(action.polygonId);
-          if (!polygon) return;
+          break;
 
-          if (!polygon.departments || polygon.departments.length === 0) {
-            // Load departments
-            const success = await this.polygonService.loadDepartments(action.polygonId);
-            if (!success) {
-              console.error('Error al cargar departamentos');
-            }
-          } else {
-            // Toggle visibility
-            this.polygonService.toggleDepartmentsVisibility(action.polygonId);
-          }
-        }, 100);
-        break;
-      case 'hideDepartments':
-        setTimeout(() => {
+        case PolygonContextMenuActionType.VISIBILITY:
+          this.polygonService.toggleVisibility(action.polygonId);
+          break;
+
+        case PolygonContextMenuActionType.DELETE:
+          this.polygonService.deletePolygon(action.polygonId);
+          break;
+
+        case PolygonContextMenuActionType.CUT:
+          this.handleCutAction(action.polygonId);
+          break;
+
+        case PolygonContextMenuActionType.UNDO_CUT:
+          this.polygonService.undoCut(action.polygonId);
+          break;
+
+        case PolygonContextMenuActionType.TOGGLE_DEPARTMENTS:
+          this.handleToggleDepartmentsAction(action.polygonId);
+          break;
+
+        case PolygonContextMenuActionType.HIDE_DEPARTMENTS:
           this.polygonService.hideDepartments(action.polygonId);
-        }, 100);
-        break;
+          break;
+      }
+    }, ACTION_DELAYS.MENU_ACTION);
+  }
+
+  /**
+   * Handle cut polygon action
+   */
+  private async handleCutAction(polygonId: string): Promise<void> {
+    const success = await this.polygonService.cutPolygon(polygonId);
+    if (!success) {
+      console.error('[MapPolygonsService] Error al recortar polígono');
+    }
+  }
+
+  /**
+   * Handle toggle departments action
+   */
+  private async handleToggleDepartmentsAction(polygonId: string): Promise<void> {
+    const polygon = this.polygonService.getPolygonById(polygonId);
+    if (!polygon) return;
+
+    if (!polygon.departments || polygon.departments.length === 0) {
+      const success = await this.polygonService.loadDepartments(polygonId);
+      if (!success) {
+        console.error('[MapPolygonsService] Error al cargar departamentos');
+      }
+    } else {
+      this.polygonService.toggleDepartmentsVisibility(polygonId);
     }
   }
 
@@ -749,7 +685,7 @@ export class MapPolygonsService {
     // Clear the polygon color CSS variable
     if (this.map) {
       const mapContainer = this.map.getContainer();
-      mapContainer.style.removeProperty('--polygon-color');
+      mapContainer.style.removeProperty(CSS_VARIABLES.POLYGON_COLOR);
     }
 
     // Exit edit mode
@@ -789,14 +725,12 @@ export class MapPolygonsService {
           coord[1],
         ]);
         const newLayer = L.polygon(latlngs, {
-          color: polygon.color,
-          fillColor: polygon.color,
-          fillOpacity: 0.2,
+          ...createPolygonOptions(polygon.color),
           polygonId: polygon.id,
         });
 
         // Add context menu listener
-        newLayer.on('contextmenu', (e: L.LeafletMouseEvent) => {
+        newLayer.on(LEAFLET_EDITABLE_EVENTS.CONTEXT_MENU, (e: L.LeafletMouseEvent) => {
           if (e.originalEvent) {
             L.DomEvent.stopPropagation(e.originalEvent);
             L.DomEvent.preventDefault(e.originalEvent);
@@ -816,7 +750,7 @@ export class MapPolygonsService {
     // Clear the polygon color CSS variable
     if (this.map) {
       const mapContainer = this.map.getContainer();
-      mapContainer.style.removeProperty('--polygon-color');
+      mapContainer.style.removeProperty(CSS_VARIABLES.POLYGON_COLOR);
     }
 
     // Exit edit mode

@@ -1,13 +1,4 @@
-/**
- * Representa un departamento con sus geometrías
- */
-export interface PolygonDepartment {
-  properties: {
-    [key: string]: any;
-  };
-  geometry: GeoJSON.Geometry;
-  intersection: GeoJSON.Geometry;
-}
+import { Department } from './department.model';
 
 /**
  * Representa un polígono en el mapa
@@ -51,7 +42,7 @@ export interface Polygon {
   /**
    * Departamentos que intersectan con el polígono
    */
-  departments?: PolygonDepartment[];
+  departments?: Department[];
 
   /**
    * Indica si los departamentos están visibles
@@ -81,7 +72,7 @@ export interface UpdatePolygonDto {
   coordinates?: Array<[number, number]>;
   color?: string;
   visible?: boolean;
-  departments?: PolygonDepartment[];
+  departments?: Department[];
   departmentsVisible?: boolean;
   originalCoordinates?: Array<[number, number]>;
 }
