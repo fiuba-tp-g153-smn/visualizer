@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/polygon.model';
+import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/geo';
 import { AlertsService } from './alerts.service';
 import { firstValueFrom } from 'rxjs';
 

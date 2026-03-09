@@ -15,7 +15,7 @@ import {
   DrawingMode,
   PolygonDrawingService,
 } from '../../../services/polygons/polygon-drawing.service';
-import { Polygon } from '../../../models/polygon.model';
+import { Polygon } from '../../../models/geo';
 import { MenuPanelComponent } from '../menu-section.model';
 
 /**
