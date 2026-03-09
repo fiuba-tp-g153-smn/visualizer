@@ -382,11 +382,18 @@ export class MapPolygonsService {
   private renderDepartmentLayers(polygon: Polygon): void {
     if (!this.map || !polygon.departments) return;
 
+    // Calculate the department color based on the polygon's current color
+    const departmentColor = lightenColor(polygon.color, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
+
     // Check if layers already exist
     const existingLayers = this.departmentLayers.get(polygon.id);
     if (existingLayers && existingLayers.length > 0) {
-      // Layers already rendered, just ensure they're on the map
+      // Update existing layers with the new color
+      const newStyle = createDepartmentStyle(departmentColor);
       existingLayers.forEach((layer) => {
+        // Update the style with the new color
+        layer.setStyle(newStyle);
+        // Ensure they're on the map
         if (!this.map!.hasLayer(layer)) {
           layer.addTo(this.map!);
         }
@@ -403,7 +410,6 @@ export class MapPolygonsService {
 
     // Create new layers
     const layers: L.GeoJSON[] = [];
-    const departmentColor = lightenColor(polygon.color, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
 
     for (const dept of polygon.departments) {
       // Render the department geometry
