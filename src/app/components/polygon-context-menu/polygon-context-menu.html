@@ -1,0 +1,61 @@
+<mat-nav-list class="polygon-context-menu">
+  <mat-list-item (click)="onEdit()">
+    <mat-icon matListItemIcon>edit_location</mat-icon>
+    <span matListItemTitle>Editar geometría</span>
+  </mat-list-item>
+  <mat-list-item (click)="onToggleVisibility()">
+    <mat-icon matListItemIcon>{{ polygonVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
+    <span matListItemTitle>{{ polygonVisible ? 'Ocultar' : 'Mostrar' }}</span>
+  </mat-list-item>
+
+  <!-- Departamentos -->
+  @if (!hasDepartments) {
+    <mat-list-item
+      (click)="!isLoadingDepartments && onToggleDepartments()"
+      [class.disabled]="isLoadingDepartments"
+    >
+      @if (isLoadingDepartments) {
+        <mat-icon matListItemIcon class="spinning">sync</mat-icon>
+      } @else {
+        <mat-icon matListItemIcon>map</mat-icon>
+      }
+      <span matListItemTitle>{{
+        isLoadingDepartments ? 'Cargando departamentos...' : 'Mostrar departamentos'
+      }}</span>
+    </mat-list-item>
+  } @else {
+    @if (departmentsVisible) {
+      <mat-list-item (click)="onToggleDepartments()">
+        <mat-icon matListItemIcon>visibility_off</mat-icon>
+        <span matListItemTitle>Ocultar departamentos</span>
+      </mat-list-item>
+    } @else {
+      <mat-list-item (click)="onToggleDepartments()">
+        <mat-icon matListItemIcon>visibility</mat-icon>
+        <span matListItemTitle>Mostrar departamentos</span>
+      </mat-list-item>
+    }
+  }
+
+  <!-- Cortar polígono -->
+  @if (!canUndoCut) {
+    <mat-list-item (click)="!isLoadingCut && onCut()" [class.disabled]="isLoadingCut">
+      @if (isLoadingCut) {
+        <mat-icon matListItemIcon class="spinning">sync</mat-icon>
+      } @else {
+        <mat-icon matListItemIcon>content_cut</mat-icon>
+      }
+      <span matListItemTitle>{{ isLoadingCut ? 'Recortando...' : 'Recortar con Argentina' }}</span>
+    </mat-list-item>
+  } @else {
+    <mat-list-item (click)="onUndoCut()">
+      <mat-icon matListItemIcon>undo</mat-icon>
+      <span matListItemTitle>Deshacer recorte</span>
+    </mat-list-item>
+  }
+
+  <mat-list-item (click)="onDelete()">
+    <mat-icon matListItemIcon color="warn">delete</mat-icon>
+    <span matListItemTitle>Eliminar</span>
+  </mat-list-item>
+</mat-nav-list>

@@ -7,44 +7,69 @@ import {
   effect,
   signal,
   computed,
+  ViewContainerRef,
+  Injector,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
+import 'leaflet-editable';
 import { MAP_CONFIG } from '../../config';
-import { LayersService } from '../../services/layers/layers.service';
+
 import { LayerControlService } from '../../services/layers/layer-control.service';
-import { LayerRenderService } from '../../services/layers/layer-render.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import {
-  BaseMap,
-  LayerCategory,
-  GoesLayerControls,
-  RadarLayerControls,
-  LayerType,
-} from '../../models';
+import { BaseMap } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
+import { PolygonService } from '../../services/polygons/polygon.service';
+import {
+  PolygonDrawingService,
+  DrawingMode,
+} from '../../services/polygons/polygon-drawing.service';
+import {
+  PolygonEditControlsComponent,
+  PolygonEditAction,
+} from '../polygon-edit-controls/polygon-edit-controls';
 
+import { MapLayersService } from '../../services/layers/map-layers.service';
+import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
+
+/**
+ * Main map container component that orchestrates the map, layers, and polygons
+ */
 @Component({
-  selector: 'app-map-viewer',
+  selector: 'app-map-container',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule],
-  templateUrl: './map-viewer.html',
-  styleUrl: './map-viewer.scss',
+  imports: [MatButtonModule, MatIconModule, PolygonEditControlsComponent],
+  templateUrl: './map-container.html',
+  styleUrl: './map-container.scss',
 })
-export class MapViewer implements OnInit, OnDestroy {
+export class MapContainer implements OnInit, OnDestroy {
   private map: L.Map | null = null;
   private platformId = inject(PLATFORM_ID);
   private baseMapService = inject(BaseMapService);
-  private layersService = inject(LayersService);
   private controlService = inject(LayerControlService);
   private layerConfigService = inject(LayerConfigService);
-  private layerRenderService = inject(LayerRenderService);
   private prefetchService = inject(TilePrefetchService);
+  private polygonService = inject(PolygonService);
+  private polygonDrawingService = inject(PolygonDrawingService);
+  private viewContainerRef = inject(ViewContainerRef);
+  private injector = inject(Injector);
+
+  // Services
+  private layersService = inject(MapLayersService);
+  private polygonsService = inject(MapPolygonsService);
 
   private currentTileLayer: L.TileLayer | null = null;
+  private ignoreNextMapEvents = false;
+
+  // Expose properties to template
+  readonly drawingMode = this.polygonDrawingService.drawingMode;
+  readonly editingPolygonId = this.polygonDrawingService.editingPolygonId;
+  readonly isEditingPolygon = computed(
+    () => this.drawingMode() === DrawingMode.EDIT && !!this.editingPolygonId(),
+  );
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -56,7 +81,7 @@ export class MapViewer implements OnInit, OnDestroy {
         }
       });
 
-      // Effect: sincronizar capas satelitales
+      // Effect: synchronize satellite/radar layers
       effect(() => {
         const layers = this.controlService.activeLayers();
         const layerIds = layers.map((item) => item.layer.id);
@@ -65,11 +90,11 @@ export class MapViewer implements OnInit, OnDestroy {
         this.layerConfigService.configs();
 
         if (this.map) {
-          this.syncLayers(layerIds);
+          this.layersService.syncLayers(layerIds);
         }
       });
 
-      // Effect: sincronizar zoom cuando cambia currentZoom signal
+      // Effect: synchronize zoom when currentZoom signal changes
       effect(() => {
         const targetZoom = this.currentZoom();
         if (this.map) {
@@ -77,6 +102,24 @@ export class MapViewer implements OnInit, OnDestroy {
           if (currentMapZoom !== targetZoom) {
             this.map.setZoom(targetZoom);
           }
+        }
+      });
+
+      // Effect: synchronize visible polygons
+      effect(() => {
+        const polygons = this.polygonService.allPolygons();
+        const editingId = this.editingPolygonId();
+        if (this.map) {
+          this.polygonsService.syncPolygons(polygons, editingId);
+        }
+      });
+
+      // Effect: handle drawing mode changes
+      effect(() => {
+        const mode = this.polygonDrawingService.drawingMode();
+        const editingPolygonId = this.polygonDrawingService.editingPolygonId();
+        if (this.map) {
+          this.polygonsService.handleDrawingModeChange(mode, editingPolygonId);
         }
       });
     }
@@ -91,7 +134,6 @@ export class MapViewer implements OnInit, OnDestroy {
   canZoomOut = computed(() => {
     return this.currentZoom() > MAP_CONFIG.minZoom;
   });
-  private ignoreNextMapEvents = false;
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -100,9 +142,13 @@ export class MapViewer implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Limpiar capas
-    this.onMapLayers.forEach((layer) => layer.remove());
-    this.onMapLayers.clear();
+    this.layersService.destroy();
+    this.polygonsService.destroy();
+
+    // Clear event blocking interval
+    if ((this as any)._eventBlockingInterval) {
+      clearInterval((this as any)._eventBlockingInterval);
+    }
 
     if (this.map) {
       this.map.remove();
@@ -116,7 +162,16 @@ export class MapViewer implements OnInit, OnDestroy {
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
       zoomControl: false,
+      doubleClickZoom: true, // Will be disabled during polygon drawing
+      editable: true,
     });
+
+    // Initialize services with the map instance
+    this.layersService.initialize(this.map);
+    this.polygonsService.initialize(this.map, this.viewContainerRef, this.injector);
+
+    // Prevent UI elements from propagating events to the map
+    this.preventUIEventPropagation();
 
     // Update zoom signal from map events (user scrolling or programmatic changes)
     this.map.on('zoom', () => {
@@ -151,6 +206,37 @@ export class MapViewer implements OnInit, OnDestroy {
     this.changeBaseMap(initialBaseMap);
   }
 
+  /**
+   * Prevent UI elements from propagating events to the map and cancel drawing on button clicks
+   */
+  private preventUIEventPropagation(): void {
+    // Apply L.DomEvent.disableClickPropagation to main UI containers
+    const applyEventBlocking = (selector: string) => {
+      const element = document.querySelector(selector) as HTMLElement;
+      if (element && !(element as any)._leaflet_disable_events) {
+        L.DomEvent.disableClickPropagation(element);
+        L.DomEvent.disableScrollPropagation(element);
+        (element as any)._leaflet_disable_events = true;
+      }
+    };
+
+    // Check periodically for UI elements and apply event blocking
+    const checkAndApply = () => {
+      applyEventBlocking('.main-menu-wrapper');
+      applyEventBlocking('.zoom-controls');
+      applyEventBlocking('.edit-controls-container');
+    };
+
+    // Initial check
+    setTimeout(checkAndApply, 100);
+
+    // Periodic check for dynamically added elements
+    const intervalId = setInterval(checkAndApply, 1000);
+
+    // Store interval ID for cleanup
+    (this as any)._eventBlockingInterval = intervalId;
+  }
+
   private changeBaseMap(baseMap: BaseMap): void {
     if (!this.map) return;
 
@@ -163,96 +249,6 @@ export class MapViewer implements OnInit, OnDestroy {
       maxZoom: baseMap.maxZoom,
       zIndex: 0,
     }).addTo(this.map);
-  }
-
-  private onMapLayers = new Map<string, L.TileLayer>();
-
-  private syncLayers(layerIds: string[]): void {
-    if (!this.map) return;
-
-    const desiredLayersOnMap = new Map<string, L.TileLayer>();
-
-    for (const layerId of layerIds) {
-      const layer = this.layersService.getLayerById(layerId);
-      if (!layer) {
-        console.error(`Layer '${layerId}' not found, skipping`);
-        continue;
-      }
-
-      const controls = this.controlService.getControls(layerId);
-      if (!controls.visible) continue;
-
-      const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
-
-      // Skip tile layers that need config if config not loaded yet (will render on next sync)
-      switch (layer.type) {
-        case LayerType.TILE:
-          switch (layer.category) {
-            case LayerCategory.RADAR:
-            case LayerCategory.GOES_19:
-              if (!this.layerConfigService.hasConfig(layerId)) {
-                continue;
-              }
-              break;
-          }
-          break;
-      }
-
-      // Render layer based on category
-      switch (layer.category) {
-        case LayerCategory.RADAR: {
-          const radarControls = controls as RadarLayerControls;
-          const layers = this.layerRenderService.createRadarLayersForPlayback(
-            layerId,
-            radarControls,
-            controls.opacity,
-            absoluteZIndex,
-          );
-          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
-          break;
-        }
-
-        case LayerCategory.GOES_19: {
-          const goesControls = controls as GoesLayerControls;
-          const layers = this.layerRenderService.createGoesLayersForPlayback(
-            layerId,
-            goesControls,
-            controls.opacity,
-            absoluteZIndex,
-          );
-          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
-          break;
-        }
-
-        default: {
-          // WMS and other non-animated layers
-          const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
-          tileLayer.setOpacity(controls.opacity);
-          tileLayer.setZIndex(absoluteZIndex);
-          desiredLayersOnMap.set(layerId, tileLayer);
-          break;
-        }
-      }
-    }
-
-    // 1. Remove stale/replaced layers
-    for (const [key, oldLayer] of this.onMapLayers) {
-      const desired = desiredLayersOnMap.get(key);
-      if (!desired || desired !== oldLayer) {
-        this.map?.removeLayer(oldLayer);
-      }
-    }
-
-    // 2. Add new or update existing layers
-    for (const [key, tileLayer] of desiredLayersOnMap) {
-      const oldLayer = this.onMapLayers.get(key);
-      if (!oldLayer || oldLayer !== tileLayer) {
-        tileLayer.addTo(this.map!);
-      }
-    }
-
-    // Update local state
-    this.onMapLayers = desiredLayersOnMap;
   }
 
   zoomIn(): void {
@@ -270,6 +266,19 @@ export class MapViewer implements OnInit, OnDestroy {
       const newZoom = Math.max(this.currentZoom() - 1, MAP_CONFIG.minZoom);
       this.currentZoom.set(newZoom);
       this.prefetchService.setZoom(newZoom);
+    }
+  }
+
+  /**
+   * Handle polygon edit actions from the UI controls
+   */
+  handleEditAction(action: PolygonEditAction): void {
+    const editingId = this.editingPolygonId();
+
+    if (action.type === 'save') {
+      this.polygonsService.savePolygonEdit(editingId);
+    } else if (action.type === 'cancel') {
+      this.polygonsService.cancelPolygonEdit(editingId);
     }
   }
 }
