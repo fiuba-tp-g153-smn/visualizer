@@ -34,7 +34,6 @@ services:
       - "4200:4200"
     environment:
       - BACKEND_BASE_URL=${BACKEND_BASE_URL}
-      - USE_MOCK_TILES=${USE_MOCK_TILES}
       - TILE_FORMAT=${TILE_FORMAT}
       - APP_HOST_PORT=${APP_HOST_PORT}
       - DOCS_URL=${DOCS_URL}
