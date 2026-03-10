@@ -117,6 +117,11 @@ export const IGN_WMS_TERRITORIAL_SUBGROUP: LayerSubgroup = {
   ],
 };
 
+// Infraestructura
+const IGN_WMS_INFRASTRUCTURE_DEFAULTS = {
+  ...IGN_WMS_DEFAULTS,
+} as const;
+
 export const IGN_WMS_INFRASTRUCTURE_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-infrastructure',
@@ -187,12 +192,12 @@ export const IGN_WMS_HYDROGRAPHY_SUBGROUP: LayerSubgroup = {
   ],
 };
 
-// Otros
-const IGN_WMS_OTHER_DEFAULTS = {
+// Defensa y seguridad
+const IGN_WMS_DEFENSE_SECURITY_DEFAULTS = {
   ...IGN_WMS_DEFAULTS,
 } as const;
 
-export const IGN_WMS_OTHER_SUBGROUP: LayerSubgroup = {
+export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-defense-security',
   name: 'Defensa y Seguridad (IGN)',
