@@ -1,5 +1,12 @@
 <div id="map"></div>
 
+<!-- Edit controls - shown when editing a polygon -->
+@if (isEditingPolygon()) {
+  <div class="edit-controls-container">
+    <app-polygon-edit-controls (action)="handleEditAction($event)"></app-polygon-edit-controls>
+  </div>
+}
+
 <div class="zoom-controls">
   <button mat-icon-button class="zoom-button" (click)="zoomIn()" [disabled]="!canZoomIn()">
     <mat-icon>add</mat-icon>

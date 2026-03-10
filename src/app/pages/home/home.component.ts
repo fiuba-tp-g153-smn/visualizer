@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
-import { MapViewer } from '../../components/map-viewer/map-viewer';
+import { MapContainer } from '../../components/map-container/map-container';
 import { MainMenuComponent } from '../../components/main-menu/main-menu';
 
 @Component({
   selector: 'app-home',
-  imports: [MapViewer, MainMenuComponent],
+  imports: [MapContainer, MainMenuComponent],
   template: `
-    <app-map-viewer />
+    <app-map-container />
     <app-main-menu />
   `,
   styles: [],

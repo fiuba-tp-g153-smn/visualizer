@@ -10,6 +10,7 @@ import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { routes } from './app.routes';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { LayerRefreshService } from './services/layers/layer-refresh.service';
+import { TOOLTIP_DELAYS } from './config/timing.config';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -34,9 +35,9 @@ export const appConfig: ApplicationConfig = {
     {
       provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
       useValue: {
-        showDelay: 500,
-        hideDelay: 100,
-        touchendHideDelay: 100,
+        showDelay: TOOLTIP_DELAYS.SHOW,
+        hideDelay: TOOLTIP_DELAYS.HIDE,
+        touchendHideDelay: TOOLTIP_DELAYS.TOUCHEND_HIDE,
       },
     },
   ],

@@ -1,17 +1,35 @@
 /**
  * Application Configuration - Centralized Exports
  *
- * This file re-exports all application configuration for cleaner imports.
+ * Este archivo re-exporta toda la configuración de la aplicación.
+ * Incluye tanto valores basados en environment como valores configurables ajustables.
+ *
+ * Para constantes literales del código (event names, etc.), ver constants/
  */
 
-// Backend configuration
+// Data Service configuration (tiles and product metadata)
 export { buildConfigUrl, buildTileUrl } from './backend.config';
 
-// Map configuration
+// Alerts Service configuration (polygon operations and departments)
+export { buildIntersectCountryUrl, buildIntersectDepartmentsUrl } from './alerts-service.config';
+
+// Timing configuration (delays, tooltips, actions)
+export { TOOLTIP_DELAYS, ACTION_DELAYS } from './timing.config';
+
+// Map configuration (initial position, zoom levels, prerender)
 export { MAP_CONFIG } from './map.config';
 
-// Base map configuration
+// Base map definitions and utilities
 export { BASE_MAPS, getBaseMap, getAllBaseMaps } from './base-maps.config';
+
+// Map polygons configuration (styles, z-index)
+export {
+  POLYGON_STYLE,
+  LINE_GUIDE_STYLE,
+  EDIT_STYLE,
+  DEPARTMENT_STYLE,
+  Z_INDEX,
+} from './map-polygons.config';
 
 // Layer definitions and setup (re-export from layers folder)
 export {
