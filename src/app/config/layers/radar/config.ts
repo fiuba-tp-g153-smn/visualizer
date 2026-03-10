@@ -19,23 +19,23 @@ const RADAR_DEFAULTS = {
       name: '0.5°',
       activeByDefault: true,
     },
-    // {
-    //   id: 'elev1',
-    //   name: '0.9°',
-    //   activeByDefault: false,
-    // },
-    // {
-    //   id: 'elev2',
-    //   name: '1.3°',
-    //   activeByDefault: false,
-    // },
+    {
+      id: 'elev1',
+      name: '0.9°',
+      activeByDefault: false,
+    },
+    {
+      id: 'elev2',
+      name: '1.3°',
+      activeByDefault: false,
+    },
   ] as const,
   category: LayerCategory.RADAR,
   tms: false,
 };
 
 const satelitePrefix = 'radar';
-const products = ['DBZH']; // 'KDP', 'VRAD', 'RHOHV', 'ZDR'
+const products = ['DBZH', 'KDP', 'VRAD', 'RHOHV', 'ZDR'] as const;
 const MIN_ZOOM = 4;
 const MAX_ZOOM = 9;
 
