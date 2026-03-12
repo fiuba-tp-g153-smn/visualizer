@@ -134,15 +134,6 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
     return polygon.departments?.length || 0;
   }
 
-  getDepartmentsList(polygon: Polygon): string {
-    if (!polygon.departments || polygon.departments.length === 0) {
-      return 'Sin datos';
-    }
-    return polygon.departments
-      .map((dept) => (dept.properties && dept.properties['nam']) || 'Desconocido')
-      .join(', ');
-  }
-
   hasDepartments(polygon: Polygon): boolean {
     return !!(polygon.departments && polygon.departments.length > 0);
   }
@@ -169,5 +160,13 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
 
   canUndoCut(polygon: Polygon): boolean {
     return !!(polygon.originalCoordinates && polygon.originalCoordinates.length > 0);
+  }
+
+  onDepartmentHover(polygonId: string, departmentName: string): void {
+    this.polygonService.setHoveredDepartment(polygonId, departmentName);
+  }
+
+  onDepartmentLeave(): void {
+    this.polygonService.clearHoveredDepartment();
   }
 }

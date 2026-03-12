@@ -170,9 +170,14 @@
                       {{ getDepartmentsCount(polygon) }}
                     </button>
                     <mat-menu #departmentMenu="matMenu" class="departments-menu">
-                      @for (dept of polygon.departments; track dept.properties?.['nam'] || $index) {
-                        <button mat-menu-item disabled>
-                          {{ (dept.properties && dept.properties['nam']) || 'Desconocido' }}
+                      @for (dept of polygon.departments; track dept.name) {
+                        <button
+                          mat-menu-item
+                          (click)="$event.stopPropagation()"
+                          (mouseenter)="onDepartmentHover(polygon.id, dept.name)"
+                          (mouseleave)="onDepartmentLeave()"
+                        >
+                          {{ dept.name }}
                         </button>
                       }
                     </mat-menu>
