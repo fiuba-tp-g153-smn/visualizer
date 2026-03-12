@@ -418,15 +418,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   onOpacityChange(opacity: number): void {
-    // For radar layers, update all selected elevations
+    // For radar layers, update ALL elevations (both selected and unselected)
+    // This ensures that when an elevation is turned on later, it matches the current opacity
     const activeLayer = this.getActiveLayer();
     if (
       activeLayer &&
       activeLayer.controls.type === LayerType.TILE &&
       activeLayer.controls.category === LayerCategory.RADAR
     ) {
-      const selectedIds = this.selectedElevationIds();
-      selectedIds.forEach((id) => {
+      // Update ALL available elevations, not just selected ones
+      const allElevationIds = this.availableElevations().map((elev) => elev.id);
+      allElevationIds.forEach((id) => {
         this.controlService.setElevationOpacity(this.layer.id, id, opacity);
       });
     }
