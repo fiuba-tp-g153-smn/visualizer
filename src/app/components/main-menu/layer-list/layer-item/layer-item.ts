@@ -93,6 +93,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // Estado local
   isLoadingConfig = signal(false);
   isExpanded = signal(false);
+  isElevationsExpanded = signal(false);
 
   playSpeed = computed(() => {
     const controls = this.controlService.getControls(this.layer.id);
@@ -138,20 +139,39 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   /**
    * Obtiene la opacidad actual de la capa activa
+   * Para capas de radar, retorna la opacidad común de todas las elevaciones si es la misma, sino retorna undefined
    */
   currentOpacity = computed(() => {
     const activeLayer = this.getActiveLayer();
     if (!activeLayer) return;
+
+    // For radar layers, check if elevations have different opacities
+    if (
+      activeLayer.controls.type === LayerType.TILE &&
+      activeLayer.controls.category === LayerCategory.RADAR
+    ) {
+      return this.globalElevationOpacity();
+    }
+
     return activeLayer.controls.opacity;
   });
 
   /**
    * Obtiene la opacidad actual como porcentaje entero (0-100)
+   * Retorna undefined si las elevaciones tienen diferentes opacidades
    */
   currentOpacityPercent = computed(() => {
     const opacity = this.currentOpacity();
-    if (opacity === undefined) return 0;
+    if (opacity === undefined) return undefined;
     return Math.round(opacity * 100);
+  });
+
+  /**
+   * Obtiene la opacidad base de la capa (usada como fallback cuando las elevaciones tienen diferentes opacidades)
+   */
+  baseLayerOpacity = computed(() => {
+    const activeLayer = this.getActiveLayer();
+    return activeLayer?.controls.opacity ?? 1;
   });
 
   /**
@@ -375,6 +395,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
+   * Alterna la expansión de los controles de elevación
+   */
+  toggleElevationsExpansion(): void {
+    this.isElevationsExpanded.set(!this.isElevationsExpanded());
+  }
+
+  /**
    * Activa la capa
    */
   private activateLayer(): void {
@@ -391,6 +418,22 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   onOpacityChange(opacity: number): void {
+    // For radar layers, update ALL elevations (both selected and unselected)
+    // This ensures that when an elevation is turned on later, it matches the current opacity
+    const activeLayer = this.getActiveLayer();
+    if (
+      activeLayer &&
+      activeLayer.controls.type === LayerType.TILE &&
+      activeLayer.controls.category === LayerCategory.RADAR
+    ) {
+      // Update ALL available elevations, not just selected ones
+      const allElevationIds = this.availableElevations().map((elev) => elev.id);
+      allElevationIds.forEach((id) => {
+        this.controlService.setElevationOpacity(this.layer.id, id, opacity);
+      });
+    }
+
+    // Always update the layer's base opacity as well
     this.controlService.setOpacity(this.layer.id, opacity);
   }
 
@@ -437,6 +480,58 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   onElevationToggle(elevationId: string): void {
     this.controlService.toggleElevation(this.layer.id, elevationId);
   }
+
+  /**
+   * Obtiene la opacidad de una elevación específica
+   */
+  getElevationOpacity(elevationId: string): number {
+    const activeItem = this.getActiveLayer();
+    if (!activeItem) return 1;
+
+    if (
+      activeItem.controls.type === LayerType.TILE &&
+      activeItem.controls.category === LayerCategory.RADAR
+    ) {
+      const elevationOpacity = activeItem.controls.elevation.elevationOpacity[elevationId];
+      return elevationOpacity !== undefined ? elevationOpacity : activeItem.controls.opacity;
+    }
+
+    return activeItem.controls.opacity;
+  }
+
+  /**
+   * Obtiene el porcentaje de opacidad de una elevación específica
+   */
+  getElevationOpacityPercent(elevationId: string): number {
+    return Math.round(this.getElevationOpacity(elevationId) * 100);
+  }
+
+  /**
+   * Establece la opacidad de una elevación específica
+   */
+  onElevationOpacityChange(elevationId: string, opacity: number): void {
+    this.controlService.setElevationOpacity(this.layer.id, elevationId, opacity);
+  }
+
+  /**
+   * Obtiene la opacidad global de todas las elevaciones seleccionadas
+   * Retorna undefined si hay diferentes opacidades
+   */
+  globalElevationOpacity = computed(() => {
+    const activeLayer = this.getActiveLayer();
+    if (!activeLayer) return undefined;
+
+    const selectedIds = this.selectedElevationIds();
+    if (selectedIds.length === 0) return activeLayer.controls.opacity;
+
+    const opacities = selectedIds.map((id) => this.getElevationOpacity(id));
+    const firstOpacity = opacities[0];
+
+    // Check if all opacities are the same
+    const allSame = opacities.every((opacity) => Math.abs(opacity - firstOpacity) < 0.001);
+
+    return allSame ? firstOpacity : undefined;
+  });
 
   /**
    * Obtiene la etiqueta de tiempo para mostrar (YYYY-MM-DD HH:MM)

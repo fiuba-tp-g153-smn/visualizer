@@ -36,7 +36,18 @@ export class MapLayersService {
 
     const desiredLayersOnMap = new Map<string, L.TileLayer>();
 
-    for (const layerId of layerIds) {
+    // Sort layers by z-index (low to high) so we process bottom layers first
+    const sortedLayerIds = [...layerIds].sort((a, b) => {
+      const controlsA = this.controlService.getControls(a);
+      const controlsB = this.controlService.getControls(b);
+      const zIndexA = this.controlService.getAbsoluteZIndex(a, controlsA);
+      const zIndexB = this.controlService.getAbsoluteZIndex(b, controlsB);
+      return zIndexA - zIndexB;
+    });
+
+    let zIndexOffset = 0;
+
+    for (const layerId of sortedLayerIds) {
       const layer = this.layersService.getLayerById(layerId);
       if (!layer) {
         console.error(`Layer '${layerId}' not found, skipping`);
@@ -45,8 +56,6 @@ export class MapLayersService {
 
       const controls = this.controlService.getControls(layerId);
       if (!controls.visible) continue;
-
-      const absoluteZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
 
       // Skip tile layers that need config if config not loaded yet (will render on next sync)
       switch (layer.type) {
@@ -62,17 +71,26 @@ export class MapLayersService {
           break;
       }
 
+      const baseZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
+      const actualZIndex = baseZIndex + zIndexOffset;
+
       // Render layer based on category
       switch (layer.category) {
         case LayerCategory.RADAR: {
           const radarControls = controls as RadarLayerControls;
+          const elevationCount = radarControls.elevation.selectedElevationIds.length;
           const layers = this.layerRenderService.createRadarLayersForPlayback(
             layerId,
             radarControls,
             controls.opacity,
-            absoluteZIndex,
+            actualZIndex,
           );
           layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+
+          // Add offset for multiple elevations
+          if (elevationCount > 1) {
+            zIndexOffset += elevationCount - 1;
+          }
           break;
         }
 
@@ -82,7 +100,7 @@ export class MapLayersService {
             layerId,
             goesControls,
             controls.opacity,
-            absoluteZIndex,
+            actualZIndex,
           );
           layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
           break;
@@ -92,7 +110,7 @@ export class MapLayersService {
           // WMS and other non-animated layers
           const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
           tileLayer.setOpacity(controls.opacity);
-          tileLayer.setZIndex(absoluteZIndex);
+          tileLayer.setZIndex(actualZIndex);
           desiredLayersOnMap.set(layerId, tileLayer);
           break;
         }

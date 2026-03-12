@@ -37,7 +37,7 @@ import { LayerConfigService } from './layer-config.service';
   providedIn: 'root',
 })
 export class LayerControlService {
-  private readonly STORAGE_KEY = 'smn-active-layers-v2';
+  private readonly STORAGE_KEY = 'smn-active-layers-v3';
 
   private readonly layersService = inject(LayersService);
   private readonly layerConfigService = inject(LayerConfigService);
@@ -261,6 +261,7 @@ export class LayerControlService {
 
   /**
    * Toggles an elevation for radar layers (adds if not present, removes if present).
+   * If all elevations are removed, the layer is automatically deactivated.
    */
   toggleElevation(layerId: string, elevationId: string): void {
     this.updateControls(layerId, (controls) => {
@@ -289,10 +290,21 @@ export class LayerControlService {
           throw new Error(`Elevation control only applies to tile layers`);
       }
     });
+
+    // Deactivate the layer if no elevations are selected
+    const updatedControls = this.getControls(layerId);
+    if (
+      updatedControls.type === LayerType.TILE &&
+      updatedControls.category === LayerCategory.RADAR &&
+      updatedControls.elevation.selectedElevationIds.length === 0
+    ) {
+      this.deactivateLayer(layerId);
+    }
   }
 
   /**
    * Sets the selected elevations for radar layers.
+   * If no elevations are provided, the layer is automatically deactivated.
    */
   setSelectedElevations(layerId: string, elevationIds: string[]): void {
     this.updateControls(layerId, (controls) => {
@@ -308,6 +320,23 @@ export class LayerControlService {
           break;
         default:
           throw new Error(`Elevation control only applies to tile layers`);
+      }
+    });
+
+    // Deactivate the layer if no elevations are selected
+    if (elevationIds.length === 0) {
+      this.deactivateLayer(layerId);
+    }
+  }
+
+  /**
+   * Sets the opacity for a specific elevation in a radar layer.
+   */
+  setElevationOpacity(layerId: string, elevationId: string, opacity: number): void {
+    const clampedOpacity = Math.max(0, Math.min(1, opacity));
+    this.updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE && controls.category === LayerCategory.RADAR) {
+        controls.elevation.elevationOpacity[elevationId] = clampedOpacity;
       }
     });
   }
@@ -636,20 +665,6 @@ export class LayerControlService {
               // Config not loaded yet, will be validated when config arrives
             }
           }
-
-          // Migrate old data: ensure radar layers have selectedElevationIds
-          if (controls.category === LayerCategory.RADAR) {
-            const radarControls = controls as RadarLayerControls;
-            if (!radarControls.elevation?.selectedElevationIds) {
-              const radarLayer = layer as RadarTileLayer;
-              const defaultElevations = radarLayer.availableElevations
-                .filter((elev) => elev.activeByDefault)
-                .map((elev) => elev.id);
-              radarControls.elevation = {
-                selectedElevationIds: defaultElevations,
-              };
-            }
-          }
         }
       } else if (DEFAULT_ACTIVE_LAYERS.includes(layer.id)) {
         // Apply default active layers
@@ -720,6 +735,7 @@ export class LayerControlService {
               category: layer.category!,
               elevation: {
                 selectedElevationIds: defaultElevations,
+                elevationOpacity: {},
               },
             } as RadarLayerControls;
           default:

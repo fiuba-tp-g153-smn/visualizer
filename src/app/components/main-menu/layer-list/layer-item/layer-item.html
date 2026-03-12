@@ -83,28 +83,79 @@
         >
           <input
             matSliderThumb
-            [value]="currentOpacity()"
+            [value]="currentOpacity() ?? baseLayerOpacity()"
             (input)="onOpacityChange(+$any($event.target).value)"
           />
         </mat-slider>
-        <span class="control-value">{{ currentOpacityPercent() }}%</span>
+        <span class="control-value">
+          {{ currentOpacityPercent() !== undefined ? currentOpacityPercent() + '%' : '-' }}
+        </span>
       </div>
 
       <!-- Control de elevación (solo para RADAR) -->
       @if (hasElevationControl()) {
         <div class="elevation-control">
-          <span class="control-label">Elevaciones</span>
-          <div class="elevation-checkboxes">
-            @for (elevation of availableElevations(); track elevation.id) {
-              <mat-checkbox
-                [checked]="isElevationSelected(elevation.id)"
-                (change)="onElevationToggle(elevation.id)"
-                class="elevation-checkbox"
-              >
-                {{ elevation.name }}
-              </mat-checkbox>
+          <div class="elevation-header">
+            <span class="control-label">Elevaciones</span>
+
+            @if (!isElevationsExpanded()) {
+              <!-- Collapsed view: checkboxes -->
+              <div class="elevation-checkboxes">
+                @for (elevation of availableElevations(); track elevation.id) {
+                  <mat-checkbox
+                    [checked]="isElevationSelected(elevation.id)"
+                    (change)="onElevationToggle(elevation.id)"
+                    class="elevation-checkbox"
+                  >
+                    {{ elevation.name }}
+                  </mat-checkbox>
+                }
+              </div>
             }
+
+            <button
+              mat-icon-button
+              (click)="toggleElevationsExpansion()"
+              [matTooltip]="isElevationsExpanded() ? 'Contraer' : 'Expandir controles de elevación'"
+              class="expand-btn"
+            >
+              <mat-icon>{{ isElevationsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
           </div>
+
+          <!-- Expanded view: individual opacity controls -->
+          @if (isElevationsExpanded()) {
+            <div class="elevation-expanded-controls">
+              <!-- Individual elevation controls -->
+              @for (elevation of availableElevations(); track elevation.id) {
+                <div class="elevation-item">
+                  <mat-checkbox
+                    [checked]="isElevationSelected(elevation.id)"
+                    (change)="onElevationToggle(elevation.id)"
+                    class="elevation-item-checkbox"
+                  >
+                    {{ elevation.name }}
+                  </mat-checkbox>
+                  <mat-slider
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    discrete
+                    class="control-slider"
+                    [displayWith]="formatOpacity"
+                    [disabled]="!isElevationSelected(elevation.id)"
+                  >
+                    <input
+                      matSliderThumb
+                      [value]="getElevationOpacity(elevation.id)"
+                      (input)="onElevationOpacityChange(elevation.id, +$any($event.target).value)"
+                    />
+                  </mat-slider>
+                  <span class="control-value">{{ getElevationOpacityPercent(elevation.id) }}%</span>
+                </div>
+              }
+            </div>
+          }
         </div>
       }
 
