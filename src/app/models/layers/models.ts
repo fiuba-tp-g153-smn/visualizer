@@ -74,6 +74,7 @@ export interface RadarElevation {
   id: string;
   name: string;
   activeByDefault: boolean; // Indica si esta elevación debe seleccionarse por defecto al activar la capa
+  zIndexPreference: number; // Z-index preference for stacking order (higher values render on top)
 }
 
 /**

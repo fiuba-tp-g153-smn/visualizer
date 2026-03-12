@@ -238,12 +238,13 @@ export class LayerRenderService {
   /**
    * Creates radar layers for playback including current frame and prerendered next frames.
    * Returns a map of composite keys to layers with opacity already set.
-   * One layer per selected elevation.
+   * One layer per selected elevation, each with its own opacity if configured.
+   * Z-indices are allocated incrementally based on elevation zIndexPreference (higher preference = higher z-index).
    *
    * @param layerId - The radar layer identifier
    * @param controls - Current layer control state
-   * @param targetOpacity - Target opacity for the current visible frames (0-1)
-   * @param absoluteZIndex - Z-index to apply to all layers
+   * @param targetOpacity - Target opacity for the current visible frames (0-1) (used as fallback if no elevation-specific opacity)
+   * @param absoluteZIndex - Base z-index for the layer (elevations will use absoluteZIndex, absoluteZIndex+1, etc.)
    * @returns Map of composite keys (layerId#elevationId#timeIndex) to layer objects
    */
   createRadarLayersForPlayback(
@@ -257,10 +258,37 @@ export class LayerRenderService {
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
     const totalFrames = this.getAvailableTilesetsCount(layerId);
 
-    for (const elevationId of selectedElevationIds) {
+    // Get layer to access elevation configurations
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.RADAR) {
+      throw new Error(`Layer ${layerId} is not a radar layer`);
+    }
+
+    const radarLayer = layer as RadarTileLayer;
+
+    // Build a map of elevationId -> zIndexPreference for selected elevations
+    const selectedElevationsWithPreference = selectedElevationIds
+      .map((elevationId) => {
+        const elevation = radarLayer.availableElevations.find((e) => e.id === elevationId);
+        if (!elevation) {
+          throw new Error(`Elevation '${elevationId}' not found for layer '${layerId}'`);
+        }
+        return { elevationId, zIndexPreference: elevation.zIndexPreference };
+      })
+      .sort((a, b) => a.zIndexPreference - b.zIndexPreference); // Sort by preference (lower first)
+
+    // Allocate z-indices incrementally: baseZIndex, baseZIndex+1, baseZIndex+2, etc.
+    selectedElevationsWithPreference.forEach((item, index) => {
+      const elevationZIndex = absoluteZIndex + index;
+      const elevationId = item.elevationId;
+
+      // Use elevation-specific opacity if available, otherwise use targetOpacity
+      const elevationOpacity = controls.elevation.elevationOpacity[elevationId];
+      const opacity = elevationOpacity !== undefined ? elevationOpacity : targetOpacity;
+
       // Current visible frame for this elevation
       const tileLayer = this.createRadarTileLayerForElevation(layerId, controls, elevationId);
-      this.applyLayerStyles(tileLayer, targetOpacity, absoluteZIndex);
+      this.applyLayerStyles(tileLayer, opacity, elevationZIndex);
       result.set(`${layerId}#${elevationId}#${currentTimeIndex}`, tileLayer);
 
       // Pre-render next N frames at opacity=0 for this elevation
@@ -269,7 +297,7 @@ export class LayerRenderService {
         currentTimeIndex,
         totalFrames,
         controls.playback.lastImagesCount,
-        absoluteZIndex,
+        elevationZIndex,
         (adjIndex) => {
           const adjLayer = this.createRadarTileLayerForElevationAtTimeIndex(
             layerId,
@@ -280,7 +308,7 @@ export class LayerRenderService {
           return { layer: adjLayer, key: `${layerId}#${elevationId}#${adjIndex}` };
         },
       );
-    }
+    });
 
     return result;
   }
@@ -479,6 +507,7 @@ export class LayerRenderService {
   /**
    * Creates a tile layer for radar imagery with a specific elevation.
    * Reads configuration from LayerConfigService to get available tilesets (shared across elevations).
+   * Uses the elevation-specific opacity if available, otherwise uses the layer's global opacity.
    *
    * @throws Error if layer not found or not a TILE layer
    */
@@ -505,7 +534,11 @@ export class LayerRenderService {
     const pathToTileset = `${layerId}/${elevation.id}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
-    const tileLayer = this.buildTileLayer(tileUrl, layer, controls.opacity);
+    // Use elevation-specific opacity if available, otherwise use layer's global opacity
+    const elevationOpacity = controls.elevation.elevationOpacity[elevationId];
+    const opacity = elevationOpacity !== undefined ? elevationOpacity : controls.opacity;
+
+    const tileLayer = this.buildTileLayer(tileUrl, layer, opacity);
     this.attachErrorHandlers(tileLayer, layerId, elevationId, elevation.name);
     return tileLayer;
   }
