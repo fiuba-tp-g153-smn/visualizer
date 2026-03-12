@@ -75,11 +75,13 @@ export class AlertsService {
       .post<{ departments: DepartmentBackendResponse[] }>(url, geoJson, { params })
       .pipe(
         map((response) => ({
-          departments: response.departments.map((dept) => ({
-            name: (dept.properties && dept.properties['nam']) || 'Desconocido',
-            geometry: dept.geometry,
-            intersection: dept.intersection,
-          })),
+          departments: response.departments
+            .map((dept) => ({
+              name: (dept.properties && dept.properties['nam']) || 'Desconocido',
+              geometry: dept.geometry,
+              intersection: dept.intersection,
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
         })),
       );
   }
