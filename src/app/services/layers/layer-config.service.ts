@@ -57,7 +57,11 @@ export class LayerConfigService {
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
         // Extract only the IDs from the tileset objects and sort chronologically
-        const availableTilesets = response.tilesets.map((tileset: any) => tileset.id).sort();
+        const allTilesets = response.tilesets.map((tileset: any) => tileset.id).sort();
+
+        // Limit to the maximum available period for this layer
+        const maxPeriod = this.getMaxPeriodForLayer(layer);
+        const availableTilesets = allTilesets.slice(-maxPeriod);
 
         const layerConfig: GoesTileLayerConfig = {
           layerId: layer.id,
@@ -100,7 +104,11 @@ export class LayerConfigService {
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
         // Sort tilesets chronologically
-        const availableTilesets = (response.tilesets || []).sort();
+        const allTilesets = (response.tilesets || []).sort();
+
+        // Limit to the maximum available period for this layer
+        const maxPeriod = this.getMaxPeriodForLayer(layer);
+        const availableTilesets = allTilesets.slice(-maxPeriod);
 
         const config: RadarTileLayerConfig = {
           layerId: layer.id,
@@ -176,6 +184,28 @@ export class LayerConfigService {
   // ============================================================================
   // Private Helpers
   // ============================================================================
+
+  /**
+   * Gets the maximum available period for a layer (the highest value in availablePeriods).
+   * This is used to limit the number of tilesets stored in memory.
+   * @param layer - The tile layer
+   * @returns The maximum period, or a default of 24 if not specified
+   */
+  private getMaxPeriodForLayer(layer: GoesTileLayer | RadarTileLayer): number {
+    if (layer.category === LayerCategory.GOES_19) {
+      const goesLayer = layer as GoesTileLayer;
+      if (goesLayer.availablePeriods && goesLayer.availablePeriods.length > 0) {
+        return Math.max(...goesLayer.availablePeriods);
+      }
+    } else if (layer.category === LayerCategory.RADAR) {
+      const radarLayer = layer as RadarTileLayer;
+      if (radarLayer.availablePeriods && radarLayer.availablePeriods.length > 0) {
+        return Math.max(...radarLayer.availablePeriods);
+      }
+    }
+    // Default fallback if no periods are defined
+    return 24;
+  }
 
   /**
    * Updates the configuration map with a new configuration.

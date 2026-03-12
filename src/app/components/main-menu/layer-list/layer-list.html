@@ -12,7 +12,7 @@
         <ng-template mat-tab-label>
           <div class="tab-label-container">
             <mat-icon class="tab-icon">grid_view</mat-icon>
-            <span>Disponibles</span>
+            <span class="tab-label">Disponibles</span>
           </div>
         </ng-template>
         <div class="tab-content">
@@ -25,7 +25,7 @@
         <ng-template mat-tab-label>
           <div class="tab-label-container">
             <mat-icon class="tab-icon">tune</mat-icon>
-            <span>Activas</span>
+            <span class="tab-label">Activas</span>
             <span class="active-count" [class.visible]="getActiveLayersCount() > 0">
               {{ getActiveLayersCount() }}
             </span>
@@ -33,6 +33,19 @@
         </ng-template>
         <div class="tab-content">
           <app-active-layers />
+        </div>
+      </mat-tab>
+
+      <!-- Tab: Sincronización Temporal -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label-container">
+            <mat-icon class="tab-icon">sync</mat-icon>
+            <span class="tab-label">Sincronización</span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          <app-sync-playback />
         </div>
       </mat-tab>
     </mat-tab-group>

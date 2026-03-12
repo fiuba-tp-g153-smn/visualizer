@@ -7,6 +7,7 @@ import { LayerControlService } from '../../../services/layers/layer-control.serv
 import { MenuPanelComponent } from '../menu-section.model';
 import { AvailableLayersComponent } from './available-layers/available-layers';
 import { ActiveLayersComponent } from './active-layers/active-layers';
+import { SyncPlaybackComponent } from './sync-playback/sync-playback';
 
 /**
  * Contenedor de listas de capas con pestañas
@@ -21,6 +22,7 @@ import { ActiveLayersComponent } from './active-layers/active-layers';
     MatIconModule,
     AvailableLayersComponent,
     ActiveLayersComponent,
+    SyncPlaybackComponent,
   ],
   templateUrl: './layer-list.html',
   styleUrl: './layer-list.scss',

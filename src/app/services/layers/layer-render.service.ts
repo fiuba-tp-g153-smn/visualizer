@@ -278,6 +278,7 @@ export class LayerRenderService {
       .sort((a, b) => a.zIndexPreference - b.zIndexPreference); // Sort by preference (lower first)
 
     // Allocate z-indices incrementally: baseZIndex, baseZIndex+1, baseZIndex+2, etc.
+    // The map-layers service ensures proper separation between layers by tracking cumulative offsets
     selectedElevationsWithPreference.forEach((item, index) => {
       const elevationZIndex = absoluteZIndex + index;
       const elevationId = item.elevationId;
