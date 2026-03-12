@@ -37,7 +37,7 @@ import { LayerConfigService } from './layer-config.service';
   providedIn: 'root',
 })
 export class LayerControlService {
-  private readonly STORAGE_KEY = 'smn-active-layers-v3';
+  private readonly ACTIVE_LAYERS_LOCAL_STORAGE_KEY = 'smn-active-layers-v3';
 
   private readonly layersService = inject(LayersService);
   private readonly layerConfigService = inject(LayerConfigService);
@@ -751,7 +751,7 @@ export class LayerControlService {
    */
   private saveControls(): void {
     const state = this.activeLayers().map(({ controls }) => controls);
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(this.ACTIVE_LAYERS_LOCAL_STORAGE_KEY, JSON.stringify(state));
   }
 
   /**
@@ -759,7 +759,7 @@ export class LayerControlService {
    */
   private loadControls(): LayerControls[] | undefined {
     try {
-      const saved = localStorage.getItem(this.STORAGE_KEY);
+      const saved = localStorage.getItem(this.ACTIVE_LAYERS_LOCAL_STORAGE_KEY);
       return saved ? JSON.parse(saved) : undefined;
     } catch {
       return undefined;

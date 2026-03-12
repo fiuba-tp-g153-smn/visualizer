@@ -11,8 +11,7 @@ import { firstValueFrom } from 'rxjs';
   providedIn: 'root',
 })
 export class PolygonService {
-  private readonly STORAGE_KEY = 'mapasmn_polygons_v3';
-  private readonly SIMPLIFIED_STORAGE_KEY = 'mapasmn_use_simplified';
+  private readonly POLYGONS_LOCAL_STORAGE_KEY = 'mapasmn_polygons_v3';
   private readonly polygons = signal<Polygon[]>([]);
   private readonly alertsService = inject(AlertsService);
 
@@ -34,7 +33,7 @@ export class PolygonService {
   /**
    * Usar geometrías simplificadas (más rápido, menor detalle)
    */
-  readonly useSimplified = signal<boolean>(this.loadSimplifiedSetting());
+  readonly useSimplified = signal<boolean>(true);
 
   /**
    * Lista de polígonos como signal readonly
@@ -380,7 +379,7 @@ export class PolygonService {
   private saveToStorage(): void {
     try {
       const data = JSON.stringify(this.polygons());
-      localStorage.setItem(this.STORAGE_KEY, data);
+      localStorage.setItem(this.POLYGONS_LOCAL_STORAGE_KEY, data);
     } catch (error) {
       console.error('Error al guardar polígonos en localStorage:', error);
     }
@@ -391,7 +390,7 @@ export class PolygonService {
    */
   private loadFromStorage(): void {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
+      const data = localStorage.getItem(this.POLYGONS_LOCAL_STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data) as Polygon[];
         // Convertir las fechas de string a Date
@@ -406,32 +405,6 @@ export class PolygonService {
       console.error('Error al cargar polígonos desde localStorage:', error);
       this.polygons.set([]);
     }
-  }
-
-  /**
-   * Guarda la configuración de simplificado en localStorage
-   */
-  private saveSimplifiedSetting(): void {
-    try {
-      localStorage.setItem(this.SIMPLIFIED_STORAGE_KEY, JSON.stringify(this.useSimplified()));
-    } catch (error) {
-      console.error('Error al guardar configuración de simplificado:', error);
-    }
-  }
-
-  /**
-   * Carga la configuración de simplificado desde localStorage
-   */
-  private loadSimplifiedSetting(): boolean {
-    try {
-      const data = localStorage.getItem(this.SIMPLIFIED_STORAGE_KEY);
-      if (data) {
-        return JSON.parse(data) as boolean;
-      }
-    } catch (error) {
-      console.error('Error al cargar configuración de simplificado:', error);
-    }
-    return true; // Por defecto usar simplificado
   }
 
   /**
