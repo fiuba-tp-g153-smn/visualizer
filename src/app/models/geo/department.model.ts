@@ -1,10 +1,12 @@
+import type { Geometry } from 'geojson';
+
 /**
  * Representa un departamento con sus geometrías
  */
 export interface Department {
   name: string;
-  geometry: GeoJSON.Geometry;
-  intersection: GeoJSON.Geometry;
+  geometry: Geometry;
+  intersection: Geometry;
 }
 
 /**
