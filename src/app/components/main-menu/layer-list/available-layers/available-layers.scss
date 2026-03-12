@@ -83,9 +83,8 @@
     }
   }
 
-  .mat-expansion-panel-body {
-    padding: 0;
-    background-color: var(--mat-sys-surface);
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0 8px 8px 8px;
   }
 
   .subgroup-panel {
@@ -96,9 +95,8 @@
       font-weight: 400;
     }
 
-    .mat-expansion-panel-body {
-      padding: 0;
-      background-color: var(--mat-sys-surface);
+    ::ng-deep .mat-expansion-panel-body {
+      padding: 0 8px 8px 8px;
     }
 
     &.mat-expanded {

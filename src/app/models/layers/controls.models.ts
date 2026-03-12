@@ -24,6 +24,7 @@ export interface GoesLayerControls extends TileLayerControls {
 }
 
 export interface RadarLayerControls extends TileLayerControls {
+  radarControls: { selectedElevationIds: string[] };
   category: LayerCategory.RADAR;
   elevation: ElevationControls;
 }
@@ -37,6 +38,7 @@ export interface PlaybackControls {
 
 export interface ElevationControls {
   selectedElevationIds: string[]; // IDs de elevaciones seleccionadas (puede estar vacío si no se ha seleccionado ninguna)
+  elevationOpacity: Record<string, number>; // Opacity per elevation (0-1), undefined uses the layer's global opacity
 }
 
 export interface WmsLayerControls extends BaseLayerControls {
