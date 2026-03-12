@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { NotificationService } from './notification.service';
-import { NotificationType } from '../models';
+import { NotificationType } from '../../models';
 
 describe('NotificationService', () => {
   let service: NotificationService;
