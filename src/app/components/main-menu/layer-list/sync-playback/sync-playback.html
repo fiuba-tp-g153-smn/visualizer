@@ -1,0 +1,133 @@
+<div class="sync-playback">
+  @if (eligibleLayers().length === 0) {
+    <div class="empty-state-container">
+      <mat-icon class="empty-icon">sync_disabled</mat-icon>
+      <h3>Sin capas disponibles</h3>
+      <p>No hay capas activas con períodos temporales para sincronizar.</p>
+    </div>
+  } @else {
+    <!-- Controles fijos arriba -->
+    <div class="sync-controls-fixed">
+      <!-- Advertencia sin intersección -->
+      @if (hasSelectedLayers() && !hasIntersection()) {
+        <div class="no-intersection-warning">
+          <mat-icon>warning</mat-icon>
+          <span>Las capas seleccionadas no tienen períodos en común</span>
+        </div>
+      }
+
+      <div class="layer-controls">
+        <!-- Rango de tiempo -->
+        <div class="time-control">
+          <div class="time-control-header">
+            <span class="control-label">Rango de tiempo</span>
+          </div>
+          <div class="time-slider-container">
+            <span class="time-min">{{ formatTimeOnly(config().minTime) }}</span>
+            <mat-slider
+              [min]="dateToSliderValue(availableTimeRange()?.min)"
+              [max]="dateToSliderValue(availableTimeRange()?.max)"
+              step="1"
+              discrete
+              class="control-slider"
+              [displayWith]="formatTimeTooltip"
+              [disabled]="!hasIntersection()"
+            >
+              <input
+                matSliderStartThumb
+                [value]="dateToSliderValue(config().minTime)"
+                (valueChange)="onMinTimeSliderChange($event)"
+              />
+              <input
+                matSliderEndThumb
+                [value]="dateToSliderValue(config().maxTime)"
+                (valueChange)="onMaxTimeSliderChange($event)"
+              />
+            </mat-slider>
+            <span class="time-max">{{ formatTimeOnly(config().maxTime) }}</span>
+
+            <!-- Velocidad inline -->
+            <div class="speed-control">
+              <div class="speed-input-wrapper">
+                <input
+                  type="number"
+                  [value]="config().speed"
+                  (change)="onSpeedChange(+$any($event.target).value)"
+                  min="0"
+                  max="60"
+                  step="0.5"
+                  class="speed-input"
+                  placeholder="1"
+                  [disabled]="!hasIntersection()"
+                />
+                <span class="speed-unit">min/s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tiempo actual -->
+        <div class="time-control">
+          <div class="time-control-header">
+            <span class="control-label">Tiempo actual</span>
+          </div>
+          <div class="time-slider-container">
+            <span class="time-min">{{ formatTimeOnly(config().minTime) }}</span>
+            <mat-slider
+              [min]="dateToSliderValue(config().minTime)"
+              [max]="dateToSliderValue(config().maxTime)"
+              step="1"
+              discrete
+              class="control-slider"
+              [displayWith]="formatTimeTooltip"
+              [disabled]="!hasIntersection()"
+            >
+              <input
+                matSliderThumb
+                [value]="dateToSliderValue(config().currentTime)"
+                (valueChange)="onCurrentTimeChange($event)"
+                [disabled]="config().isPlaying"
+              />
+            </mat-slider>
+            <span class="time-max">{{ formatTimeOnly(config().maxTime) }}</span>
+            <button
+              mat-icon-button
+              (click)="togglePlayback()"
+              [disabled]="!canPlay()"
+              [matTooltip]="getPlayTooltip()"
+              class="play-btn"
+            >
+              <mat-icon>{{ getPlayIcon() }}</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de capas scrolleable -->
+    <div class="layers-section-scrollable">
+      <div class="layers-section">
+        <span class="section-label">
+          Capas disponibles
+          @if (config().selectedLayerIds.length > 0) {
+            <span class="selected-count">({{ config().selectedLayerIds.length }})</span>
+          }
+        </span>
+
+        <div class="layers-list">
+          @for (item of eligibleLayers(); track item.layer.id) {
+            <div class="layer-checkbox-item">
+              <mat-checkbox
+                [checked]="isLayerSelected(item.layer.id)"
+                (change)="toggleLayer(item.layer.id)"
+                color="primary"
+              >
+                {{ getLayerDisplayName(item.layer.id) }}
+              </mat-checkbox>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>
