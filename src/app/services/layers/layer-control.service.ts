@@ -261,6 +261,7 @@ export class LayerControlService {
 
   /**
    * Toggles an elevation for radar layers (adds if not present, removes if present).
+   * If all elevations are removed, the layer is automatically deactivated.
    */
   toggleElevation(layerId: string, elevationId: string): void {
     this.updateControls(layerId, (controls) => {
@@ -289,10 +290,21 @@ export class LayerControlService {
           throw new Error(`Elevation control only applies to tile layers`);
       }
     });
+
+    // Deactivate the layer if no elevations are selected
+    const updatedControls = this.getControls(layerId);
+    if (
+      updatedControls.type === LayerType.TILE &&
+      updatedControls.category === LayerCategory.RADAR &&
+      updatedControls.elevation.selectedElevationIds.length === 0
+    ) {
+      this.deactivateLayer(layerId);
+    }
   }
 
   /**
    * Sets the selected elevations for radar layers.
+   * If no elevations are provided, the layer is automatically deactivated.
    */
   setSelectedElevations(layerId: string, elevationIds: string[]): void {
     this.updateControls(layerId, (controls) => {
@@ -310,6 +322,11 @@ export class LayerControlService {
           throw new Error(`Elevation control only applies to tile layers`);
       }
     });
+
+    // Deactivate the layer if no elevations are selected
+    if (elevationIds.length === 0) {
+      this.deactivateLayer(layerId);
+    }
   }
 
   /**
