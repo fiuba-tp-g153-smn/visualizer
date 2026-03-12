@@ -1,4 +1,11 @@
-import { Injectable, inject, ViewContainerRef, Injector, ComponentRef } from '@angular/core';
+import {
+  Injectable,
+  inject,
+  ViewContainerRef,
+  Injector,
+  ComponentRef,
+  effect,
+} from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import * as L from 'leaflet';
@@ -46,6 +53,10 @@ export class MapPolygonsService {
   private map: L.Map | null = null;
   private polygonLayers = new Map<string, L.Polygon>();
   private departmentLayers = new Map<string, L.GeoJSON[]>(); // polygonId -> array of department GeoJSON layers
+  private departmentLayersByName = new Map<
+    string,
+    Map<string, { layer: L.GeoJSON; baseColor: string }>
+  >(); // polygonId -> (departmentName -> layer)
   private currentDrawingPolygon: L.Polygon | null = null;
   private contextMenuOverlayRef: OverlayRef | null = null;
   private originalCoordinates: Array<[number, number]> | null = null;
@@ -53,6 +64,14 @@ export class MapPolygonsService {
   // These are needed for the context menu overlay
   private viewContainerRef: ViewContainerRef | null = null;
   private injector: Injector | null = null;
+
+  constructor() {
+    // Listen to hovered department changes and update styles
+    effect(() => {
+      const hovered = this.polygonService.hoveredDepartment();
+      this.updateDepartmentHighlight(hovered);
+    });
+  }
 
   /**
    * Initialize the service with a Leaflet map instance and Angular dependencies
@@ -398,6 +417,14 @@ export class MapPolygonsService {
           layer.addTo(this.map!);
         }
       });
+
+      // Update stored colors in the by-name map
+      const layersByName = this.departmentLayersByName.get(polygon.id);
+      if (layersByName) {
+        layersByName.forEach((entry) => {
+          entry.baseColor = departmentColor;
+        });
+      }
       return;
     }
 
@@ -410,6 +437,7 @@ export class MapPolygonsService {
 
     // Create new layers
     const layers: L.GeoJSON[] = [];
+    const layersByName = new Map<string, { layer: L.GeoJSON; baseColor: string }>();
 
     for (const dept of polygon.departments) {
       // Render the department geometry
@@ -427,19 +455,24 @@ export class MapPolygonsService {
       });
 
       // Add tooltip with department info
-      if (dept.properties && dept.properties['nam']) {
-        geoJsonLayer.bindTooltip(dept.properties['nam'], {
-          permanent: false,
-          direction: 'center',
-          className: 'department-tooltip',
-        });
-      }
+      geoJsonLayer.bindTooltip(dept.name, {
+        permanent: false,
+        direction: 'center',
+        className: 'department-tooltip',
+      });
+
+      // Store layer reference by name
+      layersByName.set(dept.name, {
+        layer: geoJsonLayer,
+        baseColor: departmentColor,
+      });
 
       geoJsonLayer.addTo(this.map);
       layers.push(geoJsonLayer);
     }
 
     this.departmentLayers.set(polygon.id, layers);
+    this.departmentLayersByName.set(polygon.id, layersByName);
   }
 
   /**
@@ -455,6 +488,9 @@ export class MapPolygonsService {
       });
       this.departmentLayers.delete(polygonId);
     }
+
+    // Also clean up the by-name map
+    this.departmentLayersByName.delete(polygonId);
   }
 
   /**
@@ -764,6 +800,51 @@ export class MapPolygonsService {
   }
 
   /**
+   * Update department highlight based on hover state
+   */
+  private updateDepartmentHighlight(
+    hovered: { polygonId: string; departmentName: string } | null,
+  ): void {
+    if (!this.map) return;
+
+    // If there's no hover, reset all departments to their base color
+    if (!hovered) {
+      this.departmentLayersByName.forEach((layersByName, polygonId) => {
+        layersByName.forEach((entry, departmentName) => {
+          const baseStyle = createDepartmentStyle(entry.baseColor);
+          entry.layer.setStyle(baseStyle);
+        });
+      });
+      return;
+    }
+
+    const { polygonId, departmentName } = hovered;
+    const layersByName = this.departmentLayersByName.get(polygonId);
+    if (!layersByName) return;
+
+    // Reset all departments in this polygon to base color
+    layersByName.forEach((entry) => {
+      const baseStyle = createDepartmentStyle(entry.baseColor);
+      entry.layer.setStyle(baseStyle);
+    });
+
+    // Highlight the hovered department
+    const hoveredEntry = layersByName.get(departmentName);
+    if (hoveredEntry) {
+      // Create a highlighted style with increased opacity and weight
+      const highlightStyle = createDepartmentStyle(hoveredEntry.baseColor);
+      highlightStyle.fillOpacity = (DEPARTMENT_STYLE.FILL_OPACITY || 0.2) * 2.5; // Increase opacity
+      highlightStyle.opacity = (DEPARTMENT_STYLE.OPACITY || 0.6) * 1.5; // Increase border opacity
+      highlightStyle.weight = (DEPARTMENT_STYLE.WEIGHT || 2) * 1.5; // Increase border weight
+
+      hoveredEntry.layer.setStyle(highlightStyle);
+
+      // Bring the layer to front
+      hoveredEntry.layer.bringToFront();
+    }
+  }
+
+  /**
    * Clean up when destroying
    */
   destroy(): void {
@@ -775,6 +856,7 @@ export class MapPolygonsService {
       layers.forEach((layer) => layer.remove());
     });
     this.departmentLayers.clear();
+    this.departmentLayersByName.clear();
 
     if (this.contextMenuOverlayRef) {
       this.contextMenuOverlayRef.dispose();

@@ -11,7 +11,7 @@ import { firstValueFrom } from 'rxjs';
   providedIn: 'root',
 })
 export class PolygonService {
-  private readonly STORAGE_KEY = 'mapasmn_polygons';
+  private readonly STORAGE_KEY = 'mapasmn_polygons_v3';
   private readonly SIMPLIFIED_STORAGE_KEY = 'mapasmn_use_simplified';
   private readonly polygons = signal<Polygon[]>([]);
   private readonly alertsService = inject(AlertsService);
@@ -21,6 +21,15 @@ export class PolygonService {
    */
   private readonly loadingCut = signal<Set<string>>(new Set());
   private readonly loadingDepartments = signal<Set<string>>(new Set());
+
+  /**
+   * Track which department is currently being hovered
+   */
+  private readonly hoveredDepartmentSignal = signal<{
+    polygonId: string;
+    departmentName: string;
+  } | null>(null);
+  readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
 
   /**
    * Usar geometrías simplificadas (más rápido, menor detalle)
@@ -423,5 +432,19 @@ export class PolygonService {
       console.error('Error al cargar configuración de simplificado:', error);
     }
     return true; // Por defecto usar simplificado
+  }
+
+  /**
+   * Set which department is currently being hovered
+   */
+  setHoveredDepartment(polygonId: string, departmentName: string): void {
+    this.hoveredDepartmentSignal.set({ polygonId, departmentName });
+  }
+
+  /**
+   * Clear the hovered department
+   */
+  clearHoveredDepartment(): void {
+    this.hoveredDepartmentSignal.set(null);
   }
 }

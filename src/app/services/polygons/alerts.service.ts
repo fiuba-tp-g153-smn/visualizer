@@ -13,6 +13,15 @@ const HTTP_PARAMS = {
 } as const;
 
 /**
+ * Departamento tal como viene del backend (con properties)
+ */
+interface DepartmentBackendResponse {
+  properties: Record<string, any>;
+  geometry: GeoJSON.Geometry;
+  intersection: GeoJSON.Geometry;
+}
+
+/**
  * Servicio para interactuar con el backend de alertas (alert-service)
  * Proporciona funcionalidades de recorte de polígonos y consulta de departamentos
  */
@@ -62,6 +71,16 @@ export class AlertsService {
     const geoJson = coordinatesToGeoJSON(coordinates);
     const params = this.buildParams(useSimplified);
 
-    return this.http.post<DepartmentsResponse>(url, geoJson, { params });
+    return this.http
+      .post<{ departments: DepartmentBackendResponse[] }>(url, geoJson, { params })
+      .pipe(
+        map((response) => ({
+          departments: response.departments.map((dept) => ({
+            name: (dept.properties && dept.properties['nam']) || 'Desconocido',
+            geometry: dept.geometry,
+            intersection: dept.intersection,
+          })),
+        })),
+      );
   }
 }

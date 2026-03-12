@@ -2,7 +2,7 @@
  * Representa un departamento con sus geometrías
  */
 export interface Department {
-  properties: Record<string, any>;
+  name: string;
   geometry: GeoJSON.Geometry;
   intersection: GeoJSON.Geometry;
 }
