@@ -6,6 +6,17 @@
     <app-polygon-edit-controls (action)="handleEditAction($event)"></app-polygon-edit-controls>
   </div>
 }
+<div class="point-value-container">
+  <app-point-value-panel
+    [visible]="isFloatingViewerEnabled() && isPointPanelVisible()"
+    [isLoading]="isPointPanelLoading()"
+    [currentIndex]="carouselIndex()"
+    [total]="activeDataLayers().length"
+    [data]="pointQueryResult()"
+    (previous)="showPreviousLayerValue()"
+    (next)="showNextLayerValue()"
+  />
+</div>
 
 <div class="zoom-controls">
   <button mat-icon-button class="zoom-button" (click)="zoomIn()" [disabled]="!canZoomIn()">

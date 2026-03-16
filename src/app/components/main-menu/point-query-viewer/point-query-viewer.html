@@ -1,0 +1,25 @@
+<section class="point-query-viewer-section">
+  <mat-checkbox
+    [checked]="viewer.isFloatingViewerEnabled()"
+    (change)="onFloatingToggle($event)"
+    color="primary"
+  >
+    Activar visor flotante
+  </mat-checkbox>
+
+  <div class="inline-viewer-wrapper">
+    <app-point-value-panel
+      [visible]="viewer.isPointPanelVisible()"
+      [isLoading]="viewer.isPointPanelLoading()"
+      [currentIndex]="viewer.carouselIndex()"
+      [total]="viewer.activeDataLayers().length"
+      [data]="viewer.pointQueryResult()"
+      (previous)="viewer.showPreviousLayerValue()"
+      (next)="viewer.showNextLayerValue()"
+    />
+
+    @if (!viewer.isPointPanelVisible()) {
+      <p class="no-layer-hint">Activá una capa satelital o de radar para consultar datos puntuales.</p>
+    }
+  </div>
+</section>

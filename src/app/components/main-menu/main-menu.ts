@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayerListComponent } from './layer-list/layer-list';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
 import { PolygonManagerComponent } from './polygon-manager/polygon-manager';
+import { PointQueryViewerComponent } from './point-query-viewer/point-query-viewer';
 import { MenuSection } from './menu-section.model';
 
 /**
@@ -36,6 +37,13 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: 'map',
     tooltip: 'Seleccionar mapa base',
     component: BaseMapSelectorComponent,
+  },
+  {
+    id: 'point-query-viewer',
+    title: 'Visor de dato puntual',
+    icon: 'my_location',
+    tooltip: 'Visor de dato puntual',
+    component: PointQueryViewerComponent,
   },
 ];
 

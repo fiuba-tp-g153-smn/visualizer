@@ -1,0 +1,47 @@
+@if (visible) {
+  <mat-card class="point-panel">
+    <div class="panel-header">
+      <button
+        mat-icon-button
+        type="button"
+        class="nav-button"
+        (click)="onPrevious()"
+        [disabled]="total <= 1"
+        aria-label="Capa anterior"
+      >
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+
+      <div class="title-block">
+        <div class="layer-name">{{ data?.layerName ?? 'Capa de datos' }}</div>
+        <div class="position">{{ total > 0 ? (currentIndex + 1) : 0 }} / {{ total }}</div>
+      </div>
+
+      <button
+        mat-icon-button
+        type="button"
+        class="nav-button"
+        (click)="onNext()"
+        [disabled]="total <= 1"
+        aria-label="Capa siguiente"
+      >
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+
+    <div class="panel-body">
+      @if (isLoading) {
+        <mat-progress-spinner diameter="26" mode="indeterminate"></mat-progress-spinner>
+      } @else if (hasDataValue) {
+        <div class="value-row">
+          <span class="value">{{ formattedValue }}</span>
+          <span class="unit">{{ data?.unit }}</span>
+        </div>
+      } @else if (!data || data.status === 'no-data') {
+        <div class="empty">Sin dato</div>
+      } @else {
+        <div class="empty">Error al consultar</div>
+      }
+    </div>
+  </mat-card>
+}
