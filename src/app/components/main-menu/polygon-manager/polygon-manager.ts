@@ -1,6 +1,5 @@
 import { Component, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -8,7 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { PolygonService } from '../../../services/polygons/polygon.service';
 import {
@@ -27,7 +26,6 @@ import { MenuPanelComponent } from '../menu-section.model';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     MatButtonModule,
     MatIconModule,
     MatListModule,
@@ -35,7 +33,7 @@ import { MenuPanelComponent } from '../menu-section.model';
     MatFormFieldModule,
     MatTooltipModule,
     MatDividerModule,
-    MatSlideToggleModule,
+    MatSliderModule,
     MatMenuModule,
   ],
   templateUrl: './polygon-manager.html',
@@ -48,7 +46,7 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   readonly polygons = this.polygonService.allPolygons;
   readonly polygonCount = this.polygonService.polygonCount;
   readonly drawingMode = this.drawingService.drawingMode;
-  readonly useSimplified = this.polygonService.useSimplified;
+  readonly simplificationLevel = this.polygonService.simplificationLevel;
 
   editingNameId: string | null = null;
   editingColorId: string | null = null;
@@ -112,8 +110,8 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
     this.polygonService.updatePolygon(id, { color });
   }
 
-  toggleSimplified(): void {
-    this.polygonService.toggleSimplified();
+  onSimplificationChange(value: number): void {
+    this.polygonService.setSimplificationLevel(value);
   }
 
   formatDate(date: Date): string {

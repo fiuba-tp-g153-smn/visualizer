@@ -9,7 +9,7 @@ import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.
  * Constantes para parámetros HTTP
  */
 const HTTP_PARAMS = {
-  USE_SIMPLIFIED: 'use_simplified',
+  SIMPLIFICATION_LEVEL: 'simplification_level',
 } as const;
 
 /**
@@ -34,23 +34,23 @@ export class AlertsService {
   /**
    * Crea los parámetros HTTP comunes para las requests
    */
-  private buildParams(useSimplified: boolean): HttpParams {
-    return new HttpParams().set(HTTP_PARAMS.USE_SIMPLIFIED, useSimplified.toString());
+  private buildParams(simplificationLevel: number): HttpParams {
+    return new HttpParams().set(HTTP_PARAMS.SIMPLIFICATION_LEVEL, simplificationLevel.toString());
   }
 
   /**
    * Recorta un polígono con los límites de Argentina
    * @param coordinates - Coordenadas del polígono [lat, lng][]
-   * @param useSimplified - Usar geometrías simplificadas (más rápido, menor detalle)
+   * @param simplificationLevel - Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
    * @returns Observable con las coordenadas del polígono recortado
    */
   intersectCountry(
     coordinates: Array<[number, number]>,
-    useSimplified: boolean = true,
+    simplificationLevel: number = 0,
   ): Observable<Array<[number, number]>> {
     const url = buildIntersectCountryUrl();
     const geoJson = coordinatesToGeoJSON(coordinates);
-    const params = this.buildParams(useSimplified);
+    const params = this.buildParams(simplificationLevel);
 
     return this.http
       .post<GeoJSON.FeatureCollection>(url, geoJson, { params })
@@ -60,16 +60,16 @@ export class AlertsService {
   /**
    * Obtiene los departamentos que intersectan con un polígono
    * @param coordinates - Coordenadas del polígono [lat, lng][]
-   * @param useSimplified - Usar geometrías simplificadas
+   * @param simplificationLevel - Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
    * @returns Observable con la lista de departamentos
    */
   intersectDepartments(
     coordinates: Array<[number, number]>,
-    useSimplified: boolean = true,
+    simplificationLevel: number = 0,
   ): Observable<DepartmentsResponse> {
     const url = buildIntersectDepartmentsUrl();
     const geoJson = coordinatesToGeoJSON(coordinates);
-    const params = this.buildParams(useSimplified);
+    const params = this.buildParams(simplificationLevel);
 
     return this.http
       .post<{ departments: DepartmentBackendResponse[] }>(url, geoJson, { params })
