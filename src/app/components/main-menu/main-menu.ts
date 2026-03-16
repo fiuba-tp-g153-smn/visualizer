@@ -40,9 +40,9 @@ const MENU_SECTIONS: MenuSection[] = [
   },
   {
     id: 'point-query-viewer',
-    title: 'Visor de dato puntual',
+    title: 'Herramientas del visualizador',
     icon: 'my_location',
-    tooltip: 'Visor de dato puntual',
+    tooltip: 'Herramientas del visualizador',
     component: PointQueryViewerComponent,
   },
 ];

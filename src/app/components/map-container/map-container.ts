@@ -9,7 +9,6 @@ import {
   computed,
   ViewContainerRef,
   Injector,
-  HostListener,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,7 +20,7 @@ import { MAP_CONFIG } from '../../config';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import { PointQueryViewerService } from '../../services/layers/point-query-viewer.service';
+import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
 import { PointValuePanelComponent } from '../point-value-panel/point-value-panel';
 import { BaseMap, GoesLayerControls, RadarLayerControls } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
@@ -79,12 +78,8 @@ export class MapContainer implements OnInit, OnDestroy {
     () => this.drawingMode() === DrawingMode.EDIT && !!this.editingPolygonId(),
   );
 
-  readonly carouselIndex = this.pointQueryViewerService.carouselIndex;
-  readonly activeDataLayers = this.pointQueryViewerService.activeDataLayers;
-  readonly isPointPanelVisible = this.pointQueryViewerService.isPointPanelVisible;
-  readonly isPointPanelLoading = this.pointQueryViewerService.isPointPanelLoading;
-  readonly pointQueryResult = this.pointQueryViewerService.pointQueryResult;
-  readonly isFloatingViewerEnabled = this.pointQueryViewerService.isFloatingViewerEnabled;
+  readonly floatingViewerEntries = this.pointQueryViewerService.floatingViewerEntries;
+  readonly isViewerEnabled = this.pointQueryViewerService.isViewerEnabled;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -171,25 +166,6 @@ export class MapContainer implements OnInit, OnDestroy {
       this.map.remove();
     }
   }
-
-  @HostListener('window:keydown', ['$event'])
-  onWindowKeydown(event: KeyboardEvent): void {
-    if (!event.shiftKey || !this.isPointPanelVisible()) {
-      return;
-    }
-
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      this.showPreviousLayerValue();
-      return;
-    }
-
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      this.showNextLayerValue();
-    }
-  }
-
   private async initMap(): Promise<void> {
     this.map = L.map('map', {
       center: [MAP_CONFIG.initialCenter.lat, MAP_CONFIG.initialCenter.lng],
@@ -243,14 +219,15 @@ export class MapContainer implements OnInit, OnDestroy {
     this.map.on('mousemove', (event: L.LeafletMouseEvent) => {
       this.pointQueryViewerService.handleMouseMove(event.latlng.lat, event.latlng.lng);
     });
+
+    this.map.on('click', (event: L.LeafletMouseEvent) => {
+      const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
+      this.pointQueryViewerService.handleMapClick(event.latlng.lat, event.latlng.lng, button);
+    });
   }
 
-  showPreviousLayerValue(): void {
-    this.pointQueryViewerService.showPreviousLayerValue();
-  }
-
-  showNextLayerValue(): void {
-    this.pointQueryViewerService.showNextLayerValue();
+  closeFloatingViewer(layerId: string): void {
+    this.pointQueryViewerService.removeSourceSelection(layerId);
   }
 
   /**

@@ -1,31 +1,18 @@
 @if (visible) {
   <mat-card class="point-panel">
     <div class="panel-header">
-      <button
-        mat-icon-button
-        type="button"
-        class="nav-button"
-        (click)="onPrevious()"
-        [disabled]="total <= 1"
-        aria-label="Capa anterior"
-      >
-        <mat-icon>chevron_left</mat-icon>
-      </button>
-
       <div class="title-block">
-        <div class="layer-name">{{ data?.layerName ?? 'Capa de datos' }}</div>
-        <div class="position">{{ total > 0 ? (currentIndex + 1) : 0 }} / {{ total }}</div>
+        <div class="layer-name">{{ data?.layerName ?? layerName }}</div>
       </div>
 
       <button
         mat-icon-button
         type="button"
-        class="nav-button"
-        (click)="onNext()"
-        [disabled]="total <= 1"
-        aria-label="Capa siguiente"
+        class="close-button"
+        (click)="onClose()"
+        aria-label="Cerrar visor"
       >
-        <mat-icon>chevron_right</mat-icon>
+        <mat-icon>close</mat-icon>
       </button>
     </div>
 
