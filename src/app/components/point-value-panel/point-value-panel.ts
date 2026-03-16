@@ -17,24 +17,18 @@ import { PointQueryDisplayData } from '../../models';
 export class PointValuePanelComponent {
   @Input() visible = false;
   @Input() isLoading = false;
-  @Input() currentIndex = 0;
-  @Input() total = 0;
+  @Input() layerName = 'Capa de datos';
   @Input() data: PointQueryDisplayData | null = null;
 
-  @Output() previous = new EventEmitter<void>();
-  @Output() next = new EventEmitter<void>();
+  @Output() close = new EventEmitter<void>();
 
   private readonly decimalFormatter = new Intl.NumberFormat('es-AR', {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 
-  onPrevious(): void {
-    this.previous.emit();
-  }
-
-  onNext(): void {
-    this.next.emit();
+  onClose(): void {
+    this.close.emit();
   }
 
   get hasDataValue(): boolean {
