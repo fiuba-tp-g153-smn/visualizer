@@ -21,7 +21,8 @@
   },
   "private": true,
   "overrides": {
-    "serialize-javascript": "^7.0.3"
+    "serialize-javascript": "^7.0.3",
+    "undici": "^7.23.1"
   },
   "dependencies": {
     "@angular-builders/custom-webpack": "^21.0.0",
@@ -43,7 +44,7 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@angular/build": "^21.0.1",
+    "@angular/build": "^21.0.0",
     "@angular/cli": "^21.0.1",
     "@angular/compiler-cli": "^21.0.0",
     "jsdom": "^27.1.0",
