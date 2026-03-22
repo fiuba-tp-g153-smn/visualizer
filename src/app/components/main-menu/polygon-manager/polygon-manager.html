@@ -23,16 +23,19 @@
       </button>
     </div>
 
-    <!-- Simplified toggle -->
-    <div class="simplified-toggle-container">
-      <mat-slide-toggle
-        [checked]="useSimplified()"
-        (change)="toggleSimplified()"
-        color="primary"
-        matTooltip="Usar geometrías simplificadas (más rápido, menor detalle) para los departamentos y el corte"
-      >
-        <span class="toggle-label">Geometrías simplificadas</span>
-      </mat-slide-toggle>
+    <!-- Simplification level slider -->
+    <div class="simplification-slider-container">
+      <div class="slider-header">
+        <span class="slider-label">Nivel de simplificación</span>
+      </div>
+      <mat-slider min="0" max="10" step="1" discrete showTickMarks class="simplification-slider">
+        <input
+          matSliderThumb
+          [value]="simplificationLevel()"
+          (valueChange)="onSimplificationChange($event)"
+          matTooltip="Nivel de simplificación para las herramientas de recorte y de carga de departamentos. 0 = máximo detalle, 10 = más rápido."
+        />
+      </mat-slider>
     </div>
   </div>
 
