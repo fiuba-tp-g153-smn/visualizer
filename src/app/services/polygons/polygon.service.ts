@@ -12,6 +12,7 @@ import { firstValueFrom } from 'rxjs';
 })
 export class PolygonService {
   private readonly POLYGONS_LOCAL_STORAGE_KEY = 'mapasmn_polygons_v3';
+  private readonly SIMPLIFICATION_LEVEL_KEY = 'mapasmn_simplification_level';
   private readonly polygons = signal<Polygon[]>([]);
   private readonly alertsService = inject(AlertsService);
 
@@ -31,9 +32,9 @@ export class PolygonService {
   readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
 
   /**
-   * Usar geometrías simplificadas (más rápido, menor detalle)
+   * Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
    */
-  readonly useSimplified = signal<boolean>(true);
+  readonly simplificationLevel = signal<number>(5);
 
   /**
    * Lista de polígonos como signal readonly
@@ -84,6 +85,7 @@ export class PolygonService {
 
   constructor() {
     this.loadFromStorage();
+    this.loadSimplificationLevelFromStorage();
   }
 
   /**
@@ -246,10 +248,13 @@ export class PolygonService {
   }
 
   /**
-   * Alterna el uso de geometrías simplificadas
+   * Establece el nivel de simplificación geométrica
    */
-  toggleSimplified(): void {
-    this.useSimplified.update((val) => !val);
+  setSimplificationLevel(level: number): void {
+    // Asegurarse de que el valor esté entre 0 y 10
+    const clampedLevel = Math.max(0, Math.min(10, Math.round(level)));
+    this.simplificationLevel.set(clampedLevel);
+    this.saveSimplificationLevelToStorage(clampedLevel);
   }
 
   /**
@@ -268,7 +273,7 @@ export class PolygonService {
 
     try {
       const cutCoordinates = await firstValueFrom(
-        this.alertsService.intersectCountry(polygon.coordinates, this.useSimplified()),
+        this.alertsService.intersectCountry(polygon.coordinates, this.simplificationLevel()),
       );
 
       if (cutCoordinates.length === 0) {
@@ -327,7 +332,7 @@ export class PolygonService {
 
     try {
       const response = await firstValueFrom(
-        this.alertsService.intersectDepartments(polygon.coordinates, this.useSimplified()),
+        this.alertsService.intersectDepartments(polygon.coordinates, this.simplificationLevel()),
       );
 
       this.updatePolygon(id, {
@@ -404,6 +409,35 @@ export class PolygonService {
     } catch (error) {
       console.error('Error al cargar polígonos desde localStorage:', error);
       this.polygons.set([]);
+    }
+  }
+
+  /**
+   * Guarda el nivel de simplificación en localStorage
+   */
+  private saveSimplificationLevelToStorage(level: number): void {
+    try {
+      localStorage.setItem(this.SIMPLIFICATION_LEVEL_KEY, level.toString());
+    } catch (error) {
+      console.error('Error al guardar nivel de simplificación en localStorage:', error);
+    }
+  }
+
+  /**
+   * Carga el nivel de simplificación desde localStorage
+   */
+  private loadSimplificationLevelFromStorage(): void {
+    try {
+      const data = localStorage.getItem(this.SIMPLIFICATION_LEVEL_KEY);
+      if (data !== null) {
+        const level = parseInt(data, 10);
+        if (!isNaN(level)) {
+          const clampedLevel = Math.max(0, Math.min(10, level));
+          this.simplificationLevel.set(clampedLevel);
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar nivel de simplificación desde localStorage:', error);
     }
   }
 
