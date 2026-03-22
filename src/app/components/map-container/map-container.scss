@@ -27,6 +27,24 @@
   z-index: 0;
 }
 
+.point-value-container {
+  position: absolute;
+  left: 12px;
+  right: 70px;
+  bottom: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: center;
+  align-content: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.point-value-container app-point-value-panel {
+  pointer-events: auto;
+}
+
 // Controles de zoom personalizados
 .zoom-controls {
   position: absolute;
@@ -41,6 +59,20 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   overflow: hidden;
+}
+
+@media (max-height: 700px) {
+  .point-value-container {
+    bottom: 64px;
+  }
+}
+
+@media (max-width: 768px) {
+  .point-value-container {
+    left: 8px;
+    right: 8px;
+    gap: 8px;
+  }
 }
 
 .zoom-button {
@@ -111,6 +143,14 @@
 
 // Leaflet Editable customizations
 ::ng-deep {
+  // Use regular cursor over map instead of Leaflet grab/grabbing cursors.
+  .leaflet-container,
+  .leaflet-grab,
+  .leaflet-dragging .leaflet-grab,
+  .leaflet-grab .leaflet-interactive {
+    cursor: default;
+  }
+
   // Vertex markers while editing
   .leaflet-vertex-icon {
     border-radius: 50%;

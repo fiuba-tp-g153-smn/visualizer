@@ -20,7 +20,9 @@ import { MAP_CONFIG } from '../../config';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import { BaseMap } from '../../models';
+import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
+import { PointValuePanelComponent } from '../point-value-panel/point-value-panel';
+import { BaseMap, GoesLayerControls, RadarLayerControls } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
 import { PolygonService } from '../../services/polygons/polygon.service';
 import {
@@ -31,17 +33,21 @@ import {
   PolygonEditControlsComponent,
   PolygonEditAction,
 } from '../polygon-edit-controls/polygon-edit-controls';
-
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
 
 /**
- * Main map container component that orchestrates the map, layers, and polygons
+ * Main map container component that orchestrates the map, layers, polygons and point-query UI.
  */
 @Component({
   selector: 'app-map-container',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, PolygonEditControlsComponent],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    PolygonEditControlsComponent,
+    PointValuePanelComponent,
+  ],
   templateUrl: './map-container.html',
   styleUrl: './map-container.scss',
 })
@@ -56,6 +62,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private polygonDrawingService = inject(PolygonDrawingService);
   private viewContainerRef = inject(ViewContainerRef);
   private injector = inject(Injector);
+  private pointQueryViewerService = inject(PointQueryViewerService);
 
   // Services
   private layersService = inject(MapLayersService);
@@ -70,6 +77,9 @@ export class MapContainer implements OnInit, OnDestroy {
   readonly isEditingPolygon = computed(
     () => this.drawingMode() === DrawingMode.EDIT && !!this.editingPolygonId(),
   );
+
+  readonly floatingViewerEntries = this.pointQueryViewerService.floatingViewerEntries;
+  readonly isViewerEnabled = this.pointQueryViewerService.isViewerEnabled;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -122,6 +132,7 @@ export class MapContainer implements OnInit, OnDestroy {
           this.polygonsService.handleDrawingModeChange(mode, editingPolygonId);
         }
       });
+
     }
   }
 
@@ -137,6 +148,7 @@ export class MapContainer implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
+      this.pointQueryViewerService.initialize();
       this.initMap();
     }
   }
@@ -154,7 +166,6 @@ export class MapContainer implements OnInit, OnDestroy {
       this.map.remove();
     }
   }
-
   private async initMap(): Promise<void> {
     this.map = L.map('map', {
       center: [MAP_CONFIG.initialCenter.lat, MAP_CONFIG.initialCenter.lng],
@@ -164,7 +175,7 @@ export class MapContainer implements OnInit, OnDestroy {
       zoomControl: false,
       doubleClickZoom: true, // Will be disabled during polygon drawing
       editable: true,
-    });
+    } as L.MapOptions & { editable: boolean });
 
     // Initialize services with the map instance
     this.layersService.initialize(this.map);
@@ -204,6 +215,19 @@ export class MapContainer implements OnInit, OnDestroy {
     // Initialize base map layer
     const initialBaseMap = this.baseMapService.getCurrentBaseMap();
     this.changeBaseMap(initialBaseMap);
+
+    this.map.on('mousemove', (event: L.LeafletMouseEvent) => {
+      this.pointQueryViewerService.handleMouseMove(event.latlng.lat, event.latlng.lng);
+    });
+
+    this.map.on('click', (event: L.LeafletMouseEvent) => {
+      const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
+      this.pointQueryViewerService.handleMapClick(event.latlng.lat, event.latlng.lng, button);
+    });
+  }
+
+  closeFloatingViewer(layerId: string): void {
+    this.pointQueryViewerService.removeSourceSelection(layerId);
   }
 
   /**
