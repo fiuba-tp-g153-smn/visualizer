@@ -2,56 +2,82 @@
 
 <img src="https://uptime.mapasmn.com/api/badge/8/status?style=flat-square" /> <img src="https://uptime.mapasmn.com/api/badge/8/uptime?style=flat-square" /> <img src="https://uptime.mapasmn.com/api/badge/8/ping?style=flat-square" />
 
-Visualizer is a web application built with Angular for visualizing interactive maps with support for multiple layers, base maps, and satellite imagery. It features a Dockerized development environment with hot-reload capabilities.
+Visualizer is an Angular 21 web application for interactive map visualization, supporting GOES-19 satellite imagery, weather radar, and IGN WMS layers rendered via Leaflet.
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.1.
+**Stack:** Angular 21 · Leaflet · Angular Material · TypeScript (strict) · Vitest · Docker
 
-## Development server
+## Table of Contents
 
-To start a local development server in a Dockerized environment with hot-reload, run:
+1. [Prerequisites](#prerequisites)
+2. [Getting Started](#getting-started)
+3. [Services](#services)
+4. [Commands](#commands)
+5. [Environment Variables](#environment-variables)
+6. [Documentation](#documentation)
+7. [Architecture](#architecture)
+   - [General data flow between all the services](#general-data-flow-between-all-the-services)
+
+## Prerequisites
+
+- **Docker** (recommended) — for `make` commands
+- **Node.js 24 LTS** — for running without Docker (`npm start`, `npm test`)
+
+## Getting Started
 
 ```bash
+# 1. Copy and configure environment variables
+cp .env.example .env
+
+# 2. Start the dev environment (Docker, with hot-reload)
 make up
 ```
 
-This command builds and starts the application in a Docker container, providing an isolated environment with automatic reloading whenever you modify any of the source files. Once the server is running, open your browser and navigate to `http://localhost:4200/`.
+The app runs at `http://localhost:4200` and the docs service at `http://localhost:${DOCS_HOST_PORT}` (default `6011`).
 
-## Docker Operations
+## Services
 
-The project uses Makefile commands for Docker-based operations:
+The project runs two Docker services:
 
-- `make up`: Start the development environment in Docker with hot-reload.
-- `make down`: Stop and clean up the development containers.
-- `make prod`: Build and run the production version in Docker.
+| Service        | Dev port         | Description                   |
+| -------------- | ---------------- | ----------------------------- |
+| `visualizer`   | `4200`           | Angular app (this repo)       |
+| `docs-service` | `DOCS_HOST_PORT` | Docusaurus documentation site |
 
-## Environment Setup
+Both services start together via `make up`. The `DOCS_URL` env var tells the Angular app where to load the docs iframe from.
 
-To configure environment variables, copy the example file:
+## Commands
 
 ```bash
-cp .env.example .env
+make up            # Start dev environment in Docker with hot-reload
+make down          # Stop and clean up all containers
+make prod          # Build and run the production Docker environment
+
+npm start          # Run dev server directly (without Docker), port 4200
+npm run build      # Production build
+npm test           # Run unit tests (Vitest)
 ```
 
-Edit the `.env` file to set your desired configuration values.
+## Environment Variables
 
-## Documentation System
+| Variable                  | Description                                  | Default                 |
+| ------------------------- | -------------------------------------------- | ----------------------- |
+| `DATA_SERVICE_BASE_URL`   | Tile and product config API                  | `http://localhost:6006` |
+| `ALERTS_SERVICE_BASE_URL` | Polygon alerts backend                       | `http://localhost:6007` |
+| `TILE_FORMAT`             | Tile image format (`webp` \| `png`)          | `webp`                  |
+| `APP_HOST_PORT`           | Host port for the app in production          | `6010`                  |
+| `DOCS_HOST_PORT`          | Host port for the docs service               | `6011`                  |
+| `DOCS_URL`                | URL the Angular app loads docs from (iframe) | `http://localhost:6011` |
 
-This project includes an integrated documentation viewer located at `/docs`. It uses `ngx-markdown` to render Markdown files from the `public/docs` directory.
+> In production (`make prod`), env vars are baked into the build at compile time via webpack `DefinePlugin`. In development, they are passed at runtime via Docker environment.
 
-### How to Add New Documents
+## Documentation
 
-1. **Create the Markdown File**:
-    Add your `.md` file to the `public/docs/` directory.
-    Example: `public/docs/my-new-feature.md`
+The `/docs` route embeds the Docusaurus docs site (`docs-service`) via iframe, served from `DOCS_URL`.
 
-2. **Register the Topic**:
-    Open `src/app/pages/docs/docs.component.ts` and add a new entry to the `topics` array:
+## Architecture
 
-    ```typescript
-    topics = [
-      { id: 'intro', title: 'Introduction' },
-      { id: 'my-new-feature', title: 'My New Feature' }, // ID must match filename
-    ];
-    ```
+### General data flow between all the services
 
-    The `id` corresponds to the filename without the extension. The `title` is what appears in the sidebar navigation.
+<p align="center">
+    <img src="./docs/imgs/general_data_flow.png" alt="General data flow between all the services" height="500px">
+</p>
