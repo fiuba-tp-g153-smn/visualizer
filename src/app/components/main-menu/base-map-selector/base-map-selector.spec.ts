@@ -14,27 +14,27 @@ describe('BaseMapSelectorComponent', () => {
       getAvailableBaseMaps: vi.fn(),
       setBaseMap: vi.fn(),
       currentBaseMap: signal({
-        id: 'osm',
-        name: 'OpenStreetMap',
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        attribution: '© OpenStreetMap',
-        maxZoom: 19,
+        id: 'argenmap',
+        name: 'Argenmap',
+        url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',
+        attribution: 'IGN',
+        maxZoom: 21,
       }),
     };
     mockBaseMapService.getAvailableBaseMaps.mockReturnValue([
       {
-        id: 'osm',
-        name: 'OpenStreetMap',
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        attribution: '© OpenStreetMap',
-        maxZoom: 19,
+        id: 'argenmap',
+        name: 'Argenmap',
+        url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',
+        attribution: 'IGN',
+        maxZoom: 21,
       },
       {
         id: 'satellite',
-        name: 'Satélite (ESRI)',
+        name: 'Satélite',
         url: 'https://example.com/{z}/{x}/{y}.png',
         attribution: '© Esri',
-        maxZoom: 18,
+        maxZoom: 17,
       },
     ]);
 
@@ -58,7 +58,7 @@ describe('BaseMapSelectorComponent', () => {
   });
 
   it('should identify active base map', () => {
-    expect(component.isActive('osm')).toBe(true);
+    expect(component.isActive('argenmap')).toBe(true);
     expect(component.isActive('satellite')).toBe(false);
   });
 
