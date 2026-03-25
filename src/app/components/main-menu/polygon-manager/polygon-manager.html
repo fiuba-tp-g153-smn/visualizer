@@ -177,7 +177,9 @@
                           (mouseenter)="onDepartmentHover(polygon.id, dept.name)"
                           (mouseleave)="onDepartmentLeave()"
                         >
-                          {{ dept.name }}
+                          {{ dept.name }}@if (dept.province) {
+                            <span> ({{ dept.province }})</span>
+                          }
                         </button>
                       }
                     </mat-menu>
