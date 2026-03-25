@@ -211,8 +211,10 @@
                       <mat-icon class="spinning">sync</mat-icon>
                       Generando alerta...
                     } @else {
-                      <mat-icon>warning</mat-icon>
-                      Generar alerta meteorológica
+                      <ng-container>
+                        <mat-icon>warning</mat-icon>
+                        Generar alerta meteorológica
+                      </ng-container>
                     }
                   </button>
                 }
