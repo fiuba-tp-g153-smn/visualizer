@@ -55,7 +55,7 @@ export type PointQueryInteractionMode = 'off' | 'manual' | 'automatic';
   providedIn: 'root',
 })
 export class PointQueryViewerService {
-  private readonly STORAGE_KEY = 'smn-point-query-viewer-v2';
+  private readonly STORAGE_KEY = 'smn-point-query-viewer-v3';
 
   private readonly controlService = inject(LayerControlService);
   private readonly pointQueryService = inject(PointQueryService);
