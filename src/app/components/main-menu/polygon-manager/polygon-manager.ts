@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 import { PolygonService } from '../../../services/polygons/polygon.service';
 import {
   DrawingMode,
@@ -16,6 +17,7 @@ import {
 } from '../../../services/polygons/polygon-drawing.service';
 import { Polygon } from '../../../models/geo';
 import { MenuPanelComponent } from '../menu-section.model';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../confirm-dialog/confirm-dialog';
 
 /**
  * Panel para gestionar polígonos en el mapa
@@ -42,6 +44,7 @@ import { MenuPanelComponent } from '../menu-section.model';
 export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   private readonly polygonService = inject(PolygonService);
   private readonly drawingService = inject(PolygonDrawingService);
+  private readonly dialog = inject(MatDialog);
 
   readonly polygons = this.polygonService.allPolygons;
   readonly polygonCount = this.polygonService.polygonCount;
@@ -83,12 +86,50 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   }
 
   deletePolygon(id: string): void {
-    this.polygonService.deletePolygon(id);
+    const polygon = this.polygons().find((p) => p.id === id);
+    const polygonName = polygon?.name || 'Sin nombre';
+
+    const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Eliminar polígono',
+          message: `¿Está seguro que desea eliminar el polígono "${polygonName}"? Esta acción no se puede deshacer.`,
+          confirmText: 'Eliminar',
+          cancelText: 'Cancelar',
+          confirmColor: 'warn',
+        },
+      },
+    );
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        this.polygonService.deletePolygon(id);
+      }
+    });
   }
 
   deleteAll(): void {
-    // Delete without confirmation for now (can add modal later)
-    this.polygonService.deleteAll();
+    const count = this.polygonCount();
+
+    const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Eliminar todos los polígonos',
+          message: `¿Está seguro que desea eliminar todos los polígonos (${count})? Esta acción no se puede deshacer.`,
+          confirmText: 'Eliminar todos',
+          cancelText: 'Cancelar',
+          confirmColor: 'warn',
+        },
+      },
+    );
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        this.polygonService.deleteAll();
+      }
+    });
   }
 
   startEditingName(id: string): void {
