@@ -356,13 +356,13 @@ export class PolygonService {
 
       this.updatePolygon(id, {
         alerts: {
-          tavisoId: response.taviso_id,
+          alertId: response.alert_id,
           timestamp: response.timestamp,
-          phenomenonCode: response.fenomeno_codigo,
-          phenomenon: response.fenomeno,
+          phenomenonCode: response.phenomenon_code,
+          phenomenon: response.phenomenon,
           gifAreaUrl: `${baseUrl}${response.gif_area_url}`,
           gifGralUrl: `${baseUrl}${response.gif_gral_url}`,
-          affectedPartidosCount: response.affected_partidos_count,
+          affectedDepartmentsCount: response.affected_departments_count,
           generatedAt: new Date(),
         },
       });

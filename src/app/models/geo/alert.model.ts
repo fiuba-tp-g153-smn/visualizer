@@ -1,44 +1,44 @@
 /**
- * Información de una alerta meteorológica generada
+ * Weather alert information
  */
 export interface Alert {
   /**
-   * ID de la alerta en la base de datos
+   * Alert ID in the database
    */
-  tavisoId: number;
+  alertId: number;
 
   /**
-   * Timestamp de generación (YYYYMMDD_HHMMSS)
+   * Generation timestamp (YYYYMMDD_HHMMSS)
    */
   timestamp: string;
 
   /**
-   * Código del fenómeno (1-92)
+   * Phenomenon code (1-92)
    */
   phenomenonCode: number;
 
   /**
-   * Descripción del fenómeno
+   * Phenomenon description
    */
   phenomenon: string;
 
   /**
-   * URL al GIF del área (vista zoom)
+   * URL to area GIF (zoomed view)
    */
   gifAreaUrl: string;
 
   /**
-   * URL al GIF general (Argentina completa)
+   * URL to general GIF (full Argentina)
    */
   gifGralUrl: string;
 
   /**
-   * Cantidad de partidos afectados
+   * Number of affected departments
    */
-  affectedPartidosCount: number;
+  affectedDepartmentsCount: number;
 
   /**
-   * Fecha de generación (ISO)
+   * Generation date (ISO)
    */
   generatedAt: Date;
 }

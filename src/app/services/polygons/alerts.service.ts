@@ -5,8 +5,10 @@ import {
   buildIntersectCountryUrl,
   buildIntersectDepartmentsUrl,
   buildGenerateAlertsUrl,
+  buildPhenomenaUrl,
 } from '../../config';
 import { DepartmentsResponse } from '../../models/geo';
+import { Phenomenon } from '../../models/phenomenon.model';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
 
 /**
@@ -29,13 +31,13 @@ interface DepartmentBackendResponse {
  * Respuesta del endpoint de generación de alertas
  */
 export interface GenerateAlertsResponse {
-  taviso_id: number;
+  alert_id: number;
   timestamp: string;
-  fenomeno_codigo: number;
-  fenomeno: string;
+  phenomenon_code: number;
+  phenomenon: string;
   gif_area_url: string;
   gif_gral_url: string;
-  affected_partidos_count: number;
+  affected_departments_count: number;
 }
 
 /**
@@ -117,5 +119,14 @@ export class AlertsService {
     const geoJson = coordinatesToGeoJSON(coordinates);
 
     return this.http.post<GenerateAlertsResponse>(url, geoJson);
+  }
+
+  /**
+   * Obtiene todos los fenómenos meteorológicos disponibles
+   * @returns Observable con la lista de fenómenos
+   */
+  getPhenomena(): Observable<Phenomenon[]> {
+    const url = buildPhenomenaUrl();
+    return this.http.get<Phenomenon[]>(url);
   }
 }
