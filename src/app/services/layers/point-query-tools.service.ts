@@ -49,7 +49,7 @@ export interface PointQueryViewerEntry {
   isLoading: boolean;
 }
 
-export type PointQueryInteractionMode = 'manual' | 'automatic';
+export type PointQueryInteractionMode = 'off' | 'manual' | 'automatic';
 
 @Injectable({
   providedIn: 'root',
@@ -67,7 +67,7 @@ export class PointQueryViewerService {
   private initialized = false;
 
   readonly isViewerEnabled = signal<boolean>(false);
-  readonly interactionMode = signal<PointQueryInteractionMode>('automatic');
+  readonly interactionMode = signal<PointQueryInteractionMode>('off');
   readonly selectedSourceIdsOrdered = signal<string[]>([]);
   readonly isPointerMoving = signal<boolean>(false);
   readonly lastMouseCoordinates = signal<MouseCoordinates | null>(null);
@@ -100,7 +100,7 @@ export class PointQueryViewerService {
 
   readonly shouldRunQueries = computed<boolean>(() => {
     return (
-      this.isViewerEnabled() &&
+      this.interactionMode() !== 'off' &&
       this.selectedSourceIdsOrdered().length > 0 &&
       this.polygonDrawingService.drawingMode() === DrawingMode.NONE
     );
@@ -197,10 +197,12 @@ export class PointQueryViewerService {
                 this.pointQueryService
                   .queryLayerPoint(layer, controls, coordinates.lat, coordinates.lon)
                   .pipe(
-                    map((result): SourceQueryResult => ({
-                      sourceId: layer.id,
-                      result,
-                    })),
+                    map(
+                      (result): SourceQueryResult => ({
+                        sourceId: layer.id,
+                        result,
+                      }),
+                    ),
                   ),
               ),
             ).pipe(finalize(() => this.loadingSourceIds.set(new Set())));
@@ -253,6 +255,12 @@ export class PointQueryViewerService {
   setInteractionMode(mode: PointQueryInteractionMode): void {
     this.interactionMode.set(mode);
     this.isPointerMoving.set(false);
+
+    if (mode === 'off') {
+      this.isViewerEnabled.set(false);
+    } else {
+      this.isViewerEnabled.set(true);
+    }
   }
 
   toggleSourceSelection(sourceId: string, checked: boolean): void {
@@ -297,10 +305,11 @@ export class PointQueryViewerService {
   }
 
   private disableViewerAndClearSources(): void {
-    if (!this.isViewerEnabled() && this.selectedSourceIdsOrdered().length === 0) {
+    if (this.interactionMode() === 'off' && this.selectedSourceIdsOrdered().length === 0) {
       return;
     }
 
+    this.interactionMode.set('off');
     this.isViewerEnabled.set(false);
     this.clearSelectedSources();
     this.isPointerMoving.set(false);
@@ -323,13 +332,20 @@ export class PointQueryViewerService {
         this.isViewerEnabled.set(parsed.isViewerEnabled);
       }
 
-      if (parsed.interactionMode === 'manual' || parsed.interactionMode === 'automatic') {
+      if (parsed.interactionMode === 'off' || parsed.interactionMode === 'manual' || parsed.interactionMode === 'automatic') {
         this.interactionMode.set(parsed.interactionMode);
+        if (parsed.interactionMode === 'off') {
+          this.isViewerEnabled.set(false);
+        } else {
+          this.isViewerEnabled.set(true);
+        }
       }
 
       if (Array.isArray(parsed.selectedSourceIdsOrdered)) {
         this.selectedSourceIdsOrdered.set(
-          parsed.selectedSourceIdsOrdered.filter((value): value is string => typeof value === 'string'),
+          parsed.selectedSourceIdsOrdered.filter(
+            (value): value is string => typeof value === 'string',
+          ),
         );
       }
     } catch (error) {

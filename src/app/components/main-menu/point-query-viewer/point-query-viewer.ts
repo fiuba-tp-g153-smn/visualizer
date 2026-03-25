@@ -1,11 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatExpansionModule } from '@angular/material/expansion';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectChange, MatSelectModule } from '@angular/material/select';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import {
   PointQueryInteractionMode,
@@ -20,10 +20,10 @@ import { MenuPanelComponent } from '../menu-section.model';
     CommonModule,
     MatCheckboxModule,
     MatExpansionModule,
-    MatFormFieldModule,
-    MatSelectModule,
+    MatRadioModule,
     MatIconModule,
     MatCardModule,
+    MatTooltipModule,
   ],
   templateUrl: './point-query-viewer.html',
   styleUrl: './point-query-viewer.scss',
@@ -31,20 +31,29 @@ import { MenuPanelComponent } from '../menu-section.model';
 export class PointQueryViewerComponent implements MenuPanelComponent {
   readonly viewer = inject(PointQueryViewerService);
 
-  readonly interactionModeOptions: Array<{ value: PointQueryInteractionMode; label: string }> = [
-    { value: 'manual', label: 'Manual (click)' },
-    { value: 'automatic', label: 'Automático' },
+  readonly interactionModeOptions: Array<{
+    value: PointQueryInteractionMode;
+    label: string;
+    tooltip: string;
+  }> = [
+    { value: 'off', label: 'Desactivado', tooltip: 'No mostrar visores de datos puntuales' },
+    {
+      value: 'manual',
+      label: 'Manual',
+      tooltip: 'Mostrar datos al hacer clic en el mapa',
+    },
+    {
+      value: 'automatic',
+      label: 'Automático',
+      tooltip: 'Mostrar datos al mover el cursor sobre el mapa',
+    },
   ];
 
   onPanelOpen(): void {}
 
   onPanelClose(): void {}
 
-  onViewerEnabledToggle(event: MatCheckboxChange): void {
-    this.viewer.setViewerEnabled(event.checked);
-  }
-
-  onInteractionModeChange(event: MatSelectChange): void {
-    this.viewer.setInteractionMode(event.value as PointQueryInteractionMode);
+  onInteractionModeChange(value: PointQueryInteractionMode): void {
+    this.viewer.setInteractionMode(value);
   }
 }

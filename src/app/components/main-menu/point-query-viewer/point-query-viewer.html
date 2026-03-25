@@ -1,28 +1,25 @@
 <section class="point-query-viewer-section">
   <h3 class="subsection-title">Visor de dato puntual</h3>
 
+  <mat-radio-group
+    [value]="viewer.interactionMode()"
+    (change)="onInteractionModeChange($event.value)"
+    class="interaction-radio-group"
+  >
+    @for (option of interactionModeOptions; track option.value) {
+      <mat-radio-button [value]="option.value" [matTooltip]="option.tooltip">{{
+        option.label
+      }}</mat-radio-button>
+    }
+  </mat-radio-group>
 
-    <mat-checkbox [checked]="viewer.isViewerEnabled()" (change)="onViewerEnabledToggle($event)">
-      Habilitar visor
-    </mat-checkbox>
-
-
-  @if (viewer.isViewerEnabled()) {
-      <mat-form-field appearance="outline" class="interaction-select">
-        <mat-label>Tipo de interacción</mat-label>
-        <mat-select [value]="viewer.interactionMode()" (selectionChange)="onInteractionModeChange($event)">
-          @for (option of interactionModeOptions; track option.value) {
-            <mat-option [value]="option.value">{{ option.label }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-
+  @if (viewer.interactionMode() !== 'off') {
     <mat-accordion class="sources-accordion" multi>
       <mat-expansion-panel [expanded]="true" hideToggle>
         <mat-expansion-panel-header>
           <mat-panel-title>
             <mat-icon class="panel-icon">sensors</mat-icon>
-            Fuente de dato
+            Fuentes activas
           </mat-panel-title>
         </mat-expansion-panel-header>
 
@@ -47,5 +44,5 @@
     @if (viewer.selectedSourceEntries().length === 0 && viewer.activeDataLayers().length > 0) {
       <p class="status-hint">Seleccioná una o más fuentes para mostrar visores flotantes.</p>
     }
-}
+  }
 </section>
