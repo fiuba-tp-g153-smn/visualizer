@@ -5,6 +5,7 @@ import type { Geometry } from 'geojson';
  */
 export interface Department {
   name: string;
+  province?: string;
   geometry: Geometry;
   intersection: Geometry;
 }

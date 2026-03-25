@@ -97,6 +97,7 @@ export class AlertsService {
           departments: response.departments
             .map((dept) => ({
               name: (dept.properties && dept.properties['nam']) || 'Desconocido',
+              province: dept.properties && dept.properties['pna'],
               geometry: dept.geometry,
               intersection: dept.intersection,
             }))
