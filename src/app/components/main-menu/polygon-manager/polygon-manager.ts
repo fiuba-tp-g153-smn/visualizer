@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
 import { PolygonService } from '../../../services/polygons/polygon.service';
 import {
   DrawingMode,
@@ -18,6 +19,7 @@ import {
 import { Polygon } from '../../../models/geo';
 import { MenuPanelComponent } from '../menu-section.model';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../confirm-dialog/confirm-dialog';
+import { PhenomenonSelectionDialogComponent } from '../../phenomenon-selection-dialog/phenomenon-selection-dialog';
 
 /**
  * Panel para gestionar polígonos en el mapa
@@ -52,24 +54,15 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   readonly simplificationLevel = this.polygonService.simplificationLevel;
 
   editingNameId: string | null = null;
-  editingColorId: string | null = null;
 
-  onPanelOpen(): void {
-    // Hook cuando el panel se abre
-  }
+  onPanelOpen(): void {}
 
   ngOnDestroy(): void {
-    // Stop any active drawing mode when panel is closed
     this.drawingService.stopDrawing();
   }
 
-  // Drawing controls
   toggleDrawMode(): void {
     this.drawingService.toggleDrawMode(DrawingMode.DRAW);
-  }
-
-  stopDrawing(): void {
-    this.drawingService.stopDrawing();
   }
 
   isDrawing(): boolean {
@@ -77,7 +70,6 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   }
 
   editPolygon(id: string): void {
-    // Set the polygon to edit mode
     this.drawingService.startEditMode(id);
   }
 
@@ -161,6 +153,31 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
     });
   }
 
+  /**
+   * Calcula el área aproximada de un polígono en km² usando la fórmula de Shoelace esférica
+   */
+  getPolygonArea(polygon: Polygon): number {
+    const coords = polygon.coordinates;
+    if (coords.length < 3) return 0;
+
+    const R = 6371; // Radio de la Tierra en km
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+    let area = 0;
+    for (let i = 0; i < coords.length; i++) {
+      const j = (i + 1) % coords.length;
+      const lat1 = toRad(coords[i][0]);
+      const lat2 = toRad(coords[j][0]);
+      const lon1 = toRad(coords[i][1]);
+      const lon2 = toRad(coords[j][1]);
+
+      area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+    }
+
+    area = (Math.abs(area) * R * R) / 2;
+    return Math.round(area);
+  }
+
   getCoordinatesCount(polygon: Polygon): number {
     return polygon.coordinates.length;
   }
@@ -195,6 +212,35 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
 
   canUndoCut(polygon: Polygon): boolean {
     return !!(polygon.originalCoordinates && polygon.originalCoordinates.length > 0);
+  }
+
+  hasAlerts(polygon: Polygon): boolean {
+    return this.polygonService.hasAlerts(polygon.id);
+  }
+
+  isLoadingAlerts(polygon: Polygon): boolean {
+    return this.polygonService.isAlertsLoading(polygon.id);
+  }
+
+  async generateAlerts(polygonId: string): Promise<void> {
+    const dialogRef = this.dialog.open<PhenomenonSelectionDialogComponent, void, number | null>(
+      PhenomenonSelectionDialogComponent,
+      {
+        width: '500px',
+      },
+    );
+
+    const selectedCode = await firstValueFrom(dialogRef.afterClosed());
+
+    if (selectedCode === null || selectedCode === undefined) {
+      return;
+    }
+
+    const success = await this.polygonService.generateAlerts(polygonId, selectedCode);
+
+    if (!success) {
+      console.error('Error al generar alertas');
+    }
   }
 
   onDepartmentHover(polygonId: string, departmentName: string): void {

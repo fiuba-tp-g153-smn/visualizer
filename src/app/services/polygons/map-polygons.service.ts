@@ -36,6 +36,7 @@ import {
   createDepartmentStyle,
   lightenColor,
 } from '../../utils/map-styles.utils';
+import { isSimplePolygon } from '../../utils/polygon-validation.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
 
 // Extended types for leaflet
@@ -272,6 +273,17 @@ export class MapPolygonsService {
 
     const latlngs = layer.getLatLngs()[0] as L.LatLng[];
     const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
+
+    // Validate polygon is simple (no self-intersections)
+    if (!isSimplePolygon(coordinates)) {
+      console.error('El polígono no puede tener intersecciones consigo mismo');
+      // Remove invalid polygon from map
+      if (this.map && this.map.hasLayer(layer)) {
+        this.map.removeLayer(layer);
+      }
+      alert('Error: El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.');
+      return;
+    }
 
     // Create polygon in service
     const polygon = this.polygonService.createPolygon({
@@ -611,6 +623,7 @@ export class MapPolygonsService {
     componentRef.instance.isLoadingCut = this.polygonService.isPolygonBeingCut(polygonId);
     componentRef.instance.isLoadingDepartments =
       this.polygonService.isDepartmentsLoading(polygonId);
+    componentRef.instance.hasAlerts = this.polygonService.hasAlerts(polygonId);
 
     // Handle menu actions
     componentRef.instance.action.subscribe((action: PolygonContextMenuAction) => {
@@ -729,6 +742,42 @@ export class MapPolygonsService {
       // Get current coordinates before disabling
       const latlngs = layer.getLatLngs()[0] as L.LatLng[];
       const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
+
+      // Validate polygon is simple (no self-intersections)
+      if (!isSimplePolygon(coordinates)) {
+        console.error('El polígono no puede tener intersecciones consigo mismo');
+
+        // Restore original coordinates
+        if (this.originalCoordinates && this.originalCoordinates.length > 0) {
+          const originalLatLngs = this.originalCoordinates.map((coord) => L.latLng(coord[0], coord[1]));
+          layer.setLatLngs([originalLatLngs]);
+        }
+
+        alert('Error: El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.');
+
+        // Disable editing
+        if (layer.disableEdit) {
+          layer.disableEdit();
+        }
+
+        // Remove dashed line style
+        layer.setStyle({
+          dashArray: '',
+        });
+
+        // Clear saved original coordinates
+        this.originalCoordinates = null;
+
+        // Clear CSS variable
+        if (this.map) {
+          const mapContainer = this.map.getContainer();
+          mapContainer.style.removeProperty(CSS_VARIABLES.POLYGON_COLOR);
+        }
+
+        // Exit edit mode
+        this.polygonDrawingService.stopDrawing();
+        return;
+      }
 
       // Disable editing first to clean up markers
       if (layer.disableEdit) {

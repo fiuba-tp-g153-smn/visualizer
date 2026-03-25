@@ -1,4 +1,5 @@
 import { Department } from './department.model';
+import { Alert } from './alert.model';
 
 /**
  * Representa un polígono en el mapa
@@ -48,6 +49,11 @@ export interface Polygon {
    * Coordenadas originales antes de recortar (para deshacer)
    */
   originalCoordinates?: Array<[number, number]>;
+
+  /**
+   * Información de las alertas meteorológicas generadas
+   */
+  alerts?: Alert;
 }
 
 /**
@@ -68,4 +74,5 @@ export interface UpdatePolygonDto {
   departments?: Department[];
   departmentsVisible?: boolean;
   originalCoordinates?: Array<[number, number]>;
+  alerts?: Alert;
 }

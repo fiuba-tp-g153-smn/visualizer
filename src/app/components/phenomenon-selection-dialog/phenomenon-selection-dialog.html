@@ -1,0 +1,27 @@
+<h1 mat-dialog-title>Generar alerta meteorológica</h1>
+<mat-dialog-content>
+  <p class="dialog-message">Seleccione el código de fenómeno meteorológico:</p>
+
+  <mat-form-field appearance="outline" class="phenomenon-select">
+    <mat-label>Código de fenómeno</mat-label>
+    <mat-select [value]="selectedCode()" (valueChange)="selectedCode.set($event)">
+      @for (phenomenon of phenomenonCodes; track phenomenon.code) {
+        <mat-option [value]="phenomenon.code">
+          {{ phenomenon.code }} - {{ phenomenon.description }}
+        </mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancelar</button>
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="onConfirm()"
+    [disabled]="selectedCode() === null"
+    cdkFocusInitial
+  >
+    Generar alerta
+  </button>
+</mat-dialog-actions>
