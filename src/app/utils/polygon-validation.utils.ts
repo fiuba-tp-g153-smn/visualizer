@@ -48,12 +48,7 @@ function segmentsIntersect(
   const [p3, p4] = seg2;
 
   // Verificar si comparten un punto extremo
-  if (
-    pointsEqual(p1, p3) ||
-    pointsEqual(p1, p4) ||
-    pointsEqual(p2, p3) ||
-    pointsEqual(p2, p4)
-  ) {
+  if (pointsEqual(p1, p3) || pointsEqual(p1, p4) || pointsEqual(p2, p3) || pointsEqual(p2, p4)) {
     return false;
   }
 
@@ -78,22 +73,14 @@ function segmentsIntersect(
 /**
  * Calcula la dirección del giro
  */
-function direction(
-  p1: [number, number],
-  p2: [number, number],
-  p3: [number, number],
-): number {
+function direction(p1: [number, number], p2: [number, number], p3: [number, number]): number {
   return (p3[0] - p1[0]) * (p2[1] - p1[1]) - (p2[0] - p1[0]) * (p3[1] - p1[1]);
 }
 
 /**
  * Verifica si un punto está en un segmento (asumiendo colinealidad)
  */
-function onSegment(
-  p1: [number, number],
-  p: [number, number],
-  p2: [number, number],
-): boolean {
+function onSegment(p1: [number, number], p: [number, number], p2: [number, number]): boolean {
   return (
     p[0] <= Math.max(p1[0], p2[0]) &&
     p[0] >= Math.min(p1[0], p2[0]) &&
