@@ -23,6 +23,7 @@ import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../components/confirm-dialog/confirm-dialog';
+import { POLYGON_COLOR } from '../../config/polygon.config';
 import {
   LEAFLET_EDITABLE_EVENTS,
   CSS_VARIABLES,
@@ -30,8 +31,8 @@ import {
 } from '../../constants/map-polygons.constants';
 import { Z_INDEX, EDIT_STYLE, DEPARTMENT_STYLE } from '../../config/map-polygons.config';
 import {
-  createPolygonOptions,
-  createLineGuideOptions,
+  POLYGON_OPTIONS,
+  LINE_GUIDE_OPTIONS,
   createDepartmentStyle,
   lightenColor,
 } from '../../utils/map-styles.utils';
@@ -108,7 +109,7 @@ export class MapPolygonsService {
       const layer = e.layer;
       const editor = layer?.editor;
       if (editor && layer.options) {
-        editor.options.lineGuideOptions = createLineGuideOptions(layer.options.color);
+        editor.options.lineGuideOptions = LINE_GUIDE_OPTIONS;
       }
     });
   }
@@ -170,42 +171,34 @@ export class MapPolygonsService {
     // Disable double-click zoom to avoid conflicts
     this.map.doubleClickZoom.disable();
 
-    // Get the color that will be used for the next polygon
-    const nextColor = this.polygonService.getNextAvailableColor();
-
     // Set the color CSS variable for this polygon's handlers
     const mapContainer = this.map.getContainer();
-    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, nextColor);
-
-    // Create polygon options
-    const polygonOptions = createPolygonOptions(nextColor);
+    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, POLYGON_COLOR);
 
     // Configure editOptions on the map before starting drawing
     const editTools = (this.map as any).editTools;
     if (editTools) {
-      const lineGuideStyle = createLineGuideOptions(nextColor);
-
       // Configure in editTools options
       editTools.options = editTools.options || {};
-      editTools.options.lineGuideOptions = lineGuideStyle;
+      editTools.options.lineGuideOptions = LINE_GUIDE_OPTIONS;
 
       // CRITICAL: Apply style directly to the line guide polylines
       // These are reused objects that need to be styled before drawing starts
       if (editTools.forwardLineGuide) {
-        editTools.forwardLineGuide.setStyle(lineGuideStyle);
+        editTools.forwardLineGuide.setStyle(LINE_GUIDE_OPTIONS);
       }
       if (editTools.backwardLineGuide) {
-        editTools.backwardLineGuide.setStyle(lineGuideStyle);
+        editTools.backwardLineGuide.setStyle(LINE_GUIDE_OPTIONS);
       }
     }
 
     // Start drawing a new polygon
-    this.currentDrawingPolygon = this.map.editTools.startPolygon(undefined, polygonOptions);
+    this.currentDrawingPolygon = this.map.editTools.startPolygon(undefined, POLYGON_OPTIONS);
 
     // Apply the style to the drawing polygon and its editor
     if (this.currentDrawingPolygon) {
       // Set style on the polygon itself
-      this.currentDrawingPolygon.setStyle(polygonOptions);
+      this.currentDrawingPolygon.setStyle(POLYGON_OPTIONS);
 
       // Add temporary layer to map if not already added
       if (!this.map.hasLayer(this.currentDrawingPolygon)) {
@@ -216,7 +209,7 @@ export class MapPolygonsService {
       const editor = (this.currentDrawingPolygon as any).editor;
       if (editor) {
         editor.options.lineGuideOptions = {
-          color: nextColor,
+          color: POLYGON_COLOR,
           weight: 2,
           opacity: 0.6,
           dashArray: '5, 5',
@@ -239,9 +232,6 @@ export class MapPolygonsService {
     // Save original coordinates before editing for potential cancellation
     this.originalCoordinates = latlngs.map((ll) => [ll.lat, ll.lng]);
 
-    // Get polygon color for custom markers
-    const polygonColor = (layer.options as any).color || '#3388ff';
-
     // Apply dashed line style
     layer.setStyle({
       dashArray: EDIT_STYLE.DASH_ARRAY,
@@ -249,7 +239,7 @@ export class MapPolygonsService {
 
     // Set CSS variable on the map container for editing markers to use
     const mapContainer = this.map.getContainer();
-    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, polygonColor);
+    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, POLYGON_COLOR);
 
     // Enable editing
     if (layer.enableEdit) {
@@ -407,13 +397,13 @@ export class MapPolygonsService {
   private renderDepartmentLayers(polygon: Polygon): void {
     if (!this.map || !polygon.departments) return;
 
-    // Calculate the department color based on the polygon's current color
-    const departmentColor = lightenColor(polygon.color, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
+    // Calculate the department color
+    const departmentColor = lightenColor(POLYGON_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
 
     // Check if layers already exist
     const existingLayers = this.departmentLayers.get(polygon.id);
     if (existingLayers && existingLayers.length > 0) {
-      // Update existing layers with the new color
+      // Update existing layers
       const newStyle = createDepartmentStyle(departmentColor);
       existingLayers.forEach((layer) => {
         // Update the style with the new color
@@ -509,7 +499,7 @@ export class MapPolygonsService {
     existingLayer.off('edit');
 
     // Update existing layer style
-    existingLayer.setStyle(createPolygonOptions(polygon.color));
+    existingLayer.setStyle(POLYGON_OPTIONS);
 
     // Check if coordinates actually changed before updating
     const currentLatLngs = existingLayer.getLatLngs()[0] as L.LatLng[];
@@ -556,7 +546,7 @@ export class MapPolygonsService {
       coord[1],
     ]);
     const layer = L.polygon(latlngs, {
-      ...createPolygonOptions(polygon.color),
+      ...POLYGON_OPTIONS,
       polygonId: polygon.id,
     });
 
@@ -800,7 +790,7 @@ export class MapPolygonsService {
           coord[1],
         ]);
         const newLayer = L.polygon(latlngs, {
-          ...createPolygonOptions(polygon.color),
+          ...POLYGON_OPTIONS,
           polygonId: polygon.id,
         });
 
