@@ -31,7 +31,7 @@ Consulta nuestra guía detallada para aprender a utilizar la interfaz.
 
 Visualizer integra múltiples fuentes de datos para ofrecer un contexto geográfico preciso:
 
-- **Mapas Base**: Soporte para tiles del mapa base con proveedores de tiles incluyendo ArgenMAP (IGN), OpenStreetMap, CartoDB y capas satelitales de ESRI.
+- **Mapas Base**: Soporte para tiles del mapa base con proveedores de tiles incluyendo Argenmap (IGN), capas satelitales de ESRI y Google.
 - **Capas Meteorológicas**: Visualización de imágenes del satélite GOES-19.
 - **Datos del IGN**: Integración con servicios WMS del IGN (Instituto Geográfico Nacional) para visualizar límites, hidrografía y rutas de Argentina.
 - **Interacción Avanzada**: Control de opacidad y orden de capas (Z-Index) para análisis personalizados.
