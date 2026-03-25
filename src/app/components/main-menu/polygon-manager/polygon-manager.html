@@ -208,8 +208,10 @@
                     class="generate-alert-button"
                   >
                     @if (isLoadingAlerts(polygon)) {
-                      <mat-icon class="spinning">sync</mat-icon>
-                      Generando alerta...
+                      <ng-container>
+                        <mat-icon class="spinning">sync</mat-icon>
+                        Generando alerta...
+                      </ng-container>
                     } @else {
                       <ng-container>
                         <mat-icon>warning</mat-icon>
@@ -247,16 +249,22 @@
                   </div>
                   <div class="alert-info">
                     <div class="alert-info-row">
-                      <span class="alert-info-label">Fenómeno ({{ polygon.alerts!.phenomenonCode }}):</span>
+                      <span class="alert-info-label"
+                        >Fenómeno ({{ polygon.alerts!.phenomenonCode }}):</span
+                      >
                       <span class="alert-info-value">{{ polygon.alerts!.phenomenon }}</span>
                     </div>
                     <div class="alert-info-row">
-                      <span class="alert-info-label">Partidos:</span>
-                      <span class="alert-info-value">{{ polygon.alerts!.affectedPartidosCount }}</span>
+                      <span class="alert-info-label">Departamentos:</span>
+                      <span class="alert-info-value">{{
+                        polygon.alerts!.affectedDepartmentsCount
+                      }}</span>
                     </div>
                     <div class="alert-info-row">
                       <span class="alert-info-label">Emitida:</span>
-                      <span class="alert-info-value">{{ formatDate(polygon.alerts!.generatedAt) }}</span>
+                      <span class="alert-info-value">{{
+                        formatDate(polygon.alerts!.generatedAt)
+                      }}</span>
                     </div>
                   </div>
                 }
