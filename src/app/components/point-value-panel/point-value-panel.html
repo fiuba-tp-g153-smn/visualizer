@@ -1,34 +1,36 @@
 @if (visible) {
   <mat-card class="point-panel">
-    <div class="panel-header">
-      <div class="title-block">
-        <div class="layer-name">{{ data?.layerName ?? layerName }}</div>
+    <div class="panel-content">
+      <div class="panel-header">
+        <div class="title-block">
+          <div class="layer-name">{{ data?.layerName ?? layerName }}</div>
+        </div>
+
+        <button
+          mat-icon-button
+          type="button"
+          class="close-button"
+          (click)="onClose()"
+          aria-label="Cerrar visor"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
 
-      <button
-        mat-icon-button
-        type="button"
-        class="close-button"
-        (click)="onClose()"
-        aria-label="Cerrar visor"
-      >
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-
-    <div class="panel-body">
-      @if (isLoading) {
-        <mat-progress-spinner diameter="26" mode="indeterminate"></mat-progress-spinner>
-      } @else if (hasDataValue) {
-        <div class="value-row">
-          <span class="value">{{ formattedValue }}</span>
-          <span class="unit">{{ data?.unit }}</span>
-        </div>
-      } @else if (!data || data.status === 'no-data') {
-        <div class="empty">Sin dato</div>
-      } @else {
-        <div class="empty">Error al consultar</div>
-      }
+      <div class="panel-body">
+        @if (isLoading) {
+          <mat-progress-spinner diameter="26" mode="indeterminate"></mat-progress-spinner>
+        } @else if (hasDataValue) {
+          <div class="value-row">
+            <span class="value">{{ formattedValue }}</span>
+            <span class="unit">{{ data?.unit }}</span>
+          </div>
+        } @else if (!data || data.status === 'no-data') {
+          <div class="empty">Sin dato</div>
+        } @else {
+          <div class="empty">Error al consultar</div>
+        }
+      </div>
     </div>
   </mat-card>
 }

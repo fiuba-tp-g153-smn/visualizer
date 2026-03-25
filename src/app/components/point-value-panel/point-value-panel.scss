@@ -1,9 +1,22 @@
 .point-panel {
-  min-width: 280px;
-  max-width: min(340px, 90vw);
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  min-width: 240px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+
+  &::ng-deep {
+    .mat-mdc-card-content {
+      padding: 0;
+    }
+  }
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0px 8px 8px 8px;
 }
 
 .panel-header {
@@ -14,27 +27,29 @@
 }
 
 .title-block {
-  text-align: left;
   flex: 1;
+  min-width: 0;
 }
 
 .layer-name {
-  font-weight: 600;
-  color: #1f2937;
-  line-height: 1.2;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .close-button {
-  color: #6b7280;
+  flex-shrink: 0;
+  color: #666;
 
   &:hover {
-    color: #ef4444;
+    color: #d32f2f;
   }
 }
 
 .panel-body {
-  margin-top: 4px;
-  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,27 +63,16 @@
 
 .value {
   font-size: 24px;
-  font-weight: 700;
-  color: #111827;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
 .unit {
-  font-size: 15px;
-  color: #374151;
+  font-size: 14px;
+  color: #666;
 }
 
 .empty {
-  font-size: 16px;
-  font-weight: 500;
-  color: #4b5563;
-}
-
-@media (max-width: 600px) {
-  .point-panel {
-    min-width: 240px;
-  }
-
-  .value {
-    font-size: 20px;
-  }
+  font-size: 14px;
+  color: #666;
 }

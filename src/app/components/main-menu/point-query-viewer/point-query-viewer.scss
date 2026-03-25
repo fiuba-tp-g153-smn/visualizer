@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 8px 16px 8px;
+  padding: 16px 12px;
 }
 
 .subsection-title {
@@ -18,12 +18,19 @@
   border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
-.controls-card {
-  padding: 8px;
-}
+.interaction-radio-group {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  flex-wrap: wrap;
 
-.interaction-select {
-  width: 100%;
+  ::ng-deep {
+    .mat-mdc-radio-button {
+      .mdc-form-field {
+        font-size: 14px;
+      }
+    }
+  }
 }
 
 .sources-accordion {
