@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
+import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
@@ -18,6 +19,10 @@ import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
 } from '../../models/polygon-context-menu-action.model';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../components/confirm-dialog/confirm-dialog';
 import {
   LEAFLET_EDITABLE_EVENTS,
   CSS_VARIABLES,
@@ -49,6 +54,7 @@ export class MapPolygonsService {
   private polygonService = inject(PolygonService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private overlay = inject(Overlay);
+  private dialog = inject(MatDialog);
 
   private map: L.Map | null = null;
   private polygonLayers = new Map<string, L.Polygon>();
@@ -646,7 +652,7 @@ export class MapPolygonsService {
           break;
 
         case PolygonContextMenuActionType.DELETE:
-          this.polygonService.deletePolygon(action.polygonId);
+          this.confirmAndDeletePolygon(action.polygonId);
           break;
 
         case PolygonContextMenuActionType.CUT:
@@ -666,6 +672,33 @@ export class MapPolygonsService {
           break;
       }
     }, ACTION_DELAYS.MENU_ACTION);
+  }
+
+  /**
+   * Confirm and delete polygon
+   */
+  private confirmAndDeletePolygon(polygonId: string): void {
+    const polygon = this.polygonService.getPolygonById(polygonId);
+    const polygonName = polygon?.name || 'Sin nombre';
+
+    const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Eliminar polígono',
+          message: `¿Está seguro que desea eliminar el polígono "${polygonName}"? Esta acción no se puede deshacer.`,
+          confirmText: 'Eliminar',
+          cancelText: 'Cancelar',
+          confirmColor: 'warn',
+        },
+      },
+    );
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        this.polygonService.deletePolygon(polygonId);
+      }
+    });
   }
 
   /**
