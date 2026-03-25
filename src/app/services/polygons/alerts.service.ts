@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { buildIntersectCountryUrl, buildIntersectDepartmentsUrl } from '../../config';
+import {
+  buildIntersectCountryUrl,
+  buildIntersectDepartmentsUrl,
+  buildGenerateAlertsUrl,
+} from '../../config';
 import { DepartmentsResponse } from '../../models/geo';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
 
@@ -19,6 +23,19 @@ interface DepartmentBackendResponse {
   properties: Record<string, any>;
   geometry: GeoJSON.Geometry;
   intersection: GeoJSON.Geometry;
+}
+
+/**
+ * Respuesta del endpoint de generación de alertas
+ */
+export interface GenerateAlertsResponse {
+  taviso_id: number;
+  timestamp: string;
+  fenomeno_codigo: number;
+  fenomeno: string;
+  gif_area_url: string;
+  gif_gral_url: string;
+  affected_partidos_count: number;
 }
 
 /**
@@ -84,5 +101,21 @@ export class AlertsService {
             .sort((a, b) => a.name.localeCompare(b.name)),
         })),
       );
+  }
+
+  /**
+   * Genera alertas meteorológicas para un polígono
+   * @param coordinates - Coordenadas del polígono [lat, lng][]
+   * @param phenomenonCode - Código del fenómeno meteorológico
+   * @returns Observable con las URLs de las alertas generadas
+   */
+  generateAlerts(
+    coordinates: Array<[number, number]>,
+    phenomenonCode: number,
+  ): Observable<GenerateAlertsResponse> {
+    const url = buildGenerateAlertsUrl(phenomenonCode);
+    const geoJson = coordinatesToGeoJSON(coordinates);
+
+    return this.http.post<GenerateAlertsResponse>(url, geoJson);
   }
 }

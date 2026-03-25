@@ -89,6 +89,7 @@
                     mat-icon-button
                     (click)="editPolygon(polygon.id)"
                     matTooltip="Editar geometría del polígono"
+                    [disabled]="hasAlerts(polygon)"
                   >
                     <mat-icon>edit_location</mat-icon>
                   </button>
@@ -97,7 +98,7 @@
                       mat-icon-button
                       (click)="cutPolygon(polygon.id)"
                       matTooltip="Recortar con Argentina"
-                      [disabled]="isLoadingCut(polygon)"
+                      [disabled]="isLoadingCut(polygon) || hasAlerts(polygon)"
                     >
                       @if (isLoadingCut(polygon)) {
                         <mat-icon class="spinning">sync</mat-icon>
@@ -111,6 +112,7 @@
                       color="accent"
                       (click)="undoCut(polygon.id)"
                       matTooltip="Deshacer recorte"
+                      [disabled]="hasAlerts(polygon)"
                     >
                       <mat-icon>undo</mat-icon>
                     </button>
@@ -139,6 +141,11 @@
                   <mat-icon class="detail-icon">straighten</mat-icon>
                   <span class="detail-label">Vértices:</span>
                   <span class="detail-value">{{ getCoordinatesCount(polygon) }}</span>
+                </div>
+                <div class="detail-item">
+                  <mat-icon class="detail-icon">square_foot</mat-icon>
+                  <span class="detail-label">Área:</span>
+                  <span class="detail-value">{{ getPolygonArea(polygon) }} km²</span>
                 </div>
                 <div class="detail-item">
                   <mat-icon class="detail-icon">schedule</mat-icon>
@@ -190,6 +197,67 @@
                     </button>
                   }
                 </div>
+
+                <!-- Generar alerta -->
+                @if (!hasAlerts(polygon)) {
+                  <button
+                    mat-flat-button
+                    color="primary"
+                    (click)="generateAlerts(polygon.id)"
+                    [disabled]="isLoadingAlerts(polygon)"
+                    class="generate-alert-button"
+                  >
+                    @if (isLoadingAlerts(polygon)) {
+                      <mat-icon class="spinning">sync</mat-icon>
+                      Generando alerta...
+                    } @else {
+                      <mat-icon>warning</mat-icon>
+                      Generar alerta meteorológica
+                    }
+                  </button>
+                }
+
+                <!-- Alertas generadas -->
+                @if (hasAlerts(polygon)) {
+                  <div class="detail-item">
+                    <mat-icon class="detail-icon" color="warn">warning</mat-icon>
+                    <span class="detail-label">Alerta:</span>
+                    <div class="alert-actions">
+                      <a
+                        [href]="polygon.alerts!.gifAreaUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        mat-icon-button
+                        matTooltip="Ver alerta de área"
+                      >
+                        <mat-icon>zoom_in</mat-icon>
+                      </a>
+                      <a
+                        [href]="polygon.alerts!.gifGralUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        mat-icon-button
+                        matTooltip="Ver alerta general"
+                      >
+                        <mat-icon>map</mat-icon>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="alert-info">
+                    <div class="alert-info-row">
+                      <span class="alert-info-label">Fenómeno ({{ polygon.alerts!.phenomenonCode }}):</span>
+                      <span class="alert-info-value">{{ polygon.alerts!.phenomenon }}</span>
+                    </div>
+                    <div class="alert-info-row">
+                      <span class="alert-info-label">Partidos:</span>
+                      <span class="alert-info-value">{{ polygon.alerts!.affectedPartidosCount }}</span>
+                    </div>
+                    <div class="alert-info-row">
+                      <span class="alert-info-label">Emitida:</span>
+                      <span class="alert-info-value">{{ formatDate(polygon.alerts!.generatedAt) }}</span>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
           </mat-list-item>

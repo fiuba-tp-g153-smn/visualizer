@@ -22,6 +22,7 @@ export class PolygonContextMenuComponent {
   @Input() canUndoCut: boolean = false;
   @Input() isLoadingCut: boolean = false;
   @Input() isLoadingDepartments: boolean = false;
+  @Input() hasAlerts: boolean = false;
   @Output() action = new EventEmitter<PolygonContextMenuAction>();
 
   onEdit(): void {

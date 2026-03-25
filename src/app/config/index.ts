@@ -16,7 +16,11 @@ export {
 } from './backend.config';
 
 // Alerts Service configuration (polygon operations and departments)
-export { buildIntersectCountryUrl, buildIntersectDepartmentsUrl } from './alerts-service.config';
+export {
+  buildIntersectCountryUrl,
+  buildIntersectDepartmentsUrl,
+  buildGenerateAlertsUrl,
+} from './alerts-service.config';
 
 // Timing configuration (delays, tooltips, actions)
 export { TOOLTIP_DELAYS, ACTION_DELAYS } from './timing.config';

@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/geo';
 import { AlertsService } from './alerts.service';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * Servicio para gestionar polígonos en el mapa
@@ -21,6 +22,7 @@ export class PolygonService {
    */
   private readonly loadingCut = signal<Set<string>>(new Set());
   private readonly loadingDepartments = signal<Set<string>>(new Set());
+  private readonly loadingAlerts = signal<Set<string>>(new Set());
 
   /**
    * Track which department is currently being hovered
@@ -67,6 +69,21 @@ export class PolygonService {
    */
   isDepartmentsLoading(id: string): boolean {
     return this.loadingDepartments().has(id);
+  }
+
+  /**
+   * Check if alerts are being generated for a polygon
+   */
+  isAlertsLoading(id: string): boolean {
+    return this.loadingAlerts().has(id);
+  }
+
+  /**
+   * Check if a polygon has alerts generated
+   */
+  hasAlerts(id: string): boolean {
+    const polygon = this.getPolygonById(id);
+    return !!(polygon?.alerts?.gifAreaUrl || polygon?.alerts?.gifGralUrl);
   }
 
   constructor() {
@@ -307,6 +324,56 @@ export class PolygonService {
     } finally {
       // Clear loading state
       this.loadingDepartments.update((set) => {
+        const newSet = new Set(set);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  }
+
+  /**
+   * Genera alertas meteorológicas para un polígono
+   * @param id - ID del polígono
+   * @param phenomenonCode - Código del fenómeno meteorológico
+   */
+  async generateAlerts(id: string, phenomenonCode: number): Promise<boolean> {
+    const polygon = this.getPolygonById(id);
+    if (!polygon) return false;
+
+    // Set loading state
+    this.loadingAlerts.update((set) => {
+      const newSet = new Set(set);
+      newSet.add(id);
+      return newSet;
+    });
+
+    try {
+      const response = await firstValueFrom(
+        this.alertsService.generateAlerts(polygon.coordinates, phenomenonCode),
+      );
+
+      const baseUrl = environment.alertsService.baseUrl;
+
+      this.updatePolygon(id, {
+        alerts: {
+          tavisoId: response.taviso_id,
+          timestamp: response.timestamp,
+          phenomenonCode: response.fenomeno_codigo,
+          phenomenon: response.fenomeno,
+          gifAreaUrl: `${baseUrl}${response.gif_area_url}`,
+          gifGralUrl: `${baseUrl}${response.gif_gral_url}`,
+          affectedPartidosCount: response.affected_partidos_count,
+          generatedAt: new Date(),
+        },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error al generar alertas:', error);
+      return false;
+    } finally {
+      // Clear loading state
+      this.loadingAlerts.update((set) => {
         const newSet = new Set(set);
         newSet.delete(id);
         return newSet;

@@ -1,5 +1,5 @@
 <mat-nav-list class="polygon-context-menu">
-  <mat-list-item (click)="onEdit()">
+  <mat-list-item (click)="!hasAlerts && onEdit()" [class.disabled]="hasAlerts">
     <mat-icon matListItemIcon>edit_location</mat-icon>
     <span matListItemTitle>Editar geometría</span>
   </mat-list-item>
@@ -39,7 +39,10 @@
 
   <!-- Cortar polígono -->
   @if (!canUndoCut) {
-    <mat-list-item (click)="!isLoadingCut && onCut()" [class.disabled]="isLoadingCut">
+    <mat-list-item
+      (click)="!isLoadingCut && !hasAlerts && onCut()"
+      [class.disabled]="isLoadingCut || hasAlerts"
+    >
       @if (isLoadingCut) {
         <mat-icon matListItemIcon class="spinning">sync</mat-icon>
       } @else {
@@ -48,7 +51,7 @@
       <span matListItemTitle>{{ isLoadingCut ? 'Recortando...' : 'Recortar con Argentina' }}</span>
     </mat-list-item>
   } @else {
-    <mat-list-item (click)="onUndoCut()">
+    <mat-list-item (click)="!hasAlerts && onUndoCut()" [class.disabled]="hasAlerts">
       <mat-icon matListItemIcon>undo</mat-icon>
       <span matListItemTitle>Deshacer recorte</span>
     </mat-list-item>
