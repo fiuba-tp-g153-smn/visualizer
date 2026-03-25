@@ -147,10 +147,6 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
     this.editingNameId = null;
   }
 
-  updateColor(id: string, color: string): void {
-    this.polygonService.updatePolygon(id, { color });
-  }
-
   onSimplificationChange(value: number): void {
     this.polygonService.setSimplificationLevel(value);
   }

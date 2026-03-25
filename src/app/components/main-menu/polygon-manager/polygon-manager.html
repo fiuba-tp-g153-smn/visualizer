@@ -27,13 +27,15 @@
     <div class="simplification-slider-container">
       <div class="slider-header">
         <span class="slider-label">Nivel de simplificación</span>
+        <span class="slider-value">{{ simplificationLevel() }}</span>
       </div>
       <mat-slider min="0" max="10" step="1" discrete showTickMarks class="simplification-slider">
         <input
           matSliderThumb
           [value]="simplificationLevel()"
+          (input)="onSimplificationChange($any($event.target).value)"
           (valueChange)="onSimplificationChange($event)"
-          matTooltip="Nivel de simplificación para las herramientas de recorte y de carga de departamentos. 0 = máximo detalle, 10 = más rápido."
+          matTooltip="Controla el nivel de detalle para las herramientas de recorte y carga de departamentos. Un valor de 0 proporciona máximo detalle, mientras que 10 es más rápido con menor precisión."
         />
       </mat-slider>
     </div>
@@ -58,18 +60,6 @@
             <div class="polygon-card">
               <!-- Header -->
               <div class="polygon-header">
-                <!-- Color indicator -->
-                <div class="color-indicator-wrapper">
-                  <input
-                    type="color"
-                    [value]="polygon.color"
-                    (change)="updateColor(polygon.id, $any($event.target).value)"
-                    class="color-picker"
-                    matTooltip="Cambiar color"
-                  />
-                  <div class="color-indicator" [style.background-color]="polygon.color"></div>
-                </div>
-
                 <!-- Name -->
                 <div class="polygon-name-section">
                   <mat-form-field

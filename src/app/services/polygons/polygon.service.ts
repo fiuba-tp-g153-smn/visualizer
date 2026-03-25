@@ -69,20 +69,6 @@ export class PolygonService {
     return this.loadingDepartments().has(id);
   }
 
-  /**
-   * Colores predeterminados para polígonos
-   */
-  private readonly defaultColors = [
-    '#FF5722', // Rojo
-    '#2196F3', // Azul
-    '#4CAF50', // Verde
-    '#FFC107', // Amarillo
-    '#9C27B0', // Púrpura
-    '#FF9800', // Naranja
-    '#00BCD4', // Cian
-    '#E91E63', // Rosa
-  ];
-
   constructor() {
     this.loadFromStorage();
     this.loadSimplificationLevelFromStorage();
@@ -104,7 +90,6 @@ export class PolygonService {
       id: this.generateId(),
       name: dto.name || this.generateDefaultName(),
       coordinates: dto.coordinates,
-      color: dto.color || this.getNextColor(),
       visible: true,
       createdAt: now,
       updatedAt: now,
@@ -220,31 +205,6 @@ export class PolygonService {
    */
   private generateDefaultName(): string {
     return 'Polígono sin nombrar';
-  }
-
-  /**
-   * Obtiene el siguiente color disponible
-   * Busca el primer color no usado, o rota si todos están en uso
-   */
-  private getNextColor(): string {
-    const usedColors = new Set(this.polygons().map((p) => p.color));
-
-    // Buscar el primer color no usado
-    for (const color of this.defaultColors) {
-      if (!usedColors.has(color)) {
-        return color;
-      }
-    }
-
-    // Si todos están en uso, rotar basado en la cantidad de polígonos
-    return this.defaultColors[this.polygons().length % this.defaultColors.length];
-  }
-
-  /**
-   * Obtiene el siguiente color disponible (método público)
-   */
-  getNextAvailableColor(): string {
-    return this.getNextColor();
   }
 
   /**

@@ -244,29 +244,6 @@
   align-items: center;
 }
 
-.color-indicator-wrapper {
-  position: relative;
-  flex-shrink: 0;
-  cursor: pointer;
-
-  .color-picker {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 32px;
-    height: 32px;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .color-indicator {
-    width: 32px;
-    height: 32px;
-    border-radius: 4px;
-    border: 2px solid var(--mat-sys-outline);
-  }
-}
-
 .polygon-name-section {
   flex: 1;
   min-width: 0;
@@ -381,6 +358,11 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  transition: background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--mat-sys-surface-container-high);
+  }
 
   mat-icon {
     font-size: 16px;
@@ -395,6 +377,11 @@
   width: 28px;
   height: 28px;
   padding: 0;
+  transition: background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--mat-sys-surface-container-high);
+  }
 
   mat-icon {
     font-size: 18px;

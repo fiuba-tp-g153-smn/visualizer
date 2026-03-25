@@ -20,11 +20,6 @@ export interface Polygon {
   coordinates: Array<[number, number]>;
 
   /**
-   * Color del polígono en formato hex
-   */
-  color: string;
-
-  /**
    * Indica si el polígono está visible en el mapa
    */
   visible: boolean;
@@ -61,7 +56,6 @@ export interface Polygon {
 export interface CreatePolygonDto {
   name: string;
   coordinates: Array<[number, number]>;
-  color?: string;
 }
 
 /**
@@ -70,7 +64,6 @@ export interface CreatePolygonDto {
 export interface UpdatePolygonDto {
   name?: string;
   coordinates?: Array<[number, number]>;
-  color?: string;
   visible?: boolean;
   departments?: Department[];
   departmentsVisible?: boolean;
