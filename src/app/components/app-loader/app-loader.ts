@@ -1,4 +1,4 @@
-import { Component, OnInit, ApplicationRef, ElementRef, Renderer2 } from '@angular/core';
+import { Component, OnInit, ApplicationRef, ElementRef, Renderer2, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { first } from 'rxjs';
@@ -8,9 +8,10 @@ import { first } from 'rxjs';
   imports: [CommonModule, MatProgressSpinnerModule],
   templateUrl: './app-loader.html',
   styleUrl: './app-loader.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppLoaderComponent implements OnInit {
-  isHidden = false;
+  readonly isHidden = signal(false);
 
   constructor(
     private appRef: ApplicationRef,
@@ -28,7 +29,7 @@ export class AppLoaderComponent implements OnInit {
   private hideLoader(): void {
     // Pequeño delay para asegurar renderizado visual completo
     setTimeout(() => {
-      this.isHidden = true;
+      this.isHidden.set(true);
 
       // Remover del DOM después de la transición CSS
       setTimeout(() => {
