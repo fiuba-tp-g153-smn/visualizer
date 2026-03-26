@@ -119,6 +119,23 @@
   }
 }
 
+// Sync tab: pulse the icon while playback is running
+.tab-label-container.sync-playing {
+  .tab-icon {
+    animation: badge-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
 .search-bar {
   display: flex;
   align-items: center;
