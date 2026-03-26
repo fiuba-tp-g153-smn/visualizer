@@ -1,99 +1,91 @@
 import { Injectable, inject, signal, computed, effect } from '@angular/core';
-import { LayerType, LayerCategory } from '../../models';
+import { LayerType, TilesetEntry, FrameInfo, SyncState } from '../../models';
 import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
-import { TilePrefetchService } from './tile-prefetch.service';
+import { PlaybackEngineService } from './playback-engine.service';
+import { formatDurationMs, formatDateTimeOnly } from '../../utils/tileset-timestamp';
 
-/**
- * Representa un período temporal con su timestamp y el índice en la capa
- */
-export interface TimePeriod {
-  timestamp: Date;
-  layerId: string;
-  index: number;
+const SYNC_ENGINE_ID = 'sync';
+
+interface SyncAlignment {
+  readonly baseIndices: ReadonlyMap<string, number>;
+  readonly effectiveFrameCount: number;
+  /** False when anchor exhausted all offsets without finding ±5 min matches for all layers. */
+  readonly isAligned: boolean;
 }
 
 /**
- * Configuración para el reproductor sincronizado
- */
-export interface SyncPlaybackConfig {
-  selectedLayerIds: string[];
-  minTime?: Date;
-  maxTime?: Date;
-  speed: number; // Minutos reales por segundo de reproducción
-  isPlaying: boolean;
-  currentTime?: Date;
-}
-
-/**
- * Servicio responsable de sincronizar la reproducción temporal de múltiples capas.
+ * Manages frame-based synchronized playback for multiple tile layers.
  *
- * Este servicio permite:
- * - Seleccionar múltiples capas activas con períodos temporales
- * - Calcular la intersección de períodos disponibles
- * - Reproducir sincronizadamente múltiples fuentes de datos
- * - Controlar la velocidad de reproducción en minutos reales por segundo
+ * Alignment: anchor = layer whose first-window frame is oldest; other layers search their
+ * full tileset history for a match within ±ALIGN_TOLERANCE_MS. If any fail, advance anchor
+ * base +1 and retry. Exhausting the anchor → isAligned: false (sync blocked).
+ *
+ * Layers are requested to load frameCount + SYNC_EXTRA_FRAMES tilesets so that anchor
+ * advancement never reduces the effective frame count below N.
+ *
+ * Uses PlaybackEngineService for the timer, shared with individual-layer playback.
  */
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class SyncPlaybackService {
   private readonly layerControlService = inject(LayerControlService);
   private readonly layerConfigService = inject(LayerConfigService);
-  private readonly tilePrefetchService = inject(TilePrefetchService);
+  private readonly engineService = inject(PlaybackEngineService);
 
-  private playbackInterval?: number;
+  private readonly originalLastImagesCount = new Map<string, number>();
 
-  // Almacena el lastImagesCount original de cada capa antes de modificarlo para sync playback
-  private originalLastImagesCount = new Map<string, number>();
+  private readonly state = signal<SyncState>({
+    selectedLayerIds: [],
+    frameCount: 1,
+    frameIndex: 0,
+    speed: 1,
+    isPlaying: false,
+  });
+
+  readonly syncState = this.state.asReadonly();
 
   constructor() {
-    // Automatically remove layers that are no longer eligible
     effect(
       () => {
         const eligibleIds = new Set(this.eligibleLayers().map((item) => item.layer.id));
-        const selectedIds = this.config().selectedLayerIds;
-
-        // Find layers that are selected but no longer eligible
+        const selectedIds = this.state().selectedLayerIds;
         const invalidIds = selectedIds.filter((id) => !eligibleIds.has(id));
 
         if (invalidIds.length > 0) {
-          // Restore original lastImagesCount for invalid layers
-          invalidIds.forEach((layerId) => {
-            this.restoreOriginalLastImagesCount(layerId);
-          });
+          invalidIds.forEach((id) => this.restoreOriginalLastImagesCount(id));
+          this.state.update((s) => ({
+            ...s,
+            selectedLayerIds: s.selectedLayerIds.filter((id) => eligibleIds.has(id)),
+          }));
+          if (this.state().selectedLayerIds.length === 0) {
+            this.pause();
+          }
+        }
+      },
+      { allowSignalWrites: true },
+    );
 
-          // Remove invalid layers from selection
-          this.config.set({
-            ...this.config(),
-            selectedLayerIds: selectedIds.filter((id) => eligibleIds.has(id)),
-          });
-
-          // Update time range after removing layers
-          this.updateTimeRange();
+    // Stop playback when alignment is lost due to a config change (e.g. new tilesets arrive
+    // and the ±5 min constraint can no longer be satisfied).
+    effect(
+      () => {
+        if (!this.isAligned() && this.state().isPlaying) {
+          this.pause();
         }
       },
       { allowSignalWrites: true },
     );
   }
 
-  private readonly config = signal<SyncPlaybackConfig>({
-    selectedLayerIds: [],
-    speed: 1, // 1 minuto real por segundo de reproducción por defecto
-    isPlaying: false,
-  });
+  // ============================================================================
+  // Derived state
+  // ============================================================================
 
-  readonly syncConfig = this.config.asReadonly();
-
-  /**
-   * Obtiene las capas activas que tienen más de un período disponible
-   */
   readonly eligibleLayers = computed(() => {
     return this.layerControlService
       .activeLayers()
       .filter(({ layer }) => {
         if (layer.type !== LayerType.TILE) return false;
-
         const tilesets = this.layerConfigService.getAvailableTilesets(layer.id);
         return tilesets && tilesets.length > 1;
       })
@@ -102,504 +94,374 @@ export class SyncPlaybackService {
   });
 
   /**
-   * Obtiene todos los períodos disponibles para una capa, parseados como Date
+   * Intersection of availablePeriods across all currently selected layers.
+   * These are the valid N values the user can choose from in the UI.
    */
-  private getLayerPeriods(layerId: string): TimePeriod[] {
-    const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
-    if (!tilesets) return [];
+  readonly availableFrameCounts = computed((): readonly number[] => {
+    const selectedIds = this.state().selectedLayerIds;
+    if (selectedIds.length === 0) return [];
 
-    const layer = this.eligibleLayers().find((item) => item.layer.id === layerId)?.layer;
-    if (!layer) return [];
-
-    return tilesets
-      .map((tileset, index) => {
-        const timestamp = this.parseTilesetTimestamp(tileset, layer.category);
-        if (!timestamp) return null;
-        return { timestamp, layerId, index };
-      })
-      .filter((period): period is TimePeriod => period !== null);
-  }
-
-  /**
-   * Parsea un tileset según la categoría de la capa
-   */
-  private parseTilesetTimestamp(tileset: string, category: LayerCategory): Date | null {
-    switch (category) {
-      case LayerCategory.GOES_19:
-        return this.parseGoesTimestamp(tileset);
-      case LayerCategory.RADAR:
-        return this.parseRadarTimestamp(tileset);
-      default:
-        return null;
-    }
-  }
-
-  /**
-   * Parsea timestamp GOES en formato juliano YYYYJJJHHMMSSS
-   */
-  private parseGoesTimestamp(tileset: string): Date | null {
-    if (tileset.length < 11) return null;
-
-    const year = parseInt(tileset.substring(0, 4));
-    const dayOfYear = parseInt(tileset.substring(4, 7));
-    const hour = parseInt(tileset.substring(7, 9));
-    const minute = parseInt(tileset.substring(9, 11));
-
-    const date = new Date(year, 0);
-    date.setDate(dayOfYear);
-    date.setHours(hour, minute, 0, 0);
-
-    return date;
-  }
-
-  /**
-   * Parsea timestamp RADAR en formato ISO-like YYYYMMDDTHHMMSSZ
-   */
-  private parseRadarTimestamp(tileset: string): Date | null {
-    if (tileset.length < 15) return null;
-
-    const year = parseInt(tileset.substring(0, 4));
-    const month = parseInt(tileset.substring(4, 6)) - 1; // Month is 0-indexed
-    const day = parseInt(tileset.substring(6, 8));
-    const hour = parseInt(tileset.substring(9, 11));
-    const minute = parseInt(tileset.substring(11, 13));
-    const second = parseInt(tileset.substring(13, 15));
-
-    return new Date(year, month, day, hour, minute, second);
-  }
-
-  /**
-   * Calcula el rango de tiempo disponible para las capas seleccionadas
-   * Retorna undefined si no hay intersección
-   */
-  readonly availableTimeRange = computed(() => {
-    const selectedIds = this.config().selectedLayerIds;
-    if (selectedIds.length === 0) return undefined;
-
-    const allPeriods = selectedIds.map((id) => this.getLayerPeriods(id));
-
-    // Verificar que todas las capas tengan períodos
-    if (allPeriods.some((periods) => periods.length === 0)) {
-      return undefined;
-    }
-
-    console.log('[SyncPlayback] Calculating available time range for selected layers', {
-      selectedIds,
-      allPeriods: allPeriods.map((periods) =>
-        periods.map((p) => ({ timestamp: p.timestamp.toISOString(), layerId: p.layerId })),
-      ),
+    const periodSets = selectedIds.map((id) => {
+      const layer = this.eligibleLayers().find((item) => item.layer.id === id)?.layer;
+      if (!layer || layer.type !== LayerType.TILE) return null;
+      const periods = layer.availablePeriods;
+      if (!periods || periods.length === 0) return null;
+      return new Set(periods);
     });
 
-    // Encontrar el primer tiempo donde todas las capas tienen datos
-    const minTimes = allPeriods.map((periods) =>
-      Math.min(...periods.map((p) => p.timestamp.getTime())),
-    );
-    const maxOfMins = Math.max(...minTimes);
+    if (periodSets.some((s) => s === null)) return [];
 
-    // Encontrar el último tiempo donde todas las capas tienen datos
-    const maxTimes = allPeriods.map((periods) =>
-      Math.max(...periods.map((p) => p.timestamp.getTime())),
-    );
-    const minOfMaxes = Math.min(...maxTimes);
+    const [first, ...rest] = periodSets as ReadonlySet<number>[];
+    const intersection = [...first].filter((v) => rest.every((s) => s.has(v)));
+    return intersection.sort((a, b) => a - b);
+  });
 
-    // Verificar que haya intersección
-    if (maxOfMins > minOfMaxes) {
-      return undefined; // No hay intersección
+  /** Maximum allowed time difference between aligned frames across layers. */
+  private readonly ALIGN_TOLERANCE_MS = 5 * 60 * 1000;
+
+  /**
+   * Extra tilesets requested per layer beyond frameCount so the anchor-advance algorithm
+   * always has enough history to produce N aligned frames even when layers are offset.
+   */
+  private readonly SYNC_EXTRA_FRAMES = 4;
+
+  /**
+   * Computes the aligned base index for the start of the N-frame playback window per layer.
+   *
+   * Strategy:
+   *  1. Initial baseIndex[id] = max(0, tilesets.length - N) per layer.
+   *  2. Anchor = layer whose tilesets[baseIndex] is the oldest timestamp.
+   *  3. For each non-anchor layer find the closest tileset within ±5 min of anchor's first frame.
+   *  4. If all match → isAligned: true.
+   *  5. If any fail → advance anchor base by 1 and retry.
+   *  6. If anchor exhausts all frames → isAligned: false (sync blocked, no fallback).
+   */
+  private readonly syncAlignment = computed((): SyncAlignment => {
+    const { selectedLayerIds, frameCount: N } = this.state();
+    const EMPTY: SyncAlignment = { baseIndices: new Map(), effectiveFrameCount: 0, isAligned: true };
+
+    if (selectedLayerIds.length === 0) return EMPTY;
+
+    // Build per-layer data: tilesets already have pre-parsed timestamps.
+    type LayerEntry = { tilesets: TilesetEntry[]; timestamps: number[] };
+    const layerData = new Map<string, LayerEntry>();
+
+    for (const layerId of selectedLayerIds) {
+      const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
+      const layer = this.eligibleLayers().find((item) => item.layer.id === layerId)?.layer;
+      if (!tilesets?.length || !layer || layer.type !== LayerType.TILE) continue;
+      layerData.set(layerId, {
+        tilesets,
+        timestamps: tilesets.map((e) => e.time.getTime()),
+      });
     }
 
-    return {
-      min: new Date(maxOfMins),
-      max: new Date(minOfMaxes),
-    };
+    if (layerData.size === 0) return EMPTY;
+
+    // Initial base indices: last N tilesets per layer.
+    const initialBase = new Map<string, number>();
+    for (const [id, { tilesets }] of layerData) {
+      initialBase.set(id, Math.max(0, tilesets.length - N));
+    }
+
+    // Single layer: no cross-layer alignment needed.
+    if (layerData.size === 1) {
+      return { baseIndices: initialBase, effectiveFrameCount: this.computeEfc(layerData, initialBase, N), isAligned: true };
+    }
+
+    // Find anchor: layer with the oldest first-frame timestamp in its initial window.
+    let anchorId: string | null = null;
+    let anchorOldestMs = Infinity;
+    for (const [id, { timestamps }] of layerData) {
+      const ms = timestamps[initialBase.get(id)!];
+      if (ms != null && ms < anchorOldestMs) {
+        anchorOldestMs = ms;
+        anchorId = id;
+      }
+    }
+
+    if (!anchorId) {
+      // No parseable timestamps: treat as aligned with initial bases.
+      return { baseIndices: initialBase, effectiveFrameCount: this.computeEfc(layerData, initialBase, N), isAligned: true };
+    }
+
+    const anchor = layerData.get(anchorId)!;
+    const anchorBaseStart = initialBase.get(anchorId)!;
+
+    // Try advancing anchor's base until all non-anchor layers find a match within ±5 min.
+    for (let offset = 0; anchorBaseStart + offset < anchor.tilesets.length; offset++) {
+      const anchorBase = anchorBaseStart + offset;
+      const anchorFirstMs = anchor.timestamps[anchorBase];
+      if (anchorFirstMs == null) continue;
+
+      const candidate = new Map<string, number>([[anchorId, anchorBase]]);
+      let allMatched = true;
+
+      for (const [id, { timestamps }] of layerData) {
+        if (id === anchorId) continue;
+        let bestIdx = -1;
+        let bestDiff = Infinity;
+        for (let i = 0; i < timestamps.length; i++) {
+          const diff = Math.abs(timestamps[i] - anchorFirstMs);
+          if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+        }
+        if (bestIdx === -1 || bestDiff > this.ALIGN_TOLERANCE_MS) { allMatched = false; break; }
+        candidate.set(id, bestIdx);
+      }
+
+      if (allMatched) {
+        return { baseIndices: candidate, effectiveFrameCount: this.computeEfc(layerData, candidate, N), isAligned: true };
+      }
+    }
+
+    // Anchor exhausted: alignment failed, block sync.
+    return { baseIndices: new Map(), effectiveFrameCount: 0, isAligned: false };
+  });
+
+  readonly effectiveFrameCount = computed(() => this.syncAlignment().effectiveFrameCount);
+  readonly isAligned = computed(() => this.syncAlignment().isAligned);
+
+  /**
+   * Whether any selected layer currently has fewer available tilesets than frameCount.
+   * The slider handles this gracefully (clamps to available count), but the UI
+   * can show a warning badge next to the affected layers.
+   */
+  readonly layersWithFewerFrames = computed((): ReadonlySet<string> => {
+    const { selectedLayerIds, frameCount } = this.state();
+    const short = new Set<string>();
+    for (const id of selectedLayerIds) {
+      const tilesets = this.layerConfigService.getAvailableTilesets(id);
+      if ((tilesets?.length ?? 0) < frameCount) short.add(id);
+    }
+    return short;
   });
 
   /**
-   * Verifica si hay intersección de períodos para las capas seleccionadas
+   * Frame info (avg time ± deviation) at the current frame index.
    */
-  readonly hasIntersection = computed(() => {
-    return this.availableTimeRange() !== undefined;
+  readonly currentFrameInfo = computed((): FrameInfo | null => {
+    return this.getFrameInfo(this.state().frameIndex);
   });
 
   // ============================================================================
-  // Public Actions
+  // Public queries
   // ============================================================================
 
+  isLayerSelected(layerId: string): boolean {
+    return this.state().selectedLayerIds.includes(layerId);
+  }
+
   /**
-   * Selecciona o deselecciona una capa para sincronización
+   * Returns the avg time ± max deviation for a given frame index across all selected layers.
    */
+  getFrameInfo(frameIndex: number): FrameInfo | null {
+    const { selectedLayerIds } = this.state();
+    const { baseIndices, effectiveFrameCount: efc, isAligned } = this.syncAlignment();
+    if (selectedLayerIds.length === 0 || !isAligned) return null;
+
+    const timestamps: Date[] = [];
+
+    for (const layerId of selectedLayerIds) {
+      const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
+      if (!tilesets?.length) continue;
+      const baseIdx = baseIndices.get(layerId) ?? Math.max(0, tilesets.length - efc);
+      timestamps.push(tilesets[Math.min(baseIdx + frameIndex, tilesets.length - 1)].time);
+    }
+
+    if (timestamps.length === 0) return null;
+
+    const times = timestamps.map((d) => d.getTime());
+    const avgMs = times.reduce((a, b) => a + b, 0) / times.length;
+    const deviationMs = Math.max(...times) - Math.min(...times);
+    const avgDate = new Date(avgMs);
+
+    const deviation = deviationMs > 0 ? ` ± ${formatDurationMs(deviationMs)}` : '';
+    const label = formatDateTimeOnly(avgDate) + deviation;
+
+    return { avgTime: avgDate, deviationMs, label };
+  }
+
+  // ============================================================================
+  // Public actions — layer selection
+  // ============================================================================
+
   toggleLayerSelection(layerId: string): void {
-    const current = this.config().selectedLayerIds;
-    const index = current.indexOf(layerId);
-
-    if (index === -1) {
-      // Agregar capa: guardar su lastImagesCount original
-      this.saveOriginalLastImagesCount(layerId);
-
-      this.config.set({
-        ...this.config(),
-        selectedLayerIds: [...current, layerId],
-      });
+    if (this.isLayerSelected(layerId)) {
+      this.deselectLayer(layerId);
     } else {
-      // Remover capa: restaurar su lastImagesCount original
-      this.restoreOriginalLastImagesCount(layerId);
-
-      this.config.set({
-        ...this.config(),
-        selectedLayerIds: current.filter((id) => id !== layerId),
-      });
+      this.selectLayer(layerId);
     }
-
-    // Recalcular el rango si hay capas seleccionadas
-    this.updateTimeRange();
   }
 
-  /**
-   * Actualiza el rango de tiempo basado en las capas seleccionadas
-   */
-  private updateTimeRange(): void {
-    const range = this.availableTimeRange();
-    if (range) {
-      this.config.set({
-        ...this.config(),
-        minTime: range.min,
-        maxTime: range.max,
-        currentTime: range.min,
-      });
+  selectLayer(layerId: string): void {
+    if (this.isLayerSelected(layerId)) return;
+    this.saveOriginalLastImagesCount(layerId);
+    this.state.update((s) => ({ ...s, selectedLayerIds: [...s.selectedLayerIds, layerId] }));
+    this.applyLastImagesCountToLayer(layerId);
 
-      // Trigger prefetch for the new range
-      this.triggerPrefetch();
-    } else {
-      this.config.set({
-        ...this.config(),
-        minTime: undefined,
-        maxTime: undefined,
-        currentTime: undefined,
-      });
+    // Auto-select a playable frameCount when the default (1) is not usable
+    if (this.state().frameCount < 2) {
+      const counts = this.availableFrameCounts();
+      const defaultCount = counts.find((n) => n >= 2);
+      if (defaultCount !== undefined) this.setFrameCount(defaultCount);
     }
   }
 
   /**
-   * Dispara el prefetch de tiles para el rango seleccionado
+   * Removes a layer from sync and restores its original lastImagesCount.
+   * Also called by LayerItemComponent when the user "detaches" via individual controls.
    */
-  private triggerPrefetch(): void {
-    const cfg = this.config();
-    if (!cfg.minTime || !cfg.maxTime || cfg.selectedLayerIds.length === 0) return;
-
-    // Request prefetch for all selected layers in the time range
-    this.tilePrefetchService.prefetchSyncRange(cfg.selectedLayerIds, {
-      min: cfg.minTime,
-      max: cfg.maxTime,
-    });
-  }
-
-  /**
-   * Establece el tiempo mínimo del rango
-   */
-  setMinTime(time: Date): void {
-    const range = this.availableTimeRange();
-    if (!range) return;
-
-    // Validar que esté dentro del rango disponible
-    const validTime = new Date(Math.max(time.getTime(), range.min.getTime()));
-
-    const cfg = this.config();
-    const newConfig = {
-      ...cfg,
-      minTime: validTime,
-    };
-
-    // Ajustar currentTime si queda fuera del nuevo rango
-    if (cfg.currentTime && cfg.currentTime < validTime) {
-      newConfig.currentTime = validTime;
-    }
-
-    this.config.set(newConfig);
-
-    // Trigger prefetch for the updated range
-    this.triggerPrefetch();
-  }
-
-  /**
-   * Establece el tiempo máximo del rango
-   */
-  setMaxTime(time: Date): void {
-    const range = this.availableTimeRange();
-    if (!range) return;
-
-    // Validar que esté dentro del rango disponible
-    const validTime = new Date(Math.min(time.getTime(), range.max.getTime()));
-
-    const cfg = this.config();
-    const newConfig = {
-      ...cfg,
-      maxTime: validTime,
-    };
-
-    // Ajustar currentTime si queda fuera del nuevo rango
-    if (cfg.currentTime && cfg.currentTime > validTime) {
-      newConfig.currentTime = validTime;
-    }
-
-    this.config.set(newConfig);
-
-    // Trigger prefetch for the updated range
-    this.triggerPrefetch();
-  }
-
-  /**
-   * Establece el tiempo actual manualmente (para el slider)
-   */
-  setCurrentTime(time: Date): void {
-    const cfg = this.config();
-    if (!cfg.minTime || !cfg.maxTime) return;
-
-    // Validar que esté dentro del rango seleccionado
-    const validTime = new Date(
-      Math.max(cfg.minTime.getTime(), Math.min(time.getTime(), cfg.maxTime.getTime())),
-    );
-
-    this.config.set({
-      ...cfg,
-      currentTime: validTime,
-    });
-
-    // Si no está reproduciendo, actualizar capas
-    if (!cfg.isPlaying) {
-      this.updateLayersForCurrentTime();
+  deselectLayer(layerId: string): void {
+    if (!this.isLayerSelected(layerId)) return;
+    this.restoreOriginalLastImagesCount(layerId);
+    this.state.update((s) => ({
+      ...s,
+      selectedLayerIds: s.selectedLayerIds.filter((id) => id !== layerId),
+    }));
+    if (this.state().selectedLayerIds.length === 0) {
+      this.pause();
     }
   }
 
   /**
-   * Establece la velocidad de reproducción (minutos reales por segundo)
+   * Detaches a layer from sync without restoring the original lastImagesCount.
+   * Used when the user interacts manually (e.g. moves the slider, press play) so
+   * the current sync values are preserved for individual playback.
    */
+  detachLayer(layerId: string): void {
+    if (!this.isLayerSelected(layerId)) return;
+    this.originalLastImagesCount.delete(layerId); // discard — keep current state
+    this.state.update((s) => ({
+      ...s,
+      selectedLayerIds: s.selectedLayerIds.filter((id) => id !== layerId),
+    }));
+    if (this.state().selectedLayerIds.length === 0) {
+      this.pause();
+    }
+  }
+
+  // ============================================================================
+  // Public actions — playback control
+  // ============================================================================
+
+  setFrameCount(frameCount: number): void {
+    this.state.update((s) => ({
+      ...s,
+      frameCount,
+      frameIndex: Math.min(s.frameIndex, Math.max(0, frameCount - 1)),
+    }));
+    this.state().selectedLayerIds.forEach((id) => this.applyLastImagesCountToLayer(id));
+    if (this.state().isPlaying) {
+      const newEfc = this.syncAlignment().effectiveFrameCount;
+      this.engineService.setFrameCount(SYNC_ENGINE_ID, newEfc);
+    }
+  }
+
+  setFrameIndex(frameIndex: number): void {
+    const efc = this.syncAlignment().effectiveFrameCount;
+    const clamped = Math.max(0, Math.min(frameIndex, Math.max(0, efc - 1)));
+    this.state.update((s) => ({ ...s, frameIndex: clamped }));
+    this.updateLayersForFrame(clamped);
+  }
+
   setSpeed(speed: number): void {
-    const clampedSpeed = Math.max(0, Math.min(60, speed));
-
-    this.config.set({
-      ...this.config(),
-      speed: clampedSpeed,
-    });
-
-    // Reiniciar reproducción si está activa
-    if (this.config().isPlaying) {
-      this.stopPlayback();
-      setTimeout(() => this.startPlayback(), 0);
+    const clamped = Math.max(0.4, Math.min(10, speed));
+    this.state.update((s) => ({ ...s, speed: clamped }));
+    if (this.state().isPlaying) {
+      this.engineService.setSpeed(SYNC_ENGINE_ID, clamped);
     }
   }
 
-  /**
-   * Alterna entre reproducción y pausa
-   */
   togglePlayback(): void {
-    if (this.config().isPlaying) {
-      this.stopPlayback();
+    if (this.state().isPlaying) {
+      this.pause();
     } else {
-      this.startPlayback();
+      this.play();
     }
   }
 
-  /**
-   * Inicia la reproducción sincronizada
-   */
-  startPlayback(): void {
-    const cfg = this.config();
+  play(): void {
+    const { selectedLayerIds, frameIndex, speed } = this.state();
+    const { effectiveFrameCount: efc, isAligned } = this.syncAlignment();
+    if (selectedLayerIds.length === 0 || !isAligned || efc < 2) return;
 
-    if (!cfg.minTime || !cfg.maxTime || cfg.selectedLayerIds.length === 0) {
-      console.warn('Cannot start playback: invalid configuration');
-      return;
-    }
+    selectedLayerIds.forEach((id) => this.layerControlService.stopPlayback(id));
 
-    // No permite reproducción con velocidad 0
-    if (cfg.speed === 0) {
-      console.warn('Cannot start playback: speed is 0');
-      return;
-    }
+    this.engineService.register(SYNC_ENGINE_ID, efc, speed);
+    this.engineService.setFrameIndex(SYNC_ENGINE_ID, Math.min(frameIndex, efc - 1));
 
-    // Trigger prefetch before starting playback
-    this.triggerPrefetch();
+    this.state.update((s) => ({ ...s, isPlaying: true }));
 
-    // Detener playback individual de todas las capas seleccionadas
-    cfg.selectedLayerIds.forEach((layerId) => {
-      this.layerControlService.stopPlayback(layerId);
-    });
-
-    // Setear currentTime al mínimo si no está definido
-    if (!cfg.currentTime) {
-      this.config.set({
-        ...cfg,
-        currentTime: cfg.minTime,
-        isPlaying: true,
-      });
-    } else {
-      this.config.set({
-        ...cfg,
-        isPlaying: true,
-      });
-    }
-
-    // Iniciar intervalo de reproducción
-    // speed es minutos reales por segundo
-    // Actualizamos speed veces por segundo, avanzando 1 minuto cada vez
-    // Ejemplo: speed=8 → actualiza cada 125ms, avanza 1 minuto
-    const intervalMs = 1000 / cfg.speed; // Actualizar speed veces por segundo
-    const advanceMs = 60 * 1000; // Avanzar 1 minuto real cada vez
-
-    this.playbackInterval = window.setInterval(() => {
-      this.advanceTime(advanceMs);
-    }, intervalMs);
-
-    // Actualizar inmediatamente con el tiempo actual
-    this.updateLayersForCurrentTime();
-  }
-
-  /**
-   * Detiene la reproducción sincronizada
-   */
-  stopPlayback(): void {
-    if (this.playbackInterval) {
-      clearInterval(this.playbackInterval);
-      this.playbackInterval = undefined;
-    }
-
-    this.config.set({
-      ...this.config(),
-      isPlaying: false,
+    this.engineService.play(SYNC_ENGINE_ID, (fi) => {
+      this.state.update((s) => ({ ...s, frameIndex: fi }));
+      this.updateLayersForFrame(fi);
     });
   }
 
+  pause(): void {
+    this.engineService.pause(SYNC_ENGINE_ID);
+    this.state.update((s) => ({ ...s, isPlaying: false }));
+  }
+
+  reset(): void {
+    this.pause();
+    this.state().selectedLayerIds.forEach((id) => this.restoreOriginalLastImagesCount(id));
+    this.state.set({ selectedLayerIds: [], frameCount: 1, frameIndex: 0, speed: 1, isPlaying: false });
+  }
+
+  // ============================================================================
+  // Private helpers
+  // ============================================================================
+
   /**
-   * Guarda el lastImagesCount original de una capa antes de modificarlo
+   * Sets each selected layer's timeIndex using pre-aligned base indices from {@link syncAlignment}.
    */
+  private updateLayersForFrame(frameIndex: number): void {
+    const { selectedLayerIds } = this.state();
+    const { baseIndices, isAligned } = this.syncAlignment();
+    if (!isAligned) return;
+
+    for (const layerId of selectedLayerIds) {
+      const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
+      if (!tilesets?.length) continue;
+      const baseIdx = baseIndices.get(layerId)!;
+      this.layerControlService.setTimeIndex(layerId, Math.min(baseIdx + frameIndex, tilesets.length - 1));
+    }
+  }
+
+  private applyLastImagesCountToLayer(layerId: string): void {
+    this.layerControlService.setLastImagesCount(
+      layerId,
+      this.state().frameCount + this.SYNC_EXTRA_FRAMES,
+    );
+  }
+
   private saveOriginalLastImagesCount(layerId: string): void {
     if (this.originalLastImagesCount.has(layerId)) return;
-
     const controls = this.layerControlService.getControls(layerId);
     if (controls.type === LayerType.TILE) {
       this.originalLastImagesCount.set(layerId, controls.playback.lastImagesCount);
     }
   }
 
-  /**
-   * Restaura el lastImagesCount original de una capa
-   */
   private restoreOriginalLastImagesCount(layerId: string): void {
-    const originalCount = this.originalLastImagesCount.get(layerId);
-    if (originalCount !== undefined) {
-      this.layerControlService.setLastImagesCount(layerId, originalCount);
+    const original = this.originalLastImagesCount.get(layerId);
+    if (original !== undefined) {
+      this.layerControlService.setLastImagesCount(layerId, original);
       this.originalLastImagesCount.delete(layerId);
     }
   }
 
-  /**
-   * Avanza el tiempo actual
-   */
-  private advanceTime(advanceMs: number): void {
-    const cfg = this.config();
-    if (!cfg.currentTime || !cfg.minTime || !cfg.maxTime) return;
-
-    const newTime = new Date(cfg.currentTime.getTime() + advanceMs);
-
-    // Si superamos el máximo, volver al inicio
-    if (newTime > cfg.maxTime) {
-      this.config.set({
-        ...cfg,
-        currentTime: cfg.minTime,
-      });
-    } else {
-      this.config.set({
-        ...cfg,
-        currentTime: newTime,
-      });
+  private computeEfc(
+    layerData: ReadonlyMap<string, { readonly tilesets: readonly TilesetEntry[] }>,
+    baseIndices: ReadonlyMap<string, number>,
+    N: number,
+  ): number {
+    if (layerData.size === 0) return 0;
+    let min = N;
+    for (const [id, { tilesets }] of layerData) {
+      min = Math.min(min, tilesets.length - (baseIndices.get(id) ?? 0));
     }
-
-    this.updateLayersForCurrentTime();
-  }
-
-  /**
-   * Actualiza todas las capas para mostrar el período más cercano al tiempo actual
-   */
-  private updateLayersForCurrentTime(): void {
-    const cfg = this.config();
-    if (!cfg.currentTime || !cfg.minTime || !cfg.maxTime) return;
-
-    // Guardar referencias locales para que TypeScript infiera correctamente el tipo
-    const minTime = cfg.minTime;
-    const maxTime = cfg.maxTime;
-    const currentTime = cfg.currentTime;
-
-    cfg.selectedLayerIds.forEach((layerId) => {
-      const periods = this.getLayerPeriods(layerId);
-      if (periods.length === 0) return;
-
-      // Encontrar el período más cercano al tiempo actual
-      const closestPeriod = this.findClosestPeriod(periods, currentTime);
-      if (closestPeriod) {
-        // Calcular cuántos frames están dentro del rango de sync playback
-        const periodsInRange = this.getPeriodsInRange(periods, minTime, maxTime);
-        const frameCountInRange = periodsInRange.length;
-
-        // Ajustar temporalmente lastImagesCount para que el prerenderizado funcione correctamente
-        // Esto asegura que los frames con opacity=0 se rendericen dentro del rango de sync playback
-        if (frameCountInRange > 1) {
-          this.layerControlService.setLastImagesCount(layerId, frameCountInRange);
-        }
-
-        this.layerControlService.setTimeIndex(layerId, closestPeriod.index);
-      }
-    });
-  }
-
-  /**
-   * Obtiene los períodos que están dentro del rango de tiempo especificado
-   */
-  private getPeriodsInRange(periods: TimePeriod[], minTime: Date, maxTime: Date): TimePeriod[] {
-    const minMs = minTime.getTime();
-    const maxMs = maxTime.getTime();
-
-    return periods.filter((period) => {
-      const periodMs = period.timestamp.getTime();
-      return periodMs >= minMs && periodMs <= maxMs;
-    });
-  }
-
-  /**
-   * Encuentra el período más cercano a un tiempo dado
-   */
-  private findClosestPeriod(periods: TimePeriod[], targetTime: Date): TimePeriod | null {
-    if (periods.length === 0) return null;
-
-    let closest = periods[0];
-    let minDiff = Math.abs(periods[0].timestamp.getTime() - targetTime.getTime());
-
-    for (let i = 1; i < periods.length; i++) {
-      const diff = Math.abs(periods[i].timestamp.getTime() - targetTime.getTime());
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = periods[i];
-      }
-    }
-
-    return closest;
-  }
-
-  /**
-   * Limpia la selección de capas y detiene la reproducción
-   */
-  reset(): void {
-    this.stopPlayback();
-
-    // Restaurar lastImagesCount original de todas las capas seleccionadas
-    this.config().selectedLayerIds.forEach((layerId) => {
-      this.restoreOriginalLastImagesCount(layerId);
-    });
-
-    this.config.set({
-      selectedLayerIds: [],
-      speed: 1,
-      isPlaying: false,
-      minTime: undefined,
-      maxTime: undefined,
-      currentTime: undefined,
-    });
+    return Math.max(1, min);
   }
 }

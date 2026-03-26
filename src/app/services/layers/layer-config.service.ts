@@ -11,8 +11,11 @@ import {
   LayerType,
   RadarTileLayer,
   GoesTileLayerConfig,
+  TileLayerConfig,
+  TilesetEntry,
 } from '../../models';
 import { LayersService } from './layers.service';
+import { parseGoesTimestamp, parseRadarTimestamp } from '../../utils/tileset-timestamp';
 
 /**
  * Service responsible for fetching and caching layer configurations.
@@ -56,12 +59,11 @@ export class LayerConfigService {
     const configUrl = buildConfigUrl(layer.id);
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
-        // Extract only the IDs from the tileset objects and sort chronologically
-        const allTilesets = response.tilesets.map((tileset: any) => tileset.id).sort();
-
-        // Limit to the maximum available period for this layer
-        const maxPeriod = this.getMaxPeriodForLayer(layer);
-        const availableTilesets = allTilesets.slice(-maxPeriod);
+        const availableTilesets: TilesetEntry[] = (response.tilesets as any[])
+          .map((t: any) => t.id as string)
+          .sort()
+          .map((id: string) => ({ id, time: parseGoesTimestamp(id) }))
+          .filter((e): e is TilesetEntry => e.time !== null);
 
         const layerConfig: GoesTileLayerConfig = {
           layerId: layer.id,
@@ -103,12 +105,10 @@ export class LayerConfigService {
 
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
-        // Sort tilesets chronologically
-        const allTilesets = (response.tilesets || []).sort();
-
-        // Limit to the maximum available period for this layer
-        const maxPeriod = this.getMaxPeriodForLayer(layer);
-        const availableTilesets = allTilesets.slice(-maxPeriod);
+        const availableTilesets: TilesetEntry[] = ((response.tilesets || []) as string[])
+          .sort()
+          .map((id) => ({ id, time: parseRadarTimestamp(id) }))
+          .filter((e): e is TilesetEntry => e.time !== null);
 
         const config: RadarTileLayerConfig = {
           layerId: layer.id,
@@ -167,7 +167,7 @@ export class LayerConfigService {
    * Returns undefined if config not yet loaded.
    * @throws Error if called on non-TILE layer
    */
-  getAvailableTilesets(layerId: string): string[] | undefined {
+  getAvailableTilesets(layerId: string): TilesetEntry[] | undefined {
     const config = this.getConfig(layerId);
     if (!config) return undefined;
 
@@ -186,28 +186,6 @@ export class LayerConfigService {
   // ============================================================================
 
   /**
-   * Gets the maximum available period for a layer (the highest value in availablePeriods).
-   * This is used to limit the number of tilesets stored in memory.
-   * @param layer - The tile layer
-   * @returns The maximum period, or a default of 24 if not specified
-   */
-  private getMaxPeriodForLayer(layer: GoesTileLayer | RadarTileLayer): number {
-    if (layer.category === LayerCategory.GOES_19) {
-      const goesLayer = layer as GoesTileLayer;
-      if (goesLayer.availablePeriods && goesLayer.availablePeriods.length > 0) {
-        return Math.max(...goesLayer.availablePeriods);
-      }
-    } else if (layer.category === LayerCategory.RADAR) {
-      const radarLayer = layer as RadarTileLayer;
-      if (radarLayer.availablePeriods && radarLayer.availablePeriods.length > 0) {
-        return Math.max(...radarLayer.availablePeriods);
-      }
-    }
-    // Default fallback if no periods are defined
-    return 24;
-  }
-
-  /**
    * Updates the configuration map with a new configuration.
    * Only updates if the configuration has actually changed to avoid unnecessary reactive updates.
    */
@@ -217,10 +195,14 @@ export class LayerConfigService {
     // Compare configs to see if they're actually different
     if (existingConfig && this.configsAreEqual(existingConfig, config)) return;
 
-    this.configMap.update((map) => {
-      const newMap = new Map(map);
-      newMap.set(layerId, config);
-      return newMap;
+    // Defer to avoid NG0100 (ExpressionChangedAfterItHasBeenCheckedError) when called
+    // from an async context (setInterval, HTTP response) during an active CD cycle.
+    queueMicrotask(() => {
+      this.configMap.update((map) => {
+        const newMap = new Map(map);
+        newMap.set(layerId, config);
+        return newMap;
+      });
     });
   }
 
@@ -232,9 +214,7 @@ export class LayerConfigService {
 
     switch (a.type) {
       case LayerType.TILE:
-        if (a.category !== (b as any).category) return false;
-        const bTile = b as GoesTileLayerConfig | RadarTileLayerConfig;
-        return this.arraysAreEqual(a.availableTilesets, bTile.availableTilesets);
+        return this.arraysAreEqual(a.availableTilesets, (b as TileLayerConfig).availableTilesets);
       default:
         return false;
     }
@@ -243,10 +223,10 @@ export class LayerConfigService {
   /**
    * Compares two arrays for equality.
    */
-  private arraysAreEqual(a: readonly string[], b: readonly string[]): boolean {
+  private arraysAreEqual(a: readonly TilesetEntry[], b: readonly TilesetEntry[]): boolean {
     if (a.length !== b.length) return false;
     for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false;
+      if (a[i].id !== b[i].id) return false;
     }
     return true;
   }

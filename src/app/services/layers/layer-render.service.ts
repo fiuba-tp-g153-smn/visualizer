@@ -130,7 +130,7 @@ export class LayerRenderService {
       );
     }
 
-    const tilesetId = tilesets[timeIndex];
+    const tilesetId = tilesets[timeIndex].id;
     const poolKey = `${layerId}-${elevationId}-${tilesetId}`;
 
     // Check pool
@@ -394,7 +394,7 @@ export class LayerRenderService {
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
-            const tilesetId = tilesets[clampedIndex];
+            const tilesetId = tilesets[clampedIndex].id;
             return `${layerId}-${tilesetId}`;
           }
           case LayerCategory.RADAR: {
@@ -416,7 +416,7 @@ export class LayerRenderService {
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
-            const tilesetId = tilesets[clampedIndex];
+            const tilesetId = tilesets[clampedIndex].id;
             return `${layerId}-[${elevationsKey}]-${tilesetId}`;
           }
           default:
@@ -607,7 +607,7 @@ export class LayerRenderService {
       );
     }
 
-    return tilesets[resolvedTimeIndex];
+    return tilesets[resolvedTimeIndex].id;
   }
 
   /**

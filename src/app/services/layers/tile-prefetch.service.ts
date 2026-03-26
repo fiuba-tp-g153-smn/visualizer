@@ -2,11 +2,11 @@ import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
 import {
-  LayerControls,
   RadarLayerControls,
   TileLayerControls,
+  ActiveLayerEntry,
 } from '../../models/layers/controls.models';
-import { Layer, LayerCategory, LayerType } from '../../models/layers/models';
+import { LayerCategory, LayerType } from '../../models/layers/models';
 import {
   LayerConfig,
   GoesTileLayerConfig,
@@ -74,136 +74,6 @@ export class TilePrefetchService {
     this.inFlight.clear();
   }
 
-  /**
-   * Prefetches tiles for a specific time range across multiple layers (for sync playback).
-   * This method is called by SyncPlaybackService to preload tiles before they're needed.
-   *
-   * @param layerIds - IDs of layers to prefetch
-   * @param timeRange - Min and max timestamps defining the range to prefetch
-   */
-  prefetchSyncRange(layerIds: string[], timeRange: { min: Date; max: Date }): void {
-    const configs = this.configService.configs();
-    const zoom = this.zoom();
-    const activeLayers = this.controlService.activeLayers();
-
-    for (const layerId of layerIds) {
-      // Find the layer and its controls
-      const activeLayer = activeLayers.find((item) => item.layer.id === layerId);
-      if (!activeLayer) continue;
-
-      const { layer, controls } = activeLayer;
-      if (layer.type !== LayerType.TILE || !layer.boundingBox) continue;
-
-      const config = configs.get(layer.id);
-      if (!config || config.type !== LayerType.TILE) continue;
-
-      const tileConfig = config as GoesTileLayerConfig | RadarTileLayerConfig;
-      if (!tileConfig.availableTilesets || tileConfig.availableTilesets.length === 0) continue;
-
-      // Filter tilesets to only those within the time range
-      const tilesetsInRange = this.filterTilesetsByTimeRange(
-        tileConfig.availableTilesets,
-        layer.category,
-        timeRange,
-      );
-
-      if (tilesetsInRange.length === 0) continue;
-
-      // Clamp zoom to native zoom range
-      const clampedZoom = Math.min(Math.max(zoom, layer.minNativeZoom), layer.maxNativeZoom);
-      const tileRange = calcTileRange(layer.boundingBox, clampedZoom);
-
-      // Build and enqueue URLs for all tilesets in range
-      if (layer.category === LayerCategory.GOES_19) {
-        for (const tilesetId of tilesetsInRange) {
-          const urls = this.buildUrls(`${layer.id}/${tilesetId}`, clampedZoom, tileRange);
-          if (urls.length > MAX_TILES_PER_LAYER) continue;
-          this.enqueue(urls);
-        }
-      } else if (layer.category === LayerCategory.RADAR) {
-        const radarControls = controls as RadarLayerControls;
-        for (const elevationId of radarControls.elevation.selectedElevationIds) {
-          for (const tilesetId of tilesetsInRange) {
-            const urls = this.buildUrls(
-              `${layer.id}/${elevationId}/${tilesetId}`,
-              clampedZoom,
-              tileRange,
-              true,
-            );
-            if (urls.length > MAX_TILES_PER_LAYER) continue;
-            this.enqueue(urls);
-          }
-        }
-      }
-    }
-
-    this.drain();
-  }
-
-  /**
-   * Filters tilesets to only include those within a specific time range.
-   * Parses timestamps according to layer category.
-   */
-  private filterTilesetsByTimeRange(
-    tilesets: string[],
-    category: LayerCategory,
-    timeRange: { min: Date; max: Date },
-  ): string[] {
-    return tilesets.filter((tileset) => {
-      const timestamp = this.parseTilesetTimestamp(tileset, category);
-      if (!timestamp) return false;
-      return timestamp >= timeRange.min && timestamp <= timeRange.max;
-    });
-  }
-
-  /**
-   * Parses a tileset ID to a Date based on layer category.
-   */
-  private parseTilesetTimestamp(tileset: string, category: LayerCategory): Date | null {
-    switch (category) {
-      case LayerCategory.GOES_19:
-        return this.parseGoesTimestamp(tileset);
-      case LayerCategory.RADAR:
-        return this.parseRadarTimestamp(tileset);
-      default:
-        return null;
-    }
-  }
-
-  /**
-   * Parses GOES timestamp in Julian format YYYYJJJHHMMSSS
-   */
-  private parseGoesTimestamp(tileset: string): Date | null {
-    if (tileset.length < 11) return null;
-
-    const year = parseInt(tileset.substring(0, 4));
-    const dayOfYear = parseInt(tileset.substring(4, 7));
-    const hour = parseInt(tileset.substring(7, 9));
-    const minute = parseInt(tileset.substring(9, 11));
-
-    const date = new Date(year, 0);
-    date.setDate(dayOfYear);
-    date.setHours(hour, minute, 0, 0);
-
-    return date;
-  }
-
-  /**
-   * Parses Radar timestamp in ISO-like format YYYYMMDDTHHMMSSZ
-   */
-  private parseRadarTimestamp(tileset: string): Date | null {
-    if (tileset.length < 15) return null;
-
-    const year = parseInt(tileset.substring(0, 4));
-    const month = parseInt(tileset.substring(4, 6)) - 1;
-    const day = parseInt(tileset.substring(6, 8));
-    const hour = parseInt(tileset.substring(9, 11));
-    const minute = parseInt(tileset.substring(11, 13));
-    const second = parseInt(tileset.substring(13, 15));
-
-    return new Date(year, month, day, hour, minute, second);
-  }
-
   // ============================================================================
   // Private Methods - Scheduling
   // ============================================================================
@@ -217,7 +87,7 @@ export class TilePrefetchService {
    * unaffected — they cannot be cancelled and will complete normally.
    */
   private schedulePrefetch(
-    activeLayers: { layer: Layer; controls: LayerControls }[],
+    activeLayers: ActiveLayerEntry[],
     configs: Map<string, LayerConfig>,
     zoom: number,
   ): void {
@@ -256,17 +126,17 @@ export class TilePrefetchService {
       const tileRange = calcTileRange(layer.boundingBox, clampedZoom);
 
       if (layer.category === LayerCategory.GOES_19) {
-        for (const tilesetId of ordered) {
-          const urls = this.buildUrls(`${layer.id}/${tilesetId}`, clampedZoom, tileRange);
+        for (const entry of ordered) {
+          const urls = this.buildUrls(`${layer.id}/${entry.id}`, clampedZoom, tileRange);
           if (urls.length > MAX_TILES_PER_LAYER) continue;
           this.enqueue(urls);
         }
       } else if (layer.category === LayerCategory.RADAR) {
         const radarControls = controls as RadarLayerControls;
         for (const elevationId of radarControls.elevation.selectedElevationIds) {
-          for (const tilesetId of ordered) {
+          for (const entry of ordered) {
             const urls = this.buildUrls(
-              `${layer.id}/${elevationId}/${tilesetId}`,
+              `${layer.id}/${elevationId}/${entry.id}`,
               clampedZoom,
               tileRange,
               true,
