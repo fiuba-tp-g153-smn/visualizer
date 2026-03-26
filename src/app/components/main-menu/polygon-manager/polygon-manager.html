@@ -23,16 +23,21 @@
       </button>
     </div>
 
-    <!-- Simplified toggle -->
-    <div class="simplified-toggle-container">
-      <mat-slide-toggle
-        [checked]="useSimplified()"
-        (change)="toggleSimplified()"
-        color="primary"
-        matTooltip="Usar geometrías simplificadas (más rápido, menor detalle) para los departamentos y el corte"
-      >
-        <span class="toggle-label">Geometrías simplificadas</span>
-      </mat-slide-toggle>
+    <!-- Simplification level slider -->
+    <div class="simplification-slider-container">
+      <div class="slider-header">
+        <span class="slider-label">Nivel de simplificación</span>
+        <span class="slider-value">{{ simplificationLevel() }}</span>
+      </div>
+      <mat-slider min="0" max="10" step="1" discrete showTickMarks class="simplification-slider">
+        <input
+          matSliderThumb
+          [value]="simplificationLevel()"
+          (input)="onSimplificationChange($any($event.target).value)"
+          (valueChange)="onSimplificationChange($event)"
+          matTooltip="Controla el nivel de detalle para las herramientas de recorte y carga de departamentos. Un valor de 0 proporciona máximo detalle, mientras que 10 es más rápido con menor precisión."
+        />
+      </mat-slider>
     </div>
   </div>
 
@@ -55,18 +60,6 @@
             <div class="polygon-card">
               <!-- Header -->
               <div class="polygon-header">
-                <!-- Color indicator -->
-                <div class="color-indicator-wrapper">
-                  <input
-                    type="color"
-                    [value]="polygon.color"
-                    (change)="updateColor(polygon.id, $any($event.target).value)"
-                    class="color-picker"
-                    matTooltip="Cambiar color"
-                  />
-                  <div class="color-indicator" [style.background-color]="polygon.color"></div>
-                </div>
-
                 <!-- Name -->
                 <div class="polygon-name-section">
                   <mat-form-field
@@ -96,6 +89,7 @@
                     mat-icon-button
                     (click)="editPolygon(polygon.id)"
                     matTooltip="Editar geometría del polígono"
+                    [disabled]="hasAlerts(polygon)"
                   >
                     <mat-icon>edit_location</mat-icon>
                   </button>
@@ -104,7 +98,7 @@
                       mat-icon-button
                       (click)="cutPolygon(polygon.id)"
                       matTooltip="Recortar con Argentina"
-                      [disabled]="isLoadingCut(polygon)"
+                      [disabled]="isLoadingCut(polygon) || hasAlerts(polygon)"
                     >
                       @if (isLoadingCut(polygon)) {
                         <mat-icon class="spinning">sync</mat-icon>
@@ -118,6 +112,7 @@
                       color="accent"
                       (click)="undoCut(polygon.id)"
                       matTooltip="Deshacer recorte"
+                      [disabled]="hasAlerts(polygon)"
                     >
                       <mat-icon>undo</mat-icon>
                     </button>
@@ -148,6 +143,11 @@
                   <span class="detail-value">{{ getCoordinatesCount(polygon) }}</span>
                 </div>
                 <div class="detail-item">
+                  <mat-icon class="detail-icon">square_foot</mat-icon>
+                  <span class="detail-label">Área:</span>
+                  <span class="detail-value">{{ getPolygonArea(polygon) }} km²</span>
+                </div>
+                <div class="detail-item">
                   <mat-icon class="detail-icon">schedule</mat-icon>
                   <span class="detail-label">Modificado:</span>
                   <span class="detail-value">{{ formatDate(polygon.updatedAt) }}</span>
@@ -170,9 +170,16 @@
                       {{ getDepartmentsCount(polygon) }}
                     </button>
                     <mat-menu #departmentMenu="matMenu" class="departments-menu">
-                      @for (dept of polygon.departments; track dept.properties?.['nam'] || $index) {
-                        <button mat-menu-item disabled>
-                          {{ (dept.properties && dept.properties['nam']) || 'Desconocido' }}
+                      @for (dept of polygon.departments; track dept.name) {
+                        <button
+                          mat-menu-item
+                          (click)="$event.stopPropagation()"
+                          (mouseenter)="onDepartmentHover(polygon.id, dept.name)"
+                          (mouseleave)="onDepartmentLeave()"
+                        >
+                          {{ dept.name }}@if (dept.province) {
+                            <span> ({{ dept.province }})</span>
+                          }
                         </button>
                       }
                     </mat-menu>
@@ -192,6 +199,77 @@
                     </button>
                   }
                 </div>
+
+                <!-- Generar alerta -->
+                @if (!hasAlerts(polygon)) {
+                  <button
+                    mat-flat-button
+                    color="primary"
+                    (click)="generateAlerts(polygon.id)"
+                    [disabled]="isLoadingAlerts(polygon)"
+                    class="generate-alert-button"
+                  >
+                    @if (isLoadingAlerts(polygon)) {
+                      <ng-container>
+                        <mat-icon class="spinning">sync</mat-icon>
+                        Generando alerta...
+                      </ng-container>
+                    } @else {
+                      <ng-container>
+                        <mat-icon>warning</mat-icon>
+                        Generar alerta meteorológica
+                      </ng-container>
+                    }
+                  </button>
+                }
+
+                <!-- Alertas generadas -->
+                @if (hasAlerts(polygon)) {
+                  <div class="detail-item">
+                    <mat-icon class="detail-icon" color="warn">warning</mat-icon>
+                    <span class="detail-label">Alerta:</span>
+                    <div class="alert-actions">
+                      <a
+                        [href]="polygon.alerts!.gifAreaUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        mat-icon-button
+                        matTooltip="Ver alerta de área"
+                      >
+                        <mat-icon>zoom_in</mat-icon>
+                      </a>
+                      <a
+                        [href]="polygon.alerts!.gifGralUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        mat-icon-button
+                        matTooltip="Ver alerta general"
+                      >
+                        <mat-icon>map</mat-icon>
+                      </a>
+                    </div>
+                  </div>
+                  <div class="alert-info">
+                    <div class="alert-info-row">
+                      <span class="alert-info-label"
+                        >Fenómeno ({{ polygon.alerts!.phenomenonCode }}):</span
+                      >
+                      <span class="alert-info-value">{{ polygon.alerts!.phenomenon }}</span>
+                    </div>
+                    <div class="alert-info-row">
+                      <span class="alert-info-label">Departamentos:</span>
+                      <span class="alert-info-value">{{
+                        polygon.alerts!.affectedDepartmentsCount
+                      }}</span>
+                    </div>
+                    <div class="alert-info-row">
+                      <span class="alert-info-label">Emitida:</span>
+                      <span class="alert-info-value">{{
+                        formatDate(polygon.alerts!.generatedAt)
+                      }}</span>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
           </mat-list-item>

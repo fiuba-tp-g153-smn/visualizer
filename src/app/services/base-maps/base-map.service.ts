@@ -2,7 +2,7 @@ import { Injectable, signal, effect } from '@angular/core';
 import { MAP_CONFIG, getBaseMap, BASE_MAPS } from '../../config';
 import { BaseMap } from '../../models';
 
-const STORAGE_KEY = 'mapasmn_selected_base_map';
+const BASE_MAP_LOCAL_STORAGE_KEY = 'mapasmn_selected_base_map';
 
 /**
  * Base Map Service
@@ -59,7 +59,7 @@ export class BaseMapService {
    */
   private loadBaseMapFromStorage(): BaseMap {
     try {
-      const storedId = localStorage.getItem(STORAGE_KEY);
+      const storedId = localStorage.getItem(BASE_MAP_LOCAL_STORAGE_KEY);
       if (storedId && BASE_MAPS[storedId]) {
         console.log('📍 Loaded base map from storage:', storedId);
         return BASE_MAPS[storedId];
@@ -75,7 +75,7 @@ export class BaseMapService {
    */
   private saveBaseMapToStorage(baseMapId: string): void {
     try {
-      localStorage.setItem(STORAGE_KEY, baseMapId);
+      localStorage.setItem(BASE_MAP_LOCAL_STORAGE_KEY, baseMapId);
     } catch (error) {
       console.warn('Failed to save base map to storage:', error);
     }

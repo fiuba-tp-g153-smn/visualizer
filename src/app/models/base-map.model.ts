@@ -2,7 +2,7 @@
  * Base map model
  *
  * Defines a base map (background map layer) configuration.
- * Each base map represents a different tileset source (e.g., OpenStreetMap, CartoDB, ArgenMAP).
+ * Each base map represents a different tileset source (e.g., OpenStreetMap, CartoDB, Argenmap).
  */
 
 export interface BaseMap {

@@ -1,0 +1,48 @@
+<section class="point-query-viewer-section">
+  <h3 class="subsection-title">Visor de dato puntual</h3>
+
+  <mat-radio-group
+    [value]="viewer.interactionMode()"
+    (change)="onInteractionModeChange($event.value)"
+    class="interaction-radio-group"
+  >
+    @for (option of interactionModeOptions; track option.value) {
+      <mat-radio-button [value]="option.value" [matTooltip]="option.tooltip">{{
+        option.label
+      }}</mat-radio-button>
+    }
+  </mat-radio-group>
+
+  @if (viewer.interactionMode() !== 'off') {
+    <mat-accordion class="sources-accordion" multi>
+      <mat-expansion-panel [expanded]="true" hideToggle>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon class="panel-icon">sensors</mat-icon>
+            Fuentes activas
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        @if (viewer.activeDataLayers().length === 0) {
+          <p class="status-hint">No hay capas activas</p>
+        } @else {
+          <div class="source-list">
+            @for (entry of viewer.activeDataLayers(); track entry.layer.id) {
+              <mat-checkbox
+                [checked]="viewer.isSourceSelected(entry.layer.id)"
+                (change)="viewer.toggleSourceSelection(entry.layer.id, $event.checked)"
+                class="source-checkbox"
+              >
+                {{ entry.layer.name }}
+              </mat-checkbox>
+            }
+          </div>
+        }
+      </mat-expansion-panel>
+    </mat-accordion>
+
+    @if (viewer.selectedSourceEntries().length === 0 && viewer.activeDataLayers().length > 0) {
+      <p class="status-hint">Seleccioná una o más fuentes para mostrar visores flotantes.</p>
+    }
+  }
+</section>

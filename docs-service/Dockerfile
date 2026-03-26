@@ -3,7 +3,7 @@
 ################################
 # Stage 1: Builder
 ################################
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 
 # Set working directory
 WORKDIR /app

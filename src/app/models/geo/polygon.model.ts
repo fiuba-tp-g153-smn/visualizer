@@ -1,4 +1,5 @@
 import { Department } from './department.model';
+import { Alert } from './alert.model';
 
 /**
  * Representa un polígono en el mapa
@@ -18,11 +19,6 @@ export interface Polygon {
    * Coordenadas del polígono [lat, lng][]
    */
   coordinates: Array<[number, number]>;
-
-  /**
-   * Color del polígono en formato hex
-   */
-  color: string;
 
   /**
    * Indica si el polígono está visible en el mapa
@@ -53,6 +49,11 @@ export interface Polygon {
    * Coordenadas originales antes de recortar (para deshacer)
    */
   originalCoordinates?: Array<[number, number]>;
+
+  /**
+   * Información de las alertas meteorológicas generadas
+   */
+  alerts?: Alert;
 }
 
 /**
@@ -61,7 +62,6 @@ export interface Polygon {
 export interface CreatePolygonDto {
   name: string;
   coordinates: Array<[number, number]>;
-  color?: string;
 }
 
 /**
@@ -70,9 +70,9 @@ export interface CreatePolygonDto {
 export interface UpdatePolygonDto {
   name?: string;
   coordinates?: Array<[number, number]>;
-  color?: string;
   visible?: boolean;
   departments?: Department[];
   departmentsVisible?: boolean;
   originalCoordinates?: Array<[number, number]>;
+  alerts?: Alert;
 }

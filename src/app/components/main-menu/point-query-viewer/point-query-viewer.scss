@@ -1,0 +1,91 @@
+:host {
+  display: block;
+}
+
+.point-query-viewer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+}
+
+.subsection-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.interaction-radio-group {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  ::ng-deep {
+    .mat-mdc-radio-button {
+      .mdc-form-field {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+.sources-accordion {
+  .mat-expansion-panel {
+    border-radius: 8px;
+    box-shadow: none;
+    background-color: var(--mat-sys-surface-container-low);
+  }
+
+  .mat-expansion-panel-header {
+    padding: 0 12px;
+    min-height: 44px;
+    background-color: var(--mat-sys-surface-container-high);
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-high);
+    }
+
+    .mat-expansion-panel-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0 12px 12px 12px;
+  }
+}
+
+.panel-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.source-checkbox {
+  ::ng-deep .mdc-form-field {
+    font-size: 14px;
+  }
+}
+
+.status-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 0 2px;
+}

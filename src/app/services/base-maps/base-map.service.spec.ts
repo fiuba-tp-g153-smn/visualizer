@@ -16,7 +16,7 @@ describe('BaseMapService', () => {
   });
 
   describe('Initial state', () => {
-    it('should have ArgenMAP as default base map', () => {
+    it('should have Argenmap as default base map', () => {
       const currentBaseMap = service.currentBaseMap();
       expect(currentBaseMap.id).toBe('argenmap');
     });
@@ -30,12 +30,12 @@ describe('BaseMapService', () => {
   });
 
   describe('setBaseMap', () => {
-    it('should change base map to OSM', () => {
-      service.setBaseMap('osm');
+    it('should change base map to Argenmap gris', () => {
+      service.setBaseMap('argenmapGris');
 
       const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('osm');
-      expect(currentBaseMap.name).toBe('OpenStreetMap');
+      expect(currentBaseMap.id).toBe('argenmapGris');
+      expect(currentBaseMap.name).toBe('Argenmap gris');
     });
 
     it('should change base map to satellite', () => {
@@ -43,32 +43,24 @@ describe('BaseMapService', () => {
 
       const currentBaseMap = service.currentBaseMap();
       expect(currentBaseMap.id).toBe('satellite');
-      expect(currentBaseMap.name).toBe('Satélite (ESRI)');
+      expect(currentBaseMap.name).toBe('Satélite');
     });
 
-    it('should change base map to CartoDB', () => {
-      service.setBaseMap('cartoDB');
+    it('should change base map to topographic', () => {
+      service.setBaseMap('topographic');
 
       const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('cartoDB');
-      expect(currentBaseMap.name).toBe('CartoDB Positron');
+      expect(currentBaseMap.id).toBe('topographic');
+      expect(currentBaseMap.name).toBe('Topográfico');
     });
 
-    it('should change base map to CartoDB Dark', () => {
-      service.setBaseMap('cartoDBDark');
-
-      const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('cartoDBDark');
-      expect(currentBaseMap.name).toBe('CartoDB Dark Matter');
-    });
-
-    it('should return to ArgenMAP', () => {
-      service.setBaseMap('osm');
+    it('should return to Argenmap', () => {
+      service.setBaseMap('satellite');
       service.setBaseMap('argenmap');
 
       const currentBaseMap = service.currentBaseMap();
       expect(currentBaseMap.id).toBe('argenmap');
-      expect(currentBaseMap.name).toBe('ArgenMAP (IGN)');
+      expect(currentBaseMap.name).toBe('Argenmap');
     });
 
     it('should throw error on invalid base map ID', () => {
@@ -78,10 +70,10 @@ describe('BaseMapService', () => {
     });
 
     it('should persist base map selection to localStorage', () => {
-      service.setBaseMap('osm');
+      service.setBaseMap('satellite');
 
       const stored = localStorage.getItem('mapasmn_selected_base_map');
-      expect(stored).toBe('osm');
+      expect(stored).toBe('satellite');
     });
   });
 
@@ -89,7 +81,7 @@ describe('BaseMapService', () => {
     it('should return array of all base maps', () => {
       const baseMaps = service.getAvailableBaseMaps();
 
-      expect(baseMaps.length).toBe(5);
+      expect(baseMaps.length).toBe(8);
     });
 
     it('should include all expected base maps', () => {
@@ -97,10 +89,13 @@ describe('BaseMapService', () => {
       const ids = baseMaps.map((p) => p.id);
 
       expect(ids).toContain('argenmap');
-      expect(ids).toContain('osm');
+      expect(ids).toContain('argenmapGris');
+      expect(ids).toContain('argenmapOscuro');
+      expect(ids).toContain('argenmapTopografico');
       expect(ids).toContain('satellite');
-      expect(ids).toContain('cartoDB');
-      expect(ids).toContain('cartoDBDark');
+      expect(ids).toContain('topographic');
+      expect(ids).toContain('googleSatellite');
+      expect(ids).toContain('oceanBase');
     });
 
     it('should return base maps with all required properties', () => {
@@ -118,7 +113,7 @@ describe('BaseMapService', () => {
 
   describe('Base map switching behavior', () => {
     it('should maintain base map state across multiple reads', () => {
-      service.setBaseMap('osm');
+      service.setBaseMap('satellite');
 
       const baseMap1 = service.currentBaseMap();
       const baseMap2 = service.currentBaseMap();
@@ -129,7 +124,7 @@ describe('BaseMapService', () => {
 
     it('should emit new value when base map changes', () => {
       const baseMapBefore = service.currentBaseMap();
-      service.setBaseMap('osm');
+      service.setBaseMap('satellite');
       const baseMapAfter = service.currentBaseMap();
 
       expect(baseMapBefore.id).not.toBe(baseMapAfter.id);
@@ -138,10 +133,10 @@ describe('BaseMapService', () => {
 
   describe('localStorage persistence', () => {
     it('should load basemap from localStorage on initialization', () => {
-      localStorage.setItem('mapasmn_selected_base_map', 'cartoDB');
+      localStorage.setItem('mapasmn_selected_base_map', 'satellite');
 
       const newService = TestBed.inject(BaseMapService);
-      expect(newService.currentBaseMap().id).toBe('cartoDB');
+      expect(newService.currentBaseMap().id).toBe('satellite');
     });
 
     it('should fallback to default if stored ID is invalid', () => {

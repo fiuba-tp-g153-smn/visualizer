@@ -7,11 +7,21 @@
  * Para constantes literales del código (event names, etc.), ver constants/
  */
 
-// Data Service configuration (tiles and product metadata)
-export { buildConfigUrl, buildTileUrl } from './backend.config';
+// Data service backend configuration
+export {
+  buildConfigUrl,
+  buildTileUrl,
+  buildSatellitePointQueryUrl,
+  buildRadarPointQueryUrl,
+} from './backend.config';
 
 // Alerts Service configuration (polygon operations and departments)
-export { buildIntersectCountryUrl, buildIntersectDepartmentsUrl } from './alerts-service.config';
+export {
+  buildIntersectCountryUrl,
+  buildIntersectDepartmentsUrl,
+  buildGenerateAlertsUrl,
+  buildPhenomenaUrl,
+} from './alerts-service.config';
 
 // Timing configuration (delays, tooltips, actions)
 export { TOOLTIP_DELAYS, ACTION_DELAYS } from './timing.config';

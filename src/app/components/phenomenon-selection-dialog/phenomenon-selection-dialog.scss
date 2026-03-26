@@ -1,0 +1,40 @@
+.dialog-message {
+  margin-bottom: 16px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.phenomenon-select {
+  width: 100%;
+  min-width: 400px;
+}
+
+mat-dialog-content {
+  padding: 20px 24px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px;
+  text-align: center;
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  background-color: rgba(255, 152, 0, 0.1);
+  border-radius: 4px;
+  font-size: 13px;
+  color: #ff9800;
+}

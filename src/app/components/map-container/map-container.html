@@ -6,6 +6,19 @@
     <app-polygon-edit-controls (action)="handleEditAction($event)"></app-polygon-edit-controls>
   </div>
 }
+@if (isViewerEnabled()) {
+  <div class="point-value-container">
+    @for (entry of floatingViewerEntries(); track entry.layerId) {
+      <app-point-value-panel
+        [visible]="true"
+        [isLoading]="entry.isLoading"
+        [layerName]="entry.layerName"
+        [data]="entry.data"
+        (close)="closeFloatingViewer(entry.layerId)"
+      />
+    }
+  </div>
+}
 
 <div class="zoom-controls">
   <button mat-icon-button class="zoom-button" (click)="zoomIn()" [disabled]="!canZoomIn()">

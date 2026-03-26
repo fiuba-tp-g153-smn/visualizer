@@ -1,0 +1,4 @@
+# Ignore false positives for localStorage keys
+# These are not secrets, just keys used for browser localStorage
+02251d76ef2b55bdae3b193d83f980f9eb448fcf:src/app/services/polygons/polygon.service.ts:generic-api-key:14
+42a07f9c4e92ec3246b7644acd698fa86a34ea0a:src/app/services/polygons/polygon.service.ts:generic-api-key:14

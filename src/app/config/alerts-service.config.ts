@@ -9,12 +9,27 @@ const ALERTS_SERVICE_BASE_URL = environment.alertsService.baseUrl;
  * Construye URL para el endpoint de intersección con el país
  */
 export function buildIntersectCountryUrl(): string {
-  return `${ALERTS_SERVICE_BASE_URL}/intersect-country`;
+  return `${ALERTS_SERVICE_BASE_URL}/intersect/country`;
 }
 
 /**
  * Construye URL para el endpoint de intersección con departamentos
  */
 export function buildIntersectDepartmentsUrl(): string {
-  return `${ALERTS_SERVICE_BASE_URL}/intersect-departments`;
+  return `${ALERTS_SERVICE_BASE_URL}/intersect/departments`;
+}
+
+/**
+ * Construye URL para el endpoint de generación de alertas
+ * @param phenomenonCode - Código del fenómeno meteorológico
+ */
+export function buildGenerateAlertsUrl(phenomenonCode: number): string {
+  return `${ALERTS_SERVICE_BASE_URL}/alerts/generate?phenomenon_code=${phenomenonCode}`;
+}
+
+/**
+ * Construye URL para el endpoint de fenómenos disponibles
+ */
+export function buildPhenomenaUrl(): string {
+  return `${ALERTS_SERVICE_BASE_URL}/alerts/phenomena`;
 }
