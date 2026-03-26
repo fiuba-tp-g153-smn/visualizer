@@ -1,6 +1,5 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
-import { RouterModule } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayerListComponent } from './layer-list/layer-list';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
 import { PolygonManagerComponent } from './polygon-manager/polygon-manager';
+import { PointQueryViewerComponent } from './point-query-viewer/point-query-viewer';
 import { MenuSection } from './menu-section.model';
 
 /**
@@ -37,6 +37,13 @@ const MENU_SECTIONS: MenuSection[] = [
     tooltip: 'Seleccionar mapa base',
     component: BaseMapSelectorComponent,
   },
+  {
+    id: 'point-query-viewer',
+    title: 'Herramientas del visualizador',
+    icon: 'my_location',
+    tooltip: 'Herramientas del visualizador',
+    component: PointQueryViewerComponent,
+  },
 ];
 
 /**
@@ -48,7 +55,6 @@ const MENU_SECTIONS: MenuSection[] = [
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule,
     NgComponentOutlet,
     MatIconModule,
     MatButtonModule,

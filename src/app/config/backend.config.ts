@@ -23,3 +23,31 @@ export function buildTileUrl(pathToProduct: string): string {
   const format = environment.tiles.format;
   return `${DATA_SERVICE_BASE_URL}/products/${pathToProduct}/{z}/{x}/{y}.${format}`;
 }
+
+/**
+ * URL para consultar el valor puntual de una capa satelital en una coordenada.
+ */
+export function buildSatellitePointQueryUrl(
+  productId: string,
+  instrumentId: string,
+  channelId: string,
+  tilesetId: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/${productId}/${instrumentId}/${channelId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
+ * URL para consultar el valor puntual de una capa de radar en una coordenada.
+ */
+export function buildRadarPointQueryUrl(
+  radarId: string,
+  variableId: string,
+  elevationId: string,
+  tilesetId: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/radar/${radarId}/${variableId}/${elevationId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
+}

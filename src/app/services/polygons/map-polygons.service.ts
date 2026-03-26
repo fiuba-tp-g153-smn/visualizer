@@ -1,6 +1,14 @@
-import { Injectable, inject, ViewContainerRef, Injector, ComponentRef } from '@angular/core';
+import {
+  Injectable,
+  inject,
+  ViewContainerRef,
+  Injector,
+  ComponentRef,
+  effect,
+} from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
+import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
@@ -12,17 +20,23 @@ import {
   PolygonContextMenuActionType,
 } from '../../models/polygon-context-menu-action.model';
 import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../components/confirm-dialog/confirm-dialog';
+import { POLYGON_COLOR } from '../../config/polygon.config';
+import {
   LEAFLET_EDITABLE_EVENTS,
   CSS_VARIABLES,
   MAP_PANES,
 } from '../../constants/map-polygons.constants';
 import { Z_INDEX, EDIT_STYLE, DEPARTMENT_STYLE } from '../../config/map-polygons.config';
 import {
-  createPolygonOptions,
-  createLineGuideOptions,
+  POLYGON_OPTIONS,
+  LINE_GUIDE_OPTIONS,
   createDepartmentStyle,
   lightenColor,
 } from '../../utils/map-styles.utils';
+import { isSimplePolygon } from '../../utils/polygon-validation.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
 
 // Extended types for leaflet
@@ -42,10 +56,15 @@ export class MapPolygonsService {
   private polygonService = inject(PolygonService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private overlay = inject(Overlay);
+  private dialog = inject(MatDialog);
 
   private map: L.Map | null = null;
   private polygonLayers = new Map<string, L.Polygon>();
   private departmentLayers = new Map<string, L.GeoJSON[]>(); // polygonId -> array of department GeoJSON layers
+  private departmentLayersByName = new Map<
+    string,
+    Map<string, { layer: L.GeoJSON; baseColor: string }>
+  >(); // polygonId -> (departmentName -> layer)
   private currentDrawingPolygon: L.Polygon | null = null;
   private contextMenuOverlayRef: OverlayRef | null = null;
   private originalCoordinates: Array<[number, number]> | null = null;
@@ -53,6 +72,14 @@ export class MapPolygonsService {
   // These are needed for the context menu overlay
   private viewContainerRef: ViewContainerRef | null = null;
   private injector: Injector | null = null;
+
+  constructor() {
+    // Listen to hovered department changes and update styles
+    effect(() => {
+      const hovered = this.polygonService.hoveredDepartment();
+      this.updateDepartmentHighlight(hovered);
+    });
+  }
 
   /**
    * Initialize the service with a Leaflet map instance and Angular dependencies
@@ -83,7 +110,7 @@ export class MapPolygonsService {
       const layer = e.layer;
       const editor = layer?.editor;
       if (editor && layer.options) {
-        editor.options.lineGuideOptions = createLineGuideOptions(layer.options.color);
+        editor.options.lineGuideOptions = LINE_GUIDE_OPTIONS;
       }
     });
   }
@@ -145,42 +172,34 @@ export class MapPolygonsService {
     // Disable double-click zoom to avoid conflicts
     this.map.doubleClickZoom.disable();
 
-    // Get the color that will be used for the next polygon
-    const nextColor = this.polygonService.getNextAvailableColor();
-
     // Set the color CSS variable for this polygon's handlers
     const mapContainer = this.map.getContainer();
-    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, nextColor);
-
-    // Create polygon options
-    const polygonOptions = createPolygonOptions(nextColor);
+    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, POLYGON_COLOR);
 
     // Configure editOptions on the map before starting drawing
     const editTools = (this.map as any).editTools;
     if (editTools) {
-      const lineGuideStyle = createLineGuideOptions(nextColor);
-
       // Configure in editTools options
       editTools.options = editTools.options || {};
-      editTools.options.lineGuideOptions = lineGuideStyle;
+      editTools.options.lineGuideOptions = LINE_GUIDE_OPTIONS;
 
       // CRITICAL: Apply style directly to the line guide polylines
       // These are reused objects that need to be styled before drawing starts
       if (editTools.forwardLineGuide) {
-        editTools.forwardLineGuide.setStyle(lineGuideStyle);
+        editTools.forwardLineGuide.setStyle(LINE_GUIDE_OPTIONS);
       }
       if (editTools.backwardLineGuide) {
-        editTools.backwardLineGuide.setStyle(lineGuideStyle);
+        editTools.backwardLineGuide.setStyle(LINE_GUIDE_OPTIONS);
       }
     }
 
     // Start drawing a new polygon
-    this.currentDrawingPolygon = this.map.editTools.startPolygon(undefined, polygonOptions);
+    this.currentDrawingPolygon = this.map.editTools.startPolygon(undefined, POLYGON_OPTIONS);
 
     // Apply the style to the drawing polygon and its editor
     if (this.currentDrawingPolygon) {
       // Set style on the polygon itself
-      this.currentDrawingPolygon.setStyle(polygonOptions);
+      this.currentDrawingPolygon.setStyle(POLYGON_OPTIONS);
 
       // Add temporary layer to map if not already added
       if (!this.map.hasLayer(this.currentDrawingPolygon)) {
@@ -191,7 +210,7 @@ export class MapPolygonsService {
       const editor = (this.currentDrawingPolygon as any).editor;
       if (editor) {
         editor.options.lineGuideOptions = {
-          color: nextColor,
+          color: POLYGON_COLOR,
           weight: 2,
           opacity: 0.6,
           dashArray: '5, 5',
@@ -214,9 +233,6 @@ export class MapPolygonsService {
     // Save original coordinates before editing for potential cancellation
     this.originalCoordinates = latlngs.map((ll) => [ll.lat, ll.lng]);
 
-    // Get polygon color for custom markers
-    const polygonColor = (layer.options as any).color || '#3388ff';
-
     // Apply dashed line style
     layer.setStyle({
       dashArray: EDIT_STYLE.DASH_ARRAY,
@@ -224,7 +240,7 @@ export class MapPolygonsService {
 
     // Set CSS variable on the map container for editing markers to use
     const mapContainer = this.map.getContainer();
-    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, polygonColor);
+    mapContainer.style.setProperty(CSS_VARIABLES.POLYGON_COLOR, POLYGON_COLOR);
 
     // Enable editing
     if (layer.enableEdit) {
@@ -257,6 +273,17 @@ export class MapPolygonsService {
 
     const latlngs = layer.getLatLngs()[0] as L.LatLng[];
     const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
+
+    // Validate polygon is simple (no self-intersections)
+    if (!isSimplePolygon(coordinates)) {
+      console.error('El polígono no puede tener intersecciones consigo mismo');
+      // Remove invalid polygon from map
+      if (this.map && this.map.hasLayer(layer)) {
+        this.map.removeLayer(layer);
+      }
+      alert('Error: El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.');
+      return;
+    }
 
     // Create polygon in service
     const polygon = this.polygonService.createPolygon({
@@ -382,13 +409,13 @@ export class MapPolygonsService {
   private renderDepartmentLayers(polygon: Polygon): void {
     if (!this.map || !polygon.departments) return;
 
-    // Calculate the department color based on the polygon's current color
-    const departmentColor = lightenColor(polygon.color, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
+    // Calculate the department color
+    const departmentColor = lightenColor(POLYGON_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
 
     // Check if layers already exist
     const existingLayers = this.departmentLayers.get(polygon.id);
     if (existingLayers && existingLayers.length > 0) {
-      // Update existing layers with the new color
+      // Update existing layers
       const newStyle = createDepartmentStyle(departmentColor);
       existingLayers.forEach((layer) => {
         // Update the style with the new color
@@ -398,6 +425,14 @@ export class MapPolygonsService {
           layer.addTo(this.map!);
         }
       });
+
+      // Update stored colors in the by-name map
+      const layersByName = this.departmentLayersByName.get(polygon.id);
+      if (layersByName) {
+        layersByName.forEach((entry) => {
+          entry.baseColor = departmentColor;
+        });
+      }
       return;
     }
 
@@ -410,6 +445,7 @@ export class MapPolygonsService {
 
     // Create new layers
     const layers: L.GeoJSON[] = [];
+    const layersByName = new Map<string, { layer: L.GeoJSON; baseColor: string }>();
 
     for (const dept of polygon.departments) {
       // Render the department geometry
@@ -427,19 +463,24 @@ export class MapPolygonsService {
       });
 
       // Add tooltip with department info
-      if (dept.properties && dept.properties['nam']) {
-        geoJsonLayer.bindTooltip(dept.properties['nam'], {
-          permanent: false,
-          direction: 'center',
-          className: 'department-tooltip',
-        });
-      }
+      geoJsonLayer.bindTooltip(dept.name, {
+        permanent: false,
+        direction: 'center',
+        className: 'department-tooltip',
+      });
+
+      // Store layer reference by name
+      layersByName.set(dept.name, {
+        layer: geoJsonLayer,
+        baseColor: departmentColor,
+      });
 
       geoJsonLayer.addTo(this.map);
       layers.push(geoJsonLayer);
     }
 
     this.departmentLayers.set(polygon.id, layers);
+    this.departmentLayersByName.set(polygon.id, layersByName);
   }
 
   /**
@@ -455,6 +496,9 @@ export class MapPolygonsService {
       });
       this.departmentLayers.delete(polygonId);
     }
+
+    // Also clean up the by-name map
+    this.departmentLayersByName.delete(polygonId);
   }
 
   /**
@@ -467,7 +511,7 @@ export class MapPolygonsService {
     existingLayer.off('edit');
 
     // Update existing layer style
-    existingLayer.setStyle(createPolygonOptions(polygon.color));
+    existingLayer.setStyle(POLYGON_OPTIONS);
 
     // Check if coordinates actually changed before updating
     const currentLatLngs = existingLayer.getLatLngs()[0] as L.LatLng[];
@@ -514,7 +558,7 @@ export class MapPolygonsService {
       coord[1],
     ]);
     const layer = L.polygon(latlngs, {
-      ...createPolygonOptions(polygon.color),
+      ...POLYGON_OPTIONS,
       polygonId: polygon.id,
     });
 
@@ -579,6 +623,7 @@ export class MapPolygonsService {
     componentRef.instance.isLoadingCut = this.polygonService.isPolygonBeingCut(polygonId);
     componentRef.instance.isLoadingDepartments =
       this.polygonService.isDepartmentsLoading(polygonId);
+    componentRef.instance.hasAlerts = this.polygonService.hasAlerts(polygonId);
 
     // Handle menu actions
     componentRef.instance.action.subscribe((action: PolygonContextMenuAction) => {
@@ -610,7 +655,7 @@ export class MapPolygonsService {
           break;
 
         case PolygonContextMenuActionType.DELETE:
-          this.polygonService.deletePolygon(action.polygonId);
+          this.confirmAndDeletePolygon(action.polygonId);
           break;
 
         case PolygonContextMenuActionType.CUT:
@@ -630,6 +675,33 @@ export class MapPolygonsService {
           break;
       }
     }, ACTION_DELAYS.MENU_ACTION);
+  }
+
+  /**
+   * Confirm and delete polygon
+   */
+  private confirmAndDeletePolygon(polygonId: string): void {
+    const polygon = this.polygonService.getPolygonById(polygonId);
+    const polygonName = polygon?.name || 'Sin nombre';
+
+    const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
+      ConfirmDialogComponent,
+      {
+        data: {
+          title: 'Eliminar polígono',
+          message: `¿Está seguro que desea eliminar el polígono "${polygonName}"? Esta acción no se puede deshacer.`,
+          confirmText: 'Eliminar',
+          cancelText: 'Cancelar',
+          confirmColor: 'warn',
+        },
+      },
+    );
+
+    dialogRef.afterClosed().subscribe((confirmed) => {
+      if (confirmed) {
+        this.polygonService.deletePolygon(polygonId);
+      }
+    });
   }
 
   /**
@@ -670,6 +742,42 @@ export class MapPolygonsService {
       // Get current coordinates before disabling
       const latlngs = layer.getLatLngs()[0] as L.LatLng[];
       const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
+
+      // Validate polygon is simple (no self-intersections)
+      if (!isSimplePolygon(coordinates)) {
+        console.error('El polígono no puede tener intersecciones consigo mismo');
+
+        // Restore original coordinates
+        if (this.originalCoordinates && this.originalCoordinates.length > 0) {
+          const originalLatLngs = this.originalCoordinates.map((coord) => L.latLng(coord[0], coord[1]));
+          layer.setLatLngs([originalLatLngs]);
+        }
+
+        alert('Error: El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.');
+
+        // Disable editing
+        if (layer.disableEdit) {
+          layer.disableEdit();
+        }
+
+        // Remove dashed line style
+        layer.setStyle({
+          dashArray: '',
+        });
+
+        // Clear saved original coordinates
+        this.originalCoordinates = null;
+
+        // Clear CSS variable
+        if (this.map) {
+          const mapContainer = this.map.getContainer();
+          mapContainer.style.removeProperty(CSS_VARIABLES.POLYGON_COLOR);
+        }
+
+        // Exit edit mode
+        this.polygonDrawingService.stopDrawing();
+        return;
+      }
 
       // Disable editing first to clean up markers
       if (layer.disableEdit) {
@@ -731,7 +839,7 @@ export class MapPolygonsService {
           coord[1],
         ]);
         const newLayer = L.polygon(latlngs, {
-          ...createPolygonOptions(polygon.color),
+          ...POLYGON_OPTIONS,
           polygonId: polygon.id,
         });
 
@@ -764,6 +872,51 @@ export class MapPolygonsService {
   }
 
   /**
+   * Update department highlight based on hover state
+   */
+  private updateDepartmentHighlight(
+    hovered: { polygonId: string; departmentName: string } | null,
+  ): void {
+    if (!this.map) return;
+
+    // If there's no hover, reset all departments to their base color
+    if (!hovered) {
+      this.departmentLayersByName.forEach((layersByName, polygonId) => {
+        layersByName.forEach((entry, departmentName) => {
+          const baseStyle = createDepartmentStyle(entry.baseColor);
+          entry.layer.setStyle(baseStyle);
+        });
+      });
+      return;
+    }
+
+    const { polygonId, departmentName } = hovered;
+    const layersByName = this.departmentLayersByName.get(polygonId);
+    if (!layersByName) return;
+
+    // Reset all departments in this polygon to base color
+    layersByName.forEach((entry) => {
+      const baseStyle = createDepartmentStyle(entry.baseColor);
+      entry.layer.setStyle(baseStyle);
+    });
+
+    // Highlight the hovered department
+    const hoveredEntry = layersByName.get(departmentName);
+    if (hoveredEntry) {
+      // Create a highlighted style with increased opacity and weight
+      const highlightStyle = createDepartmentStyle(hoveredEntry.baseColor);
+      highlightStyle.fillOpacity = (DEPARTMENT_STYLE.FILL_OPACITY || 0.2) * 2.5; // Increase opacity
+      highlightStyle.opacity = (DEPARTMENT_STYLE.OPACITY || 0.6) * 1.5; // Increase border opacity
+      highlightStyle.weight = (DEPARTMENT_STYLE.WEIGHT || 2) * 1.5; // Increase border weight
+
+      hoveredEntry.layer.setStyle(highlightStyle);
+
+      // Bring the layer to front
+      hoveredEntry.layer.bringToFront();
+    }
+  }
+
+  /**
    * Clean up when destroying
    */
   destroy(): void {
@@ -775,6 +928,7 @@ export class MapPolygonsService {
       layers.forEach((layer) => layer.remove());
     });
     this.departmentLayers.clear();
+    this.departmentLayersByName.clear();
 
     if (this.contextMenuOverlayRef) {
       this.contextMenuOverlayRef.dispose();

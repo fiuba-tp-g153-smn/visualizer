@@ -1,16 +1,44 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-import { buildIntersectCountryUrl, buildIntersectDepartmentsUrl } from '../../config';
+import {
+  buildIntersectCountryUrl,
+  buildIntersectDepartmentsUrl,
+  buildGenerateAlertsUrl,
+  buildPhenomenaUrl,
+} from '../../config';
 import { DepartmentsResponse } from '../../models/geo';
+import { Phenomenon } from '../../models/phenomenon.model';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
 
 /**
  * Constantes para parámetros HTTP
  */
 const HTTP_PARAMS = {
-  USE_SIMPLIFIED: 'use_simplified',
+  SIMPLIFICATION_LEVEL: 'simplification_level',
 } as const;
+
+/**
+ * Departamento tal como viene del backend (con properties)
+ */
+interface DepartmentBackendResponse {
+  properties: Record<string, any>;
+  geometry: GeoJSON.Geometry;
+  intersection: GeoJSON.Geometry;
+}
+
+/**
+ * Respuesta del endpoint de generación de alertas
+ */
+export interface GenerateAlertsResponse {
+  alert_id: number;
+  timestamp: string;
+  phenomenon_code: number;
+  phenomenon: string;
+  gif_area_url: string;
+  gif_gral_url: string;
+  affected_departments_count: number;
+}
 
 /**
  * Servicio para interactuar con el backend de alertas (alert-service)
@@ -25,23 +53,23 @@ export class AlertsService {
   /**
    * Crea los parámetros HTTP comunes para las requests
    */
-  private buildParams(useSimplified: boolean): HttpParams {
-    return new HttpParams().set(HTTP_PARAMS.USE_SIMPLIFIED, useSimplified.toString());
+  private buildParams(simplificationLevel: number): HttpParams {
+    return new HttpParams().set(HTTP_PARAMS.SIMPLIFICATION_LEVEL, simplificationLevel.toString());
   }
 
   /**
    * Recorta un polígono con los límites de Argentina
    * @param coordinates - Coordenadas del polígono [lat, lng][]
-   * @param useSimplified - Usar geometrías simplificadas (más rápido, menor detalle)
+   * @param simplificationLevel - Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
    * @returns Observable con las coordenadas del polígono recortado
    */
   intersectCountry(
     coordinates: Array<[number, number]>,
-    useSimplified: boolean = true,
+    simplificationLevel: number = 0,
   ): Observable<Array<[number, number]>> {
     const url = buildIntersectCountryUrl();
     const geoJson = coordinatesToGeoJSON(coordinates);
-    const params = this.buildParams(useSimplified);
+    const params = this.buildParams(simplificationLevel);
 
     return this.http
       .post<GeoJSON.FeatureCollection>(url, geoJson, { params })
@@ -51,17 +79,55 @@ export class AlertsService {
   /**
    * Obtiene los departamentos que intersectan con un polígono
    * @param coordinates - Coordenadas del polígono [lat, lng][]
-   * @param useSimplified - Usar geometrías simplificadas
+   * @param simplificationLevel - Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
    * @returns Observable con la lista de departamentos
    */
   intersectDepartments(
     coordinates: Array<[number, number]>,
-    useSimplified: boolean = true,
+    simplificationLevel: number = 0,
   ): Observable<DepartmentsResponse> {
     const url = buildIntersectDepartmentsUrl();
     const geoJson = coordinatesToGeoJSON(coordinates);
-    const params = this.buildParams(useSimplified);
+    const params = this.buildParams(simplificationLevel);
 
-    return this.http.post<DepartmentsResponse>(url, geoJson, { params });
+    return this.http
+      .post<{ departments: DepartmentBackendResponse[] }>(url, geoJson, { params })
+      .pipe(
+        map((response) => ({
+          departments: response.departments
+            .map((dept) => ({
+              name: (dept.properties && dept.properties['nam']) || 'Desconocido',
+              province: dept.properties && dept.properties['pna'],
+              geometry: dept.geometry,
+              intersection: dept.intersection,
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        })),
+      );
+  }
+
+  /**
+   * Genera alertas meteorológicas para un polígono
+   * @param coordinates - Coordenadas del polígono [lat, lng][]
+   * @param phenomenonCode - Código del fenómeno meteorológico
+   * @returns Observable con las URLs de las alertas generadas
+   */
+  generateAlerts(
+    coordinates: Array<[number, number]>,
+    phenomenonCode: number,
+  ): Observable<GenerateAlertsResponse> {
+    const url = buildGenerateAlertsUrl(phenomenonCode);
+    const geoJson = coordinatesToGeoJSON(coordinates);
+
+    return this.http.post<GenerateAlertsResponse>(url, geoJson);
+  }
+
+  /**
+   * Obtiene todos los fenómenos meteorológicos disponibles
+   * @returns Observable con la lista de fenómenos
+   */
+  getPhenomena(): Observable<Phenomenon[]> {
+    const url = buildPhenomenaUrl();
+    return this.http.get<Phenomenon[]>(url);
   }
 }

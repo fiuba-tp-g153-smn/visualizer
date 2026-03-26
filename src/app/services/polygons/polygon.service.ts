@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/geo';
 import { AlertsService } from './alerts.service';
 import { firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 /**
  * Servicio para gestionar polígonos en el mapa
@@ -11,8 +12,8 @@ import { firstValueFrom } from 'rxjs';
   providedIn: 'root',
 })
 export class PolygonService {
-  private readonly STORAGE_KEY = 'mapasmn_polygons';
-  private readonly SIMPLIFIED_STORAGE_KEY = 'mapasmn_use_simplified';
+  private readonly POLYGONS_LOCAL_STORAGE_KEY = 'mapasmn_polygons_v3';
+  private readonly SIMPLIFICATION_LEVEL_KEY = 'mapasmn_simplification_level';
   private readonly polygons = signal<Polygon[]>([]);
   private readonly alertsService = inject(AlertsService);
 
@@ -21,11 +22,21 @@ export class PolygonService {
    */
   private readonly loadingCut = signal<Set<string>>(new Set());
   private readonly loadingDepartments = signal<Set<string>>(new Set());
+  private readonly loadingAlerts = signal<Set<string>>(new Set());
 
   /**
-   * Usar geometrías simplificadas (más rápido, menor detalle)
+   * Track which department is currently being hovered
    */
-  readonly useSimplified = signal<boolean>(this.loadSimplifiedSetting());
+  private readonly hoveredDepartmentSignal = signal<{
+    polygonId: string;
+    departmentName: string;
+  } | null>(null);
+  readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
+
+  /**
+   * Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
+   */
+  readonly simplificationLevel = signal<number>(5);
 
   /**
    * Lista de polígonos como signal readonly
@@ -61,21 +72,23 @@ export class PolygonService {
   }
 
   /**
-   * Colores predeterminados para polígonos
+   * Check if alerts are being generated for a polygon
    */
-  private readonly defaultColors = [
-    '#FF5722', // Rojo
-    '#2196F3', // Azul
-    '#4CAF50', // Verde
-    '#FFC107', // Amarillo
-    '#9C27B0', // Púrpura
-    '#FF9800', // Naranja
-    '#00BCD4', // Cian
-    '#E91E63', // Rosa
-  ];
+  isAlertsLoading(id: string): boolean {
+    return this.loadingAlerts().has(id);
+  }
+
+  /**
+   * Check if a polygon has alerts generated
+   */
+  hasAlerts(id: string): boolean {
+    const polygon = this.getPolygonById(id);
+    return !!(polygon?.alerts?.gifAreaUrl || polygon?.alerts?.gifGralUrl);
+  }
 
   constructor() {
     this.loadFromStorage();
+    this.loadSimplificationLevelFromStorage();
   }
 
   /**
@@ -94,7 +107,6 @@ export class PolygonService {
       id: this.generateId(),
       name: dto.name || this.generateDefaultName(),
       coordinates: dto.coordinates,
-      color: dto.color || this.getNextColor(),
       visible: true,
       createdAt: now,
       updatedAt: now,
@@ -213,35 +225,13 @@ export class PolygonService {
   }
 
   /**
-   * Obtiene el siguiente color disponible
-   * Busca el primer color no usado, o rota si todos están en uso
+   * Establece el nivel de simplificación geométrica
    */
-  private getNextColor(): string {
-    const usedColors = new Set(this.polygons().map((p) => p.color));
-
-    // Buscar el primer color no usado
-    for (const color of this.defaultColors) {
-      if (!usedColors.has(color)) {
-        return color;
-      }
-    }
-
-    // Si todos están en uso, rotar basado en la cantidad de polígonos
-    return this.defaultColors[this.polygons().length % this.defaultColors.length];
-  }
-
-  /**
-   * Obtiene el siguiente color disponible (método público)
-   */
-  getNextAvailableColor(): string {
-    return this.getNextColor();
-  }
-
-  /**
-   * Alterna el uso de geometrías simplificadas
-   */
-  toggleSimplified(): void {
-    this.useSimplified.update((val) => !val);
+  setSimplificationLevel(level: number): void {
+    // Asegurarse de que el valor esté entre 0 y 10
+    const clampedLevel = Math.max(0, Math.min(10, Math.round(level)));
+    this.simplificationLevel.set(clampedLevel);
+    this.saveSimplificationLevelToStorage(clampedLevel);
   }
 
   /**
@@ -260,7 +250,7 @@ export class PolygonService {
 
     try {
       const cutCoordinates = await firstValueFrom(
-        this.alertsService.intersectCountry(polygon.coordinates, this.useSimplified()),
+        this.alertsService.intersectCountry(polygon.coordinates, this.simplificationLevel()),
       );
 
       if (cutCoordinates.length === 0) {
@@ -319,7 +309,7 @@ export class PolygonService {
 
     try {
       const response = await firstValueFrom(
-        this.alertsService.intersectDepartments(polygon.coordinates, this.useSimplified()),
+        this.alertsService.intersectDepartments(polygon.coordinates, this.simplificationLevel()),
       );
 
       this.updatePolygon(id, {
@@ -334,6 +324,56 @@ export class PolygonService {
     } finally {
       // Clear loading state
       this.loadingDepartments.update((set) => {
+        const newSet = new Set(set);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  }
+
+  /**
+   * Genera alertas meteorológicas para un polígono
+   * @param id - ID del polígono
+   * @param phenomenonCode - Código del fenómeno meteorológico
+   */
+  async generateAlerts(id: string, phenomenonCode: number): Promise<boolean> {
+    const polygon = this.getPolygonById(id);
+    if (!polygon) return false;
+
+    // Set loading state
+    this.loadingAlerts.update((set) => {
+      const newSet = new Set(set);
+      newSet.add(id);
+      return newSet;
+    });
+
+    try {
+      const response = await firstValueFrom(
+        this.alertsService.generateAlerts(polygon.coordinates, phenomenonCode),
+      );
+
+      const baseUrl = environment.alertsService.baseUrl;
+
+      this.updatePolygon(id, {
+        alerts: {
+          alertId: response.alert_id,
+          timestamp: response.timestamp,
+          phenomenonCode: response.phenomenon_code,
+          phenomenon: response.phenomenon,
+          gifAreaUrl: `${baseUrl}${response.gif_area_url}`,
+          gifGralUrl: `${baseUrl}${response.gif_gral_url}`,
+          affectedDepartmentsCount: response.affected_departments_count,
+          generatedAt: new Date(),
+        },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error al generar alertas:', error);
+      return false;
+    } finally {
+      // Clear loading state
+      this.loadingAlerts.update((set) => {
         const newSet = new Set(set);
         newSet.delete(id);
         return newSet;
@@ -371,7 +411,7 @@ export class PolygonService {
   private saveToStorage(): void {
     try {
       const data = JSON.stringify(this.polygons());
-      localStorage.setItem(this.STORAGE_KEY, data);
+      localStorage.setItem(this.POLYGONS_LOCAL_STORAGE_KEY, data);
     } catch (error) {
       console.error('Error al guardar polígonos en localStorage:', error);
     }
@@ -382,7 +422,7 @@ export class PolygonService {
    */
   private loadFromStorage(): void {
     try {
-      const data = localStorage.getItem(this.STORAGE_KEY);
+      const data = localStorage.getItem(this.POLYGONS_LOCAL_STORAGE_KEY);
       if (data) {
         const parsed = JSON.parse(data) as Polygon[];
         // Convertir las fechas de string a Date
@@ -400,28 +440,45 @@ export class PolygonService {
   }
 
   /**
-   * Guarda la configuración de simplificado en localStorage
+   * Guarda el nivel de simplificación en localStorage
    */
-  private saveSimplifiedSetting(): void {
+  private saveSimplificationLevelToStorage(level: number): void {
     try {
-      localStorage.setItem(this.SIMPLIFIED_STORAGE_KEY, JSON.stringify(this.useSimplified()));
+      localStorage.setItem(this.SIMPLIFICATION_LEVEL_KEY, level.toString());
     } catch (error) {
-      console.error('Error al guardar configuración de simplificado:', error);
+      console.error('Error al guardar nivel de simplificación en localStorage:', error);
     }
   }
 
   /**
-   * Carga la configuración de simplificado desde localStorage
+   * Carga el nivel de simplificación desde localStorage
    */
-  private loadSimplifiedSetting(): boolean {
+  private loadSimplificationLevelFromStorage(): void {
     try {
-      const data = localStorage.getItem(this.SIMPLIFIED_STORAGE_KEY);
-      if (data) {
-        return JSON.parse(data) as boolean;
+      const data = localStorage.getItem(this.SIMPLIFICATION_LEVEL_KEY);
+      if (data !== null) {
+        const level = parseInt(data, 10);
+        if (!isNaN(level)) {
+          const clampedLevel = Math.max(0, Math.min(10, level));
+          this.simplificationLevel.set(clampedLevel);
+        }
       }
     } catch (error) {
-      console.error('Error al cargar configuración de simplificado:', error);
+      console.error('Error al cargar nivel de simplificación desde localStorage:', error);
     }
-    return true; // Por defecto usar simplificado
+  }
+
+  /**
+   * Set which department is currently being hovered
+   */
+  setHoveredDepartment(polygonId: string, departmentName: string): void {
+    this.hoveredDepartmentSignal.set({ polygonId, departmentName });
+  }
+
+  /**
+   * Clear the hovered department
+   */
+  clearHoveredDepartment(): void {
+    this.hoveredDepartmentSignal.set(null);
   }
 }

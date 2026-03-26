@@ -1,34 +1,27 @@
 import * as L from 'leaflet';
-import {
-  POLYGON_STYLE,
-  LINE_GUIDE_STYLE,
-  DEPARTMENT_STYLE,
-} from '../config/map-polygons.config';
+import { POLYGON_STYLE, LINE_GUIDE_STYLE, DEPARTMENT_STYLE } from '../config/map-polygons.config';
+import { POLYGON_COLOR } from '../config/polygon.config';
 
 /**
- * Genera las opciones de estilo para un polígono
+ * Opciones de estilo para polígonos
  */
-export function createPolygonOptions(color: string): L.PolylineOptions {
-  return {
-    color,
-    weight: POLYGON_STYLE.WEIGHT,
-    opacity: POLYGON_STYLE.OPACITY,
-    fillColor: color,
-    fillOpacity: POLYGON_STYLE.FILL_OPACITY,
-  };
-}
+export const POLYGON_OPTIONS: L.PolylineOptions = {
+  color: POLYGON_COLOR,
+  weight: POLYGON_STYLE.WEIGHT,
+  opacity: POLYGON_STYLE.OPACITY,
+  fillColor: POLYGON_COLOR,
+  fillOpacity: POLYGON_STYLE.FILL_OPACITY,
+};
 
 /**
- * Genera las opciones de estilo para líneas guía
+ * Opciones de estilo para líneas guía
  */
-export function createLineGuideOptions(color: string): L.PolylineOptions {
-  return {
-    color,
-    weight: LINE_GUIDE_STYLE.WEIGHT,
-    opacity: LINE_GUIDE_STYLE.OPACITY,
-    dashArray: LINE_GUIDE_STYLE.DASH_ARRAY,
-  };
-}
+export const LINE_GUIDE_OPTIONS: L.PolylineOptions = {
+  color: POLYGON_COLOR,
+  weight: LINE_GUIDE_STYLE.WEIGHT,
+  opacity: LINE_GUIDE_STYLE.OPACITY,
+  dashArray: LINE_GUIDE_STYLE.DASH_ARRAY,
+};
 
 /**
  * Genera las opciones de estilo para departamentos
