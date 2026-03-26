@@ -16,9 +16,9 @@ import { formatDurationMs, formatDateTimeOnly, formatDateFull } from '../../../.
  * Permite seleccionar varias capas activas con períodos temporales y reproducirlas
  * de forma sincronizada usando un índice de frame compartido.
  *
- * Alineación temporal: para cada frame se usa la primera capa como ancla y las demás
- * buscan el tileset más cercano en el tiempo (tolerancia ≤ 10 min), sin asumir
- * cadencia idéntica entre capas.
+ * Alineación temporal: anchor = capa con timestamp más viejo; las demás buscan
+ * el tileset más cercano dentro de ±5 min. Si no encajan, el anchor avanza un
+ * paso hasta encontrar alineación o bloquear la sync.
  */
 @Component({
   selector: 'app-sync-playback',
@@ -101,6 +101,5 @@ export class SyncPlaybackComponent {
   formatFrameLabel = (frameIndex: number): string => {
     const info = this.syncService.getFrameInfo(frameIndex);
     return info ? formatDateTimeOnly(info.avgTime) : '--:--';
-  };
   };
 }
