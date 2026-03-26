@@ -6,18 +6,22 @@ export interface BaseLayerConfig {
 
 export type LayerConfig = GoesTileLayerConfig | RadarTileLayerConfig | WmsLayerConfig;
 
+export interface TilesetEntry {
+  id: string;
+  time: Date;
+}
+
 export interface TileLayerConfig extends BaseLayerConfig {
   type: LayerType.TILE;
+  availableTilesets: TilesetEntry[];
 }
 
 export interface GoesTileLayerConfig extends TileLayerConfig {
   category: LayerCategory.GOES_19;
-  availableTilesets: string[];
 }
 
 export interface RadarTileLayerConfig extends TileLayerConfig {
   category: LayerCategory.RADAR;
-  availableTilesets: string[];
 }
 
 export interface WmsLayerConfig extends BaseLayerConfig {

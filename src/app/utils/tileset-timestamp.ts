@@ -1,19 +1,3 @@
-import { LayerCategory } from '../models/layers/models';
-
-/**
- * Parses a tileset ID to a Date based on layer category.
- */
-export function parseTilesetTimestamp(tileset: string, category: LayerCategory): Date | null {
-  switch (category) {
-    case LayerCategory.GOES_19:
-      return parseGoesTimestamp(tileset);
-    case LayerCategory.RADAR:
-      return parseRadarTimestamp(tileset);
-    default:
-      return null;
-  }
-}
-
 /**
  * Parses GOES timestamp in Julian format YYYYJJJHHMMSSS.
  * Returns Date in local time.
@@ -48,31 +32,6 @@ export function parseRadarTimestamp(tileset: string): Date | null {
   const second = parseInt(tileset.substring(13, 15));
 
   return new Date(year, month, day, hour, minute, second);
-}
-
-/**
- * Formats a tileset ID as "HH:MM" based on layer category.
- */
-export function formatTilesetTimeOnly(tileset: string, category: LayerCategory): string {
-  const date = parseTilesetTimestamp(tileset, category);
-  if (!date) return '--:--';
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm}`;
-}
-
-/**
- * Formats a tileset ID as "YYYY-MM-DD HH:MM" based on layer category.
- */
-export function formatTilesetFullLabel(tileset: string, category: LayerCategory): string {
-  const date = parseTilesetTimestamp(tileset, category);
-  if (!date) return tileset;
-  const yyyy = date.getFullYear();
-  const mo = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${yyyy}-${mo}-${dd} ${hh}:${mm}`;
 }
 
 /**
