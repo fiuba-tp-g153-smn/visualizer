@@ -19,13 +19,13 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
-import { Layer, LayerCategory, LayerType } from '../../../../models';
+import { Layer, LayerCategory, LayerType, TilesetEntry } from '../../../../models';
 import { LayersService } from '../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../../../services/layers/layer-config.service';
 import { LayerRefreshService } from '../../../../services/layers/layer-refresh.service';
 import { SyncPlaybackService } from '../../../../services/layers/sync-playback.service';
-import { formatTilesetFullLabel, formatTilesetTimeOnly } from '../../../../utils/tileset-timestamp';
+import { formatDateFull, formatDateTimeOnly } from '../../../../utils/tileset-timestamp';
 
 /**
  * Modo de visualización del componente
@@ -352,7 +352,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene los tilesets disponibles según la categoría de la capa.
    * Para GOES_19 y RADAR: devuelve todos los tilesets.
    */
-  private getAvailableTilesetsForLayer(): string[] | undefined {
+  private getAvailableTilesetsForLayer(): TilesetEntry[] | undefined {
     switch (this.layer.type) {
       case LayerType.TILE:
         switch (this.layer.category) {
@@ -542,14 +542,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.hasTimeControl()) return 'Cargando...';
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return 'Sin datos';
-    return formatTilesetFullLabel(tilesets[timeIndex], this.layer.category);
+    return formatDateFull(tilesets[timeIndex].time);
   }
 
   getTimeOnly(timeIndex: number): string {
     if (!this.hasTimeControl()) return '--:--';
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return '--:--';
-    return formatTilesetTimeOnly(tilesets[timeIndex], this.layer.category);
+    return formatDateTimeOnly(tilesets[timeIndex].time);
   }
 
   // ==========================================================================
