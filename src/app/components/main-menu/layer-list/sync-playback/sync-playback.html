@@ -6,100 +6,94 @@
       <p>No hay capas activas con períodos temporales para sincronizar.</p>
     </div>
   } @else {
-    <!-- Controles fijos arriba -->
+    <!-- Controles fijos -->
     <div class="sync-controls-fixed">
-      <!-- Advertencia sin intersección -->
-      @if (hasSelectedLayers() && !hasIntersection()) {
-        <div class="no-intersection-warning">
-          <mat-icon>warning</mat-icon>
-          <span>Las capas seleccionadas no tienen períodos en común</span>
-        </div>
-      }
-
       <div class="layer-controls">
-        <!-- Rango de tiempo -->
         <div class="time-control">
-          <div class="time-control-header">
-            <span class="control-label">Rango de tiempo</span>
-          </div>
-          <div class="time-slider-container">
-            <span class="time-min">{{ formatTimeOnly(config().minTime) }}</span>
-            <mat-slider
-              [min]="dateToSliderValue(availableTimeRange()?.min)"
-              [max]="dateToSliderValue(availableTimeRange()?.max)"
-              step="1"
-              discrete
-              class="control-slider"
-              [displayWith]="formatTimeTooltip"
-              [disabled]="!hasIntersection()"
-            >
-              <input
-                matSliderStartThumb
-                [value]="dateToSliderValue(config().minTime)"
-                (valueChange)="onMinTimeSliderChange($event)"
-              />
-              <input
-                matSliderEndThumb
-                [value]="dateToSliderValue(config().maxTime)"
-                (valueChange)="onMaxTimeSliderChange($event)"
-              />
-            </mat-slider>
-            <span class="time-max">{{ formatTimeOnly(config().maxTime) }}</span>
 
-            <!-- Velocidad inline -->
-            <div class="speed-control">
-              <div class="speed-input-wrapper">
-                <input
-                  type="number"
-                  [value]="config().speed"
-                  (change)="onSpeedChange(+$any($event.target).value)"
-                  min="0"
-                  max="60"
-                  step="0.5"
-                  class="speed-input"
-                  placeholder="1"
-                  [disabled]="!hasIntersection()"
-                />
-                <span class="speed-unit">min/s</span>
+          <div class="time-control-header">
+            <span class="control-label">Sincronización</span>
+          </div>
+
+          @if (hasSelectedLayers()) {
+            @if (availableFrameCounts().length > 0) {
+              @if (isAligned()) {
+                <div class="time-slider-container">
+                  <span class="time-min">{{ frameEdgeMin() }}</span>
+                  <mat-slider
+                    min="0"
+                    [max]="effectiveFrameCount() - 1"
+                    step="1"
+                    discrete
+                    class="control-slider"
+                    [displayWith]="formatFrameLabel"
+                  >
+                    <input
+                      matSliderThumb
+                      [value]="state().frameIndex"
+                      (valueChange)="onFrameIndexChange($event)"
+                    />
+                  </mat-slider>
+                  <span class="time-max">{{ frameEdgeMax() }}</span>
+                  <button
+                    mat-icon-button
+                    (click)="togglePlayback()"
+                    [disabled]="!canPlay()"
+                    [matTooltip]="state().isPlaying ? 'Pausar' : 'Reproducir'"
+                    class="play-btn"
+                  >
+                    <mat-icon>{{ state().isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+                  </button>
+                </div>
+
+                <div class="time-controls-row">
+                  <span class="time-current">{{ currentFrameLabel() }}</span>
+                  <div class="images-count-control">
+                    <mat-form-field appearance="fill" class="images-count-select">
+                      <mat-select
+                        [value]="state().frameCount"
+                        (selectionChange)="onFrameCountChange($event.value)"
+                        panelClass="layer-select-panel"
+                      >
+                        @for (n of availableFrameCounts(); track n) {
+                          <mat-option [value]="n">{{ n }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="speed-control">
+                    <input
+                      type="number"
+                      [value]="state().speed"
+                      (change)="onSpeedChange(+$any($event.target).value)"
+                      min="0.4"
+                      max="10"
+                      step="0.1"
+                      class="speed-input"
+                      placeholder="1.0"
+                    />
+                    <span class="speed-label">s</span>
+                  </div>
+                </div>
+              } @else {
+                <div class="no-periods-message">
+                  <mat-icon class="info-icon">link_off</mat-icon>
+                  <span>No se pudo alinear temporalmente las capas seleccionadas</span>
+                </div>
+              }
+            } @else {
+              <div class="no-periods-message">
+                <mat-icon class="info-icon">warning</mat-icon>
+                <span>Las capas seleccionadas no tienen períodos en común</span>
               </div>
+            }
+          } @else {
+            <div class="no-periods-message">
+              <mat-icon class="info-icon">info</mat-icon>
+              <span>Seleccioná capas para sincronizar</span>
             </div>
-          </div>
-        </div>
+          }
 
-        <!-- Tiempo actual -->
-        <div class="time-control">
-          <div class="time-control-header">
-            <span class="control-label">Tiempo actual</span>
-          </div>
-          <div class="time-slider-container">
-            <span class="time-min">{{ formatTimeOnly(config().minTime) }}</span>
-            <mat-slider
-              [min]="dateToSliderValue(config().minTime)"
-              [max]="dateToSliderValue(config().maxTime)"
-              step="1"
-              discrete
-              class="control-slider"
-              [displayWith]="formatTimeTooltip"
-              [disabled]="!hasIntersection()"
-            >
-              <input
-                matSliderThumb
-                [value]="dateToSliderValue(config().currentTime)"
-                (valueChange)="onCurrentTimeChange($event)"
-                [disabled]="config().isPlaying"
-              />
-            </mat-slider>
-            <span class="time-max">{{ formatTimeOnly(config().maxTime) }}</span>
-            <button
-              mat-icon-button
-              (click)="togglePlayback()"
-              [disabled]="!canPlay()"
-              [matTooltip]="getPlayTooltip()"
-              class="play-btn"
-            >
-              <mat-icon>{{ getPlayIcon() }}</mat-icon>
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -108,22 +102,27 @@
     <div class="layers-section-scrollable">
       <div class="layers-section">
         <span class="section-label">
-          Capas disponibles
-          @if (config().selectedLayerIds.length > 0) {
-            <span class="selected-count">({{ config().selectedLayerIds.length }})</span>
+          Capas activas
+          @if (state().selectedLayerIds.length > 0) {
+            <span class="selected-count">({{ state().selectedLayerIds.length }})</span>
           }
         </span>
-
         <div class="layers-list">
           @for (item of eligibleLayers(); track item.layer.id) {
-            <div class="layer-checkbox-item">
+            <div class="layer-row">
               <mat-checkbox
                 [checked]="isLayerSelected(item.layer.id)"
                 (change)="toggleLayer(item.layer.id)"
                 color="primary"
               >
-                {{ getLayerDisplayName(item.layer.id) }}
+                {{ item.layer.name }}
               </mat-checkbox>
+              @if (isLayerSelected(item.layer.id) && layersWithFewerFrames().has(item.layer.id)) {
+                <mat-icon
+                  class="fewer-frames-icon"
+                  matTooltip="Menos imágenes disponibles que el N seleccionado"
+                >warning_amber</mat-icon>
+              }
             </div>
           }
         </div>
