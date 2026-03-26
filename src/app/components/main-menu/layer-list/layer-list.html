@@ -39,7 +39,7 @@
       <!-- Tab: Sincronización Temporal -->
       <mat-tab>
         <ng-template mat-tab-label>
-          <div class="tab-label-container">
+          <div class="tab-label-container" [class.sync-playing]="syncIsPlaying()">
             <mat-icon class="tab-icon">sync</mat-icon>
             <span class="tab-label">Sincronización</span>
           </div>

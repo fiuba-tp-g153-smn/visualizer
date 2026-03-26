@@ -24,6 +24,8 @@ import { LayersService } from '../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../../../services/layers/layer-config.service';
 import { LayerRefreshService } from '../../../../services/layers/layer-refresh.service';
+import { SyncPlaybackService } from '../../../../services/layers/sync-playback.service';
+import { formatTilesetFullLabel, formatTilesetTimeOnly } from '../../../../utils/tileset-timestamp';
 
 /**
  * Modo de visualización del componente
@@ -64,6 +66,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly controlService = inject(LayerControlService);
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
+  private readonly syncService = inject(SyncPlaybackService);
 
   /**
    * Capa a renderizar (requerido)
@@ -94,6 +97,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isLoadingConfig = signal(false);
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
+
+  /** True when this layer is currently controlled by the global sync playback. */
+  isSynced = computed(() => this.syncService.isLayerSelected(this.layer.id));
 
   playSpeed = computed(() => {
     const controls = this.controlService.getControls(this.layer.id);
@@ -456,9 +462,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   onTimeIndexChange(timeIndex: number): void {
-    if (this.isPlaying()) {
-      this.controlService.stopPlayback(this.layer.id);
-    }
+    this.detachIfSynced();
+    this.stopIfPlaying();
 
     this.controlService.setTimeIndex(this.layer.id, timeIndex);
   }
@@ -533,129 +538,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return allSame ? firstOpacity : undefined;
   });
 
-  /**
-   * Obtiene la etiqueta de tiempo para mostrar (YYYY-MM-DD HH:MM)
-   */
   getTimeLabel(timeIndex: number): string {
-    if (!this.hasTimeControl()) {
-      return 'Cargando...';
-    }
-
+    if (!this.hasTimeControl()) return 'Cargando...';
     const tilesets = this.getAvailableTilesetsForLayer();
-    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) {
-      return 'Sin datos';
-    }
-
-    const tileset = tilesets[timeIndex];
-
-    switch (this.layer.category) {
-      case LayerCategory.GOES_19:
-        return this.parseGoesTimestamp(tileset);
-      case LayerCategory.RADAR:
-        return this.parseRadarTimestamp(tileset);
-      default:
-        return tileset;
-    }
+    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return 'Sin datos';
+    return formatTilesetFullLabel(tilesets[timeIndex], this.layer.category);
   }
 
-  /**
-   * Obtiene solo la hora de un período (HH:MM)
-   */
   getTimeOnly(timeIndex: number): string {
-    if (!this.hasTimeControl()) {
-      return '--:--';
-    }
-
+    if (!this.hasTimeControl()) return '--:--';
     const tilesets = this.getAvailableTilesetsForLayer();
-    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) {
-      return '--:--';
-    }
-
-    const tileset = tilesets[timeIndex];
-
-    switch (this.layer.category) {
-      case LayerCategory.GOES_19:
-        return this.parseGoesTimeOnly(tileset);
-      case LayerCategory.RADAR:
-        return this.parseRadarTimeOnly(tileset);
-      default:
-        return '--:--';
-    }
-  }
-
-  /**
-   * Parsea timestamp GOES en formato juliano YYYYJJJHHMMSSS
-   * YYYY = year, JJJ = day of year, HH = hour, MM = minute, SSS = seconds with tenth
-   */
-  private parseGoesTimestamp(tileset: string): string {
-    if (tileset.length >= 11) {
-      const year = tileset.substring(0, 4);
-      const dayOfYear = tileset.substring(4, 7);
-      const hour = tileset.substring(7, 9);
-      const minute = tileset.substring(9, 11);
-
-      // Convert Julian day to date
-      const date = this.julianToDate(year, dayOfYear);
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-
-      return `${year}-${month}-${day} ${hour}:${minute}`;
-    }
-    return tileset;
-  }
-
-  /**
-   * Parsea solo la hora de timestamp GOES (HH:MM)
-   */
-  private parseGoesTimeOnly(tileset: string): string {
-    if (tileset.length >= 11) {
-      const hour = tileset.substring(7, 9);
-      const minute = tileset.substring(9, 11);
-      return `${hour}:${minute}`;
-    }
-    return '--:--';
-  }
-
-  /**
-   * Parsea timestamp RADAR en formato ISO-like YYYYMMDDTHHMMSSZ
-   * Ejemplo: 20260114T174815Z
-   */
-  private parseRadarTimestamp(tileset: string): string {
-    // Format: YYYYMMDDTHHMMSSZ (17 characters)
-    if (tileset.length >= 15) {
-      const year = tileset.substring(0, 4);
-      const month = tileset.substring(4, 6);
-      const day = tileset.substring(6, 8);
-      const hour = tileset.substring(9, 11);
-      const minute = tileset.substring(11, 13);
-
-      return `${year}-${month}-${day} ${hour}:${minute}`;
-    }
-    return tileset;
-  }
-
-  /**
-   * Parsea solo la hora de timestamp RADAR (HH:MM)
-   */
-  private parseRadarTimeOnly(tileset: string): string {
-    // Format: YYYYMMDDTHHMMSSZ
-    if (tileset.length >= 15) {
-      const hour = tileset.substring(9, 11);
-      const minute = tileset.substring(11, 13);
-      return `${hour}:${minute}`;
-    }
-    return '--:--';
-  }
-
-  /**
-   * Convierte año juliano a fecha
-   */
-  private julianToDate(year: string, dayOfYear: string): Date {
-    const yearNum = parseInt(year);
-    const dayNum = parseInt(dayOfYear);
-    const date = new Date(yearNum, 0);
-    date.setDate(dayNum);
-    return date;
+    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return '--:--';
+    return formatTilesetTimeOnly(tilesets[timeIndex], this.layer.category);
   }
 
   // ==========================================================================
@@ -663,14 +557,25 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   togglePlayback(): void {
+    this.detachIfSynced();
     this.controlService.togglePlayback(this.layer.id);
   }
 
   onPlaySpeedChange(speed: number): void {
+    this.detachIfSynced();
     this.controlService.setPlaySpeed(this.layer.id, speed);
   }
 
   onLastImagesCountChange(count: number): void {
+    this.detachIfSynced();
     this.controlService.setLastImagesCount(this.layer.id, count);
+  }
+
+  private detachIfSynced(): void {
+    if (this.isSynced()) this.syncService.detachLayer(this.layer.id);
+  }
+
+  private stopIfPlaying(): void {
+    if (this.isPlaying()) this.controlService.stopPlayback(this.layer.id);
   }
 }

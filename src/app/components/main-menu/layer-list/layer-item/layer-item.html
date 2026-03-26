@@ -198,12 +198,20 @@
                 <span class="time-max">{{ getTimeOnly(maxTimeIndex()) }}</span>
                 <button
                   mat-icon-button
-                  (click)="canPlayback() && togglePlayback()"
-                  [disabled]="!canPlayback()"
-                  [matTooltip]="isPlaying() ? 'Pausar' : 'Reproducir'"
+                  (click)="togglePlayback()"
+                  [disabled]="!canPlayback() && !isSynced()"
+                  [matTooltip]="
+                    isSynced()
+                      ? 'En sincronización — clic para desconectar'
+                      : isPlaying()
+                        ? 'Pausar'
+                        : 'Reproducir'
+                  "
                   class="play-btn"
                 >
-                  <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+                  <mat-icon>{{
+                    isSynced() ? 'sync' : isPlaying() ? 'pause' : 'play_arrow'
+                  }}</mat-icon>
                 </button>
               </div>
 
