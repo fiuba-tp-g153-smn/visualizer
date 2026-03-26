@@ -1,37 +1,37 @@
-import { Component, inject, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
 import { SyncPlaybackService } from '../../../../services/layers/sync-playback.service';
-import { LayersService } from '../../../../services/layers/layers.service';
+import { formatDurationMs, formatDateTimeOnly, formatDateFull } from '../../../../utils/tileset-timestamp';
 
 /**
- * Componente para sincronizar la reproducción temporal de múltiples capas
+ * Tab de sincronización de reproducción entre múltiples capas.
  *
- * Permite:
- * - Seleccionar capas activas con períodos temporales
- * - Definir un rango de tiempo personalizado
- * - Controlar la velocidad de reproducción
- * - Reproducir sincronizadamente múltiples fuentes de datos
+ * Permite seleccionar varias capas activas con períodos temporales y reproducirlas
+ * de forma sincronizada usando un índice de frame compartido.
+ *
+ * Alineación temporal: para cada frame se usa la primera capa como ancla y las demás
+ * buscan el tileset más cercano en el tiempo (tolerancia ≤ 10 min), sin asumir
+ * cadencia idéntica entre capas.
  */
 @Component({
   selector: 'app-sync-playback',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     FormsModule,
     MatCheckboxModule,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
+    MatSelectModule,
     MatFormFieldModule,
-    MatInputModule,
     MatSliderModule,
   ],
   templateUrl: './sync-playback.html',
@@ -39,140 +39,68 @@ import { LayersService } from '../../../../services/layers/layers.service';
 })
 export class SyncPlaybackComponent {
   private readonly syncService = inject(SyncPlaybackService);
-  private readonly layersService = inject(LayersService);
 
-  eligibleLayers = this.syncService.eligibleLayers;
-  config = this.syncService.syncConfig;
-  hasIntersection = this.syncService.hasIntersection;
-  availableTimeRange = this.syncService.availableTimeRange;
+  readonly eligibleLayers = this.syncService.eligibleLayers;
+  readonly state = this.syncService.syncState;
+  readonly availableFrameCounts = this.syncService.availableFrameCounts;
+  readonly layersWithFewerFrames = this.syncService.layersWithFewerFrames;
+  readonly effectiveFrameCount = this.syncService.effectiveFrameCount;
+  readonly isAligned = this.syncService.isAligned;
 
-  /**
-   * Obtiene el nombre de display de una capa
-   */
-  getLayerDisplayName(layerId: string): string {
-    return this.layersService.getLayerDisplayName(layerId);
+  readonly canPlay = computed(() => {
+    const s = this.state();
+    return (
+      s.selectedLayerIds.length > 0 &&
+      this.isAligned() &&
+      this.effectiveFrameCount() >= 2 &&
+      this.availableFrameCounts().length > 0
+    );
+  });
+
+  readonly hasSelectedLayers = computed(() => this.state().selectedLayerIds.length > 0);
+
+  readonly currentFrameLabel = computed(() => {
+    const info = this.syncService.currentFrameInfo();
+    if (!info) return '--:--';
+    const deviation = info.deviationMs > 0 ? ` ± ${formatDurationMs(info.deviationMs)}` : '';
+    return formatDateFull(info.avgTime) + deviation;
+  });
+
+  readonly frameEdgeMin = computed(() => this.edgeLabel(0));
+  readonly frameEdgeMax = computed(() => this.edgeLabel(this.effectiveFrameCount() - 1));
+
+  private edgeLabel(frameIndex: number): string {
+    const info = this.syncService.getFrameInfo(frameIndex);
+    return info ? formatDateTimeOnly(info.avgTime) : '--:--';
   }
 
-  /**
-   * Verifica si una capa está seleccionada
-   */
   isLayerSelected(layerId: string): boolean {
-    return this.config().selectedLayerIds.includes(layerId);
+    return this.syncService.isLayerSelected(layerId);
   }
 
-  /**
-   * Alterna la selección de una capa
-   */
   toggleLayer(layerId: string): void {
     this.syncService.toggleLayerSelection(layerId);
   }
 
-  /**
-   * Alterna la reproducción
-   */
   togglePlayback(): void {
     this.syncService.togglePlayback();
   }
 
-  /**
-   * Obtiene el icono de play/pause
-   */
-  getPlayIcon(): string {
-    return this.config().isPlaying ? 'pause' : 'play_arrow';
+  onFrameCountChange(count: number): void {
+    this.syncService.setFrameCount(count);
   }
 
-  /**
-   * Obtiene el tooltip para el botón de play/pause
-   */
-  getPlayTooltip(): string {
-    const cfg = this.config();
-    if (cfg.isPlaying) return 'Pausar';
-    if (cfg.speed === 0) return 'No se puede reproducir con velocidad 0';
-    if (!cfg.minTime || !cfg.maxTime) return 'Selecciona capas para reproducir';
-    if (cfg.selectedLayerIds.length === 0) return 'Selecciona al menos una capa';
-    return 'Reproducir';
+  onFrameIndexChange(index: number): void {
+    this.syncService.setFrameIndex(index);
   }
 
-  /**
-   * Convierte una fecha a un valor numérico para el slider (timestamp)
-   */
-  dateToSliderValue(date: Date | undefined): number {
-    return date ? date.getTime() : 0;
-  }
-
-  /**
-   * Maneja el cambio del rango mínimo desde el slider
-   */
-  onMinTimeSliderChange(timestamp: number): void {
-    this.syncService.setMinTime(new Date(timestamp));
-  }
-
-  /**
-   * Maneja el cambio del rango máximo desde el slider
-   */
-  onMaxTimeSliderChange(timestamp: number): void {
-    this.syncService.setMaxTime(new Date(timestamp));
-  }
-
-  /**
-   * Maneja el cambio del tiempo actual desde el slider
-   */
-  onCurrentTimeChange(timestamp: number): void {
-    this.syncService.setCurrentTime(new Date(timestamp));
-  }
-
-  /**
-   * Maneja el cambio de velocidad
-   */
   onSpeedChange(speed: number): void {
     this.syncService.setSpeed(speed);
   }
 
-  /**
-   * Formatea el valor de velocidad para mostrar
-   */
-  formatSpeed = (value: number): string => {
-    if (value === 1) return '1x';
-    if (value < 1) return `${value.toFixed(1)}x`;
-    return `${Math.round(value)}x`;
+  formatFrameLabel = (frameIndex: number): string => {
+    const info = this.syncService.getFrameInfo(frameIndex);
+    return info ? formatDateTimeOnly(info.avgTime) : '--:--';
   };
-
-  /**
-   * Formatea un tiempo para mostrar solo HH:MM
-   */
-  formatTimeOnly(date: Date | undefined): string {
-    if (!date) return '--:--';
-
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    return `${hours}:${minutes}`;
-  }
-
-  /**
-   * Formatea un timestamp para el tooltip del slider (solo minutos)
-   */
-  formatTimeTooltip = (timestamp: number): string => {
-    return this.formatTimeOnly(new Date(timestamp));
   };
-
-  /**
-   * Verifica si hay capas seleccionadas
-   */
-  hasSelectedLayers = computed(() => {
-    return this.config().selectedLayerIds.length > 0;
-  });
-
-  /**
-   * Verifica si se puede reproducir
-   */
-  canPlay = computed(() => {
-    const cfg = this.config();
-    return (
-      cfg.selectedLayerIds.length > 0 &&
-      cfg.minTime !== undefined &&
-      cfg.maxTime !== undefined &&
-      cfg.speed > 0
-    );
-  });
 }
