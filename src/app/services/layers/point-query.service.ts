@@ -120,7 +120,7 @@ export class PointQueryService {
     const resolvedIndex = timeIndex ?? fallbackIndex;
     const clampedIndex = Math.max(0, Math.min(resolvedIndex, config.availableTilesets.length - 1));
 
-    return config.availableTilesets[clampedIndex] ?? null;
+    return config.availableTilesets[clampedIndex]?.id ?? null;
   }
 
   private resolveRadarElevation(layer: RadarTileLayer, controls: RadarLayerControls): string | null {
