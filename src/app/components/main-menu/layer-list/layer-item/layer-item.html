@@ -13,7 +13,7 @@
         class="layer-checkbox"
         [matTooltip]="layer.description || 'Sin descripción'"
       >
-        {{ layer.name }}
+        {{ layerShortName() }}
       </mat-checkbox>
       <div class="header-actions">
         @if (isActive()) {
@@ -38,7 +38,7 @@
         <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
       }
       <span class="layer-name" [matTooltip]="layer.description || 'Sin descripción'">{{
-        layer.name
+        layerShortName()
       }}</span>
 
       <!-- Botones de control (derecha) -->
