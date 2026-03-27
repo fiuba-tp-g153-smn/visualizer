@@ -98,10 +98,9 @@ export class PointQueryViewerService {
         const selectedElevations = radarControls.elevation.selectedElevationIds;
 
         return selectedElevations.map((elevationId) => {
-          const elevation = radarLayer.availableElevations.find((e) => e.id === elevationId);
           return {
             layerId: createCompositeId(layer.id, elevationId),
-            layerName: elevation?.name ? `${layer.name} - ${elevation.name}` : layer.name,
+            layerName: this.layersService.getLayerFullName(radarLayer, elevationId),
             elevationId,
             layer: radarLayer,
             controls: radarControls,

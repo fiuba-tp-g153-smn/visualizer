@@ -4,7 +4,6 @@ import { LAYER_DEFINITIONS } from '../../config/layers';
 import { environment } from '../../../environments/environment';
 
 const RADAR_ID_PATTERN = /radar\/([A-Z0-9]+)\//;
-const RADAR_LOCATION_PATTERN = /Radar \d+ - (.+)/;
 
 /**
  * Service responsible for managing layer definitions and metadata.
@@ -80,7 +79,7 @@ export class LayersService {
    * Format: "Group - Subgroup - LayerName - Elevation"
    * Examples:
    * - "GOES 19 - ABI - Canal 2 (Visible)"
-   * - "RMA1 - Córdoba - DBZH - 0.5°"
+  * - "RMA1 - DBZH - 0.5°"
    * - "IGN - Límites - Límite internacional"
    *
    * @param layer - Layer object to get the name for
@@ -106,12 +105,6 @@ export class LayersService {
               // Extract radar ID from layer.id (e.g., "radar/RMA1/DBZH" → "RMA1")
               const radarIdMatch = layer.id.match(RADAR_ID_PATTERN);
               parts.push(radarIdMatch ? radarIdMatch[1] : 'Radar');
-
-              // Extract location from subgroup name (e.g., "Radar 1 - Córdoba" → "Córdoba")
-              const locationMatch = subgroup.name.match(RADAR_LOCATION_PATTERN);
-              if (locationMatch) {
-                parts.push(locationMatch[1]);
-              }
 
               parts.push(layer.name);
 
