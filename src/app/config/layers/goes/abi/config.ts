@@ -1,5 +1,6 @@
-import { LayerType, LayerCategory, ABIGoesTileLayer } from '../../../models';
-import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups.models';
+import { LayerType, LayerCategory, ABIGoesTileLayer } from '../../../../models';
+import { ActiveLayerGroupId, LayerSubgroup } from '../../../../models/layers/groups.models';
+import { ABI_CH13_SCALE, ABI_CH2_SCALE, ABI_CH9_SCALE } from './scales.config';
 
 /**
  * Valores por defecto para capas ABI
@@ -34,21 +35,24 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       ...ABI_DEFAULTS,
       id: `${idPrefix}/ch-2`,
       channel: 'ch-2',
-      name: 'Canal 2 (Visible)',
+      scale: ABI_CH2_SCALE,
+      name: 'Canal 2',
       description: 'Banda visible (0.64 μm)',
     },
     {
       ...ABI_DEFAULTS,
       id: `${idPrefix}/ch-9`,
       channel: 'ch-9',
-      name: 'Canal 9 (Vapor de agua)',
+      scale: ABI_CH9_SCALE,
+      name: 'Canal 9',
       description: 'Banda de vapor de agua (6.9 μm)',
     },
     {
       ...ABI_DEFAULTS,
       id: `${idPrefix}/ch-13`,
       channel: 'ch-13',
-      name: 'Canal 13 (Infrarrojo)',
+      scale: ABI_CH13_SCALE,
+      name: 'Canal 13',
       description: 'Banda infrarroja (10.3 μm)',
     },
   ] as ABIGoesTileLayer[],
