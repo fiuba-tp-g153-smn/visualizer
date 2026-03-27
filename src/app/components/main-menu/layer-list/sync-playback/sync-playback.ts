@@ -8,7 +8,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSliderModule } from '@angular/material/slider';
 import { SyncPlaybackService } from '../../../../services/layers/sync-playback.service';
-import { formatDurationMs, formatDateTimeOnly, formatDateFull } from '../../../../utils/tileset-timestamp';
+import { LayersService } from '../../../../services/layers/layers.service';
+import {
+  formatDurationMs,
+  formatDateTimeOnly,
+  formatDateFull,
+} from '../../../../utils/tileset-timestamp';
+import { Layer, LayerCategory, RadarTileLayer } from '../../../../models';
 
 /**
  * Tab de sincronización de reproducción entre múltiples capas.
@@ -39,6 +45,7 @@ import { formatDurationMs, formatDateTimeOnly, formatDateFull } from '../../../.
 })
 export class SyncPlaybackComponent {
   private readonly syncService = inject(SyncPlaybackService);
+  private readonly layersService = inject(LayersService);
 
   readonly eligibleLayers = this.syncService.eligibleLayers;
   readonly state = this.syncService.syncState;
@@ -102,4 +109,8 @@ export class SyncPlaybackComponent {
     const info = this.syncService.getFrameInfo(frameIndex);
     return info ? formatDateTimeOnly(info.avgTime) : '--:--';
   };
+
+  fullNameForLayer(layer: Layer): string {
+    return this.layersService.getLayerFullName(layer);
+  }
 }
