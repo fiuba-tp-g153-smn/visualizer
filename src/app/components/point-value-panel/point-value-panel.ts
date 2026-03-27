@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-import { PointQueryDisplayData } from '../../models';
+import { PointQueryDisplayData, PointQueryStatus } from '../../models';
 
 @Component({
   selector: 'app-point-value-panel',
@@ -15,6 +15,8 @@ import { PointQueryDisplayData } from '../../models';
   styleUrl: './point-value-panel.scss',
 })
 export class PointValuePanelComponent {
+  readonly PointQueryStatus = PointQueryStatus;
+
   @Input() visible = false;
   @Input() isLoading = false;
   @Input() layerName = 'Capa de datos';
@@ -32,7 +34,7 @@ export class PointValuePanelComponent {
   }
 
   get hasDataValue(): boolean {
-    return !!this.data && this.data.status === 'value' && this.data.value !== null;
+    return !!this.data && this.data.status === PointQueryStatus.VALUE && this.data.value !== null;
   }
 
   get formattedValue(): string {
