@@ -113,7 +113,7 @@
                 (change)="toggleLayer(item.layer.id)"
                 color="primary"
               >
-                {{ item.layer.name }}
+                {{ fullNameForLayer(item.layer) }}
               </mat-checkbox>
               @if (isLayerSelected(item.layer.id) && layersWithFewerFrames().has(item.layer.id)) {
                 <mat-icon
