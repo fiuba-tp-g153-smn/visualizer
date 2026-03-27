@@ -14,7 +14,14 @@ import { MenuPanelComponent } from '../menu-section.model';
 @Component({
   selector: 'app-point-query-viewer',
   standalone: true,
-  imports: [CommonModule, MatCheckboxModule, MatRadioModule, MatTooltipModule, MatTabsModule, MatIconModule],
+  imports: [
+    CommonModule,
+    MatCheckboxModule,
+    MatRadioModule,
+    MatTooltipModule,
+    MatTabsModule,
+    MatIconModule,
+  ],
   templateUrl: './point-query-viewer.html',
   styleUrl: './point-query-viewer.scss',
 })
