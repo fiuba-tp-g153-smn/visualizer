@@ -79,7 +79,7 @@ export class LayersService {
    * Format: "Group - Subgroup - LayerName - Elevation"
    * Examples:
    * - "GOES 19 - ABI - Canal 2 (Visible)"
-  * - "RMA1 - DBZH - 0.5°"
+   * - "RMA1 - DBZH - 0.5°"
    * - "IGN - Límites - Límite internacional"
    *
    * @param layer - Layer object to get the name for
