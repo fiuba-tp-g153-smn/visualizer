@@ -11,12 +11,16 @@ import {
 } from 'rxjs';
 
 import {
+  ABIGoesTileLayer,
+  GLMGoesTileLayer,
+  GoesLayerControls,
   LayerCategory,
   LayerType,
   PointQueryDisplayData,
   PointQueryInteractionMode,
   RadarLayerControls,
   RadarTileLayer,
+  TileLayerControls,
 } from '../../models';
 import { LayerControlService } from './layer-control.service';
 import { LayersService } from './layers.service';
@@ -30,10 +34,10 @@ interface MouseCoordinates {
 
 type DisplaySourceItem = {
   layerId: string;
-  elevationId: string;
+  elevationId?: string;
   layerName: string;
-  layer: RadarTileLayer;
-  controls: RadarLayerControls;
+  layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer;
+  controls: TileLayerControls;
 };
 
 interface PointQueryViewerEntry {
@@ -87,8 +91,20 @@ export class PointQueryViewerService {
   private readonly loadingLayerIds = signal<Set<string>>(new Set());
 
   readonly displayItems = computed<DisplaySourceItem[]>(() => {
-    return this.controlService
-      .activeLayers()
+    const activeLayers = this.controlService.activeLayers();
+
+    const satelliteItems: DisplaySourceItem[] = activeLayers
+      .filter(
+        ({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.GOES_19,
+      )
+      .map(({ layer, controls }) => ({
+        layerId: layer.id,
+        layerName: this.layersService.getLayerFullName(layer),
+        layer: layer as ABIGoesTileLayer | GLMGoesTileLayer,
+        controls: controls as GoesLayerControls,
+      }));
+
+    const radarItems: DisplaySourceItem[] = activeLayers
       .filter(
         ({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.RADAR,
       )
@@ -97,16 +113,16 @@ export class PointQueryViewerService {
         const radarControls = controls as RadarLayerControls;
         const selectedElevations = radarControls.elevation.selectedElevationIds;
 
-        return selectedElevations.map((elevationId) => {
-          return {
-            layerId: createCompositeId(layer.id, elevationId),
-            layerName: this.layersService.getLayerFullName(radarLayer, elevationId),
-            elevationId,
-            layer: radarLayer,
-            controls: radarControls,
-          };
-        });
+        return selectedElevations.map((elevationId) => ({
+          layerId: createCompositeId(layer.id, elevationId),
+          layerName: this.layersService.getLayerFullName(radarLayer, elevationId),
+          elevationId,
+          layer: radarLayer,
+          controls: radarControls,
+        }));
       });
+
+    return [...satelliteItems, ...radarItems];
   });
 
   readonly floatingViewerEntries = computed<PointQueryViewerEntry[]>(() => {

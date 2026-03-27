@@ -21,7 +21,9 @@ import { LayerControlService } from '../../services/layers/layer-control.service
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
 import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
+import { ScaleToolsService } from '../../services/layers/scale-tools.service';
 import { PointValuePanelComponent } from '../point-value-panel/point-value-panel';
+import { ScaleToolPanelComponent } from '../scale-tool-panel/scale-tool-panel';
 import { BaseMap, GoesLayerControls, RadarLayerControls } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
 import { PolygonService } from '../../services/polygons/polygon.service';
@@ -42,7 +44,13 @@ import { MapPolygonsService } from '../../services/polygons/map-polygons.service
 @Component({
   selector: 'app-map-container',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, PolygonEditControlsComponent, PointValuePanelComponent],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    PolygonEditControlsComponent,
+    PointValuePanelComponent,
+    ScaleToolPanelComponent,
+  ],
   templateUrl: './map-container.html',
   styleUrl: './map-container.scss',
 })
@@ -58,6 +66,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private viewContainerRef = inject(ViewContainerRef);
   private injector = inject(Injector);
   private pointQueryViewerService = inject(PointQueryViewerService);
+  private scaleToolsService = inject(ScaleToolsService);
 
   // Services
   private layersService = inject(MapLayersService);
@@ -75,6 +84,8 @@ export class MapContainer implements OnInit, OnDestroy {
 
   readonly floatingViewerEntries = this.pointQueryViewerService.floatingViewerEntries;
   readonly isViewerEnabled = this.pointQueryViewerService.isViewerEnabled;
+  readonly scaleToolEntries = this.scaleToolsService.scaleEntries;
+  readonly isScaleToolsEnabled = this.scaleToolsService.shouldShowScales;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -243,6 +254,7 @@ export class MapContainer implements OnInit, OnDestroy {
       applyEventBlocking('.main-menu-wrapper');
       applyEventBlocking('.zoom-controls');
       applyEventBlocking('.edit-controls-container');
+      applyEventBlocking('.scale-tools-container');
     };
 
     // Initial check

@@ -3,24 +3,19 @@ import { CommonModule } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatIconModule } from '@angular/material/icon';
 
-import { PointQueryInteractionMode } from '../../../models';
-import { PointQueryViewerService } from '../../../services/layers/point-query-tools.service';
-import { ScaleToolsService } from '../../../services/layers/scale-tools.service';
-import { MenuPanelComponent } from '../menu-section.model';
+import { PointQueryInteractionMode } from '../../../../models';
+import { PointQueryViewerService } from '../../../../services/layers/point-query-tools.service';
 
 @Component({
-  selector: 'app-point-query-viewer',
+  selector: 'app-point-query-tools-tab',
   standalone: true,
-  imports: [CommonModule, MatCheckboxModule, MatRadioModule, MatTooltipModule, MatTabsModule, MatIconModule],
-  templateUrl: './point-query-viewer.html',
-  styleUrl: './point-query-viewer.scss',
+  imports: [CommonModule, MatCheckboxModule, MatRadioModule, MatTooltipModule],
+  templateUrl: './point-query-tools-tab.html',
+  styleUrl: './point-query-tools-tab.scss',
 })
-export class PointQueryViewerComponent implements MenuPanelComponent {
+export class PointQueryToolsTabComponent {
   readonly viewer = inject(PointQueryViewerService);
-  readonly scaleTools = inject(ScaleToolsService);
   readonly PointQueryInteractionMode = PointQueryInteractionMode;
 
   readonly interactionModeOptions: Array<{
@@ -45,19 +40,7 @@ export class PointQueryViewerComponent implements MenuPanelComponent {
     },
   ];
 
-  onPanelOpen(): void {}
-
-  onPanelClose(): void {}
-
   onInteractionModeChange(value: PointQueryInteractionMode): void {
     this.viewer.setInteractionMode(value);
-  }
-
-  onScaleToolsEnabledChange(enabled: boolean): void {
-    this.scaleTools.setEnabled(enabled);
-  }
-
-  toggleScaleLayer(layerId: string): void {
-    this.scaleTools.toggleLayerSelection(layerId);
   }
 }

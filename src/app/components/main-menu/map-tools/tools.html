@@ -1,0 +1,33 @@
+<div class="tools-panel">
+  <mat-tab-group class="tools-tabs" animationDuration="0ms">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
+          <mat-icon class="tab-icon">palette</mat-icon>
+          <span class="tab-label">Escalas</span>
+          <span class="active-count" [class.visible]="getScaleItemsCount() > 0">
+            {{ getScaleItemsCount() }}
+          </span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-scale-tools-tab />
+      </div>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
+          <mat-icon class="tab-icon">my_location</mat-icon>
+          <span class="tab-label">Puntuales</span>
+          <span class="active-count" [class.visible]="getPointSelectedCount() > 0">
+            {{ getPointSelectedCount() }}
+          </span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-point-query-tools-tab />
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

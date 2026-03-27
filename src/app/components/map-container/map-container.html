@@ -20,6 +20,14 @@
   </div>
 }
 
+@if (isScaleToolsEnabled()) {
+  <div class="scale-tools-container">
+    @for (entry of scaleToolEntries(); track entry.layerId) {
+      <app-scale-tool-panel [entry]="entry" />
+    }
+  </div>
+}
+
 <div class="zoom-controls">
   <button mat-icon-button class="zoom-button" (click)="zoomIn()" [disabled]="!canZoomIn()">
     <mat-icon>add</mat-icon>

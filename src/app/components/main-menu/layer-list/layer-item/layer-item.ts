@@ -303,6 +303,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   layerShortName = computed(() => this.layersService.getLayerShortName(this.layer));
+  layerFullName = computed(() => this.layersService.getLayerFullName(this.layer));
 
   /**
    * Obtiene el índice mínimo para el slider (limitado por el selector de últimas imágenes)
