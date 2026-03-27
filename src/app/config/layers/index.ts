@@ -20,5 +20,5 @@ export { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from './ign-wms/config';
 export { RADAR_SUBGROUPS } from './radar/config';
 
 // GOES satellite configuration
-export { ABI_SUBGROUP } from './goes/abi.config';
-export { GLM_SUBGROUP } from './goes/glm.config';
+export { ABI_SUBGROUP } from './goes/abi/config';
+export { GLM_SUBGROUP } from './goes/glm/config';

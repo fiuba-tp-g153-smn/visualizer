@@ -1,5 +1,6 @@
-import { LayerType, LayerCategory, GoesTileLayer, GLMGoesTileLayer } from '../../../models';
-import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups.models';
+import { LayerType, LayerCategory, GLMGoesTileLayer } from '../../../../models';
+import { ActiveLayerGroupId, LayerSubgroup } from '../../../../models/layers/groups.models';
+import { GLM_FED_SCALE, GLM_MFA_SCALE, GLM_TOE_SCALE } from './scales.config';
 
 /**
  * Valores por defecto para capas GLM
@@ -31,6 +32,7 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       ...GLM_DEFAULTS,
       id: 'goes-19/glm/glm-fed',
       variable: 'fed',
+      scale: GLM_FED_SCALE,
       name: 'Flash Extent Density',
       description: 'Densidad de extensión de rayos',
     },
@@ -38,6 +40,7 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       ...GLM_DEFAULTS,
       id: 'goes-19/glm/glm-toe',
       variable: 'toe',
+      scale: GLM_TOE_SCALE,
       name: 'Total Optical Energy',
       description: 'Energía óptica total de los rayos',
     },
@@ -45,6 +48,7 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       ...GLM_DEFAULTS,
       id: 'goes-19/glm/glm-mfa',
       variable: 'mfa',
+      scale: GLM_MFA_SCALE,
       name: 'Minimum Flash Area',
       description: 'Área mínima de los rayos',
     },
