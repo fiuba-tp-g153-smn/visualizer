@@ -252,7 +252,7 @@ export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   layers: products.map((product) => ({
     ...RADAR_DEFAULTS,
     id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
-    name: `${product} - ${radar.ubi}`,
+    name: product,
     description: `Producto ${product} del radar meteorológico ${radar.number} de ${radar.ubi}`,
     minNativeZoom: radar.minNativeZoom,
     maxNativeZoom: radar.maxNativeZoom,
