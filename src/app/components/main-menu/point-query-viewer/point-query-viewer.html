@@ -13,36 +13,34 @@
     }
   </mat-radio-group>
 
-  @if (viewer.interactionMode() !== 'off') {
-    <mat-accordion class="sources-accordion" multi>
-      <mat-expansion-panel [expanded]="true" hideToggle>
-        <mat-expansion-panel-header>
-          <mat-panel-title>
-            <mat-icon class="panel-icon">sensors</mat-icon>
-            Capas activas
-          </mat-panel-title>
-        </mat-expansion-panel-header>
-
-        @if (viewer.activeDataLayers().length === 0) {
-          <p class="status-hint">No hay capas activas</p>
-        } @else {
-          <div class="source-list">
-            @for (entry of viewer.activeDataLayers(); track entry.layer.id) {
+  @if (viewer.interactionMode() !== PointQueryInteractionMode.OFF) {
+    <div class="sources-section">
+      @if (viewer.displayItems().length === 0) {
+        <p class="status-hint">No hay capas activas</p>
+      } @else {
+        <span class="section-label">
+          Capas activas
+          @if (viewer.selectedLayerIdsOrdered().length > 0) {
+            <span class="selected-count">({{ viewer.selectedLayerIdsOrdered().length }})</span>
+          }
+        </span>
+        <div class="source-list">
+          @for (item of viewer.displayItems(); track item.layerId) {
+            <div class="source-row">
               <mat-checkbox
-                [checked]="viewer.isSourceSelected(entry.layer.id)"
-                (change)="viewer.toggleSourceSelection(entry.layer.id, $event.checked)"
-                class="source-checkbox"
+                [checked]="viewer.isSourceSelected(item.layerId)"
+                (change)="viewer.toggleSourceSelection(item.layerId, $event.checked)"
+                color="primary"
               >
-                {{ entry.layer.name }}
+                {{ item.layerName }}
               </mat-checkbox>
-            }
-          </div>
+            </div>
+          }
+        </div>
+        @if (viewer.selectedLayerIdsOrdered().length === 0) {
+          <p class="status-hint">Seleccioná una o más fuentes para mostrar visores flotantes.</p>
         }
-      </mat-expansion-panel>
-    </mat-accordion>
-
-    @if (viewer.selectedSourceEntries().length === 0 && viewer.activeDataLayers().length > 0) {
-      <p class="status-hint">Seleccioná una o más fuentes para mostrar visores flotantes.</p>
-    }
+      }
+    </div>
   }
 </section>

@@ -42,12 +42,7 @@ import { MapPolygonsService } from '../../services/polygons/map-polygons.service
 @Component({
   selector: 'app-map-container',
   standalone: true,
-  imports: [
-    MatButtonModule,
-    MatIconModule,
-    PolygonEditControlsComponent,
-    PointValuePanelComponent,
-  ],
+  imports: [MatButtonModule, MatIconModule, PolygonEditControlsComponent, PointValuePanelComponent],
   templateUrl: './map-container.html',
   styleUrl: './map-container.scss',
 })
@@ -132,7 +127,6 @@ export class MapContainer implements OnInit, OnDestroy {
           this.polygonsService.handleDrawingModeChange(mode, editingPolygonId);
         }
       });
-
     }
   }
 

@@ -7,13 +7,12 @@ import {
   LayerCategory,
   LayerType,
   TileLayerControls,
-  GoesLayerControls,
   RadarLayerControls,
   RadarTileLayer,
   GoesTileLayer,
   PointQueryDisplayData,
-  RadarPointQueryResponse,
-  SatellitePointQueryResponse,
+  PointQueryStatus,
+  PointQueryValueDto,
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
 import { buildRadarPointQueryUrl, buildSatellitePointQueryUrl } from '../../config';
@@ -30,22 +29,23 @@ export class PointQueryService {
     controls: TileLayerControls,
     lat: number,
     lon: number,
+    elevationId?: string,
   ): Observable<PointQueryDisplayData> {
     const layerId = layer.id;
     const layerName = layer.name;
 
     if (layer.type !== LayerType.TILE) {
-      return of(this.buildNoData(layerId, layerName));
+      return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
     if (layer.category === LayerCategory.GOES_19 && !this.isWithinLayerBounds(layer, lat, lon)) {
       // Optimization: no backend request if satellite cursor is outside configured bounds.
-      return of(this.buildNoData(layerId, layerName));
+      return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
     if (!tilesetId) {
-      return of(this.buildNoData(layerId, layerName));
+      return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
     if (layer.category === LayerCategory.GOES_19) {
@@ -53,10 +53,17 @@ export class PointQueryService {
     }
 
     if (layer.category === LayerCategory.RADAR) {
-      return this.queryRadarLayer(layer as RadarTileLayer, controls as RadarLayerControls, tilesetId, lat, lon);
+      return this.queryRadarLayer(
+        layer as RadarTileLayer,
+        controls as RadarLayerControls,
+        tilesetId,
+        lat,
+        lon,
+        elevationId,
+      );
     }
 
-    return of(this.buildNoData(layerId, layerName));
+    return of(this.buildNoData(layerId, layerName, elevationId));
   }
 
   private querySatelliteLayer(
@@ -66,15 +73,22 @@ export class PointQueryService {
     lon: number,
   ): Observable<PointQueryDisplayData> {
     const [productId, instrumentId, channelId] = layer.id.split('/');
-    const url = buildSatellitePointQueryUrl(productId, instrumentId, channelId, tilesetId, lat, lon);
+    const url = buildSatellitePointQueryUrl(
+      productId,
+      instrumentId,
+      channelId,
+      tilesetId,
+      lat,
+      lon,
+    );
 
-    return this.http.get<SatellitePointQueryResponse>(url).pipe(
+    return this.http.get<PointQueryValueDto>(url).pipe(
       map((response) => ({
         layerId: layer.id,
         layerName: layer.name,
         value: response.value,
         unit: response.unit,
-        status: 'value' as const,
+        status: PointQueryStatus.VALUE,
       })),
       catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
     );
@@ -86,27 +100,38 @@ export class PointQueryService {
     tilesetId: string,
     lat: number,
     lon: number,
+    elevationId?: string,
   ): Observable<PointQueryDisplayData> {
     const parts = layer.id.split('/');
     const radarId = parts[1];
     const variableId = parts[2];
-    const elevationId = this.resolveRadarElevation(layer, controls);
+    const resolvedElevationId = elevationId ?? this.resolveRadarElevation(layer, controls);
 
-    if (!elevationId) {
-      return of(this.buildNoData(layer.id, layer.name));
+    if (!resolvedElevationId) {
+      return of(this.buildNoData(layer.id, layer.name, elevationId));
     }
 
-    const url = buildRadarPointQueryUrl(radarId, variableId, elevationId, tilesetId, lat, lon);
+    const url = buildRadarPointQueryUrl(
+      radarId,
+      variableId,
+      resolvedElevationId,
+      tilesetId,
+      lat,
+      lon,
+    );
 
-    return this.http.get<RadarPointQueryResponse>(url).pipe(
+    return this.http.get<PointQueryValueDto>(url).pipe(
       map((response) => ({
         layerId: layer.id,
+        elevationId: resolvedElevationId,
         layerName: layer.name,
         value: response.value,
         unit: response.unit,
-        status: 'value' as const,
+        status: PointQueryStatus.VALUE,
       })),
-      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+      catchError((error) =>
+        of(this.mapErrorToDisplay(layer.id, layer.name, error, resolvedElevationId)),
+      ),
     );
   }
 
@@ -123,7 +148,10 @@ export class PointQueryService {
     return config.availableTilesets[clampedIndex]?.id ?? null;
   }
 
-  private resolveRadarElevation(layer: RadarTileLayer, controls: RadarLayerControls): string | null {
+  private resolveRadarElevation(
+    layer: RadarTileLayer,
+    controls: RadarLayerControls,
+  ): string | null {
     if (controls.elevation.selectedElevationIds.length > 0) {
       return controls.elevation.selectedElevationIds[0];
     }
@@ -140,27 +168,38 @@ export class PointQueryService {
     return lat >= south && lat <= north && lon >= west && lon <= east;
   }
 
-  private mapErrorToDisplay(layerId: string, layerName: string, error: unknown): PointQueryDisplayData {
+  private mapErrorToDisplay(
+    layerId: string,
+    layerName: string,
+    error: unknown,
+    elevationId?: string,
+  ): PointQueryDisplayData {
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      return this.buildNoData(layerId, layerName);
+      return this.buildNoData(layerId, layerName, elevationId);
     }
 
     return {
       layerId,
+      elevationId,
       layerName,
       value: null,
       unit: null,
-      status: 'error',
+      status: PointQueryStatus.ERROR,
     };
   }
 
-  private buildNoData(layerId: string, layerName: string): PointQueryDisplayData {
+  private buildNoData(
+    layerId: string,
+    layerName: string,
+    elevationId?: string,
+  ): PointQueryDisplayData {
     return {
       layerId,
+      elevationId,
       layerName,
       value: null,
       unit: null,
-      status: 'no-data',
+      status: PointQueryStatus.NO_DATA,
     };
   }
 }

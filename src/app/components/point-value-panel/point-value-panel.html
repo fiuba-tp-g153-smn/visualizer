@@ -25,7 +25,7 @@
             <span class="value">{{ formattedValue }}</span>
             <span class="unit">{{ data?.unit }}</span>
           </div>
-        } @else if (!data || data.status === 'no-data') {
+        } @else if (!data || data.status === PointQueryStatus.NO_DATA) {
           <div class="empty">Sin dato</div>
         } @else {
           <div class="empty">Error al consultar</div>

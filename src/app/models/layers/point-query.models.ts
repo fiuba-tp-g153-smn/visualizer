@@ -1,31 +1,33 @@
-export interface SatellitePointQueryResponse {
-  product: string;
-  instrument: string;
-  channel: string;
-  tileset_id: string;
-  lat: number;
-  lon: number;
-  value: number;
-  unit: string;
+export enum PointQueryInteractionMode {
+  OFF = 'off',
+  MANUAL = 'manual',
+  AUTOMATIC = 'automatic',
 }
 
-export interface RadarPointQueryResponse {
-  radar: string;
-  variable: string;
-  elevation: string;
-  tileset_id: string;
-  lat: number;
-  lon: number;
-  value: number;
-  unit: string;
+export enum PointQueryStatus {
+  LOADING = 'loading',
+  VALUE = 'value',
+  NO_DATA = 'no-data',
+  ERROR = 'error',
 }
 
-export type PointQueryResponse = SatellitePointQueryResponse | RadarPointQueryResponse;
+export interface PointQueryValueDto {
+  value: number | null;
+  unit: string | null;
+}
 
-export interface PointQueryDisplayData {
+export interface BasePointQueryDisplayData {
   layerId: string;
   layerName: string;
   value: number | null;
   unit: string | null;
-  status: 'loading' | 'value' | 'no-data' | 'error';
+  status: PointQueryStatus;
 }
+
+export interface SatellitePointQueryDisplayData extends BasePointQueryDisplayData {}
+
+export interface RadarPointQueryDisplayData extends BasePointQueryDisplayData {
+  elevationId: string;
+}
+
+export type PointQueryDisplayData = SatellitePointQueryDisplayData | RadarPointQueryDisplayData;
