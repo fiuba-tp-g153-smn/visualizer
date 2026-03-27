@@ -47,6 +47,23 @@
   pointer-events: auto;
 }
 
+.scale-tools-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  bottom: 170px;
+  z-index: layerOrder.$z-ui-panels;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: stretch;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.scale-tools-container app-scale-tool-panel {
+  pointer-events: auto;
+}
+
 // Controles de zoom personalizados
 .zoom-controls {
   position: absolute;
@@ -67,6 +84,11 @@
   .point-value-container {
     bottom: 28px;
   }
+
+  .scale-tools-container {
+    bottom: 150px;
+    top: 12px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -74,6 +96,12 @@
     left: 8px;
     right: 8px;
     gap: 8px;
+  }
+
+  .scale-tools-container {
+    right: 12px;
+    bottom: 150px;
+    gap: 6px;
   }
 }
 

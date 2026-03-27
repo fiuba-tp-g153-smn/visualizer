@@ -1,0 +1,31 @@
+<div class="scale-tool">
+  <div class="scale-label">{{ verticalLabel }}</div>
+
+  @if (isContinuous) {
+    <div class="scale-bar scale-bar-continuous" [style.background]="gradientBackground"></div>
+    <div class="scale-values scale-values-continuous">
+      @for (label of continuousScaleLabels; track $index) {
+        <div class="scale-value">{{ label }}</div>
+      }
+    </div>
+  } @else {
+    <div class="scale-bar scale-bar-discrete">
+      @for (step of discreteStepsDesc; track trackByStepValue($index, step)) {
+        <div class="discrete-step-row">
+          <div class="discrete-step" [style.backgroundColor]="step.color"></div>
+        </div>
+      }
+    </div>
+    <div class="scale-values scale-values-discrete">
+      @for (
+        step of discreteStepsDesc;
+        track trackByStepValue($index, step);
+        let stepIndex = $index
+      ) {
+        <div class="scale-value-row">
+          <div class="scale-value">{{ discreteStepLabels[stepIndex] }}</div>
+        </div>
+      }
+    </div>
+  }
+</div>

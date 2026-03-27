@@ -1,0 +1,35 @@
+<div class="tool-section">
+  <mat-checkbox
+    [checked]="scaleTools.enabled()"
+    (change)="onScaleToolsEnabledChange($event.checked)"
+    color="primary"
+  >
+    Mostrar escalas en el mapa
+  </mat-checkbox>
+
+  <div class="sources-section">
+    @if (scaleTools.displayItems().length === 0) {
+      <p class="status-hint">No hay capas activas con escala configurada</p>
+    } @else {
+      <span class="section-label">
+        Capas activas
+        @if (scaleTools.selectedLayerIdsOrdered().length > 0) {
+          <span class="selected-count">({{ scaleTools.selectedLayerIdsOrdered().length }})</span>
+        }
+      </span>
+      <div class="source-list">
+        @for (item of scaleTools.displayItems(); track item.layerId) {
+          <div class="source-row">
+            <mat-checkbox
+              [checked]="scaleTools.isLayerSelected(item.layerId)"
+              (change)="toggleScaleLayer(item.layerId)"
+              color="primary"
+            >
+              {{ item.layerName }}
+            </mat-checkbox>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

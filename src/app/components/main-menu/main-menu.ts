@@ -9,7 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayerListComponent } from './layer-list/layer-list';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
 import { PolygonManagerComponent } from './polygon-manager/polygon-manager';
-import { PointQueryViewerComponent } from './point-query-viewer/point-query-viewer';
+import { MapToolsComponent } from './map-tools/tools';
 import { MenuSection } from './menu-section.model';
 
 /**
@@ -38,11 +38,11 @@ const MENU_SECTIONS: MenuSection[] = [
     component: BaseMapSelectorComponent,
   },
   {
-    id: 'point-query-viewer',
-    title: 'Herramientas del visualizador',
+    id: 'map-tools',
+    title: 'Herramientas del mapa',
     icon: 'handyman',
-    tooltip: 'Herramientas del visualizador',
-    component: PointQueryViewerComponent,
+    tooltip: 'Herramientas del mapa',
+    component: MapToolsComponent,
   },
 ];
 
