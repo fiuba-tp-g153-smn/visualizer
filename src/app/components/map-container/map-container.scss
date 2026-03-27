@@ -1,4 +1,6 @@
 // Reset específico para Leaflet
+@use '../../../_layer-order' as layerOrder;
+
 :host {
   * {
     padding: 0;
@@ -24,7 +26,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   white-space: nowrap;
   pointer-events: none;
-  z-index: 0;
+  z-index: layerOrder.$z-map-tooltip;
 }
 
 .point-value-container {
@@ -32,7 +34,7 @@
   left: 12px;
   right: 70px;
   bottom: 20px;
-  z-index: 1000;
+  z-index: layerOrder.$z-ui-panels;
   display: flex;
   flex-wrap: wrap-reverse;
   justify-content: center;
@@ -48,9 +50,9 @@
 // Controles de zoom personalizados
 .zoom-controls {
   position: absolute;
-  bottom: 45px;
+  bottom: 28px;
   right: 20px;
-  z-index: 1000;
+  z-index: layerOrder.$z-ui-controls;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -63,7 +65,7 @@
 
 @media (max-height: 700px) {
   .point-value-container {
-    bottom: 64px;
+    bottom: 28px;
   }
 }
 
@@ -138,7 +140,7 @@
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10000;
+  z-index: layerOrder.$z-ui-controls;
 }
 
 // Leaflet Editable customizations

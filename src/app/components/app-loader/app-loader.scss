@@ -1,3 +1,5 @@
+@use '../../../_layer-order' as layerOrder;
+
 .loader-container {
   position: fixed;
   top: 0;
@@ -8,7 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: layerOrder.$z-loader;
   opacity: 1;
   transition: opacity 0.3s ease-out;
 }
