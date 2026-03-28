@@ -22,9 +22,10 @@ import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
 import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
 import { ScaleToolsService } from '../../services/layers/scale-tools.service';
+import { MapInfoService } from '../../services/layers/map-info.service';
 import { PointValuePanelComponent } from '../point-value-panel/point-value-panel';
 import { ScaleToolPanelComponent } from '../scale-tool-panel/scale-tool-panel';
-import { BaseMap, GoesLayerControls, RadarLayerControls } from '../../models';
+import { BaseMap } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
 import { PolygonService } from '../../services/polygons/polygon.service';
 import {
@@ -67,6 +68,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private injector = inject(Injector);
   private pointQueryViewerService = inject(PointQueryViewerService);
   private scaleToolsService = inject(ScaleToolsService);
+  private mapInfoService = inject(MapInfoService);
 
   // Services
   private layersService = inject(MapLayersService);
@@ -86,6 +88,7 @@ export class MapContainer implements OnInit, OnDestroy {
   readonly isViewerEnabled = this.pointQueryViewerService.isViewerEnabled;
   readonly scaleToolEntries = this.scaleToolsService.scaleEntries;
   readonly isScaleToolsEnabled = this.scaleToolsService.shouldShowScales;
+  readonly isAppZoomVisible = this.mapInfoService.showZoom;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -161,6 +164,7 @@ export class MapContainer implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.layersService.destroy();
     this.polygonsService.destroy();
+    this.mapInfoService.destroy();
 
     // Clear event blocking interval
     if ((this as any)._eventBlockingInterval) {
@@ -178,6 +182,7 @@ export class MapContainer implements OnInit, OnDestroy {
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
       zoomControl: false,
+      attributionControl: false,
       doubleClickZoom: true, // Will be disabled during polygon drawing
       editable: true,
     } as L.MapOptions & { editable: boolean });
@@ -185,6 +190,7 @@ export class MapContainer implements OnInit, OnDestroy {
     // Initialize services with the map instance
     this.layersService.initialize(this.map);
     this.polygonsService.initialize(this.map, this.viewContainerRef, this.injector);
+    this.mapInfoService.initialize(this.map);
 
     // Prevent UI elements from propagating events to the map
     this.preventUIEventPropagation();

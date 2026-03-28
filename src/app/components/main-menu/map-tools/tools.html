@@ -3,6 +3,18 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <div class="tab-label-container">
+          <mat-icon class="tab-icon">settings</mat-icon>
+          <span class="tab-label">General</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-general-tools-tab />
+      </div>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
           <mat-icon class="tab-icon">palette</mat-icon>
           <span class="tab-label">Escalas</span>
           <span class="active-count" [class.visible]="getScaleItemsCount() > 0">
