@@ -1,0 +1,37 @@
+<div class="tool-section">
+  <mat-checkbox
+    [checked]="mapInfo.showCoordinates()"
+    (change)="onCoordinatesChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar coordenadas del cursor en el mapa"
+  >
+    Coordenadas
+  </mat-checkbox>
+
+  <mat-checkbox
+    [checked]="mapInfo.showScale()"
+    (change)="onScaleChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar escala gráfica de referencia en el mapa"
+  >
+    Escala
+  </mat-checkbox>
+
+  <mat-checkbox
+    [checked]="mapInfo.showZoom()"
+    (change)="onZoomChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar controles de zoom (+/-) en el mapa"
+  >
+    Zoom
+  </mat-checkbox>
+
+  <mat-checkbox
+    [checked]="mapInfo.showAttribution()"
+    (change)="onAttributionChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar atribución de fuentes de datos en el mapa"
+  >
+    Atribución
+  </mat-checkbox>
+</div>

@@ -8,6 +8,7 @@ import { ScaleToolsService } from '../../../services/layers/scale-tools.service'
 import { MenuPanelComponent } from '../menu-section.model';
 import { PointQueryToolsTabComponent } from './point-query-tools-tab/point-query-tools-tab';
 import { ScaleToolsTabComponent } from './scale-tools-tab/scale-tools-tab';
+import { GeneralToolsTabComponent } from './general-tools-tab/general-tools-tab';
 
 @Component({
   selector: 'app-map-tools',
@@ -18,6 +19,7 @@ import { ScaleToolsTabComponent } from './scale-tools-tab/scale-tools-tab';
     MatIconModule,
     ScaleToolsTabComponent,
     PointQueryToolsTabComponent,
+    GeneralToolsTabComponent,
   ],
   templateUrl: './tools.html',
   styleUrl: './tools.scss',
