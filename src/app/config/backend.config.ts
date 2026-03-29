@@ -39,6 +39,18 @@ export function buildSatellitePointQueryUrl(
 }
 
 /**
+ * URL para consultar el valor puntual de una capa ECMWF en una coordenada.
+ */
+export function buildEcmwfPointQueryUrl(
+  forecastTs: string,
+  periodTs: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/total-precipitation/${forecastTs}/${periodTs}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
  * URL para consultar el valor puntual de una capa de radar en una coordenada.
  */
 export function buildRadarPointQueryUrl(

@@ -54,6 +54,7 @@ export class PointValuePanelComponent {
     if (this.data?.status !== PointQueryStatus.VALUE) {
       return '';
     }
+    if (!this.data.scaleRange) return '';
     const { min, max } = this.data.scaleRange;
     return `Rango: ${this.format(min)} - ${this.format(max)} ${this.data.unit}`;
   }

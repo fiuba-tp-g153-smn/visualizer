@@ -159,6 +159,72 @@
         </div>
       }
 
+      <!-- Control de corridas de pronóstico (solo ECMWF) -->
+      @if (hasForecastControl()) {
+        <div class="forecast-control">
+          <div class="forecast-header">
+            <span class="control-label">Corridas</span>
+
+            @if (!isForecastsExpanded()) {
+              <!-- Collapsed view: checkboxes -->
+              <div class="forecast-checkboxes">
+                @for (forecast of availableForecasts(); track forecast) {
+                  <mat-checkbox
+                    [checked]="isForecastSelected(forecast)"
+                    (change)="onForecastToggle(forecast)"
+                    class="forecast-checkbox"
+                  >
+                    {{ formatForecastTs(forecast) }}
+                  </mat-checkbox>
+                }
+              </div>
+            }
+
+            <button
+              mat-icon-button
+              (click)="toggleForecastsExpansion()"
+              [matTooltip]="isForecastsExpanded() ? 'Contraer' : 'Expandir controles de corrida'"
+              class="expand-btn"
+            >
+              <mat-icon>{{ isForecastsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </div>
+
+          <!-- Expanded view: individual opacity controls -->
+          @if (isForecastsExpanded()) {
+            <div class="forecast-expanded-controls">
+              @for (forecast of availableForecasts(); track forecast) {
+                <div class="forecast-item">
+                  <mat-checkbox
+                    [checked]="isForecastSelected(forecast)"
+                    (change)="onForecastToggle(forecast)"
+                    class="forecast-item-checkbox"
+                  >
+                    {{ formatForecastTs(forecast) }}
+                  </mat-checkbox>
+                  <mat-slider
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    discrete
+                    class="control-slider"
+                    [displayWith]="formatOpacity"
+                    [disabled]="!isForecastSelected(forecast)"
+                  >
+                    <input
+                      matSliderThumb
+                      [value]="getForecastOpacity(forecast)"
+                      (input)="onForecastOpacityChange(forecast, +$any($event.target).value)"
+                    />
+                  </mat-slider>
+                  <span class="control-value">{{ getForecastOpacityPercent(forecast) }}%</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
       <!-- Control de Período -->
       @if (needsTimeControl()) {
         <div class="layer-controls" [class.synced-mode]="isSynced()">

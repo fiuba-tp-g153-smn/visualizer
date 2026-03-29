@@ -22,3 +22,6 @@ export { RADAR_SUBGROUPS } from './radar/config';
 // GOES satellite configuration
 export { ABI_SUBGROUP } from './goes/abi/config';
 export { GLM_SUBGROUP } from './goes/glm/config';
+
+// ECMWF configuration
+export { ECMWF_SUBGROUP } from './ecmwf/config';
