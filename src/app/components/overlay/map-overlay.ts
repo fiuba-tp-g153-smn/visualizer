@@ -6,10 +6,10 @@ import {
   DrawingMode,
   PolygonDrawingService,
 } from '../../services/polygons/polygon-drawing.service';
-import { PolygonEditAction } from './polygon-edit-controls/polygon-edit-controls';
+import { PolygonEditAction } from '../floating/polygon-edit-dock/polygon-edit-dock';
 import { PolygonContextMenuAction } from '../../models';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
-import { MapEditControlsComponent } from './edit-controls/edit-controls';
+import { PolygonEditDockComponent } from '../floating/polygon-edit-dock/polygon-edit-dock';
 import { MainMenuComponent } from './main-menu/main-menu';
 import { MapPolygonContextMenuComponent } from '../floating/polygon-context-menu/polygon-context-menu';
 import { MapPointValuesComponent } from './point-values/point-values';
@@ -24,7 +24,7 @@ import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
   standalone: true,
   imports: [
     MainMenuComponent,
-    MapEditControlsComponent,
+    PolygonEditDockComponent,
     MapPolygonContextMenuComponent,
     MapPointValuesComponent,
     MapScaleToolsComponent,

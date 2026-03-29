@@ -8,7 +8,9 @@
   >
     <mat-icon>close</mat-icon>
   </button>
-  <div class="scale-label">{{ verticalLabel }}</div>
+  <div class="scale-label" [matTooltip]="scaleTooltip" matTooltipPosition="right">
+    {{ verticalLabel }}
+  </div>
 
   @if (isContinuous) {
     <div class="scale-bar scale-bar-continuous" [style.background]="gradientBackground"></div>

@@ -2,7 +2,7 @@
 
 $dock-radius: 10px;
 
-.polygon-edit-controls {
+.polygon-edit-dock {
   @include overlaySurface.floating-surface();
 
   display: inline-flex;
@@ -10,7 +10,7 @@ $dock-radius: 10px;
   padding: 8px;
   border-radius: $dock-radius;
 
-  .edit-button {
+  .dock-button {
     display: flex;
     align-items: center;
     justify-content: center;

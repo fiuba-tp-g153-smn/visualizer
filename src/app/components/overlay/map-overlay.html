@@ -2,11 +2,6 @@
   <div class="col-main">
     <div class="row-top">
       <app-main-menu />
-      @if (isEditingPolygon()) {
-        <div class="edit-zone">
-          <app-map-edit-controls [visible]="true" (action)="handleEditAction($event)" />
-        </div>
-      }
     </div>
 
     <div class="row-bottom">
@@ -65,6 +60,10 @@
     </div>
   }
 </div>
+
+@if (isEditingPolygon()) {
+  <app-polygon-edit-dock (action)="handleEditAction($event)" />
+}
 
 <app-map-polygon-context-menu
   [state]="contextMenuState()"

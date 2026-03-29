@@ -13,8 +13,14 @@ import {
   PointQueryDisplayData,
   PointQueryStatus,
   PointQueryValueDto,
+  ScaleRangeInfo,
+  ScaleType,
+  PaletteConfigScale,
+  ContinuousScale,
+  DiscreteScale,
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
+import { LayersService } from './layers.service';
 import { buildRadarPointQueryUrl, buildSatellitePointQueryUrl } from '../../config';
 
 @Injectable({
@@ -23,6 +29,7 @@ import { buildRadarPointQueryUrl, buildSatellitePointQueryUrl } from '../../conf
 export class PointQueryService {
   private readonly http = inject(HttpClient);
   private readonly layerConfigService = inject(LayerConfigService);
+  private readonly layersService = inject(LayersService);
 
   queryLayerPoint(
     layer: Layer,
@@ -82,14 +89,23 @@ export class PointQueryService {
       lon,
     );
 
+    const scaleRange = this.extractScaleRange(layer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
     return this.http.get<PointQueryValueDto>(url).pipe(
-      map((response) => ({
-        layerId: layer.id,
-        layerName: layer.name,
-        value: response.value,
-        unit: response.unit,
-        status: PointQueryStatus.VALUE,
-      })),
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+          }) as const,
+      ),
       catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
     );
   }
@@ -108,7 +124,7 @@ export class PointQueryService {
     const resolvedElevationId = elevationId ?? this.resolveRadarElevation(layer, controls);
 
     if (!resolvedElevationId) {
-      return of(this.buildNoData(layer.id, layer.name, elevationId));
+      return of(this.buildNoData(layer.id, layer.name));
     }
 
     const url = buildRadarPointQueryUrl(
@@ -120,15 +136,24 @@ export class PointQueryService {
       lon,
     );
 
+    const scaleRange = this.extractScaleRange(layer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name, resolvedElevationId));
+    }
+
     return this.http.get<PointQueryValueDto>(url).pipe(
-      map((response) => ({
-        layerId: layer.id,
-        elevationId: resolvedElevationId,
-        layerName: layer.name,
-        value: response.value,
-        unit: response.unit,
-        status: PointQueryStatus.VALUE,
-      })),
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+            elevationId: resolvedElevationId,
+          }) as const,
+      ),
       catchError((error) =>
         of(this.mapErrorToDisplay(layer.id, layer.name, error, resolvedElevationId)),
       ),
@@ -181,12 +206,10 @@ export class PointQueryService {
 
     return {
       layerId,
-      elevationId,
       layerName,
-      value: null,
-      unit: null,
       status: PointQueryStatus.ERROR,
-    };
+      ...(elevationId && { elevationId }),
+    } as const;
   }
 
   private buildNoData(
@@ -196,11 +219,58 @@ export class PointQueryService {
   ): PointQueryDisplayData {
     return {
       layerId,
-      elevationId,
       layerName,
-      value: null,
-      unit: null,
       status: PointQueryStatus.NO_DATA,
-    };
+      ...(elevationId && { elevationId }),
+    } as const;
+  }
+
+  /**
+   * Extracts scale range information from a layer's scale definition.
+   * Returns min, max, and total steps for visualization purposes.
+   */
+  private extractScaleRange(layer: GoesTileLayer | RadarTileLayer): ScaleRangeInfo | undefined {
+    if (!layer.scale) {
+      return undefined;
+    }
+
+    const scale = layer.scale;
+
+    try {
+      switch (scale.type) {
+        case ScaleType.CONTINUOUS:
+          const continuousScale = scale as ContinuousScale;
+          if (continuousScale.stops.length < 2) return undefined;
+          return {
+            min: continuousScale.stops[0].value,
+            max: continuousScale.stops[continuousScale.stops.length - 1].value,
+            totalSteps: continuousScale.stops.length,
+          };
+
+        case ScaleType.DISCRETE:
+          const discreteScale = scale as DiscreteScale;
+          if (discreteScale.steps.length < 1) return undefined;
+          return {
+            min: discreteScale.steps[0].value,
+            max: discreteScale.steps[discreteScale.steps.length - 1].value,
+            totalSteps: discreteScale.steps.length,
+          };
+
+        case ScaleType.PALETTE_CONFIG:
+          const paletteScale = scale as PaletteConfigScale;
+          if (!paletteScale.bounds || paletteScale.bounds.length < 2) return undefined;
+          const bounds = [...paletteScale.bounds].sort((a, b) => a - b);
+          return {
+            min: bounds[0],
+            max: bounds[bounds.length - 1],
+            totalSteps: paletteScale.hexColors.length,
+          };
+
+        default:
+          return undefined;
+      }
+    } catch {
+      return undefined;
+    }
   }
 }
