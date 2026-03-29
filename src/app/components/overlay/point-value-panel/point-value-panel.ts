@@ -3,13 +3,20 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { PointQueryDisplayData, PointQueryStatus } from '../../../models';
+import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '../../../models';
 
 @Component({
   selector: 'app-point-value-panel',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+  ],
   templateUrl: './point-value-panel.html',
   styleUrl: './point-value-panel.scss',
 })
@@ -32,16 +39,26 @@ export class PointValuePanelComponent {
     this.close.emit();
   }
 
-  get hasDataValue(): boolean {
-    return !!this.data && this.data.status === PointQueryStatus.VALUE && this.data.value !== null;
+  get valueData(): PointQueryValueData | null {
+    return this.data?.status === PointQueryStatus.VALUE ? this.data : null;
   }
 
   get formattedValue(): string {
-    const value = this.data?.value;
-    if (!this.hasDataValue || value === null || value === undefined) {
+    if (this.data?.status !== PointQueryStatus.VALUE) {
       return '';
     }
+    return this.decimalFormatter.format(this.data.value);
+  }
 
-    return this.decimalFormatter.format(value);
+  get valueTooltip(): string {
+    if (this.data?.status !== PointQueryStatus.VALUE) {
+      return '';
+    }
+    const { min, max } = this.data.scaleRange;
+    return `Rango: ${this.format(min)} - ${this.format(max)} ${this.data.unit}`;
+  }
+
+  private format(num: number): string {
+    return this.decimalFormatter.format(num);
   }
 }

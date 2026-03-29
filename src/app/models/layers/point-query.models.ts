@@ -12,22 +12,51 @@ export enum PointQueryStatus {
 }
 
 export interface PointQueryValueDto {
-  value: number | null;
-  unit: string | null;
+  value: number;
+  unit: string;
 }
 
-export interface BasePointQueryDisplayData {
+export interface ScaleRangeInfo {
+  min: number;
+  max: number;
+  totalSteps: number;
+}
+
+// Discriminated union by status for type safety
+
+export interface PointQueryValueData {
   layerId: string;
   layerName: string;
-  value: number | null;
-  unit: string | null;
-  status: PointQueryStatus;
+  value: number;
+  unit: string;
+  status: PointQueryStatus.VALUE;
+  scaleRange: ScaleRangeInfo;
+  elevationId?: string; // Present only for radar layers
 }
 
-export interface SatellitePointQueryDisplayData extends BasePointQueryDisplayData {}
-
-export interface RadarPointQueryDisplayData extends BasePointQueryDisplayData {
-  elevationId: string;
+export interface PointQueryNoDataResult {
+  layerId: string;
+  layerName: string;
+  status: PointQueryStatus.NO_DATA;
+  elevationId?: string;
 }
 
-export type PointQueryDisplayData = SatellitePointQueryDisplayData | RadarPointQueryDisplayData;
+export interface PointQueryErrorResult {
+  layerId: string;
+  layerName: string;
+  status: PointQueryStatus.ERROR;
+  elevationId?: string;
+}
+
+export interface PointQueryLoadingState {
+  layerId: string;
+  layerName: string;
+  status: PointQueryStatus.LOADING;
+  elevationId?: string;
+}
+
+export type PointQueryDisplayData =
+  | PointQueryValueData
+  | PointQueryNoDataResult
+  | PointQueryErrorResult
+  | PointQueryLoadingState;

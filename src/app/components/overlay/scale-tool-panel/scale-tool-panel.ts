@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter } from 
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ContinuousScale, DiscreteScale, ScaleType, PaletteConfigScale } from '../../../models';
 import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
@@ -9,7 +10,7 @@ import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
 @Component({
   selector: 'app-scale-tool-panel',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
   templateUrl: './scale-tool-panel.html',
   styleUrl: './scale-tool-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -48,6 +49,30 @@ export class ScaleToolPanelComponent {
 
   get verticalLabel(): string {
     return `${this.entry.layerName} (${this.entry.scale.unit})`;
+  }
+
+  get scaleTooltip(): string {
+    const { min, max } = this.scaleRange;
+    return `${this.entry.layerName}\nRango: ${this.formatValue(min)} - ${this.formatValue(max)} ${this.entry.scale.unit}`;
+  }
+
+  get scaleRange(): { min: number; max: number } {
+    switch (this.entry.scale.type) {
+      case ScaleType.CONTINUOUS: {
+        const stops = this.sortedContinuousStopsAsc;
+        return { min: stops[0]?.value ?? 0, max: stops[stops.length - 1]?.value ?? 0 };
+      }
+      case ScaleType.DISCRETE: {
+        const steps = this.sortedDiscreteStepsDesc;
+        return { min: steps[steps.length - 1]?.value ?? 0, max: steps[0]?.value ?? 0 };
+      }
+      case ScaleType.PALETTE_CONFIG: {
+        const bounds = this.paletteConfigScale.bounds;
+        return { min: bounds[0] ?? 0, max: bounds[bounds.length - 1] ?? 0 };
+      }
+      default:
+        return { min: 0, max: 0 };
+    }
   }
 
   get continuousScaleLabels(): string[] {

@@ -54,12 +54,13 @@ app-main-menu {
   max-height: 100%;
 }
 
-.edit-zone {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  pointer-events: none;
+app-polygon-edit-dock {
+  position: fixed;
+  left: 50%;
+  bottom: $edge;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  z-index: layerOrder.$z-main-menu;
 }
 
 // Bottom row: zoom + info controls side by side

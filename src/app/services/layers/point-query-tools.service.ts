@@ -67,6 +67,7 @@ function createCompositeId(layerId: string, elevationId: string): string {
 })
 export class PointQueryViewerService {
   private readonly STORAGE_KEY = 'smn-point-query-viewer-v4';
+  private readonly RESULTS_STORAGE_KEY = 'smn-point-query-results-v1';
   private readonly automaticQueryDebounceMs = 500;
 
   private readonly controlService = inject(LayerControlService);
@@ -146,10 +147,16 @@ export class PointQueryViewerService {
 
   constructor() {
     this.loadStateFromStorage();
+    this.loadResultsFromStorage();
 
     effect(() => {
       // Persist minimal configuration state.
       this.saveStateToStorage();
+    });
+
+    effect(() => {
+      // Persist query results to restore on reload.
+      this.saveResultsToStorage();
     });
 
     effect(() => {
@@ -415,6 +422,61 @@ export class PointQueryViewerService {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(payload));
     } catch (error) {
       console.warn('Failed to save point query viewer state to localStorage:', error);
+    }
+  }
+
+  private loadResultsFromStorage(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(this.RESULTS_STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (!parsed || typeof parsed !== 'object') {
+        return;
+      }
+
+      const nextResults = new Map<string, PointQueryDisplayData>();
+      for (const [layerId, result] of Object.entries(parsed)) {
+        // Basic validation that result has expected shape
+        if (result && typeof result === 'object' && 'status' in result) {
+          nextResults.set(layerId, result as PointQueryDisplayData);
+        }
+      }
+
+      if (nextResults.size > 0) {
+        this.resultsBySource.set(nextResults);
+      }
+    } catch (error) {
+      console.warn('Failed to load point query results from localStorage:', error);
+    }
+  }
+
+  private saveResultsToStorage(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    const results = this.resultsBySource();
+    if (results.size === 0) {
+      try {
+        localStorage.removeItem(this.RESULTS_STORAGE_KEY);
+      } catch {
+        // Ignore remove errors
+      }
+      return;
+    }
+
+    try {
+      const payload: Record<string, PointQueryDisplayData> = Object.fromEntries(results);
+      localStorage.setItem(this.RESULTS_STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      console.warn('Failed to save point query results to localStorage:', error);
     }
   }
 }

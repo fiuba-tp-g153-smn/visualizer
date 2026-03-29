@@ -10,13 +10,13 @@
       <mat-icon>close</mat-icon>
     </button>
 
-    <span class="layer-name">{{ layerName }}</span>
+    <span class="layer-name" [matTooltip]="layerName">{{ layerName }}</span>
 
     @if (isLoading) {
       <mat-progress-spinner diameter="14" mode="indeterminate"></mat-progress-spinner>
-    } @else if (hasDataValue) {
-      <span class="value">{{ formattedValue }}</span>
-      <span class="unit">{{ data?.unit }}</span>
+    } @else if (valueData) {
+      <span class="value" [matTooltip]="valueTooltip">{{ formattedValue }}</span>
+      <span class="unit">{{ valueData.unit }}</span>
     } @else if (!data || data.status === PointQueryStatus.NO_DATA) {
       <span class="empty">Sin dato</span>
     } @else {
