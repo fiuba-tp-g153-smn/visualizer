@@ -3,6 +3,7 @@
   flex: 1;
   min-height: 0;
   pointer-events: auto;
+  overflow: visible;
 }
 
 .scale-tools-container {
@@ -12,9 +13,13 @@
   align-items: stretch;
   gap: 12px;
   pointer-events: auto;
+  overflow: visible;
 }
 
 app-scale-tool-panel {
   display: flex;
+  flex: 1;
+  min-height: 0;
   pointer-events: auto;
+  overflow: visible;
 }

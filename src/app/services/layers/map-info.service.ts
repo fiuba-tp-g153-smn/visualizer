@@ -39,10 +39,10 @@ export class MapInfoService {
   readonly scaleInfo = computed<ScaleInfo>(() => this.calculateScale());
 
   // Tool visibility states
-  readonly showCoordinates = signal<boolean>(false);
-  readonly showAttribution = signal<boolean>(true);
-  readonly showScale = signal<boolean>(false);
-  readonly showZoom = signal<boolean>(false);
+  readonly showCoordinates = signal<boolean>(MAP_CONFIG.defaultShowCoordinates);
+  readonly showAttribution = signal<boolean>(MAP_CONFIG.defaultShowAttribution);
+  readonly showScale = signal<boolean>(MAP_CONFIG.defaultShowScale);
+  readonly showZoom = signal<boolean>(MAP_CONFIG.defaultShowZoom);
 
   // Event handlers
   private mouseMoveHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
@@ -59,10 +59,10 @@ export class MapInfoService {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const state = JSON.parse(stored) as MapToolsState;
-        this.showCoordinates.set(state.showCoordinates ?? false);
-        this.showAttribution.set(state.showAttribution ?? true);
-        this.showScale.set(state.showScale ?? false);
-        this.showZoom.set(state.showZoom ?? false);
+        this.showCoordinates.set(state.showCoordinates ?? MAP_CONFIG.defaultShowCoordinates);
+        this.showAttribution.set(state.showAttribution ?? MAP_CONFIG.defaultShowAttribution);
+        this.showScale.set(state.showScale ?? MAP_CONFIG.defaultShowScale);
+        this.showZoom.set(state.showZoom ?? MAP_CONFIG.defaultShowZoom);
       }
     } catch {
       // Ignore parse errors, use defaults

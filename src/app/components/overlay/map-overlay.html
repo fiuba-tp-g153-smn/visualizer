@@ -1,18 +1,15 @@
-<div class="overlay-column">
-  <!-- Top: Main menu + edit controls -->
-  <div class="top-section">
-    <app-main-menu />
-    @if (isEditingPolygon()) {
-      <div class="edit-zone">
-        <app-map-edit-controls [visible]="true" (action)="handleEditAction($event)" />
-      </div>
-    }
-  </div>
+<div class="overlay-layout">
+  <div class="col-main">
+    <div class="row-top">
+      <app-main-menu />
+      @if (isEditingPolygon()) {
+        <div class="edit-zone">
+          <app-map-edit-controls [visible]="true" (action)="handleEditAction($event)" />
+        </div>
+      }
+    </div>
 
-  <!-- Bottom: Zoom controls + Info controls -->
-  @if (hasBottomControls()) {
-    <div class="bottom-section">
-      <!-- Left: Zoom -->
+    <div class="row-bottom">
       @if (showZoom()) {
         <app-map-zoom-controls
           [visible]="true"
@@ -23,8 +20,6 @@
           (zoomOut)="zoomOut()"
         />
       }
-
-      <!-- Right: Scale / Coordinates / Attribution -->
       @if (hasInfoControls()) {
         <div class="info-controls">
           @if (showScale()) {
@@ -32,6 +27,7 @@
               [visible]="true"
               [scaleText]="scaleInfo().text"
               [scaleWidth]="scaleInfo().width"
+              (close)="closeScale()"
             />
           }
           @if (showCoordinates()) {
@@ -39,32 +35,36 @@
               [visible]="true"
               [latitude]="mouseLatitude()"
               [longitude]="mouseLongitude()"
+              (close)="closeCoordinates()"
             />
           }
           @if (showAttribution()) {
-            <app-map-attribution />
+            <app-map-attribution (close)="closeAttribution()" />
           }
         </div>
       }
     </div>
+  </div>
+
+  @if (isScaleToolsEnabled() || isViewerEnabled()) {
+    <div class="col-side">
+      @if (isScaleToolsEnabled()) {
+        <app-map-scale-tools
+          [visible]="true"
+          [entries]="scaleToolEntries()"
+          (close)="closeScaleTool($event)"
+        />
+      }
+      @if (isViewerEnabled()) {
+        <app-map-point-values
+          [visible]="true"
+          [entries]="floatingViewerEntries()"
+          (close)="closeFloatingViewer($event)"
+        />
+      }
+    </div>
   }
 </div>
-
-<!-- Scale tools (color palettes) - separate column on the right -->
-@if (isScaleToolsEnabled()) {
-  <div class="scale-tools-column">
-    <app-map-scale-tools [visible]="true" [entries]="scaleToolEntries()" />
-  </div>
-}
-
-<!-- Point values viewer -->
-@if (isViewerEnabled()) {
-  <app-map-point-values
-    [visible]="true"
-    [entries]="floatingViewerEntries()"
-    (close)="closeFloatingViewer($event)"
-  />
-}
 
 <app-map-polygon-context-menu
   [state]="contextMenuState()"

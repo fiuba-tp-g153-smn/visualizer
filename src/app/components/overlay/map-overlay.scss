@@ -8,34 +8,37 @@ $gap: 12px;
   z-index: layerOrder.$z-main-menu;
   pointer-events: none;
   display: flex;
-  height: 100%;
-  box-sizing: border-box;
-  padding: $edge;
-  gap: $gap;
 }
 
-// ── Main column (menu + bottom controls) ───────────────────────────────────
+// ── Main layout ────────────────────────────────────────────────────────────
 
-.overlay-column {
+.overlay-layout {
   flex: 1;
-  min-width: 0;
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  flex-direction: row;
+  align-items: stretch;
+  padding: $edge;
   gap: $gap;
-  overflow: hidden;
+  pointer-events: none;
 }
 
-// ── Top section (main menu + edit controls) ────────────────────────────────
+// ── Left/main column ───────────────────────────────────────────────────────
 
-.top-section {
+.col-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+}
+
+.row-top {
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: flex-start;
   gap: $gap;
-  min-height: 0;
-  flex: 1 1 0;
-  overflow: hidden;
 }
 
 .edit-zone {
@@ -46,9 +49,8 @@ $gap: 12px;
   pointer-events: none;
 }
 
-// ── Bottom section (zoom + info controls) ──────────────────────────────────
-
-.bottom-section {
+// Bottom row: zoom + info controls side by side
+.row-bottom {
   flex-shrink: 0;
   display: flex;
   align-items: flex-end;
@@ -61,25 +63,30 @@ $gap: 12px;
   align-items: flex-start;
   gap: 4px;
   pointer-events: auto;
+  overflow: visible;
 }
 
-// ── Scale tools column (color palettes, right side) ────────────────────────
+// ── Right column (scale tools + point values) ──────────────────────────────
 
-.scale-tools-column {
+.col-side {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  justify-content: space-between;
+  align-items: flex-end;
   gap: $gap;
-  pointer-events: auto;
+  overflow: visible;
 }
 
-// ── Point values (floating, centered) ──────────────────────────────────────
+app-map-scale-tools {
+  flex: 1;
+  min-height: 0;
+  pointer-events: auto;
+  overflow: visible;
+}
 
 app-map-point-values {
-  position: absolute;
-  bottom: $edge;
-  left: 50%;
-  transform: translateX(-50%);
+  flex-shrink: 0;
   pointer-events: auto;
+  overflow: visible;
 }

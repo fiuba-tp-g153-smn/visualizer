@@ -1,4 +1,4 @@
-import { Injectable, inject, computed, signal, effect } from '@angular/core';
+import { Injectable, inject, computed, signal, effect, untracked } from '@angular/core';
 import {
   Layer,
   LayerType,
@@ -55,6 +55,38 @@ export class LayerControlService {
     effect(() => {
       this.saveControls();
     });
+
+    // Sync timeIndex to latest tileset when config changes (auto-refresh)
+    effect(() => {
+      const configs = this.layerConfigService.configs();
+
+      // Use untracked to avoid depending on controls signal (prevents infinite loops)
+      untracked(() => {
+        const activeLayerIds = this.activeLayers().map(({ layer }) => layer.id);
+
+        for (const layerId of activeLayerIds) {
+          const config = configs.get(layerId);
+          if (!config || config.type !== LayerType.TILE) {
+            continue;
+          }
+
+          const controls = this.getControls(layerId);
+          if (!controls || controls.type !== LayerType.TILE) {
+            continue;
+          }
+
+          // Skip if playback is running — don't interrupt animation
+          if (controls.playback.isPlaying) {
+            continue;
+          }
+
+          const latestIndex = config.availableTilesets.length - 1;
+          if (latestIndex >= 0 && controls.playback.timeIndex !== latestIndex) {
+            this.setTimeIndex(layerId, latestIndex);
+          }
+        }
+      });
+    });
   }
 
   // ============================================================================
@@ -83,9 +115,7 @@ export class LayerControlService {
   /**
    * Gets active layers filtered by their z-index group.
    */
-  getActiveLayersForGroup(
-    groupId: ActiveLayerGroupId,
-  ): ActiveLayerEntry[] {
+  getActiveLayersForGroup(groupId: ActiveLayerGroupId): ActiveLayerEntry[] {
     return this.activeLayers().filter(({ layer }) => layer.zIndexGroup === groupId);
   }
 

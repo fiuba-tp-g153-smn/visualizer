@@ -4,17 +4,20 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  overflow: visible;
 }
 
 .scale-tool {
   @include overlaySurface.floating-surface();
 
   display: flex;
+  flex: 1;
   flex-direction: row;
   align-items: stretch;
   gap: 6px;
   padding: 8px 6px;
   position: relative;
+  overflow: visible;
 }
 
 .close-button {
