@@ -11,13 +11,11 @@ import { PolygonContextMenuAction } from '../../models';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
 import { MapEditControlsComponent } from './edit-controls/edit-controls';
 import { MainMenuComponent } from './main-menu/main-menu';
-import { MapPolygonContextMenuComponent } from '../floating/polygon-context-menu/polygon-context-menu';
+import { MapPolygonContextMenuComponent } from './polygon-context-menu/polygon-context-menu';
 import { MapPointValuesComponent } from './point-values/point-values';
 import { MapScaleToolsComponent } from './scale-tools/scale-tools';
 import { MapZoomControlsComponent } from './zoom-controls/zoom-controls';
 import { MapAttributionComponent } from './map-attribution/map-attribution';
-import { MapScaleComponent } from './map-scale/map-scale';
-import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
 
 @Component({
   selector: 'app-map-overlay',
@@ -30,8 +28,6 @@ import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
     MapScaleToolsComponent,
     MapZoomControlsComponent,
     MapAttributionComponent,
-    MapScaleComponent,
-    MapCoordinatesComponent,
   ],
   templateUrl: './map-overlay.html',
   styleUrl: './map-overlay.scss',
@@ -53,37 +49,19 @@ export class MapOverlayComponent {
   readonly isViewerEnabled = this.pointQueryViewerService.isViewerEnabled;
   readonly scaleToolEntries = this.scaleToolsService.scaleEntries;
   readonly isScaleToolsEnabled = this.scaleToolsService.shouldShowScales;
-
-  // Map info signals
-  readonly showZoom = this.mapInfoService.showZoom;
+  readonly isAppZoomVisible = this.mapInfoService.showZoom;
   readonly currentZoom = this.mapInfoService.currentZoom;
   readonly canZoomIn = this.mapInfoService.canZoomIn;
   readonly canZoomOut = this.mapInfoService.canZoomOut;
-
-  readonly showScale = this.mapInfoService.showScale;
-  readonly scaleInfo = this.mapInfoService.scaleInfo;
-
-  readonly showCoordinates = this.mapInfoService.showCoordinates;
-  readonly mouseLatitude = this.mapInfoService.mouseLatitude;
-  readonly mouseLongitude = this.mapInfoService.mouseLongitude;
-
-  readonly showAttribution = this.mapInfoService.showAttribution;
-
-  // Computed: any bottom control is visible
-  readonly hasBottomControls = computed(
-    () => this.showZoom() || this.showScale() || this.showCoordinates() || this.showAttribution(),
-  );
-
-  // Computed: any right column control is visible (scale/coords/attribution)
-  readonly hasInfoControls = computed(
-    () => this.showScale() || this.showCoordinates() || this.showAttribution(),
-  );
-
   readonly contextMenuState = this.polygonsService.contextMenuState;
 
   readonly closeFloatingViewer = (layerId: string): void => {
     this.pointQueryViewerService.removeSourceSelection(layerId);
   };
+
+  closeScale(layerId: string): void {
+    this.scaleToolsService.toggleLayerSelection(layerId);
+  }
 
   zoomIn(): void {
     this.mapInfoService.zoomIn();

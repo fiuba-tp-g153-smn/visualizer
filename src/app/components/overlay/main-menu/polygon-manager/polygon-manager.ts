@@ -18,7 +18,10 @@ import {
 } from '../../../../services/polygons/polygon-drawing.service';
 import { Polygon } from '../../../../models/geo';
 import { MenuPanelComponent } from '../menu-section.model';
-import { ConfirmDialogComponent, ConfirmDialogData } from '../../../floating/confirm-dialog/confirm-dialog';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../floating/confirm-dialog/confirm-dialog';
 import { PhenomenonSelectionDialogComponent } from '../../../floating/phenomenon-selection-dialog/phenomenon-selection-dialog';
 
 /**

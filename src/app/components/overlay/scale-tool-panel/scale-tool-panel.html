@@ -1,4 +1,13 @@
 <div class="scale-tool">
+  <button
+    mat-icon-button
+    type="button"
+    class="close-button"
+    (click)="onClose()"
+    aria-label="Cerrar escala"
+  >
+    <mat-icon>close</mat-icon>
+  </button>
   <div class="scale-label">{{ verticalLabel }}</div>
 
   @if (isContinuous) {

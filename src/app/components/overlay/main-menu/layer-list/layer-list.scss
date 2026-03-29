@@ -10,7 +10,8 @@
 
 .tab-content {
   padding: 0;
-  max-height: calc(100vh - 180px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 

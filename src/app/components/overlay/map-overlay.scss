@@ -7,40 +7,37 @@ $gap: 12px;
   position: relative;
   z-index: layerOrder.$z-main-menu;
   pointer-events: none;
-}
-
-// ── Main layout ────────────────────────────────────────────────────────────
-// Row:  [ col-main (flex:1) ] [ col-side ]
-// col-main is a column: row-top / row-middle (flex:1) / row-bottom
-
-.overlay-layout {
-  height: 100%;
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  height: 100%;
+  box-sizing: border-box;
   padding: $edge;
   gap: $gap;
-  pointer-events: none;
 }
 
-// ── Left/main column ───────────────────────────────────────────────────────
+// ── Main column (menu + bottom controls) ───────────────────────────────────
 
-.col-main {
+.overlay-column {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: $gap;
+  overflow: hidden;
 }
 
-.row-top {
-  flex-shrink: 0;
+// ── Top section (main menu + edit controls) ────────────────────────────────
+
+.top-section {
   display: flex;
   align-items: flex-start;
   gap: $gap;
+  min-height: 0;
+  flex: 1 1 0;
+  overflow: hidden;
 }
 
-// Centers the edit-controls in the remaining space after the menu
 .edit-zone {
   flex: 1;
   display: flex;
@@ -49,26 +46,40 @@ $gap: 12px;
   pointer-events: none;
 }
 
-// Grows to fill the middle; zoom anchors to bottom-start
-.row-middle {
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-}
+// ── Bottom section (zoom + info controls) ──────────────────────────────────
 
-// Point-value panels centered
-.row-bottom {
+.bottom-section {
   flex-shrink: 0;
   display: flex;
-  justify-content: center;
+  align-items: flex-end;
+  gap: $gap;
 }
 
-// ── Right scale-tools column ───────────────────────────────────────────────
+.info-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  pointer-events: auto;
+}
 
-.col-side {
+// ── Scale tools column (color palettes, right side) ────────────────────────
+
+.scale-tools-column {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: $gap;
+  pointer-events: auto;
+}
+
+// ── Point values (floating, centered) ──────────────────────────────────────
+
+app-map-point-values {
+  position: absolute;
+  bottom: $edge;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
 }

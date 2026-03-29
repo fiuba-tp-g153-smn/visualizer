@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
 import { ScaleToolPanelComponent } from '../scale-tool-panel/scale-tool-panel';
 
@@ -12,4 +12,9 @@ import { ScaleToolPanelComponent } from '../scale-tool-panel/scale-tool-panel';
 export class MapScaleToolsComponent {
   readonly visible = input<boolean>(false);
   readonly entries = input<ReadonlyArray<ScaleToolEntry>>([]);
+  readonly close = output<string>();
+
+  onClose(layerId: string): void {
+    this.close.emit(layerId);
+  }
 }

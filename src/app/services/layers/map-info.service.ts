@@ -11,28 +11,44 @@ interface MapToolsState {
   showZoom: boolean;
 }
 
+/** Scale bar configuration */
+interface ScaleInfo {
+  text: string;
+  width: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class MapInfoService {
   private map: L.Map | null = null;
 
+  // Zoom state
   readonly currentZoom = signal<number>(MAP_CONFIG.initialZoom);
   readonly canZoomIn = computed(() => this.currentZoom() < MAP_CONFIG.maxZoom);
   readonly canZoomOut = computed(() => this.currentZoom() > MAP_CONFIG.minZoom);
 
-  // Tool visibility states
-  showCoordinates = signal<boolean>(false);
-  showAttribution = signal<boolean>(true);
-  showScale = signal<boolean>(false);
-  showZoom = signal<boolean>(false);
+  // Mouse coordinates state
+  readonly mouseLatitude = signal<number | null>(null);
+  readonly mouseLongitude = signal<number | null>(null);
 
-  // Leaflet controls
-  private scaleControl: L.Control.Scale | null = null;
-  private attributionControl: L.Control.Attribution | null = null;
-  private coordinatesControl: L.Control | null = null;
-  private coordinatesMouseMoveHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
-  private coordinatesMouseOutHandler: (() => void) | null = null;
+  // Map center for scale calculation
+  private readonly mapCenterLat = signal<number>(MAP_CONFIG.initialCenter.lat);
+
+  // Scale bar state (computed from zoom and center latitude)
+  readonly scaleInfo = computed<ScaleInfo>(() => this.calculateScale());
+
+  // Tool visibility states
+  readonly showCoordinates = signal<boolean>(false);
+  readonly showAttribution = signal<boolean>(true);
+  readonly showScale = signal<boolean>(false);
+  readonly showZoom = signal<boolean>(false);
+
+  // Event handlers
+  private mouseMoveHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
+  private mouseOutHandler: (() => void) | null = null;
+  private zoomEndHandler: (() => void) | null = null;
+  private moveEndHandler: (() => void) | null = null;
 
   constructor() {
     this.loadPersistedState();
@@ -48,7 +64,7 @@ export class MapInfoService {
         this.showScale.set(state.showScale ?? false);
         this.showZoom.set(state.showZoom ?? false);
       }
-    } catch (e) {
+    } catch {
       // Ignore parse errors, use defaults
     }
   }
@@ -62,7 +78,7 @@ export class MapInfoService {
         showZoom: this.showZoom(),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {
+    } catch {
       // Ignore storage errors
     }
   }
@@ -70,53 +86,139 @@ export class MapInfoService {
   initialize(map: L.Map): void {
     this.map = map;
     this.currentZoom.set(Math.round(map.getZoom()));
+    this.mapCenterLat.set(map.getCenter().lat);
 
-    // Add default controls if enabled
-    if (this.showScale()) {
-      this.addScaleControl();
+    // Setup event listeners for reactive data
+    this.setupEventListeners();
+  }
+
+  private setupEventListeners(): void {
+    if (!this.map) return;
+
+    // Mouse move for coordinates
+    this.mouseMoveHandler = (e: L.LeafletMouseEvent) => {
+      this.mouseLatitude.set(e.latlng.lat);
+      this.mouseLongitude.set(e.latlng.lng);
+    };
+
+    this.mouseOutHandler = () => {
+      this.mouseLatitude.set(null);
+      this.mouseLongitude.set(null);
+    };
+
+    // Zoom/move for scale calculation
+    this.zoomEndHandler = () => {
+      if (this.map) {
+        this.currentZoom.set(Math.round(this.map.getZoom()));
+        this.mapCenterLat.set(this.map.getCenter().lat);
+      }
+    };
+
+    this.moveEndHandler = () => {
+      if (this.map) {
+        this.mapCenterLat.set(this.map.getCenter().lat);
+      }
+    };
+
+    this.map.on('mousemove', this.mouseMoveHandler);
+    this.map.on('mouseout', this.mouseOutHandler);
+    this.map.on('zoomend', this.zoomEndHandler);
+    this.map.on('moveend', this.moveEndHandler);
+  }
+
+  private removeEventListeners(): void {
+    if (!this.map) return;
+
+    if (this.mouseMoveHandler) {
+      this.map.off('mousemove', this.mouseMoveHandler);
+      this.mouseMoveHandler = null;
     }
-    if (this.showAttribution()) {
-      this.addAttributionControl();
+    if (this.mouseOutHandler) {
+      this.map.off('mouseout', this.mouseOutHandler);
+      this.mouseOutHandler = null;
     }
-    if (this.showCoordinates()) {
-      this.addCoordinatesControl();
+    if (this.zoomEndHandler) {
+      this.map.off('zoomend', this.zoomEndHandler);
+      this.zoomEndHandler = null;
     }
+    if (this.moveEndHandler) {
+      this.map.off('moveend', this.moveEndHandler);
+      this.moveEndHandler = null;
+    }
+  }
+
+  /**
+   * Calculate scale bar text and width based on current zoom and latitude.
+   * Uses the same logic as Leaflet's L.Control.Scale.
+   */
+  private calculateScale(): ScaleInfo {
+    const zoom = this.currentZoom();
+    const lat = this.mapCenterLat();
+    const maxWidth = 150; // max bar width in pixels
+
+    // Earth radius in meters
+    const earthRadius = 6378137;
+
+    // Meters per pixel at equator for zoom level 0
+    const metersPerPixelAtEquator = (2 * Math.PI * earthRadius) / 256;
+
+    // Adjust for zoom level and latitude (Mercator projection)
+    const metersPerPixel =
+      (metersPerPixelAtEquator * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, zoom);
+
+    // Calculate the distance represented by maxWidth pixels
+    const maxMeters = maxWidth * metersPerPixel;
+
+    // Find a "nice" round number for the scale
+    const { distance, unit } = this.getRoundDistance(maxMeters);
+
+    // Calculate the actual pixel width for this distance
+    const width = distance / metersPerPixel;
+
+    return {
+      text: `${distance >= 1000 ? distance / 1000 : distance} ${unit}`,
+      width: Math.round(width),
+    };
+  }
+
+  /**
+   * Get a nice round distance value for the scale bar.
+   */
+  private getRoundDistance(maxMeters: number): { distance: number; unit: string } {
+    // Round numbers for scale bar
+    const roundNumbers = [
+      1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000,
+      500000, 1000000,
+    ];
+
+    for (const num of roundNumbers) {
+      if (num <= maxMeters) {
+        continue;
+      }
+      // Use the previous round number that fits
+      const idx = roundNumbers.indexOf(num);
+      const distance = idx > 0 ? roundNumbers[idx - 1] : roundNumbers[0];
+      const unit = distance >= 1000 ? 'km' : 'm';
+      return { distance, unit };
+    }
+
+    // Fallback for very large scales
+    return { distance: 1000000, unit: 'km' };
   }
 
   toggleCoordinates(enabled: boolean): void {
     this.showCoordinates.set(enabled);
     this.persistState();
-    if (!this.map) return;
-
-    if (enabled) {
-      this.addCoordinatesControl();
-    } else {
-      this.removeCoordinatesControl();
-    }
   }
 
   toggleAttribution(enabled: boolean): void {
     this.showAttribution.set(enabled);
     this.persistState();
-    if (!this.map) return;
-
-    if (enabled) {
-      this.addAttributionControl();
-    } else {
-      this.removeAttributionControl();
-    }
   }
 
   toggleScale(enabled: boolean): void {
     this.showScale.set(enabled);
     this.persistState();
-    if (!this.map) return;
-
-    if (enabled) {
-      this.addScaleControl();
-    } else {
-      this.removeScaleControl();
-    }
   }
 
   toggleZoom(enabled: boolean): void {
@@ -136,147 +238,8 @@ export class MapInfoService {
     this.setCurrentZoom(this.currentZoom() - 1);
   }
 
-  private addScaleControl(): void {
-    if (!this.map || this.scaleControl) return;
-    // Use Leaflet's native scale control - dinámico y adaptable al zoom
-    const scale = L.control.scale({
-      position: 'bottomleft',
-      metric: true,
-      imperial: false, // Solo mostrar KMs
-      maxWidth: 200,
-    }) as any;
-
-    // Wrap the control to add custom class
-    const originalOnAdd = scale.onAdd?.bind(scale);
-    if (originalOnAdd) {
-      scale.onAdd = (map: L.Map) => {
-        const container = originalOnAdd(map);
-        if (container) {
-          container.classList?.add('custom-leaflet-scale');
-        }
-        return container;
-      };
-    }
-
-    scale.addTo(this.map);
-    this.scaleControl = scale;
-    this.ensureScaleAboveCoordinates();
-  }
-
-  private removeScaleControl(): void {
-    if (!this.map || !this.scaleControl) return;
-    this.map.removeControl(this.scaleControl);
-    this.scaleControl = null;
-  }
-
-  private addAttributionControl(): void {
-    if (!this.map || this.attributionControl) return;
-    this.attributionControl = L.control.attribution({
-      position: 'bottomleft',
-      prefix:
-        '<a href="https://leafletjs.com" title="A JavaScript library for interactive maps">Leaflet</a>',
-    });
-    this.attributionControl.addTo(this.map);
-
-    // Sync attributions already present on active layers.
-    this.map.eachLayer((layer) => {
-      const attribution = (layer as L.Layer & { options?: { attribution?: string } }).options
-        ?.attribution;
-      if (attribution) {
-        this.attributionControl?.addAttribution(attribution);
-      }
-    });
-  }
-
-  private removeAttributionControl(): void {
-    if (!this.map || !this.attributionControl) return;
-    this.map.removeControl(this.attributionControl);
-    this.attributionControl = null;
-  }
-
-  private addCoordinatesControl(): void {
-    if (!this.map || this.coordinatesControl) return;
-
-    // Create a custom control for coordinates
-    const CoordinatesControl = L.Control.extend({
-      onAdd: () => {
-        const div = L.DomUtil.create(
-          'div',
-          'leaflet-control-coordinates leaflet-control custom-leaflet-coordinates',
-        );
-        div.textContent = 'Lat --.--, Lon --.--';
-
-        L.DomEvent.disableClickPropagation(div);
-        L.DomEvent.disableScrollPropagation(div);
-
-        this.coordinatesMouseMoveHandler = (e: L.LeafletMouseEvent) => {
-          div.textContent = `Lat ${e.latlng.lat.toFixed(4)}°, Lon ${e.latlng.lng.toFixed(4)}°`;
-        };
-
-        this.coordinatesMouseOutHandler = () => {
-          div.textContent = 'Lat --.--, Lon --.--';
-        };
-
-        this.map?.on('mousemove', this.coordinatesMouseMoveHandler);
-        this.map?.on('mouseout', this.coordinatesMouseOutHandler);
-
-        return div;
-      },
-    });
-
-    this.coordinatesControl = new CoordinatesControl({ position: 'bottomleft' });
-    this.coordinatesControl.addTo(this.map);
-    this.ensureScaleAboveCoordinates();
-  }
-
-  private removeCoordinatesControl(): void {
-    if (!this.map || !this.coordinatesControl) return;
-    if (this.coordinatesMouseMoveHandler) {
-      this.map.off('mousemove', this.coordinatesMouseMoveHandler);
-      this.coordinatesMouseMoveHandler = null;
-    }
-    if (this.coordinatesMouseOutHandler) {
-      this.map.off('mouseout', this.coordinatesMouseOutHandler);
-      this.coordinatesMouseOutHandler = null;
-    }
-    this.map.removeControl(this.coordinatesControl);
-    this.coordinatesControl = null;
-  }
-
-  private ensureScaleAboveCoordinates(): void {
-    if (!this.map || !this.scaleControl || !this.coordinatesControl) {
-      return;
-    }
-
-    // In bottom corners, Leaflet inserts new controls at the top.
-    // Re-adding scale keeps it visually above coordinates regardless of toggle order.
-    this.map.removeControl(this.scaleControl);
-    this.scaleControl.addTo(this.map);
-  }
-
   destroy(): void {
-    if (this.map) {
-      if (this.scaleControl) {
-        this.map.removeControl(this.scaleControl);
-      }
-      if (this.attributionControl) {
-        this.map.removeControl(this.attributionControl);
-      }
-      if (this.coordinatesControl) {
-        this.map.removeControl(this.coordinatesControl);
-      }
-      if (this.coordinatesMouseMoveHandler) {
-        this.map.off('mousemove', this.coordinatesMouseMoveHandler);
-        this.coordinatesMouseMoveHandler = null;
-      }
-      if (this.coordinatesMouseOutHandler) {
-        this.map.off('mouseout', this.coordinatesMouseOutHandler);
-        this.coordinatesMouseOutHandler = null;
-      }
-    }
-    this.attributionControl = null;
-    this.coordinatesControl = null;
-    this.scaleControl = null;
+    this.removeEventListeners();
     this.map = null;
   }
 }
