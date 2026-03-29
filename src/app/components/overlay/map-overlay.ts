@@ -81,9 +81,9 @@ export class MapOverlayComponent {
 
   readonly contextMenuState = this.polygonsService.contextMenuState;
 
-  readonly closeFloatingViewer = (layerId: string): void => {
+  closeFloatingViewer(layerId: string): void {
     this.pointQueryViewerService.removeSourceSelection(layerId);
-  };
+  }
 
   zoomIn(): void {
     this.mapInfoService.zoomIn();
@@ -91,6 +91,22 @@ export class MapOverlayComponent {
 
   zoomOut(): void {
     this.mapInfoService.zoomOut();
+  }
+
+  closeScale(): void {
+    this.mapInfoService.toggleScale(false);
+  }
+
+  closeCoordinates(): void {
+    this.mapInfoService.toggleCoordinates(false);
+  }
+
+  closeAttribution(): void {
+    this.mapInfoService.toggleAttribution(false);
+  }
+
+  closeScaleTool(layerId: string): void {
+    this.scaleToolsService.toggleLayerSelection(layerId);
   }
 
   handleEditAction(action: PolygonEditAction): void {

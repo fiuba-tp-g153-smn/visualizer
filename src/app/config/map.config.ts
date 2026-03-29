@@ -18,4 +18,10 @@ export const MAP_CONFIG = {
   // Number of next frames to pre-render in the DOM with opacity=0
   // para animaciones suaves sin flashes durante playback
   prerenderNextFrames: 2,
+
+  // Default tool visibility
+  defaultShowCoordinates: false,
+  defaultShowAttribution: true,
+  defaultShowScale: false,
+  defaultShowZoom: true,
 };

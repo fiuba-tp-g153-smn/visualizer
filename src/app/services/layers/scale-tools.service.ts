@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 
 import { Layer, LayerCategory, LayerControls, LayerType, ScaleType } from '../../models';
 import { LayerControlService } from './layer-control.service';
@@ -24,7 +24,6 @@ export interface ScaleToolEntry {
 }
 
 interface PersistedScaleToolsState {
-  enabled: boolean;
   selectedLayerIdsOrdered: string[];
 }
 
@@ -40,7 +39,6 @@ export class ScaleToolsService {
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
 
-  readonly enabled = signal<boolean>(true);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
 
   readonly displayItems = computed<ScaleLayerItem[]>(() => {
@@ -98,7 +96,7 @@ export class ScaleToolsService {
   });
 
   readonly shouldShowScales = computed<boolean>(() => {
-    return this.enabled() && this.scaleEntries().length > 0;
+    return this.scaleEntries().length > 0;
   });
 
   constructor() {
@@ -109,18 +107,30 @@ export class ScaleToolsService {
     });
 
     effect(() => {
-      const activeLayerIds = new Set(this.displayItems().map((item) => item.layerId));
-      const currentSelection = this.selectedLayerIdsOrdered();
-      const filteredSelection = currentSelection.filter((layerId) => activeLayerIds.has(layerId));
+      const activeItems = this.displayItems();
+      const activeLayerIds = new Set(activeItems.map((item) => item.layerId));
 
-      if (filteredSelection.length !== currentSelection.length) {
-        this.selectedLayerIdsOrdered.set(filteredSelection);
-      }
+      untracked(() => {
+        const currentSelection = this.selectedLayerIdsOrdered();
+
+        // Remove deactivated layers from selection
+        const filteredSelection = currentSelection.filter((layerId) => activeLayerIds.has(layerId));
+
+        // Auto-select newly activated layers
+        const newLayerIds = activeItems
+          .map((item) => item.layerId)
+          .filter((layerId) => !currentSelection.includes(layerId));
+
+        const updatedSelection = [...filteredSelection, ...newLayerIds];
+
+        if (
+          updatedSelection.length !== currentSelection.length ||
+          !updatedSelection.every((id, i) => currentSelection[i] === id)
+        ) {
+          this.selectedLayerIdsOrdered.set(updatedSelection);
+        }
+      });
     });
-  }
-
-  setEnabled(enabled: boolean): void {
-    this.enabled.set(enabled);
   }
 
   toggleLayerSelection(layerId: string): void {
@@ -176,10 +186,6 @@ export class ScaleToolsService {
 
       const parsed = JSON.parse(raw) as Partial<PersistedScaleToolsState>;
 
-      if (typeof parsed.enabled === 'boolean') {
-        this.enabled.set(parsed.enabled);
-      }
-
       if (Array.isArray(parsed.selectedLayerIdsOrdered)) {
         this.selectedLayerIdsOrdered.set(
           parsed.selectedLayerIdsOrdered.filter(
@@ -188,7 +194,6 @@ export class ScaleToolsService {
         );
       }
     } catch {
-      this.enabled.set(true);
       this.selectedLayerIdsOrdered.set([]);
     }
   }
@@ -199,7 +204,6 @@ export class ScaleToolsService {
     }
 
     const payload: PersistedScaleToolsState = {
-      enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
     };
 

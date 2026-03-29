@@ -141,6 +141,7 @@ export class PointQueryService {
       return null;
     }
 
+    // Use the timeIndex from controls (synced by LayerControlService with latest config)
     const fallbackIndex = config.availableTilesets.length - 1;
     const resolvedIndex = timeIndex ?? fallbackIndex;
     const clampedIndex = Math.max(0, Math.min(resolvedIndex, config.availableTilesets.length - 1));

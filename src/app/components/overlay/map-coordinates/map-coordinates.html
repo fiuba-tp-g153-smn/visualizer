@@ -1,5 +1,14 @@
 @if (visible()) {
   <div class="coordinates">
+    <button
+      mat-icon-button
+      type="button"
+      class="close-button"
+      (click)="onClose()"
+      aria-label="Cerrar coordenadas"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
     @if (latitude() !== null && longitude() !== null) {
       <span class="coord">Lat {{ latitude() | number: '1.4-4' }}°</span>
       <span class="separator">,</span>

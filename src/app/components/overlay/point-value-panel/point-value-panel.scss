@@ -1,83 +1,74 @@
 @use '../../../styles/overlay-surface' as overlaySurface;
 
 .point-panel {
-  width: 180px;
-  height: 64px;
   @include overlaySurface.floating-surface();
-}
 
-.panel-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0px 6px 6px 6px;
-  flex: 1;
-  justify-content: space-between;
-}
-
-.panel-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  gap: 6px;
+  padding: 4px 10px;
+  position: relative;
+  width: 200px;
+  height: 26px;
+  box-sizing: border-box;
 }
 
-.title-block {
-  flex: 1;
-  min-width: 0;
+.close-button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--mat-sys-on-surface-variant);
+  background: var(--mat-sys-surface-container);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+
+  .mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: var(--mat-sys-error);
+    opacity: 1;
+  }
+}
+
+.point-panel:hover .close-button {
+  opacity: 0.7;
 }
 
 .layer-name {
   font-size: 11px;
   font-weight: 500;
-  color: var(--mat-sys-on-surface);
-  white-space: nowrap;
+  color: var(--mat-sys-on-surface-variant);
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.close-button {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  color: var(--mat-sys-on-surface-variant);
-
-  .mat-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-  }
-
-  &:hover {
-    color: var(--mat-sys-error);
-  }
-}
-
-.panel-body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-}
-
-.value-row {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--mat-sys-on-surface);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .unit {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--mat-sys-on-surface-variant);
 }
 
 .empty {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--mat-sys-on-surface-variant);
 }

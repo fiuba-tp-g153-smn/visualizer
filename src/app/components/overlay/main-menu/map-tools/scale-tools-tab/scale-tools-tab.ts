@@ -14,10 +14,6 @@ import { ScaleToolsService } from '../../../../../services/layers/scale-tools.se
 export class ScaleToolsTabComponent {
   readonly scaleTools = inject(ScaleToolsService);
 
-  onScaleToolsEnabledChange(enabled: boolean): void {
-    this.scaleTools.setEnabled(enabled);
-  }
-
   toggleScaleLayer(layerId: string): void {
     this.scaleTools.toggleLayerSelection(layerId);
   }

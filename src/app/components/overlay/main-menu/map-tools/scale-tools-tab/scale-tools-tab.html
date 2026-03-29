@@ -1,12 +1,4 @@
 <div class="tool-section">
-  <mat-checkbox
-    [checked]="scaleTools.enabled()"
-    (change)="onScaleToolsEnabledChange($event.checked)"
-    color="primary"
-  >
-    Mostrar escalas en el mapa
-  </mat-checkbox>
-
   <div class="sources-section">
     @if (scaleTools.displayItems().length === 0) {
       <p class="status-hint">No hay capas activas con escala configurada</p>
