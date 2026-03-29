@@ -1,14 +1,16 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config';
 
-const STORAGE_KEY = 'smn-map-tools-v1';
+const STORAGE_KEY = 'smn-map-tools-v3';
 
 interface MapToolsState {
   showCoordinates: boolean;
   showAttribution: boolean;
   showScale: boolean;
   showZoom: boolean;
+  showCursorLines: boolean;
+  showGraticule: boolean;
 }
 
 /** Scale bar configuration */
@@ -16,6 +18,67 @@ interface ScaleInfo {
   text: string;
   width: number;
 }
+
+/** Important geographic lines for the graticule */
+const GRATICULE_LATITUDES = [
+  { lat: 66.5, label: 'Círculo Polar Ártico' },
+  { lat: 23.5, label: 'Trópico de Cáncer' },
+  { lat: 0, label: 'Ecuador' },
+  { lat: -23.5, label: 'Trópico de Capricornio' },
+  { lat: -66.5, label: 'Círculo Polar Antártico' },
+];
+
+const GRATICULE_LONGITUDES = [
+  { lng: -180, label: '180° W' },
+  { lng: -150, label: '150° W' },
+  { lng: -120, label: '120° W' },
+  { lng: -90, label: '90° W' },
+  { lng: -60, label: '60° W' },
+  { lng: -30, label: '30° W' },
+  { lng: 0, label: 'Meridiano de Greenwich' },
+  { lng: 30, label: '30° E' },
+  { lng: 60, label: '60° E' },
+  { lng: 90, label: '90° E' },
+  { lng: 120, label: '120° E' },
+  { lng: 150, label: '150° E' },
+];
+
+// Use theme-aligned colors (primary: #0090d0, secondary: #fcbf49, tertiary: #242c4f)
+const CROSSHAIR_STYLE: L.PolylineOptions = {
+  color: '#0090d0', // primary
+  weight: 1,
+  opacity: 0.6,
+  dashArray: '4, 4',
+  interactive: false,
+};
+
+const GRATICULE_STYLE: L.PolylineOptions = {
+  color: '#73777c', // neutral-50
+  weight: 1,
+  opacity: 0.4,
+  dashArray: '2, 4',
+  interactive: false,
+};
+
+const GRATICULE_SPECIAL_STYLE: L.PolylineOptions = {
+  color: '#555c82', // tertiary-40
+  weight: 1,
+  opacity: 0.5,
+  interactive: false,
+};
+
+const QUERY_MARKER_ICON = L.divIcon({
+  className: 'query-marker',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+  html: `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="10" cy="10" r="4" fill="#0090d0" fill-opacity="0.3" stroke="#0090d0" stroke-width="1.5"/>
+    <line x1="10" y1="0" x2="10" y2="6" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="10" y1="14" x2="10" y2="20" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="0" y1="10" x2="6" y2="10" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="14" y1="10" x2="20" y2="10" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
+  </svg>`,
+});
 
 @Injectable({
   providedIn: 'root',
@@ -44,6 +107,21 @@ export class MapInfoService {
   readonly showScale = signal<boolean>(MAP_CONFIG.defaultShowScale);
   readonly showZoom = signal<boolean>(MAP_CONFIG.defaultShowZoom);
 
+  // Crosshair lines that follow the cursor
+  readonly showCursorLines = signal<boolean>(false);
+
+  // Graticule (major parallels and meridians)
+  readonly showGraticule = signal<boolean>(false);
+
+  // Query marker position (set by PointQueryViewerService)
+  readonly queryMarkerPosition = signal<{ lat: number; lon: number } | null>(null);
+
+  // Overlay layers (managed internally)
+  private latitudeLine: L.Polyline | null = null;
+  private longitudeLine: L.Polyline | null = null;
+  private graticuleGroup: L.LayerGroup | null = null;
+  private queryMarker: L.Marker | null = null;
+
   // Event handlers
   private mouseMoveHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
   private mouseOutHandler: (() => void) | null = null;
@@ -52,6 +130,29 @@ export class MapInfoService {
 
   constructor() {
     this.loadPersistedState();
+    this.setupOverlayEffects();
+  }
+
+  private setupOverlayEffects(): void {
+    // Effect: update crosshair lines when mouse moves or visibility changes
+    effect(() => {
+      const lat = this.mouseLatitude();
+      const lng = this.mouseLongitude();
+      const show = this.showCursorLines();
+      this.updateCrosshair(lat, lng, show);
+    });
+
+    // Effect: update graticule when visibility changes
+    effect(() => {
+      const show = this.showGraticule();
+      this.updateGraticule(show);
+    });
+
+    // Effect: update query marker position
+    effect(() => {
+      const position = this.queryMarkerPosition();
+      this.updateQueryMarker(position);
+    });
   }
 
   private loadPersistedState(): void {
@@ -63,6 +164,8 @@ export class MapInfoService {
         this.showAttribution.set(state.showAttribution ?? MAP_CONFIG.defaultShowAttribution);
         this.showScale.set(state.showScale ?? MAP_CONFIG.defaultShowScale);
         this.showZoom.set(state.showZoom ?? MAP_CONFIG.defaultShowZoom);
+        this.showCursorLines.set(state.showCursorLines ?? false);
+        this.showGraticule.set(state.showGraticule ?? false);
       }
     } catch {
       // Ignore parse errors, use defaults
@@ -76,6 +179,8 @@ export class MapInfoService {
         showAttribution: this.showAttribution(),
         showScale: this.showScale(),
         showZoom: this.showZoom(),
+        showCursorLines: this.showCursorLines(),
+        showGraticule: this.showGraticule(),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
@@ -90,6 +195,18 @@ export class MapInfoService {
 
     // Setup event listeners for reactive data
     this.setupEventListeners();
+
+    // Apply persisted overlay states now that map is available
+    this.applyPersistedOverlays();
+  }
+
+  /** Apply overlays that were loaded from storage before map was initialized */
+  private applyPersistedOverlays(): void {
+    // Graticule needs to be initialized if it was persisted as visible
+    if (this.showGraticule()) {
+      this.updateGraticule(true);
+    }
+    // Cursor lines will auto-apply when mouse moves over the map
   }
 
   private setupEventListeners(): void {
@@ -101,6 +218,7 @@ export class MapInfoService {
       this.mouseLongitude.set(e.latlng.lng);
     };
 
+    // Clear coordinates when mouse leaves the map
     this.mouseOutHandler = () => {
       this.mouseLatitude.set(null);
       this.mouseLongitude.set(null);
@@ -226,6 +344,16 @@ export class MapInfoService {
     this.persistState();
   }
 
+  toggleCursorLines(enabled: boolean): void {
+    this.showCursorLines.set(enabled);
+    this.persistState();
+  }
+
+  toggleGraticule(enabled: boolean): void {
+    this.showGraticule.set(enabled);
+    this.persistState();
+  }
+
   setCurrentZoom(zoom: number): void {
     this.currentZoom.set(Math.max(MAP_CONFIG.minZoom, Math.min(MAP_CONFIG.maxZoom, zoom)));
   }
@@ -240,6 +368,136 @@ export class MapInfoService {
 
   destroy(): void {
     this.removeEventListeners();
+    this.removeCrosshair();
+    this.removeGraticule();
+    this.removeQueryMarker();
     this.map = null;
+  }
+
+  // ── Overlay Management ─────────────────────────────────────────────────────
+
+  setQueryMarkerPosition(position: { lat: number; lon: number } | null): void {
+    this.queryMarkerPosition.set(position);
+  }
+
+  private updateCrosshair(lat: number | null, lng: number | null, show: boolean): void {
+    if (!this.map) return;
+
+    if (show && lat !== null && lng !== null) {
+      // Latitude line (horizontal)
+      const latCoords: L.LatLngExpression[] = [
+        [lat, -180],
+        [lat, 180],
+      ];
+      if (this.latitudeLine) {
+        this.latitudeLine.setLatLngs(latCoords);
+      } else {
+        this.latitudeLine = L.polyline(latCoords, CROSSHAIR_STYLE).addTo(this.map);
+      }
+
+      // Longitude line (vertical)
+      const lngCoords: L.LatLngExpression[] = [
+        [-90, lng],
+        [90, lng],
+      ];
+      if (this.longitudeLine) {
+        this.longitudeLine.setLatLngs(lngCoords);
+      } else {
+        this.longitudeLine = L.polyline(lngCoords, CROSSHAIR_STYLE).addTo(this.map);
+      }
+    } else {
+      this.removeCrosshair();
+    }
+  }
+
+  private removeCrosshair(): void {
+    if (this.latitudeLine) {
+      this.latitudeLine.remove();
+      this.latitudeLine = null;
+    }
+    if (this.longitudeLine) {
+      this.longitudeLine.remove();
+      this.longitudeLine = null;
+    }
+  }
+
+  private updateGraticule(show: boolean): void {
+    if (!this.map) return;
+
+    if (show) {
+      if (!this.graticuleGroup) {
+        this.graticuleGroup = L.layerGroup().addTo(this.map);
+        this.createGraticuleLines();
+      }
+    } else {
+      this.removeGraticule();
+    }
+  }
+
+  private createGraticuleLines(): void {
+    if (!this.graticuleGroup) return;
+
+    // Add latitude lines (parallels)
+    for (const { lat, label } of GRATICULE_LATITUDES) {
+      const isSpecial = lat === 0; // Ecuador
+      const style = isSpecial ? GRATICULE_SPECIAL_STYLE : GRATICULE_STYLE;
+      const line = L.polyline(
+        [
+          [lat, -180],
+          [lat, 180],
+        ],
+        style,
+      );
+      line.bindTooltip(label, { permanent: false, direction: 'top' });
+      this.graticuleGroup.addLayer(line);
+    }
+
+    // Add longitude lines (meridians)
+    for (const { lng, label } of GRATICULE_LONGITUDES) {
+      const isSpecial = lng === 0; // Greenwich
+      const style = isSpecial ? GRATICULE_SPECIAL_STYLE : GRATICULE_STYLE;
+      const line = L.polyline(
+        [
+          [-90, lng],
+          [90, lng],
+        ],
+        style,
+      );
+      line.bindTooltip(label, { permanent: false, direction: 'right' });
+      this.graticuleGroup.addLayer(line);
+    }
+  }
+
+  private removeGraticule(): void {
+    if (this.graticuleGroup) {
+      this.graticuleGroup.clearLayers();
+      this.graticuleGroup.remove();
+      this.graticuleGroup = null;
+    }
+  }
+
+  private updateQueryMarker(position: { lat: number; lon: number } | null): void {
+    if (!this.map) return;
+
+    if (position) {
+      const latLng: L.LatLngExpression = [position.lat, position.lon];
+      if (this.queryMarker) {
+        this.queryMarker.setLatLng(latLng);
+      } else {
+        this.queryMarker = L.marker(latLng, {
+          icon: QUERY_MARKER_ICON,
+          interactive: false,
+        }).addTo(this.map);
+      }
+    } else {
+      this.removeQueryMarker();
+    }
+  }
+
+  private removeQueryMarker(): void {
+    if (this.queryMarker) {
+      this.queryMarker.remove();
+      this.queryMarker = null;
+    }
   }
 }

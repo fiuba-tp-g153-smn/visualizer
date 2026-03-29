@@ -81,19 +81,24 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 12px 16px;
+      padding: 8px 16px;
       font-size: 14px;
-      color: var(--mat-sys-on-surface);
-      transition: background-color 0.2s ease;
+      border-radius: 8px;
 
-      ::ng-deep {
-        .mat-icon {
-          color: var(--mat-sys-on-surface-variant);
-        }
+      &.cancel {
+        background-color: var(--mat-sys-error);
       }
 
-      &:hover:not(:disabled) {
-        background-color: var(--mat-sys-surface-container-high);
+      &.delete-button {
+        color: var(--mat-sys-on-surface);
+
+        ::ng-deep .mat-icon {
+          color: var(--mat-sys-error);
+        }
+
+        &:hover:not(:disabled) {
+          background-color: color-mix(in srgb, var(--mat-sys-error) 12%, transparent);
+        }
       }
 
       &:disabled {

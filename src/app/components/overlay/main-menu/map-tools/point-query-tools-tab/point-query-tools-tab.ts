@@ -23,11 +23,6 @@ export class PointQueryToolsTabComponent {
     tooltip: string;
   }> = [
     {
-      value: PointQueryInteractionMode.OFF,
-      label: 'Desactivado',
-      tooltip: 'No mostrar visores de datos puntuales',
-    },
-    {
       value: PointQueryInteractionMode.MANUAL,
       label: 'Manual',
       tooltip: 'Mostrar datos al hacer clic en el mapa',
@@ -41,5 +36,9 @@ export class PointQueryToolsTabComponent {
 
   onInteractionModeChange(value: PointQueryInteractionMode): void {
     this.viewer.setInteractionMode(value);
+  }
+
+  onMarkerChange(enabled: boolean): void {
+    this.viewer.toggleMarker(enabled);
   }
 }
