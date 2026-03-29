@@ -91,22 +91,6 @@ export class PointQueryViewerService {
   private readonly resultsBySource = signal<Map<string, PointQueryDisplayData>>(new Map());
   private readonly loadingLayerIds = signal<Set<string>>(new Set());
 
-  /**
-   * Tracks the timeIndex for each selected layer based on controls.
-   * When controls.playback.timeIndex changes (via LayerControlService sync with config),
-   * this computed changes, triggering a re-query.
-   */
-  private readonly selectedLayersTimeIndexFingerprint = computed<string>(() => {
-    const selectedItems = this.getSelectedDisplayItems();
-
-    const fingerprints = selectedItems.map((item) => {
-      const timeIndex = item.controls.playback.timeIndex ?? -1;
-      return `${item.layerId}:${timeIndex}`;
-    });
-
-    return fingerprints.join('|');
-  });
-
   readonly displayItems = computed<DisplaySourceItem[]>(() => {
     const activeLayers = this.controlService.activeLayers();
 
@@ -201,28 +185,6 @@ export class PointQueryViewerService {
 
       if (mode === DrawingMode.DRAW || mode === DrawingMode.EDIT) {
         this.disableViewerAndClearSources();
-      }
-    });
-
-    // Re-query when layer timeIndex changes (triggered by LayerControlService
-    // syncing with config updates from LayerRefreshService).
-    effect(() => {
-      // Track the fingerprint to detect timeIndex changes
-      const _fingerprint = this.selectedLayersTimeIndexFingerprint();
-
-      // Only re-query if we have existing results and valid coordinates
-      if (!this.canRunQueries() || this.resultsBySource().size === 0) {
-        return;
-      }
-
-      // Use the appropriate coordinates based on interaction mode
-      const coordinates =
-        this.interactionMode() === PointQueryInteractionMode.AUTOMATIC
-          ? this.lastMouseCoordinates()
-          : this.lastClickCoordinates();
-
-      if (coordinates) {
-        this.queryTriggerSubject.next(coordinates);
       }
     });
   }
