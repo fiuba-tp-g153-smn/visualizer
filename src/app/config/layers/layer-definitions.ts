@@ -1,6 +1,7 @@
 import { ABI_SUBGROUP } from './goes/abi.config';
 import { GLM_SUBGROUP } from './goes/glm.config';
 import { RADAR_SUBGROUPS } from './radar/config';
+import { ECMWF_SUBGROUP } from './ecmwf/config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
   IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
@@ -35,6 +36,14 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     icon: 'waves',
     expanded: false,
     subgroups: RADAR_SUBGROUPS,
+  },
+  {
+    id: 'modelos',
+    name: 'Modelos',
+    description: 'Modelos numéricos de pronóstico',
+    icon: 'water_drop',
+    expanded: false,
+    subgroups: [ECMWF_SUBGROUP],
   },
   {
     id: 'ign-wms',

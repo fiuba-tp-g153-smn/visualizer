@@ -48,7 +48,9 @@ export class LayerRefreshService {
         // Only TILE layers of GOES_19 and RADAR categories need config
         const needsConfig =
           layer.type === LayerType.TILE &&
-          (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.RADAR);
+          (layer.category === LayerCategory.GOES_19 ||
+            layer.category === LayerCategory.RADAR ||
+            layer.category === LayerCategory.ECMWF);
 
         if (!needsConfig) {
           continue; // Skip layers that don't need config (e.g., WMS layers)

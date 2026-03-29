@@ -19,7 +19,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
-import { Layer, LayerCategory, LayerType } from '../../../../models';
+import { EcmwfTileLayerConfig, Layer, LayerCategory, LayerType } from '../../../../models';
 import { LayersService } from '../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../../../services/layers/layer-config.service';
@@ -94,6 +94,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isLoadingConfig = signal(false);
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
+  isForecastsExpanded = signal(false);
 
   playSpeed = computed(() => {
     const controls = this.controlService.getControls(this.layer.id);
@@ -145,12 +146,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const activeLayer = this.getActiveLayer();
     if (!activeLayer) return;
 
-    // For radar layers, check if elevations have different opacities
-    if (
-      activeLayer.controls.type === LayerType.TILE &&
-      activeLayer.controls.category === LayerCategory.RADAR
-    ) {
-      return this.globalElevationOpacity();
+    if (activeLayer.controls.type === LayerType.TILE) {
+      // For radar layers, check if elevations have different opacities
+      if (activeLayer.controls.category === LayerCategory.RADAR) {
+        return this.globalElevationOpacity();
+      }
+      // For ECMWF layers, check if forecasts have different opacities
+      if (activeLayer.controls.category === LayerCategory.ECMWF) {
+        return this.globalForecastOpacity();
+      }
     }
 
     return activeLayer.controls.opacity;
@@ -216,6 +220,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         switch (this.layer.category) {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
+          case LayerCategory.ECMWF:
             return true;
           default:
             return false;
@@ -352,6 +357,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         switch (this.layer.category) {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
+          case LayerCategory.ECMWF:
             return this.configService.getAvailableTilesets(this.layer.id);
           default:
             return undefined;
@@ -402,6 +408,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
+   * Alterna la expansión de los controles de corridas ECMWF
+   */
+  toggleForecastsExpansion(): void {
+    this.isForecastsExpanded.set(!this.isForecastsExpanded());
+  }
+
+  /**
    * Activa la capa
    */
   private activateLayer(): void {
@@ -418,19 +431,22 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   onOpacityChange(opacity: number): void {
-    // For radar layers, update ALL elevations (both selected and unselected)
-    // This ensures that when an elevation is turned on later, it matches the current opacity
     const activeLayer = this.getActiveLayer();
-    if (
-      activeLayer &&
-      activeLayer.controls.type === LayerType.TILE &&
-      activeLayer.controls.category === LayerCategory.RADAR
-    ) {
-      // Update ALL available elevations, not just selected ones
-      const allElevationIds = this.availableElevations().map((elev) => elev.id);
-      allElevationIds.forEach((id) => {
-        this.controlService.setElevationOpacity(this.layer.id, id, opacity);
-      });
+    if (activeLayer && activeLayer.controls.type === LayerType.TILE) {
+      // For radar layers, update ALL elevations
+      if (activeLayer.controls.category === LayerCategory.RADAR) {
+        const allElevationIds = this.availableElevations().map((elev) => elev.id);
+        allElevationIds.forEach((id) => {
+          this.controlService.setElevationOpacity(this.layer.id, id, opacity);
+        });
+      }
+      // For ECMWF layers, update ALL forecasts
+      if (activeLayer.controls.category === LayerCategory.ECMWF) {
+        const allForecasts = this.availableForecasts();
+        allForecasts.forEach((ts) => {
+          this.controlService.setEcmwfForecastOpacity(this.layer.id, ts, opacity);
+        });
+      }
     }
 
     // Always update the layer's base opacity as well
@@ -534,6 +550,23 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
+   * Obtiene la opacidad global de todas las corridas seleccionadas.
+   * Retorna undefined si hay diferentes opacidades.
+   */
+  globalForecastOpacity = computed(() => {
+    const activeLayer = this.getActiveLayer();
+    if (!activeLayer) return undefined;
+
+    const selectedTimestamps = this.selectedForecastTimestamps();
+    if (selectedTimestamps.length === 0) return activeLayer.controls.opacity;
+
+    const opacities = selectedTimestamps.map((ts) => this.getForecastOpacity(ts));
+    const firstOpacity = opacities[0];
+    const allSame = opacities.every((o) => Math.abs(o - firstOpacity) < 0.001);
+    return allSame ? firstOpacity : undefined;
+  });
+
+  /**
    * Obtiene la etiqueta de tiempo para mostrar (YYYY-MM-DD HH:MM)
    */
   getTimeLabel(timeIndex: number): string {
@@ -553,6 +586,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         return this.parseGoesTimestamp(tileset);
       case LayerCategory.RADAR:
         return this.parseRadarTimestamp(tileset);
+      case LayerCategory.ECMWF:
+        return this.parseEcmwfPeriodTimestamp(tileset);
       default:
         return tileset;
     }
@@ -578,6 +613,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         return this.parseGoesTimeOnly(tileset);
       case LayerCategory.RADAR:
         return this.parseRadarTimeOnly(tileset);
+      case LayerCategory.ECMWF:
+        return this.parseEcmwfPeriodTimeOnly(tileset);
       default:
         return '--:--';
     }
@@ -645,6 +682,142 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return `${hour}:${minute}`;
     }
     return '--:--';
+  }
+
+  // ==========================================================================
+  // ECMWF Timestamp Helpers
+  // ==========================================================================
+
+  /**
+   * Parsea "20260330T1500Z-20260330T1800Z" → "2026-03-30 15:00 - 18:00"
+   */
+  private parseEcmwfPeriodTimestamp(periodTs: string): string {
+    const dashIdx = periodTs.indexOf('-', 1);
+    if (dashIdx === -1) return periodTs;
+    const start = periodTs.substring(0, dashIdx);
+    const end = periodTs.substring(dashIdx + 1);
+    return `${this.formatEcmwfTs(start)} - ${this.formatEcmwfTsTimeOnly(end)}`;
+  }
+
+  /**
+   * Parsea "20260330T1500Z-20260330T1800Z" → "15:00-18:00"
+   */
+  private parseEcmwfPeriodTimeOnly(periodTs: string): string {
+    const dashIdx = periodTs.indexOf('-', 1);
+    if (dashIdx === -1) return '--:--';
+    const start = periodTs.substring(0, dashIdx);
+    const end = periodTs.substring(dashIdx + 1);
+    return `${this.formatEcmwfTsTimeOnly(start)}-${this.formatEcmwfTsTimeOnly(end)}`;
+  }
+
+  /**
+   * "20260330T1500Z" → "2026-03-30 15:00"
+   */
+  private formatEcmwfTs(ts: string): string {
+    if (ts.length >= 13) {
+      return `${ts.substring(0, 4)}-${ts.substring(4, 6)}-${ts.substring(6, 8)} ${ts.substring(9, 11)}:${ts.substring(11, 13)}`;
+    }
+    return ts;
+  }
+
+  /**
+   * "20260330T1500Z" → "15:00"
+   */
+  private formatEcmwfTsTimeOnly(ts: string): string {
+    return ts.length >= 13 ? `${ts.substring(9, 11)}:${ts.substring(11, 13)}` : '--:--';
+  }
+
+  /**
+   * "20260330T1200Z" → "2026-03-30T12:00Z" (ISO 8601 for combobox display)
+   */
+  formatForecastTs(forecastTs: string): string {
+    if (forecastTs.length >= 13) {
+      return `${forecastTs.substring(0, 4)}-${forecastTs.substring(4, 6)}-${forecastTs.substring(6, 8)}T${forecastTs.substring(9, 11)}:${forecastTs.substring(11, 13)}Z`;
+    }
+    return forecastTs;
+  }
+
+  /**
+   * Verifica si la capa necesita control de corridas (solo ECMWF)
+   */
+  hasForecastControl = computed(() => {
+    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF) {
+      return false;
+    }
+    const config = this.configService.getConfig(this.layer.id) as EcmwfTileLayerConfig | undefined;
+    return (config?.availableForecasts?.length ?? 0) > 0;
+  });
+
+  /**
+   * Available forecast runs (ECMWF layers only)
+   */
+  availableForecasts = computed((): string[] => {
+    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF) {
+      return [];
+    }
+    const config = this.configService.getConfig(this.layer.id) as EcmwfTileLayerConfig | undefined;
+    return config?.availableForecasts ?? [];
+  });
+
+  /**
+   * IDs de las corridas seleccionadas
+   */
+  selectedForecastTimestamps = computed((): string[] => {
+    const activeItem = this.getActiveLayer();
+    if (!activeItem) return [];
+    if (
+      activeItem.controls.type === LayerType.TILE &&
+      activeItem.controls.category === LayerCategory.ECMWF
+    ) {
+      return (activeItem.controls as import('../../../../models').EcmwfLayerControls).forecast
+        .selectedForecastTimestamps;
+    }
+    return [];
+  });
+
+  /**
+   * Verifica si una corrida está seleccionada
+   */
+  isForecastSelected(forecastTs: string): boolean {
+    return this.selectedForecastTimestamps().includes(forecastTs);
+  }
+
+  /**
+   * Toggle de una corrida (activar/desactivar)
+   */
+  onForecastToggle(forecastTs: string): void {
+    this.controlService.toggleEcmwfForecast(this.layer.id, forecastTs);
+  }
+
+  /**
+   * Obtiene la opacidad de una corrida específica
+   */
+  getForecastOpacity(forecastTs: string): number {
+    const activeItem = this.getActiveLayer();
+    if (!activeItem) return 1;
+    if (
+      activeItem.controls.type === LayerType.TILE &&
+      activeItem.controls.category === LayerCategory.ECMWF
+    ) {
+      const ecmwfControls = activeItem.controls as import('../../../../models').EcmwfLayerControls;
+      const forecastOpacity = ecmwfControls.forecast.forecastOpacity[forecastTs];
+      return forecastOpacity !== undefined ? forecastOpacity : activeItem.controls.opacity;
+    }
+    return activeItem.controls.opacity;
+  }
+
+  /**
+   * Obtiene el porcentaje de opacidad de una corrida específica
+   */
+  getForecastOpacityPercent(forecastTs: string): number {
+    return Math.round(this.getForecastOpacity(forecastTs) * 100);
+  }
+
+  /**
+   * Establece la opacidad de una corrida específica
+   */
+  onForecastOpacityChange(forecastTs: string, opacity: number): void {
+    this.controlService.setEcmwfForecastOpacity(this.layer.id, forecastTs, opacity);
   }
 
   /**

@@ -20,6 +20,7 @@ export enum LayerCategory {
   GOES_19 = 'goes_19', // GOES 19
   RADAR = 'radar', // Radar meteorológico
   IGN_WMS = 'ign_wms', // IGN WMS layers
+  ECMWF = 'ecmwf', // Modelo numérico europeo (ECMWF)
 }
 
 /**
@@ -43,7 +44,7 @@ interface BaseLayer {
  * Unión discriminada de todos los tipos de capas
  * TypeScript puede inferir el tipo correcto basándose en la propiedad 'type'
  */
-export type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLayer;
+export type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLayer | EcmwfTileLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
@@ -75,6 +76,12 @@ export interface RadarElevation {
   name: string;
   activeByDefault: boolean; // Indica si esta elevación debe seleccionarse por defecto al activar la capa
   zIndexPreference: number; // Z-index preference for stacking order (higher values render on top)
+}
+
+export interface EcmwfTileLayer extends TileLayer {
+  category: LayerCategory.ECMWF;
+  variable: string; // Variable del modelo (ej: 'total-precipitation')
+  availablePeriods?: readonly number[]; // Períodos de acumulación disponibles (ej: [1, 6, 12, 24, 48])
 }
 
 /**

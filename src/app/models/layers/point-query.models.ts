@@ -20,7 +20,16 @@ export interface RadarPointQueryResponse {
   unit: string;
 }
 
-export type PointQueryResponse = SatellitePointQueryResponse | RadarPointQueryResponse;
+export interface EcmwfPointQueryResponse {
+  forecast_ts: string;
+  period_ts: string;
+  lat: number;
+  lon: number;
+  value: number;
+  unit: string;
+}
+
+export type PointQueryResponse = SatellitePointQueryResponse | RadarPointQueryResponse | EcmwfPointQueryResponse;
 
 export interface PointQueryDisplayData {
   layerId: string;

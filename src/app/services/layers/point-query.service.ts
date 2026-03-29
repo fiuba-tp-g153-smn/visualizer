@@ -11,12 +11,19 @@ import {
   RadarLayerControls,
   RadarTileLayer,
   GoesTileLayer,
+  EcmwfLayerControls,
+  EcmwfTileLayerConfig,
   PointQueryDisplayData,
   RadarPointQueryResponse,
   SatellitePointQueryResponse,
+  EcmwfPointQueryResponse,
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
-import { buildRadarPointQueryUrl, buildSatellitePointQueryUrl } from '../../config';
+import {
+  buildRadarPointQueryUrl,
+  buildSatellitePointQueryUrl,
+  buildEcmwfPointQueryUrl,
+} from '../../config';
 
 @Injectable({
   providedIn: 'root',
@@ -38,9 +45,15 @@ export class PointQueryService {
       return of(this.buildNoData(layerId, layerName));
     }
 
-    if (layer.category === LayerCategory.GOES_19 && !this.isWithinLayerBounds(layer, lat, lon)) {
-      // Optimization: no backend request if satellite cursor is outside configured bounds.
+    if (
+      (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF) &&
+      !this.isWithinLayerBounds(layer, lat, lon)
+    ) {
       return of(this.buildNoData(layerId, layerName));
+    }
+
+    if (layer.category === LayerCategory.ECMWF) {
+      return this.queryEcmwfLayer(layer, controls as EcmwfLayerControls, lat, lon);
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
@@ -99,6 +112,49 @@ export class PointQueryService {
     const url = buildRadarPointQueryUrl(radarId, variableId, elevationId, tilesetId, lat, lon);
 
     return this.http.get<RadarPointQueryResponse>(url).pipe(
+      map((response) => ({
+        layerId: layer.id,
+        layerName: layer.name,
+        value: response.value,
+        unit: response.unit,
+        status: 'value' as const,
+      })),
+      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    );
+  }
+
+  private queryEcmwfLayer(
+    layer: Layer,
+    controls: EcmwfLayerControls,
+    lat: number,
+    lon: number,
+  ): Observable<PointQueryDisplayData> {
+    const config = this.layerConfigService.getConfig(layer.id) as EcmwfTileLayerConfig | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    // Resolve the period from the union-based availableTilesets
+    const idx = Math.max(
+      0,
+      Math.min(
+        controls.playback.timeIndex ?? config.availableTilesets.length - 1,
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const periodTs = config.availableTilesets[idx];
+
+    // Pick the first selected forecast that has this period
+    const forecastsForPeriod = config.forecastsByPeriod[periodTs];
+    const selectedForecasts = controls.forecast.selectedForecastTimestamps;
+    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!forecastTs) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const url = buildEcmwfPointQueryUrl(forecastTs, periodTs, lat, lon);
+
+    return this.http.get<EcmwfPointQueryResponse>(url).pipe(
       map((response) => ({
         layerId: layer.id,
         layerName: layer.name,

@@ -4,7 +4,13 @@ import { LayerControlService } from './layer-control.service';
 import { LayerRenderService } from './layer-render.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
-import { GoesLayerControls, LayerCategory, LayerType, RadarLayerControls } from '../../models';
+import {
+  EcmwfLayerControls,
+  GoesLayerControls,
+  LayerCategory,
+  LayerType,
+  RadarLayerControls,
+} from '../../models';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -63,6 +69,7 @@ export class MapLayersService {
           switch (layer.category) {
             case LayerCategory.RADAR:
             case LayerCategory.GOES_19:
+            case LayerCategory.ECMWF:
               if (!this.layerConfigService.hasConfig(layerId)) {
                 continue;
               }
@@ -103,6 +110,24 @@ export class MapLayersService {
             actualZIndex,
           );
           layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+          break;
+        }
+
+        case LayerCategory.ECMWF: {
+          const ecmwfControls = controls as EcmwfLayerControls;
+          const forecastCount = ecmwfControls.forecast.selectedForecastTimestamps.length;
+          const layers = this.layerRenderService.createEcmwfLayersForPlayback(
+            layerId,
+            ecmwfControls,
+            controls.opacity,
+            actualZIndex,
+          );
+          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+
+          // Add offset for multiple forecasts
+          if (forecastCount > 1) {
+            zIndexOffset += forecastCount - 1;
+          }
           break;
         }
 

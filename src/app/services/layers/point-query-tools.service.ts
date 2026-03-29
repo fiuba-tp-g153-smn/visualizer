@@ -82,7 +82,9 @@ export class PointQueryViewerService {
       .filter(
         ({ layer }) =>
           layer.type === LayerType.TILE &&
-          (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.RADAR),
+          (layer.category === LayerCategory.GOES_19 ||
+            layer.category === LayerCategory.RADAR ||
+            layer.category === LayerCategory.ECMWF),
       )
       .map(({ layer, controls }) => ({
         layer,
