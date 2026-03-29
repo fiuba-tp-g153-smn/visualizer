@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, of, catchError } from 'rxjs';
+import { Observable, forkJoin, map, of, catchError, switchMap } from 'rxjs';
 import { buildConfigUrl } from '../../config';
 import {
   Layer,
@@ -13,9 +13,15 @@ import {
   GoesTileLayerConfig,
   TileLayerConfig,
   TilesetEntry,
+  EcmwfTileLayer,
+  EcmwfTileLayerConfig,
 } from '../../models';
 import { LayersService } from './layers.service';
-import { parseGoesTimestamp, parseRadarTimestamp } from '../../utils/tileset-timestamp';
+import {
+  parseGoesTimestamp,
+  parseRadarTimestamp,
+  parseEcmwfPeriodStart,
+} from '../../utils/tileset-timestamp';
 
 /**
  * Service responsible for fetching and caching layer configurations.
@@ -127,6 +133,103 @@ export class LayerConfigService {
   }
 
   /**
+   * Fetches and updates the configuration for an ECMWF layer.
+   * Fetches all available forecast runs and all their periods in parallel via forkJoin.
+   */
+  fetchEcmwfLayerConfig(layer: EcmwfTileLayer): Observable<EcmwfTileLayerConfig> {
+    const forecastsUrl = buildConfigUrl(layer.id);
+    return this.http
+      .get<{ forecasts: Array<{ forecast_ts: string }> }>(forecastsUrl)
+      .pipe(
+        switchMap((resp) => {
+          if (!resp.forecasts?.length) {
+            throw new Error(`No forecasts available for ${layer.id}`);
+          }
+          const forecasts = resp.forecasts.map((f) => f.forecast_ts);
+
+          const periodRequests = forecasts.map((ts) =>
+            this.http
+              .get<{ periods: Array<{ period_ts: string }> }>(
+                buildConfigUrl(`${layer.id}/${ts}`),
+              )
+              .pipe(map((r) => ({ ts, periods: r.periods.map((p) => p.period_ts).sort() }))),
+          );
+
+          return forkJoin(periodRequests).pipe(
+            map((results) => {
+              const periodsByForecast: Record<string, string[]> = {};
+              results.forEach((r) => {
+                periodsByForecast[r.ts] = r.periods;
+              });
+
+              const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
+
+              const firstPeriods = periodsByForecast[forecasts[0]] ?? [];
+              const availableTilesets: TilesetEntry[] = firstPeriods.map((id) => ({
+                id,
+                time: parseEcmwfPeriodStart(id) ?? new Date(0),
+              }));
+
+              const config: EcmwfTileLayerConfig = {
+                layerId: layer.id,
+                type: LayerType.TILE,
+                category: LayerCategory.ECMWF,
+                availableTilesets,
+                availableForecasts: forecasts,
+                periodsByForecast,
+                forecastsByPeriod,
+              };
+              this.updateConfigMap(layer.id, config);
+              return config;
+            }),
+          );
+        }),
+        catchError((error) => {
+          console.error(`Failed to fetch ECMWF config for ${layer.id}:`, error);
+          throw error;
+        }),
+      );
+  }
+
+  /**
+   * Updates the availableTilesets for an ECMWF layer based on the selected forecasts.
+   * Uses the first selected forecast's periods for the time slider.
+   */
+  updateEcmwfSelectedForecasts(layerId: string, selectedForecastTimestamps: string[]): void {
+    const config = this.getConfig(layerId) as EcmwfTileLayerConfig | undefined;
+    if (!config || config.category !== LayerCategory.ECMWF) return;
+
+    // Compute sorted union of all periods across selected forecasts
+    const periodSet = new Set<string>();
+    for (const forecastTs of selectedForecastTimestamps) {
+      const periods = config.periodsByForecast[forecastTs];
+      if (periods) {
+        for (const p of periods) {
+          periodSet.add(p);
+        }
+      }
+    }
+
+    // Build reverse lookup scoped to selected forecasts
+    const selectedPeriodsByForecast: Record<string, string[]> = {};
+    for (const forecastTs of selectedForecastTimestamps) {
+      selectedPeriodsByForecast[forecastTs] = config.periodsByForecast[forecastTs] ?? [];
+    }
+
+    const sortedPeriods = [...periodSet].sort();
+    const availableTilesets: TilesetEntry[] = sortedPeriods.map((id) => ({
+      id,
+      time: parseEcmwfPeriodStart(id) ?? new Date(0),
+    }));
+
+    this.updateConfigMap(layerId, {
+      ...config,
+      availableTilesets,
+      forecastsByPeriod: this.buildForecastsByPeriod(selectedPeriodsByForecast),
+    });
+  }
+
+  /**
    * Main entry point to fetch layer configuration.
    * Dispatches to the appropriate method based on layer category.
    *
@@ -138,6 +241,8 @@ export class LayerConfigService {
         return this.fetchGoesLayerConfig(layer as GoesTileLayer);
       case LayerCategory.RADAR:
         return this.fetchRadarLayerConfig(layer as RadarTileLayer);
+      case LayerCategory.ECMWF:
+        return this.fetchEcmwfLayerConfig(layer as EcmwfTileLayer);
       default:
         throw new Error(`Layer category ${layer.category} does not require tileset configuration`);
     }
@@ -218,6 +323,24 @@ export class LayerConfigService {
       default:
         return false;
     }
+  }
+
+  /**
+   * Builds a reverse lookup: period → forecast timestamps that contain it.
+   */
+  private buildForecastsByPeriod(
+    periodsByForecast: Readonly<Record<string, string[]>>,
+  ): Record<string, string[]> {
+    const result: Record<string, string[]> = {};
+    for (const [forecastTs, periods] of Object.entries(periodsByForecast)) {
+      for (const period of periods) {
+        if (!result[period]) {
+          result[period] = [];
+        }
+        result[period].push(forecastTs);
+      }
+    }
+    return result;
   }
 
   /**

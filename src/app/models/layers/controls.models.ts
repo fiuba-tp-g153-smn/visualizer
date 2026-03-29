@@ -11,7 +11,7 @@ export interface BaseLayerControls {
   zIndex: number;
 }
 
-export type LayerControls = GoesLayerControls | RadarLayerControls | WmsLayerControls;
+export type LayerControls = GoesLayerControls | RadarLayerControls | WmsLayerControls | EcmwfLayerControls;
 
 /** A layer that is currently active (visible) on the map, paired with its controls. */
 export interface ActiveLayerEntry {
@@ -48,4 +48,15 @@ export interface ElevationControls {
 
 export interface WmsLayerControls extends BaseLayerControls {
   type: LayerType.WMS;
+}
+
+export interface EcmwfForecastControls {
+  selectedForecastTimestamps: string[]; // IDs de corridas seleccionadas
+  forecastOpacity: Record<string, number>; // Opacidad por corrida (0-1), undefined usa la opacidad global
+}
+
+export interface EcmwfLayerControls extends TileLayerControls {
+  category: LayerCategory.ECMWF;
+  forecast: EcmwfForecastControls;
+  availablePeriods?: readonly number[];
 }

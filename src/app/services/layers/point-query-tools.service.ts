@@ -116,7 +116,10 @@ export class PointQueryViewerService {
 
     const satelliteItems: DisplaySourceItem[] = activeLayers
       .filter(
-        ({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.GOES_19,
+        ({ layer }) =>
+          layer.type === LayerType.TILE &&
+          (layer.category === LayerCategory.GOES_19 ||
+            layer.category === LayerCategory.ECMWF),
       )
       .map(({ layer, controls }) => ({
         layerId: layer.id,

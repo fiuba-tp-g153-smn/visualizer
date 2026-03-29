@@ -42,6 +42,82 @@ export function formatDurationMs(ms: number): string {
   return `${Math.round(ms / 60_000)}min`;
 }
 
+// ============================================================================
+// ECMWF Timestamp Parsing & Formatting
+// ============================================================================
+
+/**
+ * Parses ECMWF timestamp in format YYYYMMDDTHHMMZ (14 chars, no seconds).
+ * Example: "20260330T1500Z" → Date(2026, 2, 30, 15, 0)
+ */
+export function parseEcmwfTimestamp(ts: string): Date | null {
+  if (ts.length < 13) return null;
+
+  const year = parseInt(ts.substring(0, 4));
+  const month = parseInt(ts.substring(4, 6)) - 1;
+  const day = parseInt(ts.substring(6, 8));
+  const hour = parseInt(ts.substring(9, 11));
+  const minute = parseInt(ts.substring(11, 13));
+
+  return new Date(year, month, day, hour, minute, 0);
+}
+
+/**
+ * Extracts and parses the start timestamp from an ECMWF period range.
+ * Example: "20260330T1500Z-20260330T1800Z" → Date for 2026-03-30 15:00
+ */
+export function parseEcmwfPeriodStart(periodTs: string): Date | null {
+  const dashIdx = periodTs.indexOf('-', 1);
+  const startTs = dashIdx === -1 ? periodTs : periodTs.substring(0, dashIdx);
+  return parseEcmwfTimestamp(startTs);
+}
+
+/**
+ * Formats an ECMWF period range as "YYYY-MM-DD HH:MM - HH:MM".
+ * Example: "20260330T1500Z-20260330T1800Z" → "2026-03-30 15:00 - 18:00"
+ */
+export function formatEcmwfPeriodFull(periodTs: string): string {
+  const dashIdx = periodTs.indexOf('-', 1);
+  if (dashIdx === -1) return periodTs;
+
+  const startDate = parseEcmwfTimestamp(periodTs.substring(0, dashIdx));
+  const endDate = parseEcmwfTimestamp(periodTs.substring(dashIdx + 1));
+
+  if (!startDate || !endDate) return periodTs;
+
+  return `${formatDateFull(startDate)} - ${formatDateTimeOnly(endDate)}`;
+}
+
+/**
+ * Formats an ECMWF period range as "HH:MM-HH:MM" (time only).
+ * Example: "20260330T1500Z-20260330T1800Z" → "15:00-18:00"
+ */
+export function formatEcmwfPeriodTimeOnly(periodTs: string): string {
+  const dashIdx = periodTs.indexOf('-', 1);
+  if (dashIdx === -1) return '--:--';
+
+  const startDate = parseEcmwfTimestamp(periodTs.substring(0, dashIdx));
+  const endDate = parseEcmwfTimestamp(periodTs.substring(dashIdx + 1));
+
+  if (!startDate || !endDate) return '--:--';
+
+  return `${formatDateTimeOnly(startDate)}-${formatDateTimeOnly(endDate)}`;
+}
+
+/**
+ * Formats an ECMWF forecast timestamp as ISO 8601 for display.
+ * Example: "20260330T1200Z" → "2026-03-30T12:00Z"
+ */
+export function formatEcmwfForecastTs(forecastTs: string): string {
+  if (forecastTs.length < 13) return forecastTs;
+
+  return `${forecastTs.substring(0, 4)}-${forecastTs.substring(4, 6)}-${forecastTs.substring(6, 8)}T${forecastTs.substring(9, 11)}:${forecastTs.substring(11, 13)}Z`;
+}
+
+// ============================================================================
+// Generic Formatting
+// ============================================================================
+
 /**
  * Formats a Date as "HH:MM".
  */

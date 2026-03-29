@@ -4,7 +4,7 @@ export interface BaseLayerConfig {
   layerId: string;
 }
 
-export type LayerConfig = GoesTileLayerConfig | RadarTileLayerConfig | WmsLayerConfig;
+export type LayerConfig = GoesTileLayerConfig | RadarTileLayerConfig | WmsLayerConfig | EcmwfTileLayerConfig;
 
 export interface TilesetEntry {
   id: string;
@@ -26,4 +26,12 @@ export interface RadarTileLayerConfig extends TileLayerConfig {
 
 export interface WmsLayerConfig extends BaseLayerConfig {
   type: LayerType.WMS;
+}
+
+export interface EcmwfTileLayerConfig extends TileLayerConfig {
+  category: LayerCategory.ECMWF;
+  // availableTilesets inherited as TilesetEntry[] — id = period string, time = parsed start date
+  availableForecasts: string[]; // Todos los forecast_ts disponibles, ordenados desc
+  periodsByForecast: Readonly<Record<string, string[]>>; // Todos los períodos por corrida (keys = period string IDs)
+  forecastsByPeriod: Readonly<Record<string, string[]>>; // Lookup inverso: período → corridas que lo tienen
 }
