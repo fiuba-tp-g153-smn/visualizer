@@ -15,6 +15,7 @@ import { PolygonService } from '../../services/polygons/polygon.service';
 import { PolygonDrawingService } from '../../services/polygons/polygon-drawing.service';
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
+import { KeyboardShortcutsIntegrationService } from '../../services/keyboard-shortcuts/keyboard-shortcuts-integration.service';
 
 /**
  * Main map container component that orchestrates the map, layers, polygons and point-query UI.
@@ -40,6 +41,7 @@ export class MapContainer implements OnInit, OnDestroy {
   // Services
   private layersService = inject(MapLayersService);
   private polygonsService = inject(MapPolygonsService);
+  private shortcutsIntegration = inject(KeyboardShortcutsIntegrationService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -104,6 +106,7 @@ export class MapContainer implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       this.pointQueryViewerService.initialize();
+      this.shortcutsIntegration.initialize();
       this.initMap();
     }
   }

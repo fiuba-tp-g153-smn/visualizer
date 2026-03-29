@@ -5,7 +5,7 @@
       <button
         mat-button
         (click)="toggleDrawMode()"
-        matTooltip="Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último."
+        [matTooltip]="drawTooltip()"
         class="control-button"
       >
         <mat-icon>{{ isDrawing() ? 'close' : 'draw' }}</mat-icon>
@@ -177,7 +177,8 @@
                           (mouseenter)="onDepartmentHover(polygon.id, dept.name)"
                           (mouseleave)="onDepartmentLeave()"
                         >
-                          {{ dept.name }}@if (dept.province) {
+                          {{ dept.name }}
+                          @if (dept.province) {
                             <span> ({{ dept.province }})</span>
                           }
                         </button>

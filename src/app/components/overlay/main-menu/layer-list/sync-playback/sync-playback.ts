@@ -9,6 +9,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSliderModule } from '@angular/material/slider';
 import { SyncPlaybackService } from '../../../../../services/layers/sync-playback.service';
 import { LayersService } from '../../../../../services/layers/layers.service';
+import { KeyboardShortcutsService } from '../../../../../services/keyboard-shortcuts/keyboard-shortcuts.service';
+import { SHORTCUT_IDS } from '../../../../../config/keyboard-shortcuts.config';
+import { formatKeyCombination } from '../../../../../models';
 import {
   formatDurationMs,
   formatDateTimeOnly,
@@ -46,6 +49,7 @@ import { Layer, LayerCategory, RadarTileLayer } from '../../../../../models';
 export class SyncPlaybackComponent {
   private readonly syncService = inject(SyncPlaybackService);
   private readonly layersService = inject(LayersService);
+  private readonly shortcutsService = inject(KeyboardShortcutsService);
 
   readonly eligibleLayers = this.syncService.eligibleLayers;
   readonly state = this.syncService.syncState;
@@ -75,6 +79,18 @@ export class SyncPlaybackComponent {
 
   readonly frameEdgeMin = computed(() => this.edgeLabel(0));
   readonly frameEdgeMax = computed(() => this.edgeLabel(this.effectiveFrameCount() - 1));
+
+  /**
+   * Gets play/pause tooltip with keyboard shortcut hint
+   */
+  readonly playTooltip = computed(() => {
+    const baseText = this.state().isPlaying ? 'Pausar' : 'Reproducir';
+    const shortcut = this.shortcutsService.getShortcutById(SHORTCUT_IDS.TOGGLE_SYNC_PLAYBACK);
+    if (shortcut && this.shortcutsService.isShortcutEnabled(shortcut.id)) {
+      return `${baseText} (${formatKeyCombination(shortcut.keyCombination)})`;
+    }
+    return baseText;
+  });
 
   private edgeLabel(frameIndex: number): string {
     const info = this.syncService.getFrameInfo(frameIndex);

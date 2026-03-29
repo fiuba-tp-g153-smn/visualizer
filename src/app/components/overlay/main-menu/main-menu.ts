@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,7 +10,11 @@ import { LayerListComponent } from './layer-list/layer-list';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
 import { PolygonManagerComponent } from './polygon-manager/polygon-manager';
 import { MapToolsComponent } from './map-tools/tools';
+import { KeyboardShortcutsPanelComponent } from './keyboard-shortcuts-panel/keyboard-shortcuts-panel';
 import { MenuSection } from './menu-section.model';
+import { KeyboardShortcutsService } from '../../../services/keyboard-shortcuts/keyboard-shortcuts.service';
+import { SHORTCUT_IDS } from '../../../config/keyboard-shortcuts.config';
+import { formatKeyCombination } from '../../../models';
 
 /**
  * Configuración de secciones del menú
@@ -44,6 +48,13 @@ const MENU_SECTIONS: MenuSection[] = [
     tooltip: 'Herramientas del mapa',
     component: MapToolsComponent,
   },
+  {
+    id: 'shortcuts',
+    title: 'Atajos de teclado',
+    icon: 'keyboard',
+    tooltip: 'Atajos de teclado',
+    component: KeyboardShortcutsPanelComponent,
+  },
 ];
 
 /**
@@ -66,14 +77,62 @@ const MENU_SECTIONS: MenuSection[] = [
   templateUrl: './main-menu.html',
   styleUrl: './main-menu.scss',
 })
-export class MainMenuComponent {
+export class MainMenuComponent implements OnInit, OnDestroy {
+  private readonly shortcutsService = inject(KeyboardShortcutsService);
+
   // Secciones disponibles del menú
   readonly sections = MENU_SECTIONS;
 
   // Panel activo (ID de la sección o null)
   readonly activePanel = signal<string | null>(null);
 
-  constructor() {}
+  // Unsubscribe de handlers
+  private unsubscribeHandlers: (() => void) | null = null;
+
+  ngOnInit(): void {
+    this.registerShortcutHandlers();
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribeHandlers?.();
+  }
+
+  /**
+   * Registra los handlers de shortcuts para navegación de paneles
+   */
+  private registerShortcutHandlers(): void {
+    this.unsubscribeHandlers = this.shortcutsService.registerHandlers({
+      [SHORTCUT_IDS.OPEN_LAYERS_PANEL]: () => this.togglePanel('layers'),
+      [SHORTCUT_IDS.OPEN_POLYGONS_PANEL]: () => this.togglePanel('polygons'),
+      [SHORTCUT_IDS.OPEN_BASEMAPS_PANEL]: () => this.togglePanel('basemaps'),
+      [SHORTCUT_IDS.OPEN_TOOLS_PANEL]: () => this.togglePanel('map-tools'),
+      [SHORTCUT_IDS.OPEN_SHORTCUTS_PANEL]: () => this.togglePanel('shortcuts'),
+      [SHORTCUT_IDS.SHOW_HELP]: () => this.togglePanel('shortcuts'),
+      [SHORTCUT_IDS.CLOSE_PANEL]: () => this.closePanel(),
+    });
+  }
+
+  /**
+   * Obtiene el tooltip con shortcut para una sección
+   */
+  getTooltipWithShortcut(section: MenuSection): string {
+    const shortcutMap: Record<string, string> = {
+      layers: SHORTCUT_IDS.OPEN_LAYERS_PANEL,
+      polygons: SHORTCUT_IDS.OPEN_POLYGONS_PANEL,
+      basemaps: SHORTCUT_IDS.OPEN_BASEMAPS_PANEL,
+      'map-tools': SHORTCUT_IDS.OPEN_TOOLS_PANEL,
+      shortcuts: SHORTCUT_IDS.OPEN_SHORTCUTS_PANEL,
+    };
+
+    const shortcutId = shortcutMap[section.id];
+    if (shortcutId) {
+      const shortcut = this.shortcutsService.getShortcutById(shortcutId);
+      if (shortcut && this.shortcutsService.isShortcutEnabled(shortcutId)) {
+        return `${section.tooltip} (${formatKeyCombination(shortcut.keyCombination)})`;
+      }
+    }
+    return section.tooltip;
+  }
 
   /**
    * Obtiene la sección activa

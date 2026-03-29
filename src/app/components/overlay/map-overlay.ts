@@ -2,6 +2,9 @@ import { Component, computed, inject } from '@angular/core';
 import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
 import { ScaleToolsService } from '../../services/layers/scale-tools.service';
 import { MapInfoService } from '../../services/layers/map-info.service';
+import { KeyboardShortcutsService } from '../../services/keyboard-shortcuts/keyboard-shortcuts.service';
+import { SHORTCUT_IDS } from '../../config/keyboard-shortcuts.config';
+import { formatKeyCombination } from '../../models';
 import {
   DrawingMode,
   PolygonDrawingService,
@@ -42,6 +45,7 @@ export class MapOverlayComponent {
   private polygonDrawingService = inject(PolygonDrawingService);
   private polygonsService = inject(MapPolygonsService);
   private mapInfoService = inject(MapInfoService);
+  private shortcutsService = inject(KeyboardShortcutsService);
 
   readonly drawingMode = this.polygonDrawingService.drawingMode;
   readonly editingPolygonId = this.polygonDrawingService.editingPolygonId;
@@ -69,6 +73,12 @@ export class MapOverlayComponent {
 
   readonly showAttribution = this.mapInfoService.showAttribution;
 
+  // Zoom tooltips with keyboard shortcuts
+  readonly zoomInTooltip = computed(() => this.getShortcutTooltip('Acercar', SHORTCUT_IDS.ZOOM_IN));
+  readonly zoomOutTooltip = computed(() =>
+    this.getShortcutTooltip('Alejar', SHORTCUT_IDS.ZOOM_OUT),
+  );
+
   // Computed: any bottom control is visible
   readonly hasBottomControls = computed(
     () => this.showZoom() || this.showScale() || this.showCoordinates() || this.showAttribution(),
@@ -80,6 +90,17 @@ export class MapOverlayComponent {
   );
 
   readonly contextMenuState = this.polygonsService.contextMenuState;
+
+  /**
+   * Gets a tooltip with keyboard shortcut hint
+   */
+  private getShortcutTooltip(baseText: string, shortcutId: string): string {
+    const shortcut = this.shortcutsService.getShortcutById(shortcutId);
+    if (shortcut && this.shortcutsService.isShortcutEnabled(shortcut.id)) {
+      return `${baseText} (${formatKeyCombination(shortcut.keyCombination)})`;
+    }
+    return baseText;
+  }
 
   closeFloatingViewer(layerId: string): void {
     this.pointQueryViewerService.removeSourceSelection(layerId);

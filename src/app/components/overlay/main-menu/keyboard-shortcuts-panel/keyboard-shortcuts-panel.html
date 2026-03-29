@@ -1,0 +1,68 @@
+<div class="shortcuts-panel">
+  <!-- Global toggle -->
+  <div class="global-toggle">
+    <mat-slide-toggle
+      [checked]="shortcutsService.globalEnabled()"
+      (change)="onGlobalToggle($event.checked)"
+      color="primary"
+    >
+      <span class="toggle-label">Atajos de teclado activos</span>
+    </mat-slide-toggle>
+  </div>
+
+  <mat-divider />
+
+  <!-- Categories accordion -->
+  <mat-accordion class="categories-accordion" [multi]="false">
+    @for (category of categories; track category) {
+      <mat-expansion-panel
+        [expanded]="expandedCategory() === category"
+        (opened)="onCategoryExpanded(category)"
+        (closed)="onCategoryClosed(category)"
+        [disabled]="!shortcutsService.globalEnabled()"
+      >
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon class="category-icon">{{ categoryIcons[category] }}</mat-icon>
+            <span class="category-name">{{ categoryNames[category] }}</span>
+          </mat-panel-title>
+          <mat-panel-description>
+            <span class="category-count">
+              {{ getEnabledCount(category) }}/{{ getTotalCount(category) }}
+            </span>
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div class="shortcuts-list">
+          @for (shortcut of getShortcutsForCategory(category); track shortcut.id) {
+            <div class="shortcut-item">
+              <mat-checkbox
+                [checked]="shortcutsService.isShortcutEnabled(shortcut.id)"
+                (change)="onShortcutToggle(shortcut.id, $event.checked)"
+                [disabled]="!shortcutsService.globalEnabled()"
+                color="primary"
+              >
+                <span class="shortcut-name">{{ shortcut.name }}</span>
+              </mat-checkbox>
+              <kbd class="shortcut-keys" [matTooltip]="shortcut.description">
+                {{ formatKeys(shortcut.keyCombination) }}
+              </kbd>
+            </div>
+          }
+        </div>
+      </mat-expansion-panel>
+    }
+  </mat-accordion>
+
+  <!-- Reset button -->
+  <div class="actions-section">
+    <button
+      mat-stroked-button
+      (click)="onResetDefaults()"
+      matTooltip="Restaurar todos los atajos a sus valores predeterminados"
+    >
+      <mat-icon>restore</mat-icon>
+      Restaurar valores
+    </button>
+  </div>
+</div>

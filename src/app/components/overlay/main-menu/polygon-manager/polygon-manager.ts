@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +16,9 @@ import {
   DrawingMode,
   PolygonDrawingService,
 } from '../../../../services/polygons/polygon-drawing.service';
+import { KeyboardShortcutsService } from '../../../../services/keyboard-shortcuts/keyboard-shortcuts.service';
+import { SHORTCUT_IDS } from '../../../../config/keyboard-shortcuts.config';
+import { formatKeyCombination } from '../../../../models';
 import { Polygon } from '../../../../models/geo';
 import { MenuPanelComponent } from '../menu-section.model';
 import {
@@ -49,6 +52,7 @@ import { PhenomenonSelectionDialogComponent } from '../../../floating/phenomenon
 export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   private readonly polygonService = inject(PolygonService);
   private readonly drawingService = inject(PolygonDrawingService);
+  private readonly shortcutsService = inject(KeyboardShortcutsService);
   private readonly dialog = inject(MatDialog);
 
   readonly polygons = this.polygonService.allPolygons;
@@ -57,6 +61,22 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   readonly simplificationLevel = this.polygonService.simplificationLevel;
 
   editingNameId: string | null = null;
+
+  /**
+   * Gets tooltip with keyboard shortcut hint for draw button
+   */
+  readonly drawTooltip = computed(() => {
+    const isDrawing = this.drawingMode() === DrawingMode.DRAW;
+    const baseText = isDrawing
+      ? 'Cancelar dibujo'
+      : 'Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último.';
+    const shortcutId = isDrawing ? SHORTCUT_IDS.CANCEL_DRAWING : SHORTCUT_IDS.START_DRAW_POLYGON;
+    const shortcut = this.shortcutsService.getShortcutById(shortcutId);
+    if (shortcut && this.shortcutsService.isShortcutEnabled(shortcut.id)) {
+      return `${baseText} (${formatKeyCombination(shortcut.keyCombination)})`;
+    }
+    return baseText;
+  });
 
   onPanelOpen(): void {}
 

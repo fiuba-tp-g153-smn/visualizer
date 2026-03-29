@@ -38,7 +38,7 @@
                     mat-icon-button
                     (click)="togglePlayback()"
                     [disabled]="!canPlay()"
-                    [matTooltip]="state().isPlaying ? 'Pausar' : 'Reproducir'"
+                    [matTooltip]="playTooltip()"
                     class="play-btn"
                   >
                     <mat-icon>{{ state().isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>

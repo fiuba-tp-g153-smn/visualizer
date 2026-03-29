@@ -50,3 +50,12 @@ export {
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
 } from './layers';
+
+// Keyboard shortcuts configuration
+export {
+  SHORTCUTS_CONFIG,
+  SHORTCUT_IDS,
+  getShortcutById,
+  getShortcutsByCategory,
+} from './keyboard-shortcuts.config';
+export type { ShortcutId } from './keyboard-shortcuts.config';
