@@ -67,6 +67,7 @@ function createCompositeId(layerId: string, elevationId: string): string {
 })
 export class PointQueryViewerService {
   private readonly STORAGE_KEY = 'smn-point-query-viewer-v4';
+  private readonly automaticQueryDebounceMs = 500;
 
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
@@ -161,6 +162,13 @@ export class PointQueryViewerService {
       if (filteredSelection.length !== currentSelection.length) {
         this.selectedLayerIdsOrdered.set(filteredSelection);
       }
+
+      if (
+        filteredSelection.length === 0 &&
+        this.interactionMode() !== PointQueryInteractionMode.OFF
+      ) {
+        this.interactionMode.set(PointQueryInteractionMode.OFF);
+      }
     });
 
     effect(() => {
@@ -189,17 +197,19 @@ export class PointQueryViewerService {
     this.initialized = true;
 
     this.subscriptions.add(
-      this.mouseMoveSubject.pipe(debounceTime(400)).subscribe((coordinates) => {
-        this.isPointerMoving.set(false);
-        this.lastMouseCoordinates.set(coordinates);
+      this.mouseMoveSubject
+        .pipe(debounceTime(this.automaticQueryDebounceMs))
+        .subscribe((coordinates) => {
+          this.isPointerMoving.set(false);
+          this.lastMouseCoordinates.set(coordinates);
 
-        if (
-          this.interactionMode() === PointQueryInteractionMode.AUTOMATIC &&
-          this.canRunQueries()
-        ) {
-          this.queryTriggerSubject.next(coordinates);
-        }
-      }),
+          if (
+            this.interactionMode() === PointQueryInteractionMode.AUTOMATIC &&
+            this.canRunQueries()
+          ) {
+            this.queryTriggerSubject.next(coordinates);
+          }
+        }),
     );
 
     this.subscriptions.add(
@@ -283,7 +293,13 @@ export class PointQueryViewerService {
       if (currentSelection.includes(layerId)) {
         return;
       }
+
       this.selectedLayerIdsOrdered.set([...currentSelection, layerId]);
+
+      if (this.interactionMode() === PointQueryInteractionMode.OFF) {
+        this.interactionMode.set(PointQueryInteractionMode.MANUAL);
+      }
+
       return;
     }
 
@@ -297,6 +313,10 @@ export class PointQueryViewerService {
     }
 
     this.selectedLayerIdsOrdered.set(currentSelection.filter((id) => id !== layerId));
+
+    if (this.selectedLayerIdsOrdered().length === 0) {
+      this.interactionMode.set(PointQueryInteractionMode.OFF);
+    }
 
     const nextResults = new Map(this.resultsBySource());
     nextResults.delete(layerId);

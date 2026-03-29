@@ -1,0 +1,17 @@
+:host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.context-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.context-menu-positioner {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 1;
+}

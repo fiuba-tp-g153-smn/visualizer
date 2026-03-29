@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import * as L from 'leaflet';
+import { MAP_CONFIG } from '../../config';
 
 const STORAGE_KEY = 'smn-map-tools-v1';
 
@@ -16,6 +17,10 @@ interface MapToolsState {
 export class MapInfoService {
   private map: L.Map | null = null;
 
+  readonly currentZoom = signal<number>(MAP_CONFIG.initialZoom);
+  readonly canZoomIn = computed(() => this.currentZoom() < MAP_CONFIG.maxZoom);
+  readonly canZoomOut = computed(() => this.currentZoom() > MAP_CONFIG.minZoom);
+
   // Tool visibility states
   showCoordinates = signal<boolean>(false);
   showAttribution = signal<boolean>(true);
@@ -27,6 +32,7 @@ export class MapInfoService {
   private attributionControl: L.Control.Attribution | null = null;
   private coordinatesControl: L.Control | null = null;
   private coordinatesMouseMoveHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
+  private coordinatesMouseOutHandler: (() => void) | null = null;
 
   constructor() {
     this.loadPersistedState();
@@ -63,6 +69,7 @@ export class MapInfoService {
 
   initialize(map: L.Map): void {
     this.map = map;
+    this.currentZoom.set(Math.round(map.getZoom()));
 
     // Add default controls if enabled
     if (this.showScale()) {
@@ -117,6 +124,18 @@ export class MapInfoService {
     this.persistState();
   }
 
+  setCurrentZoom(zoom: number): void {
+    this.currentZoom.set(Math.max(MAP_CONFIG.minZoom, Math.min(MAP_CONFIG.maxZoom, zoom)));
+  }
+
+  zoomIn(): void {
+    this.setCurrentZoom(this.currentZoom() + 1);
+  }
+
+  zoomOut(): void {
+    this.setCurrentZoom(this.currentZoom() - 1);
+  }
+
   private addScaleControl(): void {
     if (!this.map || this.scaleControl) return;
     // Use Leaflet's native scale control - dinámico y adaptable al zoom
@@ -153,7 +172,7 @@ export class MapInfoService {
   private addAttributionControl(): void {
     if (!this.map || this.attributionControl) return;
     this.attributionControl = L.control.attribution({
-      position: 'bottomright',
+      position: 'bottomleft',
       prefix:
         '<a href="https://leafletjs.com" title="A JavaScript library for interactive maps">Leaflet</a>',
     });
@@ -181,19 +200,25 @@ export class MapInfoService {
     // Create a custom control for coordinates
     const CoordinatesControl = L.Control.extend({
       onAdd: () => {
-        const div = L.DomUtil.create('div', 'leaflet-control-coordinates leaflet-control');
-        div.style.backgroundColor = 'white';
-        div.style.padding = '4px 8px';
-        div.style.borderRadius = '4px';
-        div.style.fontSize = '12px';
-        div.style.whiteSpace = 'nowrap';
-        div.textContent = 'Mueve el cursor...';
+        const div = L.DomUtil.create(
+          'div',
+          'leaflet-control-coordinates leaflet-control custom-leaflet-coordinates',
+        );
+        div.textContent = 'Lat --.--, Lon --.--';
+
+        L.DomEvent.disableClickPropagation(div);
+        L.DomEvent.disableScrollPropagation(div);
 
         this.coordinatesMouseMoveHandler = (e: L.LeafletMouseEvent) => {
-          div.textContent = `${e.latlng.lat.toFixed(4)}°, ${e.latlng.lng.toFixed(4)}°`;
+          div.textContent = `Lat ${e.latlng.lat.toFixed(4)}°, Lon ${e.latlng.lng.toFixed(4)}°`;
+        };
+
+        this.coordinatesMouseOutHandler = () => {
+          div.textContent = 'Lat --.--, Lon --.--';
         };
 
         this.map?.on('mousemove', this.coordinatesMouseMoveHandler);
+        this.map?.on('mouseout', this.coordinatesMouseOutHandler);
 
         return div;
       },
@@ -209,6 +234,10 @@ export class MapInfoService {
     if (this.coordinatesMouseMoveHandler) {
       this.map.off('mousemove', this.coordinatesMouseMoveHandler);
       this.coordinatesMouseMoveHandler = null;
+    }
+    if (this.coordinatesMouseOutHandler) {
+      this.map.off('mouseout', this.coordinatesMouseOutHandler);
+      this.coordinatesMouseOutHandler = null;
     }
     this.map.removeControl(this.coordinatesControl);
     this.coordinatesControl = null;
@@ -239,6 +268,10 @@ export class MapInfoService {
       if (this.coordinatesMouseMoveHandler) {
         this.map.off('mousemove', this.coordinatesMouseMoveHandler);
         this.coordinatesMouseMoveHandler = null;
+      }
+      if (this.coordinatesMouseOutHandler) {
+        this.map.off('mouseout', this.coordinatesMouseOutHandler);
+        this.coordinatesMouseOutHandler = null;
       }
     }
     this.attributionControl = null;

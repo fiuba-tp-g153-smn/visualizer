@@ -1,0 +1,18 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+.polygon-edit-controls {
+  @include overlaySurface.floating-surface();
+
+  display: inline-flex;
+  gap: 12px;
+  padding: 12px;
+
+  .edit-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}

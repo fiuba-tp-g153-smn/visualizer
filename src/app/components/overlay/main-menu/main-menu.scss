@@ -1,0 +1,92 @@
+@use '../../../../_layer-order' as layerOrder;
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+:host {
+  z-index: layerOrder.$z-main-menu;
+  display: block;
+  pointer-events: auto;
+}
+
+.main-menu-wrapper {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.menu-button-bar {
+  @include overlaySurface.floating-surface();
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-top: 3px solid var(--mat-sys-secondary);
+
+  mat-divider {
+    width: 100%;
+  }
+}
+
+.smn-logo {
+  padding: 4px;
+  display: block;
+}
+
+.menu-button-bar button[mat-icon-button].active {
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+.menu-panel {
+  @include overlaySurface.floating-surface();
+
+  width: 450px;
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+  animation: slideIn 200ms ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.menu-header {
+  background: var(--mat-sys-tertiary);
+  color: var(--mat-sys-on-tertiary);
+  border-bottom: 3px solid var(--mat-sys-secondary);
+  justify-content: space-between;
+  flex-shrink: 0;
+
+  button {
+    color: var(--mat-sys-on-tertiary);
+  }
+}
+
+.panel-content {
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  // Ensure child components take full height
+  > * {
+    flex: 1;
+    min-height: 0;
+  }
+}
