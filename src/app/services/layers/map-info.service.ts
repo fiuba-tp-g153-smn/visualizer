@@ -185,10 +185,10 @@ export class MapInfoService {
    * Get a nice round distance value for the scale bar.
    */
   private getRoundDistance(maxMeters: number): { distance: number; unit: string } {
-    // Round numbers for scale bar
+    // Round numbers for scale bar (in meters)
     const roundNumbers = [
       1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000,
-      500000, 1000000,
+      500000, 1000000, 2000000, 3000000, 5000000, 10000000,
     ];
 
     for (const num of roundNumbers) {
@@ -203,7 +203,7 @@ export class MapInfoService {
     }
 
     // Fallback for very large scales
-    return { distance: 1000000, unit: 'km' };
+    return { distance: 5000000, unit: 'km' };
   }
 
   toggleCoordinates(enabled: boolean): void {
