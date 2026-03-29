@@ -43,9 +43,15 @@ html {
   -ms-interpolation-mode: nearest-neighbor;
 }
 
+mat-card {
+  --mat-card-outline-width: 0;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
+  // height: 100%;
+  overflow: hidden;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
 }

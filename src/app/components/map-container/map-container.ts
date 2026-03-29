@@ -1,18 +1,5 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  PLATFORM_ID,
-  inject,
-  effect,
-  signal,
-  computed,
-  ViewContainerRef,
-  Injector,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { MAP_CONFIG } from '../../config';
@@ -21,21 +8,11 @@ import { LayerControlService } from '../../services/layers/layer-control.service
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
 import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
-import { ScaleToolsService } from '../../services/layers/scale-tools.service';
 import { MapInfoService } from '../../services/layers/map-info.service';
-import { PointValuePanelComponent } from '../point-value-panel/point-value-panel';
-import { ScaleToolPanelComponent } from '../scale-tool-panel/scale-tool-panel';
 import { BaseMap } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
 import { PolygonService } from '../../services/polygons/polygon.service';
-import {
-  PolygonDrawingService,
-  DrawingMode,
-} from '../../services/polygons/polygon-drawing.service';
-import {
-  PolygonEditControlsComponent,
-  PolygonEditAction,
-} from '../polygon-edit-controls/polygon-edit-controls';
+import { PolygonDrawingService } from '../../services/polygons/polygon-drawing.service';
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
 
@@ -45,13 +22,6 @@ import { MapPolygonsService } from '../../services/polygons/map-polygons.service
 @Component({
   selector: 'app-map-container',
   standalone: true,
-  imports: [
-    MatButtonModule,
-    MatIconModule,
-    PolygonEditControlsComponent,
-    PointValuePanelComponent,
-    ScaleToolPanelComponent,
-  ],
   templateUrl: './map-container.html',
   styleUrl: './map-container.scss',
 })
@@ -64,10 +34,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private prefetchService = inject(TilePrefetchService);
   private polygonService = inject(PolygonService);
   private polygonDrawingService = inject(PolygonDrawingService);
-  private viewContainerRef = inject(ViewContainerRef);
-  private injector = inject(Injector);
   private pointQueryViewerService = inject(PointQueryViewerService);
-  private scaleToolsService = inject(ScaleToolsService);
   private mapInfoService = inject(MapInfoService);
 
   // Services
@@ -75,20 +42,10 @@ export class MapContainer implements OnInit, OnDestroy {
   private polygonsService = inject(MapPolygonsService);
 
   private currentTileLayer: L.TileLayer | null = null;
-  private ignoreNextMapEvents = false;
 
-  // Expose properties to template
-  readonly drawingMode = this.polygonDrawingService.drawingMode;
+  readonly showZoom = this.mapInfoService.showZoom;
+
   readonly editingPolygonId = this.polygonDrawingService.editingPolygonId;
-  readonly isEditingPolygon = computed(
-    () => this.drawingMode() === DrawingMode.EDIT && !!this.editingPolygonId(),
-  );
-
-  readonly floatingViewerEntries = this.pointQueryViewerService.floatingViewerEntries;
-  readonly isViewerEnabled = this.pointQueryViewerService.isViewerEnabled;
-  readonly scaleToolEntries = this.scaleToolsService.scaleEntries;
-  readonly isScaleToolsEnabled = this.scaleToolsService.shouldShowScales;
-  readonly isAppZoomVisible = this.mapInfoService.showZoom;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -115,7 +72,7 @@ export class MapContainer implements OnInit, OnDestroy {
 
       // Effect: synchronize zoom when currentZoom signal changes
       effect(() => {
-        const targetZoom = this.currentZoom();
+        const targetZoom = this.mapInfoService.currentZoom();
         if (this.map) {
           const currentMapZoom = Math.round(this.map.getZoom());
           if (currentMapZoom !== targetZoom) {
@@ -143,16 +100,6 @@ export class MapContainer implements OnInit, OnDestroy {
       });
     }
   }
-
-  currentZoom = signal<number>(MAP_CONFIG.initialZoom);
-
-  canZoomIn = computed(() => {
-    return this.currentZoom() < MAP_CONFIG.maxZoom;
-  });
-
-  canZoomOut = computed(() => {
-    return this.currentZoom() > MAP_CONFIG.minZoom;
-  });
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -189,7 +136,7 @@ export class MapContainer implements OnInit, OnDestroy {
 
     // Initialize services with the map instance
     this.layersService.initialize(this.map);
-    this.polygonsService.initialize(this.map, this.viewContainerRef, this.injector);
+    this.polygonsService.initialize(this.map);
     this.mapInfoService.initialize(this.map);
 
     // Prevent UI elements from propagating events to the map
@@ -197,27 +144,14 @@ export class MapContainer implements OnInit, OnDestroy {
 
     // Update zoom signal from map events (user scrolling or programmatic changes)
     this.map.on('zoom', () => {
-      if (this.ignoreNextMapEvents) {
-        return;
-      }
       const mapZoom = this.map?.getZoom();
-      if (mapZoom !== undefined && mapZoom !== this.currentZoom()) {
-        this.currentZoom.set(mapZoom);
+      if (mapZoom !== undefined) {
+        this.mapInfoService.setCurrentZoom(Math.round(mapZoom));
       }
     });
 
     this.map.on('zoomend', () => {
       const mapZoom = this.map?.getZoom();
-      const targetZoom = this.currentZoom();
-
-      // If map reached the target, we're done
-      if (mapZoom !== undefined && Math.round(mapZoom) === targetZoom) {
-        this.ignoreNextMapEvents = false;
-      } else if (mapZoom !== undefined && Math.round(mapZoom) !== targetZoom && this.map) {
-        // Map didn't reach target - trigger another zoom
-        this.ignoreNextMapEvents = false;
-      }
-
       if (mapZoom !== undefined) {
         this.prefetchService.setZoom(Math.round(mapZoom));
       }
@@ -232,13 +166,10 @@ export class MapContainer implements OnInit, OnDestroy {
     });
 
     this.map.on('click', (event: L.LeafletMouseEvent) => {
+      this.polygonsService.closeContextMenu();
       const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
       this.pointQueryViewerService.handleMapClick(event.latlng.lat, event.latlng.lng, button);
     });
-  }
-
-  closeFloatingViewer(layerId: string): void {
-    this.pointQueryViewerService.removeSourceSelection(layerId);
   }
 
   /**
@@ -259,7 +190,6 @@ export class MapContainer implements OnInit, OnDestroy {
     const checkAndApply = () => {
       applyEventBlocking('.main-menu-wrapper');
       applyEventBlocking('.zoom-controls');
-      applyEventBlocking('.edit-controls-container');
       applyEventBlocking('.scale-tools-container');
     };
 
@@ -285,36 +215,5 @@ export class MapContainer implements OnInit, OnDestroy {
       maxZoom: baseMap.maxZoom,
       zIndex: 0,
     }).addTo(this.map);
-  }
-
-  zoomIn(): void {
-    if (this.map) {
-      this.ignoreNextMapEvents = true;
-      const newZoom = Math.min(this.currentZoom() + 1, MAP_CONFIG.maxZoom);
-      this.currentZoom.set(newZoom);
-      this.prefetchService.setZoom(newZoom);
-    }
-  }
-
-  zoomOut(): void {
-    if (this.map) {
-      this.ignoreNextMapEvents = true;
-      const newZoom = Math.max(this.currentZoom() - 1, MAP_CONFIG.minZoom);
-      this.currentZoom.set(newZoom);
-      this.prefetchService.setZoom(newZoom);
-    }
-  }
-
-  /**
-   * Handle polygon edit actions from the UI controls
-   */
-  handleEditAction(action: PolygonEditAction): void {
-    const editingId = this.editingPolygonId();
-
-    if (action.type === 'save') {
-      this.polygonsService.savePolygonEdit(editingId);
-    } else if (action.type === 'cancel') {
-      this.polygonsService.cancelPolygonEdit(editingId);
-    }
   }
 }

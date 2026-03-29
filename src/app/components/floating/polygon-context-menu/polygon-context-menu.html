@@ -1,0 +1,22 @@
+@if (state(); as menuState) {
+  <div class="context-menu-backdrop" (click)="onBackdropClick()">
+    <div
+      class="context-menu-positioner"
+      [style.left.px]="menuState.x"
+      [style.top.px]="menuState.y"
+      (click)="onMenuClick($event)"
+    >
+      <app-polygon-context-menu
+        [polygonId]="menuState.polygonId"
+        [polygonVisible]="menuState.polygonVisible"
+        [hasDepartments]="menuState.hasDepartments"
+        [departmentsVisible]="menuState.departmentsVisible"
+        [canUndoCut]="menuState.canUndoCut"
+        [isLoadingCut]="menuState.isLoadingCut"
+        [isLoadingDepartments]="menuState.isLoadingDepartments"
+        [hasAlerts]="menuState.hasAlerts"
+        (action)="onAction($event)"
+      />
+    </div>
+  </div>
+}

@@ -1,0 +1,13 @@
+<div class="point-value-container">
+  @if (visible()) {
+    @for (entry of entries(); track entry.layerId) {
+      <app-point-value-panel
+        [visible]="true"
+        [isLoading]="entry.isLoading"
+        [layerName]="entry.layerName"
+        [data]="entry.data"
+        (close)="onClose(entry.layerId)"
+      />
+    }
+  }
+</div>

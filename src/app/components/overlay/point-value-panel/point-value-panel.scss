@@ -1,0 +1,74 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+.point-panel {
+  width: 240px;
+  height: 80px;
+  @include overlaySurface.floating-surface();
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0px 8px 8px 8px;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.layer-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.close-button {
+  color: var(--mat-sys-on-surface-variant);
+
+  &:hover {
+    color: var(--mat-sys-error);
+  }
+}
+
+.panel-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.value {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+}
+
+.unit {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.empty {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface-variant);
+}

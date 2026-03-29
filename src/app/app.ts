@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { environment } from '../environments/environment';
-import { NotificationPanelComponent } from './components/notification-panel/notification-panel';
+import { NotificationPanelComponent } from './components/floating/notification-panel/notification-panel';
 
 @Component({
   selector: 'app-root',

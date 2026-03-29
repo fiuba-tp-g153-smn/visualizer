@@ -10,22 +10,20 @@
 
 #map {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   position: relative;
 }
 
 // Leaflet scale control styling
 ::ng-deep .custom-leaflet-scale {
-  background: rgba(255, 255, 255, 0.7);
+  background: #fff;
   border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
   padding: 8px 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   font-size: 11px;
   font-weight: 500;
   display: flex;
   justify-content: center;
-  backdrop-filter: blur(8px);
 
   .leaflet-control-scale-line {
     border-color: rgba(0, 0, 0, 0.6);
@@ -42,6 +40,41 @@
   }
 }
 
+::ng-deep .custom-leaflet-coordinates {
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: rgba(0, 0, 0, 0.72);
+  white-space: nowrap;
+}
+
+::ng-deep {
+  .leaflet-bottom {
+    bottom: 20px;
+  }
+
+  .leaflet-left {
+    left: 20px;
+  }
+
+  &.zoom-visible .leaflet-left {
+    // 20px edge + 40px zoom widget + 12px gap
+    left: 72px;
+  }
+
+  .leaflet-bottom .leaflet-control {
+    margin-bottom: 8px;
+  }
+
+  .leaflet-left .leaflet-control {
+    margin-left: 0;
+  }
+}
+
 // Department tooltip styling
 ::ng-deep .department-tooltip {
   background-color: rgba(0, 0, 0, 0.85);
@@ -55,204 +88,6 @@
   white-space: nowrap;
   pointer-events: none;
   z-index: layerOrder.$z-map-tooltip;
-}
-
-// UI Overlay Container - centralizes all floating elements with flexbox
-.ui-overlay-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  z-index: layerOrder.$z-ui-controls;
-}
-
-// Top zone - centered items at top (edit controls)
-.ui-row-top {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 20px;
-  gap: 20px;
-  flex-shrink: 0;
-}
-
-.ui-row-top .ui-zone-start {
-  pointer-events: auto;
-}
-
-// Bottom zone - flexible items distributed start and end
-.ui-row-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding: 20px;
-  gap: 20px;
-  flex-shrink: 0;
-  margin-top: auto;
-}
-
-.ui-row-bottom .ui-zone-start {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  pointer-events: auto;
-}
-
-.ui-row-bottom .ui-zone-end {
-  pointer-events: auto;
-}
-
-// Right side - vertical items (scale tools)
-.ui-zone-end-full {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  bottom: 170px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  pointer-events: auto;
-  z-index: layerOrder.$z-ui-panels;
-}
-
-// Point value container - horizontal flex
-.point-value-container {
-  display: flex;
-  flex-wrap: wrap-reverse;
-  justify-content: center;
-  align-content: flex-end;
-  gap: 8px;
-  pointer-events: auto;
-}
-
-.point-value-container app-point-value-panel {
-  pointer-events: auto;
-}
-
-// Scale tools container - vertical flex
-.scale-tools-container {
-  display: flex;
-  flex-direction: row-reverse;
-  align-items: stretch;
-  gap: 8px;
-  pointer-events: auto;
-  z-index: layerOrder.$z-ui-panels;
-}
-
-.scale-tools-container app-scale-tool-panel {
-  pointer-events: auto;
-}
-
-// Zoom controls - compact flex layout
-.zoom-controls {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  background-color: var(--mat-sys-surface);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  pointer-events: auto;
-  z-index: layerOrder.$z-ui-controls;
-}
-
-@media (max-height: 700px) {
-  .ui-zone-end-full {
-    bottom: 150px;
-    top: 20px;
-  }
-}
-
-@media (max-width: 768px) {
-  .ui-overlay-container {
-    padding: 0;
-  }
-
-  .ui-row-bottom {
-    flex-direction: column;
-    align-items: flex-end;
-    padding: 20px;
-  }
-
-  .ui-row-bottom .ui-zone-start {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .ui-zone-end-full {
-    right: 20px;
-  }
-}
-
-.zoom-button {
-  width: 40px;
-  height: 36px;
-  border-radius: 0;
-  color: var(--mat-sys-on-surface);
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover:not(:disabled) {
-    background-color: var(--mat-sys-surface-container-high);
-  }
-
-  &:active:not(:disabled) {
-    background-color: var(--mat-sys-primary-container);
-    color: var(--mat-sys-on-primary-container);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-  }
-
-  &:first-child {
-    border-radius: 8px 8px 0 0;
-
-    ::ng-deep .mat-mdc-button-persistent-ripple,
-    ::ng-deep .mat-mdc-button-ripple {
-      border-radius: 8px 8px 0 0;
-    }
-  }
-
-  &:last-child {
-    border-radius: 0 0 8px 8px;
-
-    ::ng-deep .mat-mdc-button-persistent-ripple,
-    ::ng-deep .mat-mdc-button-ripple {
-      border-radius: 0 0 8px 8px;
-    }
-  }
-}
-
-.zoom-level {
-  width: 40px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--mat-sys-on-surface-variant);
-  border-top: 1px solid var(--mat-sys-outline-variant);
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-  background-color: var(--mat-sys-surface-container-low);
-  user-select: none;
-}
-
-// Edit controls container - posicionamiento
-.edit-controls-container {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: layerOrder.$z-ui-controls;
 }
 
 // Leaflet Editable customizations
