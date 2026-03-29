@@ -1,0 +1,74 @@
+@use '../../../_layer-order' as layerOrder;
+
+$edge: 20px;
+$gap: 12px;
+
+:host {
+  position: relative;
+  z-index: layerOrder.$z-main-menu;
+  pointer-events: none;
+}
+
+// ── Main layout ────────────────────────────────────────────────────────────
+// Row:  [ col-main (flex:1) ] [ col-side ]
+// col-main is a column: row-top / row-middle (flex:1) / row-bottom
+
+.overlay-layout {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  padding: $edge;
+  gap: $gap;
+  pointer-events: none;
+}
+
+// ── Left/main column ───────────────────────────────────────────────────────
+
+.col-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+}
+
+.row-top {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: $gap;
+}
+
+// Centers the edit-controls in the remaining space after the menu
+.edit-zone {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+// Grows to fill the middle; zoom anchors to bottom-start
+.row-middle {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+}
+
+.left-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $gap;
+}
+
+// ── Right scale-tools column ───────────────────────────────────────────────
+
+.col-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: $gap;
+}

@@ -1,0 +1,27 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+:host {
+  display: contents;
+}
+
+.coordinates {
+  @include overlaySurface.floating-surface();
+
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.separator {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.placeholder {
+  color: var(--mat-sys-on-surface-variant);
+}

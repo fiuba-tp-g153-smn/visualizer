@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 import { ContinuousScale, DiscreteScale, ScaleType, PaletteConfigScale } from '../../../models';
 import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
@@ -7,7 +9,7 @@ import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
 @Component({
   selector: 'app-scale-tool-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule],
   templateUrl: './scale-tool-panel.html',
   styleUrl: './scale-tool-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -17,6 +19,11 @@ export class ScaleToolPanelComponent {
   private readonly PALETTE_FALLBACK_COLOR = '#cccccc';
 
   @Input({ required: true }) entry!: ScaleToolEntry;
+  @Output() close = new EventEmitter<void>();
+
+  onClose(): void {
+    this.close.emit();
+  }
 
   get isContinuous(): boolean {
     return this.entry.scale.type === ScaleType.CONTINUOUS;
