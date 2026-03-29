@@ -4,6 +4,7 @@
 :host {
   z-index: layerOrder.$z-main-menu;
   display: flex;
+  align-self: flex-start;
   min-height: 0;
   max-height: 100%;
   pointer-events: auto;
@@ -14,6 +15,7 @@
   display: flex;
   gap: 20px;
   align-items: flex-start;
+  flex: 0 0 auto;
   min-height: 0;
   max-height: 100%;
   overflow: hidden;
@@ -29,6 +31,9 @@
   padding: 8px;
   border-top: 3px solid var(--mat-sys-secondary);
   flex-shrink: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
 
   mat-divider {
     width: 100%;
@@ -49,13 +54,14 @@
   @include overlaySurface.floating-surface();
 
   width: 450px;
+  max-width: min(450px, calc(100vw - 160px));
   min-height: 0;
   max-height: 100%;
   overflow: hidden;
   animation: slideIn 200ms ease-out;
   display: flex;
   flex-direction: column;
-  flex-shrink: 1;
+  flex: 0 1 auto;
 }
 
 @keyframes slideIn {
@@ -83,7 +89,7 @@
 
 .panel-content {
   padding: 0;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   display: flex;
@@ -93,9 +99,9 @@
     padding-bottom: 0;
   }
 
-  // Ensure child components take full height
+  // Avoid forcing content to fill the full panel height.
   > * {
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
   }
 }

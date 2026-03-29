@@ -1,23 +1,28 @@
 :host {
-  display: flex;
-  justify-content: flex-end;
   pointer-events: auto;
   overflow: visible;
 }
 
 .point-value-container {
-  display: grid;
-  grid-template-columns: repeat(2, max-content);
-  gap: 4px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
   pointer-events: auto;
   overflow: visible;
-  // Trick: rotate container 180deg so first item appears bottom-right
-  transform: rotate(180deg);
+}
+
+.point-value-column {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  pointer-events: auto;
+  overflow: visible;
 }
 
 app-point-value-panel {
+  flex: 0 0 auto;
   pointer-events: auto;
   overflow: visible;
-  // Counter-rotate items so content is readable
-  transform: rotate(180deg);
 }
