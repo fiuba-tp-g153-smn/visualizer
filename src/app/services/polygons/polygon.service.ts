@@ -3,6 +3,7 @@ import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/geo';
 import { AlertsService } from './alerts.service';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
 
 /**
  * Servicio para gestionar polígonos en el mapa
@@ -309,7 +310,10 @@ export class PolygonService {
 
     try {
       const response = await firstValueFrom(
-        this.alertsService.intersectDepartments(polygon.coordinates, this.simplificationLevel()),
+        this.alertsService.intersectDepartments(
+          polygon.coordinates,
+          DEPARTMENTS_SIMPLIFICATION_LEVEL,
+        ),
       );
 
       this.updatePolygon(id, {

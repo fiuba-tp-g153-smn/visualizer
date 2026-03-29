@@ -78,37 +78,12 @@
     gap: 8px;
 
     .control-button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px 16px;
-      font-size: 14px;
-      border-radius: 8px;
-
       &.cancel {
         background-color: var(--mat-sys-error);
       }
 
       &.delete-button {
-        color: var(--mat-sys-on-surface);
-
-        ::ng-deep .mat-icon {
-          color: var(--mat-sys-error);
-        }
-
-        &:hover:not(:disabled) {
-          background-color: color-mix(in srgb, var(--mat-sys-error) 12%, transparent);
-        }
-      }
-
-      &:disabled {
-        ::ng-deep {
-          .mdc-button__label,
-          .mat-icon {
-            color: var(--mat-sys-on-surface-variant);
-            opacity: 0.6;
-          }
-        }
+        color: var(--mat-sys-error);
       }
     }
   }
@@ -377,13 +352,14 @@
   transition: background-color 0.2s ease;
 
   &:hover:not(:disabled) {
-    background-color: var(--mat-sys-surface-container-high);
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
   }
 
   mat-icon {
     font-size: 18px;
     width: 18px;
     height: 18px;
+    color: var(--mat-sys-primary);
   }
 }
 

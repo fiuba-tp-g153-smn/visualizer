@@ -1,6 +1,6 @@
 @use '../../../styles/overlay-surface' as overlaySurface;
 
-$dock-radius: 10px;
+$dock-radius: 24px;
 
 .polygon-edit-controls {
   @include overlaySurface.floating-surface();
@@ -9,13 +9,4 @@ $dock-radius: 10px;
   gap: 12px;
   padding: 8px;
   border-radius: $dock-radius;
-
-  .edit-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-width: 112px;
-    border-radius: 8px;
-  }
 }
