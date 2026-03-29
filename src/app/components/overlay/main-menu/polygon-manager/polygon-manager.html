@@ -3,10 +3,12 @@
   <div class="drawing-controls">
     <div class="control-buttons">
       <button
-        mat-button
+        mat-flat-button
+        color="primary"
         (click)="toggleDrawMode()"
         matTooltip="Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último."
         class="control-button"
+        [class.cancel]="isDrawing()"
       >
         <mat-icon>{{ isDrawing() ? 'close' : 'draw' }}</mat-icon>
         {{ isDrawing() ? 'Cancelar' : 'Dibujar' }}
@@ -16,7 +18,7 @@
         (click)="deleteAll()"
         [disabled]="polygonCount() === 0"
         matTooltip="Eliminar todos los polígonos"
-        class="control-button"
+        class="control-button delete-button"
       >
         <mat-icon>delete_sweep</mat-icon>
         Borrar todos
@@ -177,7 +179,8 @@
                           (mouseenter)="onDepartmentHover(polygon.id, dept.name)"
                           (mouseleave)="onDepartmentLeave()"
                         >
-                          {{ dept.name }}@if (dept.province) {
+                          {{ dept.name }}
+                          @if (dept.province) {
                             <span> ({{ dept.province }})</span>
                           }
                         </button>

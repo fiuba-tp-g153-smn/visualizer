@@ -25,6 +25,7 @@ import {
 import { LayerControlService } from './layer-control.service';
 import { LayersService } from './layers.service';
 import { PointQueryService } from './point-query.service';
+import { MapInfoService } from './map-info.service';
 import { DrawingMode, PolygonDrawingService } from '../polygons/polygon-drawing.service';
 
 interface MouseCoordinates {
@@ -50,6 +51,7 @@ interface PointQueryViewerEntry {
 interface PersistedPointQueryViewerState {
   interactionMode: PointQueryInteractionMode;
   selectedLayerIdsOrdered: string[];
+  showMarker: boolean;
 }
 
 interface SourceQueryResult {
@@ -73,6 +75,7 @@ export class PointQueryViewerService {
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
   private readonly pointQueryService = inject(PointQueryService);
+  private readonly mapInfoService = inject(MapInfoService);
   private readonly polygonDrawingService = inject(PolygonDrawingService);
 
   private readonly subscriptions = new Subscription();
@@ -88,6 +91,22 @@ export class PointQueryViewerService {
   readonly isPointerMoving = signal<boolean>(false);
   readonly lastMouseCoordinates = signal<MouseCoordinates | null>(null);
   readonly lastClickCoordinates = signal<MouseCoordinates | null>(null);
+  readonly showMarker = signal<boolean>(false);
+
+  // Current marker position (for rendering on map)
+  readonly markerPosition = computed<MouseCoordinates | null>(() => {
+    if (!this.showMarker() || !this.isViewerEnabled()) {
+      return null;
+    }
+    const mode = this.interactionMode();
+    if (mode === PointQueryInteractionMode.MANUAL) {
+      return this.lastClickCoordinates();
+    }
+    if (mode === PointQueryInteractionMode.AUTOMATIC) {
+      return this.lastMouseCoordinates();
+    }
+    return null;
+  });
 
   private readonly resultsBySource = signal<Map<string, PointQueryDisplayData>>(new Map());
   private readonly loadingLayerIds = signal<Set<string>>(new Set());
@@ -194,6 +213,12 @@ export class PointQueryViewerService {
         this.disableViewerAndClearSources();
       }
     });
+
+    // Sync marker position with MapInfoService for rendering
+    effect(() => {
+      const position = this.markerPosition();
+      this.mapInfoService.setQueryMarkerPosition(position);
+    });
   }
 
   initialize(): void {
@@ -291,6 +316,10 @@ export class PointQueryViewerService {
   setInteractionMode(mode: PointQueryInteractionMode): void {
     this.interactionMode.set(mode);
     this.isPointerMoving.set(false);
+  }
+
+  toggleMarker(enabled: boolean): void {
+    this.showMarker.set(enabled);
   }
 
   toggleSourceSelection(layerId: string, checked: boolean): void {
@@ -403,6 +432,10 @@ export class PointQueryViewerService {
           ),
         );
       }
+
+      if (typeof parsed.showMarker === 'boolean') {
+        this.showMarker.set(parsed.showMarker);
+      }
     } catch (error) {
       console.warn('Failed to load point query viewer state from localStorage:', error);
     }
@@ -416,6 +449,7 @@ export class PointQueryViewerService {
     const payload: PersistedPointQueryViewerState = {
       interactionMode: this.interactionMode(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
+      showMarker: this.showMarker(),
     };
 
     try {

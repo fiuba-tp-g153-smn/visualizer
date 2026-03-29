@@ -86,7 +86,7 @@ app-polygon-edit-dock {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-end;
   gap: $gap;
   overflow: visible;

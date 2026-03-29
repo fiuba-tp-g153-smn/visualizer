@@ -17,6 +17,10 @@ export class GeneralToolsTabComponent {
 
   onCoordinatesChange(enabled: boolean): void {
     this.mapInfo.toggleCoordinates(enabled);
+    // When disabling coordinates, also disable cursor lines
+    if (!enabled) {
+      this.mapInfo.toggleCursorLines(false);
+    }
   }
 
   onScaleChange(enabled: boolean): void {
@@ -29,5 +33,13 @@ export class GeneralToolsTabComponent {
 
   onAttributionChange(enabled: boolean): void {
     this.mapInfo.toggleAttribution(enabled);
+  }
+
+  onCursorLinesChange(enabled: boolean): void {
+    this.mapInfo.toggleCursorLines(enabled);
+  }
+
+  onGraticuleChange(enabled: boolean): void {
+    this.mapInfo.toggleGraticule(enabled);
   }
 }

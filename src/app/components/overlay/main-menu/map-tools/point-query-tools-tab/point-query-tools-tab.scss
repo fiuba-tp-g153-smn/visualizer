@@ -20,10 +20,18 @@
   }
 }
 
+.mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .sources-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
 .section-label {
@@ -61,4 +69,10 @@
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant);
   padding: 0 2px;
+}
+
+.marker-checkbox {
+  ::ng-deep .mdc-form-field {
+    font-size: 14px;
+  }
 }
