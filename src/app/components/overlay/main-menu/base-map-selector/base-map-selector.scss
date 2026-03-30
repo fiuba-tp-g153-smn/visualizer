@@ -1,11 +1,15 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .base-map-selector {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .base-map-grid {
@@ -13,7 +17,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  max-height: calc(100vh - 160px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
