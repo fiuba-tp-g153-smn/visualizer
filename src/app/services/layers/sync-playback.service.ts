@@ -45,36 +45,30 @@ export class SyncPlaybackService {
   readonly syncState = this.state.asReadonly();
 
   constructor() {
-    effect(
-      () => {
-        const eligibleIds = new Set(this.eligibleLayers().map((item) => item.layer.id));
-        const selectedIds = this.state().selectedLayerIds;
-        const invalidIds = selectedIds.filter((id) => !eligibleIds.has(id));
+    effect(() => {
+      const eligibleIds = new Set(this.eligibleLayers().map((item) => item.layer.id));
+      const selectedIds = this.state().selectedLayerIds;
+      const invalidIds = selectedIds.filter((id) => !eligibleIds.has(id));
 
-        if (invalidIds.length > 0) {
-          invalidIds.forEach((id) => this.restoreOriginalLastImagesCount(id));
-          this.state.update((s) => ({
-            ...s,
-            selectedLayerIds: s.selectedLayerIds.filter((id) => eligibleIds.has(id)),
-          }));
-          if (this.state().selectedLayerIds.length === 0) {
-            this.pause();
-          }
+      if (invalidIds.length > 0) {
+        invalidIds.forEach((id) => this.restoreOriginalLastImagesCount(id));
+        this.state.update((s) => ({
+          ...s,
+          selectedLayerIds: s.selectedLayerIds.filter((id) => eligibleIds.has(id)),
+        }));
+        if (this.state().selectedLayerIds.length === 0) {
+          this.pause();
         }
-      },
-      { allowSignalWrites: true },
-    );
+      }
+    });
 
     // Stop playback when alignment is lost due to a config change (e.g. new tilesets arrive
     // and the ±5 min constraint can no longer be satisfied).
-    effect(
-      () => {
-        if (!this.isAligned() && this.state().isPlaying) {
-          this.pause();
-        }
-      },
-      { allowSignalWrites: true },
-    );
+    effect(() => {
+      if (!this.isAligned() && this.state().isPlaying) {
+        this.pause();
+      }
+    });
   }
 
   // ============================================================================
