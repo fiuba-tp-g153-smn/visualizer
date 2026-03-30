@@ -74,6 +74,16 @@
                     <span class="speed-label">s</span>
                   </div>
                 </div>
+
+                @if (hasReducedFrameCount()) {
+                  <div class="reduced-frames-info">
+                    <mat-icon>info</mat-icon>
+                    <span>
+                      Mostrando <strong>{{ effectiveFrameCount() }}</strong> de
+                      {{ state().frameCount }} (algunas capas tienen menos datos)
+                    </span>
+                  </div>
+                }
               } @else {
                 <div class="no-periods-message">
                   <mat-icon class="info-icon">link_off</mat-icon>
@@ -116,12 +126,18 @@
                 {{ fullNameForLayer(item.layer) }}
               </mat-checkbox>
               @if (isLayerSelected(item.layer.id) && layersWithFewerFrames().has(item.layer.id)) {
-                <mat-icon
-                  class="fewer-frames-icon"
-                  matTooltip="Menos imágenes disponibles que el N seleccionado"
+                <mat-chip
+                  class="fewer-frames-chip"
+                  [matTooltip]="
+                    'Solo ' +
+                    getActualTilesetCount(item.layer.id) +
+                    ' imágenes disponibles (se solicitaron ' +
+                    state().frameCount +
+                    ')'
+                  "
                 >
-                  warning_amber
-                </mat-icon>
+                  {{ getActualTilesetCount(item.layer.id) }}
+                </mat-chip>
               }
             </div>
           }

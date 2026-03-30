@@ -292,6 +292,15 @@ export class SyncPlaybackService {
   });
 
   /**
+   * Returns the actual available tileset count for a given layer.
+   * Useful for UI to show "6 → 3" when a layer has fewer frames than requested.
+   */
+  getActualTilesetCount(layerId: string): number {
+    const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
+    return tilesets?.length ?? 0;
+  }
+
+  /**
    * Frame info (avg time ± deviation) at the current frame index.
    */
   readonly currentFrameInfo = computed((): FrameInfo | null => {
