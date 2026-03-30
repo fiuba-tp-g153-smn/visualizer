@@ -132,13 +132,17 @@ export class SyncPlaybackService {
    *  1. Initial baseIndex[id] = max(0, tilesets.length - N) per layer.
    *  2. Anchor = layer whose tilesets[baseIndex] is the oldest timestamp.
    *  3. For each non-anchor layer find the closest tileset within ±5 min of anchor's first frame.
-   *  4. If all match → isAligned: true.
-   *  5. If any fail → advance anchor base by 1 and retry.
+   *  4. Verify ALL subsequent frames (0 to effectiveFrameCount-1) are also within ±5 min across layers.
+   *  5. If any frame fails alignment → advance anchor base by 1 and retry.
    *  6. If anchor exhausts all frames → isAligned: false (sync blocked, no fallback).
    */
   private readonly syncAlignment = computed((): SyncAlignment => {
     const { selectedLayerIds, frameCount: N } = this.state();
-    const EMPTY: SyncAlignment = { baseIndices: new Map(), effectiveFrameCount: 0, isAligned: true };
+    const EMPTY: SyncAlignment = {
+      baseIndices: new Map(),
+      effectiveFrameCount: 0,
+      isAligned: true,
+    };
 
     if (selectedLayerIds.length === 0) return EMPTY;
 
@@ -166,7 +170,11 @@ export class SyncPlaybackService {
 
     // Single layer: no cross-layer alignment needed.
     if (layerData.size === 1) {
-      return { baseIndices: initialBase, effectiveFrameCount: this.computeEfc(layerData, initialBase, N), isAligned: true };
+      return {
+        baseIndices: initialBase,
+        effectiveFrameCount: this.computeEfc(layerData, initialBase, N),
+        isAligned: true,
+      };
     }
 
     // Find anchor: layer with the oldest first-frame timestamp in its initial window.
@@ -182,41 +190,94 @@ export class SyncPlaybackService {
 
     if (!anchorId) {
       // No parseable timestamps: treat as aligned with initial bases.
-      return { baseIndices: initialBase, effectiveFrameCount: this.computeEfc(layerData, initialBase, N), isAligned: true };
+      return {
+        baseIndices: initialBase,
+        effectiveFrameCount: this.computeEfc(layerData, initialBase, N),
+        isAligned: true,
+      };
     }
 
     const anchor = layerData.get(anchorId)!;
     const anchorBaseStart = initialBase.get(anchorId)!;
 
-    // Try advancing anchor's base until all non-anchor layers find a match within ±5 min.
+    // Try advancing anchor's base until all non-anchor layers find a match within ±5 min
+    // for ALL frames in the window.
     for (let offset = 0; anchorBaseStart + offset < anchor.tilesets.length; offset++) {
       const anchorBase = anchorBaseStart + offset;
       const anchorFirstMs = anchor.timestamps[anchorBase];
       if (anchorFirstMs == null) continue;
 
       const candidate = new Map<string, number>([[anchorId, anchorBase]]);
-      let allMatched = true;
+      let firstFrameMatched = true;
 
+      // Step 1: Find best match for first frame (frame 0)
       for (const [id, { timestamps }] of layerData) {
         if (id === anchorId) continue;
         let bestIdx = -1;
         let bestDiff = Infinity;
         for (let i = 0; i < timestamps.length; i++) {
           const diff = Math.abs(timestamps[i] - anchorFirstMs);
-          if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            bestIdx = i;
+          }
         }
-        if (bestIdx === -1 || bestDiff > this.ALIGN_TOLERANCE_MS) { allMatched = false; break; }
+        if (bestIdx === -1 || bestDiff > this.ALIGN_TOLERANCE_MS) {
+          firstFrameMatched = false;
+          break;
+        }
         candidate.set(id, bestIdx);
       }
 
-      if (allMatched) {
-        return { baseIndices: candidate, effectiveFrameCount: this.computeEfc(layerData, candidate, N), isAligned: true };
+      if (!firstFrameMatched) continue;
+
+      // Step 2: Verify ALL subsequent frames are also within ±5 min across layers
+      const efc = this.computeEfc(layerData, candidate, N);
+      const allFramesAligned = this.verifyAllFramesAligned(layerData, candidate, efc);
+
+      if (allFramesAligned) {
+        return { baseIndices: candidate, effectiveFrameCount: efc, isAligned: true };
       }
     }
 
     // Anchor exhausted: alignment failed, block sync.
     return { baseIndices: new Map(), effectiveFrameCount: 0, isAligned: false };
   });
+
+  /**
+   * Verifies that all frames (0 to frameCount-1) are within ±ALIGN_TOLERANCE_MS across all layers.
+   * For each frame index, computes the max timestamp spread and checks it's within tolerance.
+   */
+  private verifyAllFramesAligned(
+    layerData: ReadonlyMap<
+      string,
+      { readonly tilesets: readonly TilesetEntry[]; readonly timestamps: readonly number[] }
+    >,
+    baseIndices: ReadonlyMap<string, number>,
+    frameCount: number,
+  ): boolean {
+    for (let frameIdx = 0; frameIdx < frameCount; frameIdx++) {
+      const timestamps: number[] = [];
+
+      for (const [id, { timestamps: ts, tilesets }] of layerData) {
+        const baseIdx = baseIndices.get(id)!;
+        const idx = Math.min(baseIdx + frameIdx, tilesets.length - 1);
+        timestamps.push(ts[idx]);
+      }
+
+      if (timestamps.length < 2) continue;
+
+      const minTs = Math.min(...timestamps);
+      const maxTs = Math.max(...timestamps);
+      const spread = maxTs - minTs;
+
+      if (spread > this.ALIGN_TOLERANCE_MS) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   readonly effectiveFrameCount = computed(() => this.syncAlignment().effectiveFrameCount);
   readonly isAligned = computed(() => this.syncAlignment().isAligned);
@@ -406,7 +467,13 @@ export class SyncPlaybackService {
   reset(): void {
     this.pause();
     this.state().selectedLayerIds.forEach((id) => this.restoreOriginalLastImagesCount(id));
-    this.state.set({ selectedLayerIds: [], frameCount: 1, frameIndex: 0, speed: 1, isPlaying: false });
+    this.state.set({
+      selectedLayerIds: [],
+      frameCount: 1,
+      frameIndex: 0,
+      speed: 1,
+      isPlaying: false,
+    });
   }
 
   // ============================================================================
@@ -425,7 +492,10 @@ export class SyncPlaybackService {
       const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
       if (!tilesets?.length) continue;
       const baseIdx = baseIndices.get(layerId)!;
-      this.layerControlService.setTimeIndex(layerId, Math.min(baseIdx + frameIndex, tilesets.length - 1));
+      this.layerControlService.setTimeIndex(
+        layerId,
+        Math.min(baseIdx + frameIndex, tilesets.length - 1),
+      );
     }
   }
 
