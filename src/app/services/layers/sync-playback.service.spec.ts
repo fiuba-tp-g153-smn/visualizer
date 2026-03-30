@@ -1034,6 +1034,24 @@ describe('SyncPlaybackService', () => {
       expect(service.layersWithFewerFrames().size).toBe(0);
     });
 
+    it('should return actual tileset count via getActualTilesetCount', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(7, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      expect(service.getActualTilesetCount('layer-a')).toBe(7);
+    });
+
+    it('should return 0 for unknown layer in getActualTilesetCount', () => {
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(undefined);
+      expect(service.getActualTilesetCount('unknown-layer')).toBe(0);
+    });
+
     it('should identify layers with fewer tilesets than frameCount', () => {
       const layerA = createMockGoesLayer('layer-a');
       const layerB = createMockGoesLayer('layer-b');
