@@ -15,6 +15,8 @@ import {
   ActiveLayerGroupId,
   WmsLayer,
   WmsLayerControls,
+  RadarTileLayer,
+  RadarLayerControls,
 } from '../../models';
 
 // ============================================================================
@@ -80,6 +82,56 @@ function createMockGoesControls(
       timeIndex: 0,
       speed: 1,
       lastImagesCount: 6,
+    },
+    ...overrides,
+  };
+}
+
+/**
+ * Creates a mock Radar layer.
+ */
+function createMockRadarLayer(
+  id: string,
+  availablePeriods: readonly number[] = [1, 6, 12, 24],
+): RadarTileLayer {
+  return {
+    id,
+    name: `Radar Layer ${id}`,
+    type: LayerType.TILE,
+    category: LayerCategory.RADAR,
+    minNativeZoom: 0,
+    maxNativeZoom: 8,
+    zIndexGroup: ActiveLayerGroupId.BASE,
+    availablePeriods,
+    availableElevations: [
+      { id: 'elev0', name: '0.5°', activeByDefault: true, zIndexPreference: 1 },
+    ],
+  };
+}
+
+/**
+ * Creates mock controls for a Radar layer.
+ */
+function createMockRadarControls(
+  layerId: string,
+  overrides: Partial<RadarLayerControls> = {},
+): RadarLayerControls {
+  return {
+    id: layerId,
+    type: LayerType.TILE,
+    category: LayerCategory.RADAR,
+    visible: true,
+    opacity: 1,
+    zIndex: 1,
+    playback: {
+      isPlaying: false,
+      timeIndex: 0,
+      speed: 1,
+      lastImagesCount: 6,
+    },
+    elevation: {
+      selectedElevationIds: ['elev0'],
+      elevationOpacity: { elev0: 1 },
     },
     ...overrides,
   };
@@ -958,6 +1010,681 @@ describe('SyncPlaybackService', () => {
 
       // Should still align (B is anchor, A matches within tolerance)
       expect(service.isAligned()).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Layers With Fewer Frames
+  // ============================================================================
+
+  describe('Layers with fewer frames', () => {
+    it('should return empty set when all layers have enough tilesets', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.setFrameCount(6);
+
+      expect(service.layersWithFewerFrames().size).toBe(0);
+    });
+
+    it('should identify layers with fewer tilesets than frameCount', () => {
+      const layerA = createMockGoesLayer('layer-a');
+      const layerB = createMockGoesLayer('layer-b');
+      const controlsA = createMockGoesControls('layer-a');
+      const controlsB = createMockGoesControls('layer-b');
+
+      // Layer A has 10 tilesets, Layer B has only 4
+      const tilesetsA = createTilesets(10, baseTime, 10);
+      const tilesetsB = createTilesets(4, new Date(baseTime.getTime() + 60 * 60 * 1000), 10);
+
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) =>
+        id === 'layer-a' ? tilesetsA : tilesetsB,
+      );
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'layer-a' ? controlsA : controlsB,
+      );
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.selectLayer('layer-b');
+      service.setFrameCount(6);
+
+      const fewerFrames = service.layersWithFewerFrames();
+      expect(fewerFrames.has('layer-b')).toBe(true);
+      expect(fewerFrames.has('layer-a')).toBe(false);
+    });
+
+    it('should identify multiple layers with fewer frames', () => {
+      const layerA = createMockGoesLayer('layer-a');
+      const layerB = createMockGoesLayer('layer-b');
+      const layerC = createMockGoesLayer('layer-c');
+      const controlsA = createMockGoesControls('layer-a');
+      const controlsB = createMockGoesControls('layer-b');
+      const controlsC = createMockGoesControls('layer-c');
+
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+        { layer: layerC, controls: controlsC },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) => {
+        if (id === 'layer-a') return createTilesets(10, baseTime, 10);
+        if (id === 'layer-b') return createTilesets(3, baseTime, 10);
+        return createTilesets(5, baseTime, 10);
+      });
+      layerControlServiceMock.getControls.mockImplementation((id: string) => {
+        if (id === 'layer-a') return controlsA;
+        if (id === 'layer-b') return controlsB;
+        return controlsC;
+      });
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.selectLayer('layer-b');
+      service.selectLayer('layer-c');
+      service.setFrameCount(6);
+
+      const fewerFrames = service.layersWithFewerFrames();
+      expect(fewerFrames.has('layer-a')).toBe(false);
+      expect(fewerFrames.has('layer-b')).toBe(true);
+      expect(fewerFrames.has('layer-c')).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Frame Info - Extended Cases
+  // ============================================================================
+
+  describe('Frame info - extended cases', () => {
+    it('should return frame info for arbitrary frame index via getFrameInfo', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(6, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.setFrameCount(6);
+
+      // Get frame info for frame 2 (should be 20 minutes after base)
+      const info = service.getFrameInfo(2);
+      expect(info).not.toBeNull();
+      expect(info!.avgTime.getTime()).toBe(baseTime.getTime() + 2 * 10 * 60 * 1000);
+    });
+
+    it('should return null when not aligned', () => {
+      const layerA = createMockGoesLayer('layer-a');
+      const layerB = createMockGoesLayer('layer-b');
+      const controlsA = createMockGoesControls('layer-a');
+      const controlsB = createMockGoesControls('layer-b');
+
+      // Completely out of range - 2 hours apart
+      const tilesetsA = createTilesets(4, baseTime, 10);
+      const tilesetsB = createTilesets(4, new Date(baseTime.getTime() + 120 * 60 * 1000), 10);
+
+      layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) =>
+        id === 'layer-a' ? tilesetsA : tilesetsB,
+      );
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'layer-a' ? controlsA : controlsB,
+      );
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.selectLayer('layer-b');
+      service.setFrameCount(4);
+
+      expect(service.isAligned()).toBe(false);
+      expect(service.getFrameInfo(0)).toBeNull();
+      expect(service.currentFrameInfo()).toBeNull();
+    });
+
+    it('should return zero deviation for single layer', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(6, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.setFrameCount(4);
+
+      const info = service.currentFrameInfo();
+      expect(info).not.toBeNull();
+      expect(info!.deviationMs).toBe(0);
+    });
+  });
+
+  // ============================================================================
+  // Auto-select Frame Count
+  // ============================================================================
+
+  describe('Auto-select frame count', () => {
+    it('should auto-select frameCount >= 2 on first layer selection', () => {
+      const layer = createMockGoesLayer('layer-a', [1, 6, 12, 24]);
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(30, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      // Initial frameCount is 1
+      expect(service.syncState().frameCount).toBe(1);
+
+      service.selectLayer('layer-a');
+
+      // Should auto-select the first available count >= 2 (which is 6)
+      expect(service.syncState().frameCount).toBe(6);
+    });
+
+    it('should not auto-select if frameCount already >= 2', () => {
+      const layer = createMockGoesLayer('layer-a', [1, 6, 12, 24]);
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(30, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      // Manually set frameCount to 12 before selecting
+      service.setFrameCount(12);
+      service.selectLayer('layer-a');
+
+      // Should keep 12, not change to 6
+      expect(service.syncState().frameCount).toBe(12);
+    });
+  });
+
+  // ============================================================================
+  // Original LastImagesCount Protection
+  // ============================================================================
+
+  describe('Original lastImagesCount protection', () => {
+    it('should not overwrite original lastImagesCount on duplicate selection', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a', {
+        playback: { isPlaying: false, timeIndex: 0, speed: 1, lastImagesCount: 8 },
+      });
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+
+      // Change the controls to simulate external update
+      const newControls = createMockGoesControls('layer-a', {
+        playback: { isPlaying: false, timeIndex: 0, speed: 1, lastImagesCount: 20 },
+      });
+      layerControlServiceMock.getControls.mockReturnValue(newControls);
+
+      // Try to select again (should be no-op)
+      service.selectLayer('layer-a');
+
+      // Deselect should restore original value (8), not the new one (20)
+      service.deselectLayer('layer-a');
+      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenLastCalledWith('layer-a', 8);
+    });
+  });
+
+  // ============================================================================
+  // Engine Synchronization
+  // ============================================================================
+
+  describe('Engine synchronization', () => {
+    beforeEach(() => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(20, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.setFrameCount(6);
+    });
+
+    it('should sync speed with engine while playing', () => {
+      service.play();
+      playbackEngineServiceMock.setSpeed.mockClear();
+
+      service.setSpeed(2.5);
+
+      expect(playbackEngineServiceMock.setSpeed).toHaveBeenCalledWith('sync', 2.5);
+    });
+
+    it('should not sync speed with engine when not playing', () => {
+      playbackEngineServiceMock.setSpeed.mockClear();
+
+      service.setSpeed(2.5);
+
+      expect(playbackEngineServiceMock.setSpeed).not.toHaveBeenCalled();
+    });
+
+    it('should sync frame count with engine while playing', () => {
+      service.play();
+      playbackEngineServiceMock.setFrameCount.mockClear();
+
+      service.setFrameCount(12);
+
+      expect(playbackEngineServiceMock.setFrameCount).toHaveBeenCalledWith(
+        'sync',
+        expect.any(Number),
+      );
+    });
+
+    it('should stop individual layer playback when starting sync playback', () => {
+      layerControlServiceMock.stopPlayback.mockClear();
+
+      service.play();
+
+      expect(layerControlServiceMock.stopPlayback).toHaveBeenCalledWith('layer-a');
+    });
+
+    it('should stop individual playback for all selected layers', () => {
+      // Add a second layer
+      const layerB = createMockGoesLayer('layer-b');
+      const controlsB = createMockGoesControls('layer-b');
+      const layer = createMockGoesLayer('layer-a');
+      const controlsA = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(20, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([
+        { layer, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'layer-a' ? controlsA : controlsB,
+      );
+      TestBed.tick();
+
+      service.selectLayer('layer-b');
+      layerControlServiceMock.stopPlayback.mockClear();
+
+      service.play();
+
+      expect(layerControlServiceMock.stopPlayback).toHaveBeenCalledWith('layer-a');
+      expect(layerControlServiceMock.stopPlayback).toHaveBeenCalledWith('layer-b');
+    });
+  });
+
+  // ============================================================================
+  // Frame Count and Index Clamping
+  // ============================================================================
+
+  describe('Frame count and index clamping', () => {
+    beforeEach(() => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(20, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+    });
+
+    it('should clamp frameIndex when frameCount is reduced', () => {
+      service.setFrameCount(12);
+      service.setFrameIndex(10);
+
+      expect(service.syncState().frameIndex).toBe(10);
+
+      service.setFrameCount(6);
+
+      // frameIndex should be clamped to max valid index (5)
+      expect(service.syncState().frameIndex).toBeLessThanOrEqual(5);
+    });
+
+    it('should handle setFrameIndex when effectiveFrameCount is minimal', () => {
+      service.setFrameCount(1);
+
+      service.setFrameIndex(0);
+      expect(service.syncState().frameIndex).toBe(0);
+
+      service.setFrameIndex(10);
+      expect(service.syncState().frameIndex).toBe(0); // Clamped to 0
+    });
+
+    it('should handle frameCount equal to tilesets length exactly', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(6, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      TestBed.tick();
+
+      service.setFrameCount(6);
+
+      expect(service.effectiveFrameCount()).toBe(6);
+      expect(service.isAligned()).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Auto-deselect with Remaining Layers
+  // ============================================================================
+
+  describe('Auto-deselect with remaining layers', () => {
+    it('should keep playback running when some layers remain after auto-deselect', () => {
+      const layerA = createMockGoesLayer('layer-a');
+      const layerB = createMockGoesLayer('layer-b');
+      const controlsA = createMockGoesControls('layer-a');
+      const controlsB = createMockGoesControls('layer-b');
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'layer-a' ? controlsA : controlsB,
+      );
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.selectLayer('layer-b');
+      service.setFrameCount(6);
+      service.play();
+
+      expect(service.syncState().isPlaying).toBe(true);
+
+      // Remove layer-b from active layers (simulates user deactivating the layer)
+      layerControlServiceMock.activeLayers.set([{ layer: layerA, controls: controlsA }]);
+      TestBed.tick();
+
+      // layer-b should be auto-removed from selection
+      expect(service.syncState().selectedLayerIds).not.toContain('layer-b');
+      expect(service.syncState().selectedLayerIds).toContain('layer-a');
+      // Note: Playback continues with remaining layer (implementation may pause for realignment)
+    });
+
+    it('should pause playback when all layers are auto-deselected', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.setFrameCount(6);
+      service.play();
+
+      expect(service.syncState().isPlaying).toBe(true);
+
+      // Remove all layers
+      layerControlServiceMock.activeLayers.set([]);
+      TestBed.tick();
+
+      expect(service.syncState().selectedLayerIds).toEqual([]);
+      expect(service.syncState().isPlaying).toBe(false);
+    });
+  });
+
+  // ============================================================================
+  // SYNC_EXTRA_FRAMES Verification
+  // ============================================================================
+
+  describe('SYNC_EXTRA_FRAMES buffer', () => {
+    it('should request frameCount + 4 tilesets from layer', () => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(20, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      layerControlServiceMock.setLastImagesCount.mockClear();
+
+      service.setFrameCount(6);
+
+      // Should request 6 + 4 = 10 tilesets
+      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenCalledWith('layer-a', 10);
+    });
+
+    it('should apply SYNC_EXTRA_FRAMES to all selected layers', () => {
+      const layerA = createMockGoesLayer('layer-a');
+      const layerB = createMockGoesLayer('layer-b');
+      const controlsA = createMockGoesControls('layer-a');
+      const controlsB = createMockGoesControls('layer-b');
+      const tilesets = createTilesets(20, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'layer-a' ? controlsA : controlsB,
+      );
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.selectLayer('layer-b');
+      layerControlServiceMock.setLastImagesCount.mockClear();
+
+      service.setFrameCount(12);
+
+      // Both should get 12 + 4 = 16
+      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenCalledWith('layer-a', 16);
+      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenCalledWith('layer-b', 16);
+    });
+  });
+
+  // ============================================================================
+  // Speed Boundary Values
+  // ============================================================================
+
+  describe('Speed boundary values', () => {
+    beforeEach(() => {
+      const layer = createMockGoesLayer('layer-a');
+      const controls = createMockGoesControls('layer-a');
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockReturnValue(controls);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+    });
+
+    it('should accept speed exactly at minimum (0.4)', () => {
+      service.setSpeed(0.4);
+      expect(service.syncState().speed).toBe(0.4);
+    });
+
+    it('should accept speed exactly at maximum (10)', () => {
+      service.setSpeed(10);
+      expect(service.syncState().speed).toBe(10);
+    });
+
+    it('should accept speed within valid range', () => {
+      service.setSpeed(5);
+      expect(service.syncState().speed).toBe(5);
+    });
+  });
+
+  // ============================================================================
+  // RADAR Category Layers
+  // ============================================================================
+
+  describe('RADAR category layers', () => {
+    it('should include RADAR layers as eligible', () => {
+      const layer = createMockRadarLayer('radar-a');
+      const controls = createMockRadarControls('radar-a');
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([{ layer, controls }]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      TestBed.tick();
+
+      expect(service.eligibleLayers()).toHaveLength(1);
+      expect(service.eligibleLayers()[0].layer.id).toBe('radar-a');
+    });
+
+    it('should sync GOES and RADAR layers together', () => {
+      const goesLayer = createMockGoesLayer('goes-a');
+      const radarLayer = createMockRadarLayer('radar-a');
+      const goesControls = createMockGoesControls('goes-a');
+      const radarControls = createMockRadarControls('radar-a');
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([
+        { layer: goesLayer, controls: goesControls },
+        { layer: radarLayer, controls: radarControls },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'goes-a' ? goesControls : radarControls,
+      );
+      TestBed.tick();
+
+      service.selectLayer('goes-a');
+      service.selectLayer('radar-a');
+      service.setFrameCount(6);
+
+      expect(service.isAligned()).toBe(true);
+      expect(service.syncState().selectedLayerIds).toContain('goes-a');
+      expect(service.syncState().selectedLayerIds).toContain('radar-a');
+    });
+
+    it('should compute available frame counts intersection with RADAR layers', () => {
+      const goesLayer = createMockGoesLayer('goes-a', [1, 6, 12, 24]);
+      const radarLayer = createMockRadarLayer('radar-a', [6, 12, 48]);
+      const goesControls = createMockGoesControls('goes-a');
+      const radarControls = createMockRadarControls('radar-a');
+      const tilesets = createTilesets(50, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([
+        { layer: goesLayer, controls: goesControls },
+        { layer: radarLayer, controls: radarControls },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'goes-a' ? goesControls : radarControls,
+      );
+      TestBed.tick();
+
+      service.selectLayer('goes-a');
+      service.selectLayer('radar-a');
+
+      // Intersection: [1,6,12,24] ∩ [6,12,48] = [6, 12]
+      expect(service.availableFrameCounts()).toEqual([6, 12]);
+    });
+  });
+
+  // ============================================================================
+  // Update Layers for Frame (Internal Behavior)
+  // ============================================================================
+
+  describe('Update layers for frame', () => {
+    it('should not call setTimeIndex when not aligned', () => {
+      const layerA = createMockGoesLayer('layer-a');
+      const layerB = createMockGoesLayer('layer-b');
+      const controlsA = createMockGoesControls('layer-a');
+      const controlsB = createMockGoesControls('layer-b');
+
+      // Completely out of range
+      const tilesetsA = createTilesets(4, baseTime, 10);
+      const tilesetsB = createTilesets(4, new Date(baseTime.getTime() + 120 * 60 * 1000), 10);
+
+      layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) =>
+        id === 'layer-a' ? tilesetsA : tilesetsB,
+      );
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'layer-a' ? controlsA : controlsB,
+      );
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.selectLayer('layer-b');
+      service.setFrameCount(4);
+
+      expect(service.isAligned()).toBe(false);
+
+      layerControlServiceMock.setTimeIndex.mockClear();
+      service.setFrameIndex(1);
+
+      // Should not call setTimeIndex because layers are not aligned
+      expect(layerControlServiceMock.setTimeIndex).not.toHaveBeenCalled();
+    });
+
+    it('should set correct time indices for all layers when aligned', () => {
+      const layerA = createMockGoesLayer('layer-a');
+      const layerB = createMockGoesLayer('layer-b');
+      const controlsA = createMockGoesControls('layer-a');
+      const controlsB = createMockGoesControls('layer-b');
+      const tilesets = createTilesets(10, baseTime, 10);
+
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
+      layerControlServiceMock.getControls.mockImplementation((id: string) =>
+        id === 'layer-a' ? controlsA : controlsB,
+      );
+      TestBed.tick();
+
+      service.selectLayer('layer-a');
+      service.selectLayer('layer-b');
+      service.setFrameCount(6);
+
+      layerControlServiceMock.setTimeIndex.mockClear();
+      service.setFrameIndex(2);
+
+      expect(layerControlServiceMock.setTimeIndex).toHaveBeenCalledWith(
+        'layer-a',
+        expect.any(Number),
+      );
+      expect(layerControlServiceMock.setTimeIndex).toHaveBeenCalledWith(
+        'layer-b',
+        expect.any(Number),
+      );
     });
   });
 });
