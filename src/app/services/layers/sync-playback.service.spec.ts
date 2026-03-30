@@ -186,7 +186,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(createTilesets(8, baseTime, 10));
 
-      TestBed.flushEffects();
+      TestBed.tick();
 
       expect(service.eligibleLayers()).toHaveLength(1);
       expect(service.eligibleLayers()[0].layer.id).toBe('layer-a');
@@ -198,7 +198,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(createTilesets(1, baseTime, 10));
 
-      TestBed.flushEffects();
+      TestBed.tick();
 
       expect(service.eligibleLayers()).toHaveLength(0);
     });
@@ -221,7 +221,7 @@ describe('SyncPlaybackService', () => {
       };
       layerControlServiceMock.activeLayers.set([{ layer: wmsLayer, controls: wmsControls }]);
 
-      TestBed.flushEffects();
+      TestBed.tick();
 
       expect(service.eligibleLayers()).toHaveLength(0);
     });
@@ -238,7 +238,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(createTilesets(8, baseTime, 10));
       layerControlServiceMock.getControls.mockReturnValue(controls);
-      TestBed.flushEffects();
+      TestBed.tick();
     });
 
     it('should add layer to selection', () => {
@@ -288,7 +288,7 @@ describe('SyncPlaybackService', () => {
 
       // Layer becomes inactive
       layerControlServiceMock.activeLayers.set([]);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       expect(service.syncState().selectedLayerIds).toEqual([]);
     });
@@ -307,7 +307,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
       layerControlServiceMock.getControls.mockReturnValue(controls);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.setFrameCount(4);
@@ -331,7 +331,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -362,7 +362,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -377,10 +377,7 @@ describe('SyncPlaybackService', () => {
   // ============================================================================
 
   describe('Sync alignment - all frames validation', () => {
-    // TODO: These tests require investigation into how Angular signals/computeds
-    // interact with vitest mocks. The alignment validation logic may need to be
-    // tested differently due to lazy signal evaluation.
-    it.skip('should fail alignment when first frame matches but later frames diverge', () => {
+    it('should fail alignment when layers have no timestamps within tolerance', () => {
       const layerA = createMockGoesLayer('layer-a');
       const layerB = createMockGoesLayer('layer-b');
       const controlsA = createMockGoesControls('layer-a');
@@ -389,16 +386,9 @@ describe('SyncPlaybackService', () => {
       // Layer A: 10:00, 10:10, 10:20, 10:30 (10 min intervals)
       const tilesetsA = createTilesets(4, baseTime, 10);
 
-      // Layer B: 10:02, 10:35, 10:50, 11:05 (first is close, rest diverge significantly)
-      // This setup should cause alignment to fail because:
-      // - Frame 0: A=10:00, B=10:02 (2min diff - OK)
-      // - Frame 1: A=10:10, B=10:35 (25min diff - FAIL)
-      const tilesetsB = [
-        createTileset('b-0', new Date(baseTime.getTime() + 2 * 60 * 1000)), // 10:02
-        createTileset('b-1', new Date(baseTime.getTime() + 35 * 60 * 1000)), // 10:35
-        createTileset('b-2', new Date(baseTime.getTime() + 50 * 60 * 1000)), // 10:50
-        createTileset('b-3', new Date(baseTime.getTime() + 65 * 60 * 1000)), // 11:05
-      ];
+      // Layer B: 11:00, 11:10, 11:20, 11:30 (60 min after A, NO possible alignment)
+      // All B timestamps are > 5 min away from ALL A timestamps
+      const tilesetsB = createTilesets(4, new Date(baseTime.getTime() + 60 * 60 * 1000), 10);
 
       // Configure mocks BEFORE setting active layers
       layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) =>
@@ -413,14 +403,13 @@ describe('SyncPlaybackService', () => {
         { layer: layerA, controls: controlsA },
         { layer: layerB, controls: controlsB },
       ]);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
       service.setFrameCount(4);
 
-      // The algorithm should fail to find ANY valid alignment for all 4 frames
-      // because there's no way to align layers A and B within ±5min for all frames
+      // The algorithm should fail because NO frame from A can align with ANY frame from B
       expect(service.isAligned()).toBe(false);
     });
 
@@ -451,7 +440,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -491,7 +480,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -535,7 +524,7 @@ describe('SyncPlaybackService', () => {
         if (id === 'layer-b') return controlsB;
         return controlsC;
       });
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -545,7 +534,7 @@ describe('SyncPlaybackService', () => {
       expect(service.isAligned()).toBe(true);
     });
 
-    it.skip('should fail if one layer diverges significantly', () => {
+    it('should fail if one layer is completely out of range', () => {
       const layerA = createMockGoesLayer('layer-a');
       const layerB = createMockGoesLayer('layer-b');
       const layerC = createMockGoesLayer('layer-c');
@@ -553,17 +542,13 @@ describe('SyncPlaybackService', () => {
       const controlsB = createMockGoesControls('layer-b');
       const controlsC = createMockGoesControls('layer-c');
 
-      // A and B are close, C diverges
+      // A and B are close (can align)
       const tilesetsA = createTilesets(4, baseTime, 10);
       const tilesetsB = createTilesets(4, new Date(baseTime.getTime() + 2 * 60 * 1000), 10);
-      // C has 20-min intervals starting 30 min later
-      const tilesetsC = createTilesets(4, new Date(baseTime.getTime() + 30 * 60 * 1000), 20);
+      // C is 2 HOURS later - completely out of range of A and B for ALL frames
+      const tilesetsC = createTilesets(4, new Date(baseTime.getTime() + 120 * 60 * 1000), 10);
 
-      layerControlServiceMock.activeLayers.set([
-        { layer: layerA, controls: controlsA },
-        { layer: layerB, controls: controlsB },
-        { layer: layerC, controls: controlsC },
-      ]);
+      // Configure mocks BEFORE setting active layers
       layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) => {
         if (id === 'layer-a') return tilesetsA;
         if (id === 'layer-b') return tilesetsB;
@@ -574,13 +559,21 @@ describe('SyncPlaybackService', () => {
         if (id === 'layer-b') return controlsB;
         return controlsC;
       });
-      TestBed.flushEffects();
+
+      // Set active layers AFTER mocks are configured
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+        { layer: layerC, controls: controlsC },
+      ]);
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
       service.selectLayer('layer-c');
       service.setFrameCount(4);
 
+      // Should fail because C cannot align with A/B
       expect(service.isAligned()).toBe(false);
     });
   });
@@ -598,7 +591,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
       layerControlServiceMock.getControls.mockReturnValue(controls);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.setFrameCount(4);
@@ -694,7 +687,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -719,7 +712,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
       layerControlServiceMock.getControls.mockReturnValue(controls);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.setFrameCount(4);
@@ -741,9 +734,7 @@ describe('SyncPlaybackService', () => {
   // ============================================================================
 
   describe('Config updates during playback', () => {
-    // TODO: This test requires investigation into how Angular signals/computeds
-    // interact with vitest mocks when the mock implementation changes mid-test.
-    it.skip('should pause playback when alignment is lost', () => {
+    it('should pause playback when alignment is lost', () => {
       const layerA = createMockGoesLayer('layer-a');
       const layerB = createMockGoesLayer('layer-b');
       const controlsA = createMockGoesControls('layer-a');
@@ -753,17 +744,20 @@ describe('SyncPlaybackService', () => {
       const tilesetsA = createTilesets(6, baseTime, 10);
       const tilesetsB = createTilesets(6, new Date(baseTime.getTime() + 1 * 60 * 1000), 10);
 
-      layerControlServiceMock.activeLayers.set([
-        { layer: layerA, controls: controlsA },
-        { layer: layerB, controls: controlsB },
-      ]);
+      // Configure mocks BEFORE setting active layers
       layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) =>
         id === 'layer-a' ? tilesetsA : tilesetsB,
       );
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+
+      // Set active layers AFTER mocks are configured
+      layerControlServiceMock.activeLayers.set([
+        { layer: layerA, controls: controlsA },
+        { layer: layerB, controls: controlsB },
+      ]);
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -776,8 +770,8 @@ describe('SyncPlaybackService', () => {
       expect(service.syncState().isPlaying).toBe(true);
 
       // Simulate config update that breaks alignment
-      // Layer B now has completely different timestamps
-      const newTilesetsB = createTilesets(6, new Date(baseTime.getTime() + 30 * 60 * 1000), 20);
+      // Layer B now has timestamps 2 HOURS later - completely out of range
+      const newTilesetsB = createTilesets(6, new Date(baseTime.getTime() + 120 * 60 * 1000), 10);
       layerConfigServiceMock.getAvailableTilesets.mockImplementation((id: string) =>
         id === 'layer-a' ? tilesetsA : newTilesetsB,
       );
@@ -787,7 +781,7 @@ describe('SyncPlaybackService', () => {
         { layer: layerA, controls: controlsA },
         { layer: layerB, controls: controlsB },
       ]);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       // Playback should be paused due to alignment loss
       expect(service.isAligned()).toBe(false);
@@ -815,7 +809,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -839,7 +833,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -861,7 +855,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(tilesets);
       layerControlServiceMock.getControls.mockReturnValue(controls);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
 
@@ -888,7 +882,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue([]);
       layerControlServiceMock.getControls.mockReturnValue(controls);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       // Should not crash
       expect(service.eligibleLayers()).toHaveLength(0);
@@ -901,7 +895,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.activeLayers.set([{ layer, controls }]);
       layerConfigServiceMock.getAvailableTilesets.mockReturnValue(undefined);
       layerControlServiceMock.getControls.mockReturnValue(controls);
-      TestBed.flushEffects();
+      TestBed.tick();
 
       expect(service.eligibleLayers()).toHaveLength(0);
     });
@@ -926,7 +920,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
@@ -956,7 +950,7 @@ describe('SyncPlaybackService', () => {
       layerControlServiceMock.getControls.mockImplementation((id: string) =>
         id === 'layer-a' ? controlsA : controlsB,
       );
-      TestBed.flushEffects();
+      TestBed.tick();
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
