@@ -1,7 +1,7 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { App } from './app/app';
-import { AppLoaderComponent } from './app/components/app-loader/app-loader';
+import { AppLoaderComponent } from './app/components/floating/app-loader/app-loader';
 import { createApplication } from '@angular/platform-browser';
 
 // Bootstrap del loader primero para que se muestre inmediatamente

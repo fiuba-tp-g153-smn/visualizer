@@ -130,7 +130,7 @@ export class LayerRenderService {
       );
     }
 
-    const tilesetId = tilesets[timeIndex];
+    const tilesetId = tilesets[timeIndex].id;
     const poolKey = `${layerId}-${elevationId}-${tilesetId}`;
 
     // Check pool
@@ -278,6 +278,7 @@ export class LayerRenderService {
       .sort((a, b) => a.zIndexPreference - b.zIndexPreference); // Sort by preference (lower first)
 
     // Allocate z-indices incrementally: baseZIndex, baseZIndex+1, baseZIndex+2, etc.
+    // The map-layers service ensures proper separation between layers by tracking cumulative offsets
     selectedElevationsWithPreference.forEach((item, index) => {
       const elevationZIndex = absoluteZIndex + index;
       const elevationId = item.elevationId;
@@ -393,7 +394,7 @@ export class LayerRenderService {
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
-            const tilesetId = tilesets[clampedIndex];
+            const tilesetId = tilesets[clampedIndex].id;
             return `${layerId}-${tilesetId}`;
           }
           case LayerCategory.RADAR: {
@@ -415,7 +416,7 @@ export class LayerRenderService {
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
-            const tilesetId = tilesets[clampedIndex];
+            const tilesetId = tilesets[clampedIndex].id;
             return `${layerId}-[${elevationsKey}]-${tilesetId}`;
           }
           default:
@@ -606,7 +607,7 @@ export class LayerRenderService {
       );
     }
 
-    return tilesets[resolvedTimeIndex];
+    return tilesets[resolvedTimeIndex].id;
   }
 
   /**

@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Layer, LayerGroup } from '../../models';
+import { Layer, LayerCategory, LayerGroup, RadarTileLayer } from '../../models';
 import { LAYER_DEFINITIONS } from '../../config/layers';
 import { environment } from '../../../environments/environment';
+
+const RADAR_ID_PATTERN = /radar\/([A-Z0-9]+)\//;
 
 /**
  * Service responsible for managing layer definitions and metadata.
@@ -69,6 +71,81 @@ export class LayersService {
   getLayerDisplayName(layerId: string): string {
     const layer = this.getLayerById(layerId);
     if (!layer) throw new Error(`Layer '${layerId}' not found`);
+    return layer.name;
+  }
+
+  /**
+   * Gets the full hierarchical name for a layer.
+   * Format: "Group - Subgroup - LayerName - Elevation"
+   * Examples:
+   * - "GOES 19 - ABI - Canal 2 (Visible)"
+   * - "RMA1 - DBZH - 0.5°"
+   * - "IGN - Límites - Límite internacional"
+   *
+   * @param layer - Layer object to get the name for
+   * @param elevationId - Optional elevation ID for radar layers
+   * @returns Full hierarchical name, or layer.name if layer not found in definitions
+   */
+  getLayerFullName(layer: Layer, elevationId?: string): string {
+    // Find group and subgroup for this layer
+    for (const group of this.layerDefinitions) {
+      for (const subgroup of group.subgroups) {
+        if (subgroup.layers.some((l) => l.id === layer.id)) {
+          const parts: string[] = [];
+
+          // Build hierarchical name based on group type
+          switch (layer.category) {
+            case LayerCategory.GOES_19:
+              parts.push('GOES 19');
+              parts.push(subgroup.name); // ABI, GLM
+              parts.push(layer.name);
+              break;
+
+            case LayerCategory.RADAR: {
+              // Extract radar ID from layer.id (e.g., "radar/RMA1/DBZH" → "RMA1")
+              const radarIdMatch = layer.id.match(RADAR_ID_PATTERN);
+              parts.push(radarIdMatch ? radarIdMatch[1] : 'Radar');
+
+              parts.push(layer.name);
+
+              // Add elevation if provided
+              if (elevationId) {
+                const radarLayer = layer as RadarTileLayer;
+                const elevation = radarLayer.availableElevations.find((e) => e.id === elevationId);
+                if (elevation) {
+                  parts.push(elevation.name);
+                }
+              }
+              break;
+            }
+
+            case LayerCategory.IGN_WMS:
+              parts.push('IGN');
+              parts.push(subgroup.name);
+              parts.push(layer.name);
+              break;
+
+            default:
+              throw new Error(`Unknown layer category`);
+          }
+
+          return parts.join(' - ');
+        }
+      }
+    }
+
+    // Fallback if not found in definitions
+    return layer.name;
+  }
+
+  /**
+   * Gets just the layer name (no group/subgroup hierarchy).
+   * This is the same as layer.name.
+   *
+   * @param layer - Layer object
+   * @returns Short name (just the layer's name property)
+   */
+  getLayerShortName(layer: Layer): string {
     return layer.name;
   }
 

@@ -1,0 +1,7 @@
+@if (visible()) {
+  <div class="scale-tools-container">
+    @for (entry of entries(); track entry.layerId) {
+      <app-scale-tool-panel [entry]="entry" (close)="onClose(entry.layerId)" />
+    }
+  </div>
+}

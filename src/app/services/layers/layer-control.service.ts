@@ -1,4 +1,4 @@
-import { Injectable, inject, computed, signal, effect } from '@angular/core';
+import { Injectable, inject, computed, signal, effect, untracked } from '@angular/core';
 import {
   Layer,
   LayerType,
@@ -11,6 +11,8 @@ import {
   GoesLayerControls,
   RadarElevation,
   RadarTileLayer,
+  TilesetEntry,
+  ActiveLayerEntry,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -19,6 +21,7 @@ import {
   DEFAULT_LAYER_CONTROLS,
 } from '../../config/layers';
 import { LayerConfigService } from './layer-config.service';
+import { PlaybackEngineService } from './playback-engine.service';
 
 /**
  * Service responsible for managing layer controls, visibility, and playback state.
@@ -41,9 +44,9 @@ export class LayerControlService {
 
   private readonly layersService = inject(LayersService);
   private readonly layerConfigService = inject(LayerConfigService);
+  private readonly engineService = inject(PlaybackEngineService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
-  private readonly playbackIntervals = new Map<string, number>();
 
   constructor() {
     this.initializeControls();
@@ -51,6 +54,38 @@ export class LayerControlService {
     // Auto-save controls when they change
     effect(() => {
       this.saveControls();
+    });
+
+    // Sync timeIndex to latest tileset when config changes (auto-refresh)
+    effect(() => {
+      const configs = this.layerConfigService.configs();
+
+      // Use untracked to avoid depending on controls signal (prevents infinite loops)
+      untracked(() => {
+        const activeLayerIds = this.activeLayers().map(({ layer }) => layer.id);
+
+        for (const layerId of activeLayerIds) {
+          const config = configs.get(layerId);
+          if (!config || config.type !== LayerType.TILE) {
+            continue;
+          }
+
+          const controls = this.getControls(layerId);
+          if (!controls || controls.type !== LayerType.TILE) {
+            continue;
+          }
+
+          // Skip if playback is running — don't interrupt animation
+          if (controls.playback.isPlaying) {
+            continue;
+          }
+
+          const latestIndex = config.availableTilesets.length - 1;
+          if (latestIndex >= 0 && controls.playback.timeIndex !== latestIndex) {
+            this.setTimeIndex(layerId, latestIndex);
+          }
+        }
+      });
     });
   }
 
@@ -69,7 +104,7 @@ export class LayerControlService {
         const controls = this.controls().get(layer.id);
         return controls?.visible ? { layer, controls } : null;
       })
-      .filter((item): item is { layer: Layer; controls: LayerControls } => item !== null)
+      .filter((item): item is ActiveLayerEntry => item !== null)
       .sort((a, b) => (b.controls.zIndex ?? 0) - (a.controls.zIndex ?? 0));
   });
 
@@ -80,9 +115,7 @@ export class LayerControlService {
   /**
    * Gets active layers filtered by their z-index group.
    */
-  getActiveLayersForGroup(
-    groupId: ActiveLayerGroupId,
-  ): { layer: Layer; controls: LayerControls }[] {
+  getActiveLayersForGroup(groupId: ActiveLayerGroupId): ActiveLayerEntry[] {
     return this.activeLayers().filter(({ layer }) => layer.zIndexGroup === groupId);
   }
 
@@ -456,15 +489,6 @@ export class LayerControlService {
   startPlayback(layerId: string): void {
     if (!this.isActive(layerId)) return;
 
-    // Clear existing interval if playing
-    if (this.isPlaying(layerId)) {
-      const interval = this.playbackIntervals.get(layerId);
-      if (interval) {
-        clearInterval(interval);
-        this.playbackIntervals.delete(layerId);
-      }
-    }
-
     const controls = this.getControls(layerId);
     if (controls.type !== LayerType.TILE) return;
 
@@ -472,56 +496,29 @@ export class LayerControlService {
     if (!availablePeriods || availablePeriods.length === 0) return;
 
     const lastImagesCount = controls.playback.lastImagesCount;
-
-    // Calculate playback range:
-    // If available periods > last images count, start from (total - count) to show only recent images
-    // Otherwise, start from 0 to show all available periods
     const maxTimeIndex = availablePeriods.length - 1;
     const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
+    const frameCount = maxTimeIndex - minTimeIndex + 1;
 
-    // Don't start playback if there's only 1 period in range
-    if (maxTimeIndex - minTimeIndex < 1) return;
+    if (frameCount < 2) return;
 
-    // Reset to first frame of the cycle
-    this.updateControls(layerId, (controls) => {
-      if (controls.type === LayerType.TILE && controls.playback) {
-        controls.playback.timeIndex = minTimeIndex;
+    const speed = controls.playback.speed;
+
+    this.engineService.register(layerId, frameCount, speed);
+
+    this.updateControls(layerId, (c) => {
+      if (c.type === LayerType.TILE && c.playback) {
+        c.playback.isPlaying = true;
+        c.playback.timeIndex = minTimeIndex;
       }
     });
 
-    const speed = controls.playback.speed;
-    const interval = setInterval(() => {
-      const controls = this.getControls(layerId);
-      if (
-        !controls ||
-        controls.type !== LayerType.TILE ||
-        !controls.playback ||
-        !controls.playback.isPlaying ||
-        controls.playback.timeIndex === undefined
-      ) {
-        return;
-      }
-
-      const current = controls.playback.timeIndex;
-      const next = current >= maxTimeIndex ? minTimeIndex : current + 1;
-
-      this.updateControls(layerId, (controls) => {
-        if (controls.type === LayerType.TILE && controls.playback) {
-          controls.playback.timeIndex = next;
+    this.engineService.play(layerId, (frameIndex) => {
+      this.updateControls(layerId, (c) => {
+        if (c.type === LayerType.TILE && c.playback) {
+          c.playback.timeIndex = minTimeIndex + frameIndex;
         }
       });
-    }, speed * 1000);
-
-    this.playbackIntervals.set(layerId, interval);
-
-    this.updateControls(layerId, (controls) => {
-      switch (controls.type) {
-        case LayerType.TILE:
-          controls.playback.isPlaying = true;
-          break;
-        default:
-          throw new Error(`Playback can only be started on tile layers`);
-      }
     });
   }
 
@@ -532,11 +529,7 @@ export class LayerControlService {
     if (!this.isActive(layerId)) return;
     if (!this.isPlaying(layerId)) return;
 
-    const interval = this.playbackIntervals.get(layerId);
-    if (interval) {
-      clearInterval(interval);
-      this.playbackIntervals.delete(layerId);
-    }
+    this.engineService.pause(layerId);
 
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.playback) {
@@ -562,7 +555,7 @@ export class LayerControlService {
    * Returns undefined if config not yet loaded.
    * @throws Error if layer not found or unsupported layer type
    */
-  private getAvailablePeriodsForLayer(layerId: string): string[] | undefined {
+  private getAvailablePeriodsForLayer(layerId: string): TilesetEntry[] | undefined {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer) throw new Error(`Layer '${layerId}' not found`);
 

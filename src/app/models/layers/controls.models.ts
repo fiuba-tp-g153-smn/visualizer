@@ -1,4 +1,4 @@
-import { LayerCategory, LayerType } from './models';
+import { Layer, LayerCategory, LayerType } from './models';
 
 export interface BaseLayerControls {
   id: string;
@@ -13,6 +13,12 @@ export interface BaseLayerControls {
 
 export type LayerControls = GoesLayerControls | RadarLayerControls | WmsLayerControls;
 
+/** A layer that is currently active (visible) on the map, paired with its controls. */
+export interface ActiveLayerEntry {
+  layer: Layer;
+  controls: LayerControls;
+}
+
 export interface TileLayerControls extends BaseLayerControls {
   type: LayerType.TILE;
   playback: PlaybackControls;
@@ -24,7 +30,6 @@ export interface GoesLayerControls extends TileLayerControls {
 }
 
 export interface RadarLayerControls extends TileLayerControls {
-  radarControls: { selectedElevationIds: string[] };
   category: LayerCategory.RADAR;
   elevation: ElevationControls;
 }

@@ -1,0 +1,106 @@
+@use '../../../_layer-order' as layerOrder;
+
+$edge: 20px;
+$gap: 12px;
+
+:host {
+  position: relative;
+  z-index: layerOrder.$z-main-menu;
+  pointer-events: none;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+// ── Main layout ────────────────────────────────────────────────────────────
+
+.overlay-layout {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  padding: $edge;
+  gap: $gap;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+// ── Left/main column ───────────────────────────────────────────────────────
+
+.col-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+}
+
+.row-top {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: $gap;
+}
+
+app-main-menu {
+  align-self: flex-start;
+  min-height: 0;
+  max-height: 100%;
+}
+
+app-polygon-edit-dock {
+  position: fixed;
+  left: 50%;
+  bottom: $edge;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  z-index: layerOrder.$z-main-menu;
+}
+
+// Bottom row: zoom + info controls side by side
+.row-bottom {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: $gap;
+}
+
+.info-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+// ── Right column (scale tools + point values) ──────────────────────────────
+
+.col-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: $gap;
+  overflow: visible;
+}
+
+app-map-scale-tools {
+  flex: 1;
+  min-height: 0;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+app-map-point-values {
+  flex-shrink: 0;
+  pointer-events: auto;
+  overflow: visible;
+}

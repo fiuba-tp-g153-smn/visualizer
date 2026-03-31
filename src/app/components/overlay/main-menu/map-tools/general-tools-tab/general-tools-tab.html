@@ -1,0 +1,59 @@
+<div class="tool-section">
+  <mat-checkbox
+    [checked]="mapInfo.showZoom()"
+    (change)="onZoomChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar controles de zoom (+/-) en el mapa"
+  >
+    Controles de zoom
+  </mat-checkbox>
+
+  <mat-checkbox
+    [checked]="mapInfo.showScale()"
+    (change)="onScaleChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar escala gráfica de referencia en el mapa"
+  >
+    Escala
+  </mat-checkbox>
+
+  <mat-checkbox
+    [checked]="mapInfo.showCoordinates()"
+    (change)="onCoordinatesChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar coordenadas del cursor en el mapa"
+  >
+    Coordenadas
+  </mat-checkbox>
+
+  @if (mapInfo.showCoordinates()) {
+    <div class="sub-options">
+      <mat-checkbox
+        [checked]="mapInfo.showCursorLines()"
+        (change)="onCursorLinesChange($event.checked)"
+        color="primary"
+        matTooltip="Mostrar líneas de latitud y longitud que siguen al cursor"
+      >
+        Líneas de cursor
+      </mat-checkbox>
+    </div>
+  }
+
+  <mat-checkbox
+    [checked]="mapInfo.showGraticule()"
+    (change)="onGraticuleChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar grilla con trópicos y meridianos importantes"
+  >
+    Trópicos y meridianos
+  </mat-checkbox>
+
+  <mat-checkbox
+    [checked]="mapInfo.showAttribution()"
+    (change)="onAttributionChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar atribución de fuentes de datos en el mapa"
+  >
+    Atribución
+  </mat-checkbox>
+</div>

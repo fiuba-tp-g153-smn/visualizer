@@ -1,0 +1,78 @@
+.tool-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 12px;
+}
+
+.interaction-radio-group {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  ::ng-deep {
+    .mat-mdc-radio-button {
+      .mdc-form-field {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+.mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sources-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.section-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 4px 0 8px 0;
+
+  .selected-count {
+    font-weight: normal;
+    margin-left: 4px;
+  }
+}
+
+.source-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.source-row {
+  background-color: var(--mat-sys-surface);
+  padding: 4px 0;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-lowest);
+  }
+
+  ::ng-deep .mdc-form-field {
+    font-size: 14px;
+  }
+}
+
+.status-hint {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 0 2px;
+}
+
+.marker-checkbox {
+  ::ng-deep .mdc-form-field {
+    font-size: 14px;
+  }
+}

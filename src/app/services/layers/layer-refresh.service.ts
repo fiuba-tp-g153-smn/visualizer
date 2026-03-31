@@ -9,9 +9,9 @@ import {
   LayerConfig,
   LayerType,
   LayerCategory,
-  GoesTileLayerConfig,
-  RadarTileLayerConfig,
+  TileLayerConfig,
   NotificationType,
+  TilesetEntry,
 } from '../../models';
 
 /**
@@ -204,7 +204,7 @@ export class LayerRefreshService {
 
     switch (after.type) {
       case LayerType.TILE:
-        const beforeTilesets = (before as GoesTileLayerConfig | RadarTileLayerConfig)
+        const beforeTilesets = (before as TileLayerConfig)
           .availableTilesets;
         const afterTilesets = after.availableTilesets;
         const diff = this.calculateDiff(beforeTilesets, afterTilesets);
@@ -307,12 +307,15 @@ export class LayerRefreshService {
   /**
    * Calculates the difference between two arrays of tileset IDs.
    */
-  private calculateDiff(before: string[], after: string[]): { added: number; removed: number } {
-    const beforeSet = new Set(before);
-    const afterSet = new Set(after);
+  private calculateDiff(
+    before: TilesetEntry[],
+    after: TilesetEntry[],
+  ): { added: number; removed: number } {
+    const beforeSet = new Set(before.map((e) => e.id));
+    const afterSet = new Set(after.map((e) => e.id));
 
-    const added = after.filter((id) => !beforeSet.has(id)).length;
-    const removed = before.filter((id) => !afterSet.has(id)).length;
+    const added = after.filter((e) => !beforeSet.has(e.id)).length;
+    const removed = before.filter((e) => !afterSet.has(e.id)).length;
 
     return { added, removed };
   }

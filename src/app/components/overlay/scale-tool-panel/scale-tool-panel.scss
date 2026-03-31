@@ -1,0 +1,120 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+}
+
+.scale-tool {
+  @include overlaySurface.floating-surface();
+
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 6px;
+  position: relative;
+  overflow: visible;
+}
+
+.close-button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--mat-sys-on-surface-variant);
+  background: var(--mat-sys-surface-container);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+
+  .mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: var(--mat-sys-error);
+    opacity: 1;
+  }
+}
+
+.scale-tool:hover .close-button {
+  opacity: 0.7;
+}
+
+.scale-label {
+  font-size: 10px;
+  color: var(--mat-sys-on-surface-variant);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  transform-origin: center;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+
+.scale-value {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--mat-sys-on-surface-variant);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.scale-bar {
+  width: 14px;
+  align-self: stretch;
+  border-radius: 6px;
+  overflow: hidden;
+  outline: 1px solid var(--mat-sys-outline-variant);
+}
+
+.scale-bar-discrete {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.discrete-step-row {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.discrete-step {
+  flex: 1;
+  min-height: 0;
+}
+
+.scale-values {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-block: 1px;
+}
+
+.scale-values-discrete {
+  justify-content: initial;
+  padding-block: 0;
+}
+
+.scale-value-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+}

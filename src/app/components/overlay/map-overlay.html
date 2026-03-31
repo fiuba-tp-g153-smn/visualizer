@@ -1,0 +1,72 @@
+<div class="overlay-layout">
+  <div class="col-main">
+    <div class="row-top">
+      <app-main-menu />
+    </div>
+
+    <div class="row-bottom">
+      @if (showZoom()) {
+        <app-map-zoom-controls
+          [visible]="true"
+          [currentZoom]="currentZoom()"
+          [canZoomIn]="canZoomIn()"
+          [canZoomOut]="canZoomOut()"
+          (zoomIn)="zoomIn()"
+          (zoomOut)="zoomOut()"
+        />
+      }
+      @if (hasInfoControls()) {
+        <div class="info-controls">
+          @if (showScale()) {
+            <app-map-scale
+              [visible]="true"
+              [scaleText]="scaleInfo().text"
+              [scaleWidth]="scaleInfo().width"
+              (close)="closeScale()"
+            />
+          }
+          @if (showCoordinates()) {
+            <app-map-coordinates
+              [visible]="true"
+              [latitude]="mouseLatitude()"
+              [longitude]="mouseLongitude()"
+              (close)="closeCoordinates()"
+            />
+          }
+          @if (showAttribution()) {
+            <app-map-attribution (close)="closeAttribution()" />
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (isScaleToolsEnabled() || isViewerEnabled()) {
+    <div class="col-side">
+      @if (isScaleToolsEnabled()) {
+        <app-map-scale-tools
+          [visible]="true"
+          [entries]="scaleToolEntries()"
+          (close)="closeScaleTool($event)"
+        />
+      }
+      @if (isViewerEnabled()) {
+        <app-map-point-values
+          [visible]="true"
+          [entries]="floatingViewerEntries()"
+          (close)="closeFloatingViewer($event)"
+        />
+      }
+    </div>
+  }
+</div>
+
+@if (isEditingPolygon()) {
+  <app-polygon-edit-dock (action)="handleEditAction($event)" />
+}
+
+<app-map-polygon-context-menu
+  [state]="contextMenuState()"
+  (close)="closeContextMenu()"
+  (action)="handleContextMenuAction($event)"
+/>
