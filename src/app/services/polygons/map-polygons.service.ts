@@ -460,8 +460,9 @@ export class MapPolygonsService {
         }
       });
 
-      // Add tooltip with department info
-      geoJsonLayer.bindTooltip(dept.name, {
+      // Add tooltip with department info (including province if available)
+      const tooltipText = dept.province ? `${dept.name} (${dept.province})` : dept.name;
+      geoJsonLayer.bindTooltip(tooltipText, {
         permanent: false,
         direction: 'center',
         className: 'department-tooltip',

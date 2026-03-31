@@ -41,6 +41,12 @@ export {
   Z_INDEX,
 } from './map-polygons.config';
 
+// INDEC province codes (department code -> province name mapping)
+export {
+  INDEC_PROVINCE_CODES,
+  getProvinceNameFromDepartmentCode,
+} from './indec-provinces.config';
+
 // Layer definitions and setup (re-export from layers folder)
 export {
   LAYER_DEFINITIONS,
