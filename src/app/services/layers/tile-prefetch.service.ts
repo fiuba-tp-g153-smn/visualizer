@@ -1,15 +1,23 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
-import { LayerControls, RadarLayerControls, TileLayerControls } from '../../models/layers/controls.models';
-import { Layer, LayerCategory, LayerType } from '../../models/layers/models';
-import { LayerConfig, GoesTileLayerConfig, RadarTileLayerConfig } from '../../models/layers/config.models';
+import {
+  RadarLayerControls,
+  TileLayerControls,
+  ActiveLayerEntry,
+} from '../../models/layers/controls.models';
+import { LayerCategory, LayerType } from '../../models/layers/models';
+import {
+  LayerConfig,
+  GoesTileLayerConfig,
+  RadarTileLayerConfig,
+} from '../../models/layers/config.models';
 import { buildTileUrl } from '../../config/backend.config';
 import { MAP_CONFIG } from '../../config';
 import { calcTileRange, TileRange } from '../../utils/tile-math';
 
-const MAX_CONCURRENT = 10;
-const MAX_TILES_PER_LAYER = 300;
+const MAX_CONCURRENT = 100;
+const MAX_TILES_PER_LAYER = 3000;
 
 /**
  * Service responsible for prefetching tiles for the current animation window.
@@ -79,7 +87,7 @@ export class TilePrefetchService {
    * unaffected — they cannot be cancelled and will complete normally.
    */
   private schedulePrefetch(
-    activeLayers: { layer: Layer; controls: LayerControls }[],
+    activeLayers: ActiveLayerEntry[],
     configs: Map<string, LayerConfig>,
     zoom: number,
   ): void {
@@ -118,17 +126,17 @@ export class TilePrefetchService {
       const tileRange = calcTileRange(layer.boundingBox, clampedZoom);
 
       if (layer.category === LayerCategory.GOES_19) {
-        for (const tilesetId of ordered) {
-          const urls = this.buildUrls(`${layer.id}/${tilesetId}`, clampedZoom, tileRange);
+        for (const entry of ordered) {
+          const urls = this.buildUrls(`${layer.id}/${entry.id}`, clampedZoom, tileRange);
           if (urls.length > MAX_TILES_PER_LAYER) continue;
           this.enqueue(urls);
         }
       } else if (layer.category === LayerCategory.RADAR) {
         const radarControls = controls as RadarLayerControls;
         for (const elevationId of radarControls.elevation.selectedElevationIds) {
-          for (const tilesetId of ordered) {
+          for (const entry of ordered) {
             const urls = this.buildUrls(
-              `${layer.id}/${elevationId}/${tilesetId}`,
+              `${layer.id}/${elevationId}/${entry.id}`,
               clampedZoom,
               tileRange,
               true,

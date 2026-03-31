@@ -1,0 +1,132 @@
+<div class="sync-playback">
+  @if (eligibleLayers().length === 0) {
+    <div class="empty-state-container">
+      <mat-icon class="empty-icon">sync_disabled</mat-icon>
+      <h3>Sin capas disponibles</h3>
+      <p>No hay capas activas con períodos temporales para sincronizar.</p>
+    </div>
+  } @else {
+    <!-- Controles fijos -->
+    <div class="sync-controls-fixed">
+      <div class="layer-controls">
+        <div class="time-control">
+          <div class="time-control-header">
+            <span class="control-label">Sincronización</span>
+          </div>
+
+          @if (hasSelectedLayers()) {
+            @if (availableFrameCounts().length > 0) {
+              @if (isAligned()) {
+                <div class="time-slider-container">
+                  <span class="time-min">{{ frameEdgeMin() }}</span>
+                  <mat-slider
+                    min="0"
+                    [max]="effectiveFrameCount() - 1"
+                    step="1"
+                    discrete
+                    class="control-slider"
+                    [displayWith]="formatFrameLabel"
+                  >
+                    <input
+                      matSliderThumb
+                      [value]="state().frameIndex"
+                      (valueChange)="onFrameIndexChange($event)"
+                    />
+                  </mat-slider>
+                  <span class="time-max">{{ frameEdgeMax() }}</span>
+                  <button
+                    mat-icon-button
+                    (click)="togglePlayback()"
+                    [disabled]="!canPlay()"
+                    [matTooltip]="state().isPlaying ? 'Pausar' : 'Reproducir'"
+                    class="play-btn"
+                  >
+                    <mat-icon>{{ state().isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+                  </button>
+                </div>
+
+                <div class="time-controls-row">
+                  <span class="time-current">{{ currentFrameLabel() }}</span>
+                  <div class="images-count-control">
+                    <mat-form-field appearance="fill" class="images-count-select">
+                      <mat-select
+                        [value]="state().frameCount"
+                        (selectionChange)="onFrameCountChange($event.value)"
+                        panelClass="layer-select-panel"
+                      >
+                        @for (n of availableFrameCounts(); track n) {
+                          <mat-option [value]="n">{{ n }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                  <div class="speed-control">
+                    <input
+                      type="number"
+                      [value]="state().speed"
+                      (change)="onSpeedChange(+$any($event.target).value)"
+                      min="0.4"
+                      max="10"
+                      step="0.1"
+                      class="speed-input"
+                      placeholder="1.0"
+                    />
+                    <span class="speed-label">s</span>
+                  </div>
+                </div>
+              } @else {
+                <div class="no-periods-message">
+                  <mat-icon class="info-icon">link_off</mat-icon>
+                  <span>No se pudo alinear temporalmente las capas seleccionadas</span>
+                </div>
+              }
+            } @else {
+              <div class="no-periods-message">
+                <mat-icon class="info-icon">warning</mat-icon>
+                <span>Las capas seleccionadas no tienen períodos en común</span>
+              </div>
+            }
+          } @else {
+            <div class="no-periods-message">
+              <mat-icon class="info-icon">info</mat-icon>
+              <span>Seleccioná capas para sincronizar</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de capas scrolleable -->
+    <div class="layers-section-scrollable">
+      <div class="layers-section">
+        <span class="section-label">
+          Capas activas
+          @if (state().selectedLayerIds.length > 0) {
+            <span class="selected-count">({{ state().selectedLayerIds.length }})</span>
+          }
+        </span>
+        <div class="layers-list">
+          @for (item of eligibleLayers(); track item.layer.id) {
+            <div class="layer-row">
+              <mat-checkbox
+                [checked]="isLayerSelected(item.layer.id)"
+                (change)="toggleLayer(item.layer.id)"
+                color="primary"
+              >
+                {{ fullNameForLayer(item.layer) }}
+              </mat-checkbox>
+              @if (isLayerSelected(item.layer.id) && layersWithFewerFrames().has(item.layer.id)) {
+                <mat-icon
+                  class="fewer-frames-icon"
+                  matTooltip="Menos imágenes disponibles que el N seleccionado"
+                >
+                  warning_amber
+                </mat-icon>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

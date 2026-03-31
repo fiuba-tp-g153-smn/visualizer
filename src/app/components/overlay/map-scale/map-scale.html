@@ -1,0 +1,17 @@
+@if (visible() && scaleText()) {
+  <div class="scale-container">
+    <button
+      mat-icon-button
+      type="button"
+      class="close-button"
+      (click)="onClose()"
+      aria-label="Cerrar escala"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+    <div class="scale-bar" [style.width.px]="scaleWidth()">
+      <span class="scale-text">{{ scaleText() }}</span>
+      <div class="scale-ruler"></div>
+    </div>
+  </div>
+}

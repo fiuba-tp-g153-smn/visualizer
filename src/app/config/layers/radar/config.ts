@@ -1,10 +1,18 @@
 import {
   ActiveLayerGroupId,
   LayerCategory,
+  LayerScale,
   LayerSubgroup,
   LayerType,
   RadarTileLayer,
 } from '../../../models';
+import {
+  RADAR_DBZH_SCALE,
+  RADAR_VRAD_SCALE,
+  RADAR_RHOHV_SCALE,
+  RADAR_ZDR_SCALE,
+  RADAR_KDP_SCALE,
+} from './scales.config';
 
 /**
  * Valores por defecto para capas RADAR
@@ -41,6 +49,14 @@ const satelitePrefix = 'radar';
 const products = ['DBZH', 'KDP', 'VRAD', 'RHOHV', 'ZDR'] as const;
 const MIN_ZOOM = 4;
 const MAX_ZOOM = 9;
+
+const RADAR_SCALES: Record<(typeof products)[number], LayerScale> = {
+  DBZH: RADAR_DBZH_SCALE,
+  KDP: RADAR_KDP_SCALE,
+  VRAD: RADAR_VRAD_SCALE,
+  RHOHV: RADAR_RHOHV_SCALE,
+  ZDR: RADAR_ZDR_SCALE,
+};
 
 // Ubicaciones y configuraciones de los 17 radares de la red SINARAME (SMN/INTA)
 const RADARES_SMN = [
@@ -252,7 +268,8 @@ export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   layers: products.map((product) => ({
     ...RADAR_DEFAULTS,
     id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
-    name: `${product} - ${radar.ubi}`,
+    name: product,
+    scale: RADAR_SCALES[product],
     description: `Producto ${product} del radar meteorológico ${radar.number} de ${radar.ubi}`,
     minNativeZoom: radar.minNativeZoom,
     maxNativeZoom: radar.maxNativeZoom,

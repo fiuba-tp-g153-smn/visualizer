@@ -1,0 +1,381 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.polygon-manager {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+::ng-deep .departments-menu {
+  .mat-mdc-menu-content {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+}
+
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  text-align: center;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  flex: 1;
+  min-height: 0;
+
+  .empty-icon {
+    opacity: 0.5;
+    color: var(--mat-sys-primary);
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  p {
+    font-size: 13px;
+    line-height: 1.4;
+    margin: 0;
+  }
+}
+
+.drawing-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px;
+  background-color: var(--mat-sys-surface-container-low);
+
+  .control-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+
+    .control-button {
+      &.cancel {
+        background-color: var(--mat-sys-error);
+      }
+
+      &.delete-button {
+        color: var(--mat-sys-error);
+      }
+    }
+  }
+
+  .simplification-slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 16px;
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .slider-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .slider-value {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--mat-sys-primary);
+        background-color: var(--mat-sys-primary-container);
+        padding: 2px 8px;
+        border-radius: 4px;
+        min-width: 24px;
+        text-align: center;
+      }
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.polygon-list-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+}
+
+.polygon-list {
+  padding: 0;
+
+  .polygon-item {
+    height: auto;
+    padding: 12px 16px;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-low);
+    }
+
+    &.hidden {
+      opacity: 0.5;
+    }
+  }
+}
+
+.polygon-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.polygon-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.polygon-name-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+
+  .name-input {
+    width: 100%;
+    font-size: 14px;
+
+    ::ng-deep {
+      .mat-mdc-text-field-wrapper {
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .mat-mdc-form-field-infix {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        min-height: auto;
+      }
+
+      .mat-mdc-form-field-subscript-wrapper {
+        display: none;
+      }
+
+      input.mat-mdc-input-element {
+        padding-left: 8px;
+        padding-right: 8px;
+        font-weight: 500;
+        font-size: 15px;
+      }
+
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-width: 2px;
+      }
+    }
+
+    &.readonly {
+      pointer-events: auto;
+
+      ::ng-deep {
+        input.mat-mdc-input-element {
+          cursor: pointer;
+        }
+
+        .mdc-notched-outline__leading,
+        .mdc-notched-outline__notch,
+        .mdc-notched-outline__trailing {
+          border-color: transparent;
+        }
+
+        &:hover {
+          .mdc-notched-outline__leading,
+          .mdc-notched-outline__notch,
+          .mdc-notched-outline__trailing {
+            border-color: var(--mat-sys-outline-variant);
+          }
+        }
+      }
+    }
+  }
+}
+
+.polygon-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.polygon-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border-radius: 4px;
+  font-size: 13px;
+
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--mat-sys-on-surface-variant);
+
+    .detail-label {
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .detail-value {
+      color: var(--mat-sys-on-surface);
+    }
+  }
+}
+
+.alert-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.generate-alert-button {
+  width: 100%;
+
+  ::ng-deep {
+    .mat-mdc-button-touch-target {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mdc-button__label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+  }
+}
+
+.alert-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 8px;
+  font-size: 11px;
+
+  .alert-info-row {
+    display: flex;
+    gap: 4px;
+    align-items: baseline;
+
+    .alert-info-label {
+      color: var(--mat-sys-on-surface-variant);
+      opacity: 0.8;
+      min-width: 60px;
+      flex-shrink: 0;
+    }
+
+    .alert-info-value {
+      color: var(--mat-sys-on-surface);
+      font-weight: 500;
+      flex: 1;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.departments-button {
+  min-width: auto;
+  padding: 0 0 0 4px;
+  height: 28px;
+  line-height: 28px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+  }
+}
+
+.load-departments-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  transition: background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--mat-sys-primary);
+  }
+}
+
+.polygon-list-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.polygon-list-container::-webkit-scrollbar-track {
+  background: var(--mat-sys-surface-container-lowest);
+}
+
+.polygon-list-container::-webkit-scrollbar-thumb {
+  background: var(--mat-sys-outline-variant);
+  border-radius: 4px;
+
+  &:hover {
+    background: var(--mat-sys-outline);
+  }
+}

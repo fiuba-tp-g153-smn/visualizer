@@ -1,0 +1,60 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+:host {
+  display: contents;
+  pointer-events: auto;
+}
+
+.attribution {
+  @include overlaySurface.floating-surface();
+
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  position: relative;
+
+  a {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.close-button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--mat-sys-on-surface-variant);
+  background: var(--mat-sys-surface-container);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+
+  .mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: var(--mat-sys-error);
+    opacity: 1;
+  }
+}
+
+.attribution:hover .close-button {
+  opacity: 0.7;
+}

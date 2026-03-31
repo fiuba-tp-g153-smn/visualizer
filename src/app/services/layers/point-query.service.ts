@@ -7,15 +7,20 @@ import {
   LayerCategory,
   LayerType,
   TileLayerControls,
-  GoesLayerControls,
   RadarLayerControls,
   RadarTileLayer,
   GoesTileLayer,
   PointQueryDisplayData,
-  RadarPointQueryResponse,
-  SatellitePointQueryResponse,
+  PointQueryStatus,
+  PointQueryValueDto,
+  ScaleRangeInfo,
+  ScaleType,
+  PaletteConfigScale,
+  ContinuousScale,
+  DiscreteScale,
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
+import { LayersService } from './layers.service';
 import { buildRadarPointQueryUrl, buildSatellitePointQueryUrl } from '../../config';
 
 @Injectable({
@@ -24,28 +29,30 @@ import { buildRadarPointQueryUrl, buildSatellitePointQueryUrl } from '../../conf
 export class PointQueryService {
   private readonly http = inject(HttpClient);
   private readonly layerConfigService = inject(LayerConfigService);
+  private readonly layersService = inject(LayersService);
 
   queryLayerPoint(
     layer: Layer,
     controls: TileLayerControls,
     lat: number,
     lon: number,
+    elevationId?: string,
   ): Observable<PointQueryDisplayData> {
     const layerId = layer.id;
     const layerName = layer.name;
 
     if (layer.type !== LayerType.TILE) {
-      return of(this.buildNoData(layerId, layerName));
+      return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
     if (layer.category === LayerCategory.GOES_19 && !this.isWithinLayerBounds(layer, lat, lon)) {
       // Optimization: no backend request if satellite cursor is outside configured bounds.
-      return of(this.buildNoData(layerId, layerName));
+      return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
     if (!tilesetId) {
-      return of(this.buildNoData(layerId, layerName));
+      return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
     if (layer.category === LayerCategory.GOES_19) {
@@ -53,10 +60,17 @@ export class PointQueryService {
     }
 
     if (layer.category === LayerCategory.RADAR) {
-      return this.queryRadarLayer(layer as RadarTileLayer, controls as RadarLayerControls, tilesetId, lat, lon);
+      return this.queryRadarLayer(
+        layer as RadarTileLayer,
+        controls as RadarLayerControls,
+        tilesetId,
+        lat,
+        lon,
+        elevationId,
+      );
     }
 
-    return of(this.buildNoData(layerId, layerName));
+    return of(this.buildNoData(layerId, layerName, elevationId));
   }
 
   private querySatelliteLayer(
@@ -66,16 +80,32 @@ export class PointQueryService {
     lon: number,
   ): Observable<PointQueryDisplayData> {
     const [productId, instrumentId, channelId] = layer.id.split('/');
-    const url = buildSatellitePointQueryUrl(productId, instrumentId, channelId, tilesetId, lat, lon);
+    const url = buildSatellitePointQueryUrl(
+      productId,
+      instrumentId,
+      channelId,
+      tilesetId,
+      lat,
+      lon,
+    );
 
-    return this.http.get<SatellitePointQueryResponse>(url).pipe(
-      map((response) => ({
-        layerId: layer.id,
-        layerName: layer.name,
-        value: response.value,
-        unit: response.unit,
-        status: 'value' as const,
-      })),
+    const scaleRange = this.extractScaleRange(layer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+          }) as const,
+      ),
       catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
     );
   }
@@ -86,27 +116,47 @@ export class PointQueryService {
     tilesetId: string,
     lat: number,
     lon: number,
+    elevationId?: string,
   ): Observable<PointQueryDisplayData> {
     const parts = layer.id.split('/');
     const radarId = parts[1];
     const variableId = parts[2];
-    const elevationId = this.resolveRadarElevation(layer, controls);
+    const resolvedElevationId = elevationId ?? this.resolveRadarElevation(layer, controls);
 
-    if (!elevationId) {
+    if (!resolvedElevationId) {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
-    const url = buildRadarPointQueryUrl(radarId, variableId, elevationId, tilesetId, lat, lon);
+    const url = buildRadarPointQueryUrl(
+      radarId,
+      variableId,
+      resolvedElevationId,
+      tilesetId,
+      lat,
+      lon,
+    );
 
-    return this.http.get<RadarPointQueryResponse>(url).pipe(
-      map((response) => ({
-        layerId: layer.id,
-        layerName: layer.name,
-        value: response.value,
-        unit: response.unit,
-        status: 'value' as const,
-      })),
-      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    const scaleRange = this.extractScaleRange(layer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name, resolvedElevationId));
+    }
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+            elevationId: resolvedElevationId,
+          }) as const,
+      ),
+      catchError((error) =>
+        of(this.mapErrorToDisplay(layer.id, layer.name, error, resolvedElevationId)),
+      ),
     );
   }
 
@@ -116,14 +166,18 @@ export class PointQueryService {
       return null;
     }
 
+    // Use the timeIndex from controls (synced by LayerControlService with latest config)
     const fallbackIndex = config.availableTilesets.length - 1;
     const resolvedIndex = timeIndex ?? fallbackIndex;
     const clampedIndex = Math.max(0, Math.min(resolvedIndex, config.availableTilesets.length - 1));
 
-    return config.availableTilesets[clampedIndex] ?? null;
+    return config.availableTilesets[clampedIndex]?.id ?? null;
   }
 
-  private resolveRadarElevation(layer: RadarTileLayer, controls: RadarLayerControls): string | null {
+  private resolveRadarElevation(
+    layer: RadarTileLayer,
+    controls: RadarLayerControls,
+  ): string | null {
     if (controls.elevation.selectedElevationIds.length > 0) {
       return controls.elevation.selectedElevationIds[0];
     }
@@ -140,27 +194,83 @@ export class PointQueryService {
     return lat >= south && lat <= north && lon >= west && lon <= east;
   }
 
-  private mapErrorToDisplay(layerId: string, layerName: string, error: unknown): PointQueryDisplayData {
+  private mapErrorToDisplay(
+    layerId: string,
+    layerName: string,
+    error: unknown,
+    elevationId?: string,
+  ): PointQueryDisplayData {
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      return this.buildNoData(layerId, layerName);
+      return this.buildNoData(layerId, layerName, elevationId);
     }
 
     return {
       layerId,
       layerName,
-      value: null,
-      unit: null,
-      status: 'error',
-    };
+      status: PointQueryStatus.ERROR,
+      ...(elevationId && { elevationId }),
+    } as const;
   }
 
-  private buildNoData(layerId: string, layerName: string): PointQueryDisplayData {
+  private buildNoData(
+    layerId: string,
+    layerName: string,
+    elevationId?: string,
+  ): PointQueryDisplayData {
     return {
       layerId,
       layerName,
-      value: null,
-      unit: null,
-      status: 'no-data',
-    };
+      status: PointQueryStatus.NO_DATA,
+      ...(elevationId && { elevationId }),
+    } as const;
+  }
+
+  /**
+   * Extracts scale range information from a layer's scale definition.
+   * Returns min, max, and total steps for visualization purposes.
+   */
+  private extractScaleRange(layer: GoesTileLayer | RadarTileLayer): ScaleRangeInfo | undefined {
+    if (!layer.scale) {
+      return undefined;
+    }
+
+    const scale = layer.scale;
+
+    try {
+      switch (scale.type) {
+        case ScaleType.CONTINUOUS:
+          const continuousScale = scale as ContinuousScale;
+          if (continuousScale.stops.length < 2) return undefined;
+          return {
+            min: continuousScale.stops[0].value,
+            max: continuousScale.stops[continuousScale.stops.length - 1].value,
+            totalSteps: continuousScale.stops.length,
+          };
+
+        case ScaleType.DISCRETE:
+          const discreteScale = scale as DiscreteScale;
+          if (discreteScale.steps.length < 1) return undefined;
+          return {
+            min: discreteScale.steps[0].value,
+            max: discreteScale.steps[discreteScale.steps.length - 1].value,
+            totalSteps: discreteScale.steps.length,
+          };
+
+        case ScaleType.PALETTE_CONFIG:
+          const paletteScale = scale as PaletteConfigScale;
+          if (!paletteScale.bounds || paletteScale.bounds.length < 2) return undefined;
+          const bounds = [...paletteScale.bounds].sort((a, b) => a - b);
+          return {
+            min: bounds[0],
+            max: bounds[bounds.length - 1],
+            totalSteps: paletteScale.hexColors.length,
+          };
+
+        default:
+          return undefined;
+      }
+    } catch {
+      return undefined;
+    }
   }
 }

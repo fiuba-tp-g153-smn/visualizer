@@ -1,0 +1,52 @@
+<div class="tool-section">
+  @if (viewer.displayItems().length === 0) {
+    <p class="status-hint">No hay capas activas</p>
+  } @else {
+    <div class="mode-section">
+      <span class="section-label">Modo de consulta</span>
+      <mat-radio-group
+        [value]="viewer.interactionMode()"
+        (change)="onInteractionModeChange($event.value)"
+        class="interaction-radio-group"
+      >
+        @for (option of interactionModeOptions; track option.value) {
+          <mat-radio-button [value]="option.value" [matTooltip]="option.tooltip">{{
+            option.label
+          }}</mat-radio-button>
+        }
+      </mat-radio-group>
+
+      <mat-checkbox
+        [checked]="viewer.showMarker()"
+        (change)="onMarkerChange($event.checked)"
+        color="primary"
+        matTooltip="Mostrar un marcador en el punto de consulta"
+        class="marker-checkbox"
+      >
+        Mostrar marcador
+      </mat-checkbox>
+    </div>
+
+    <div class="sources-section">
+      <span class="section-label">
+        Capas activas
+        @if (viewer.selectedLayerIdsOrdered().length > 0) {
+          <span class="selected-count">({{ viewer.selectedLayerIdsOrdered().length }})</span>
+        }
+      </span>
+      <div class="source-list">
+        @for (item of viewer.displayItems(); track item.layerId) {
+          <div class="source-row">
+            <mat-checkbox
+              [checked]="viewer.isSourceSelected(item.layerId)"
+              (change)="viewer.toggleSourceSelection(item.layerId, $event.checked)"
+              color="primary"
+            >
+              {{ item.layerName }}
+            </mat-checkbox>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

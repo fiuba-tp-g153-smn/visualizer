@@ -1,0 +1,12 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+$dock-radius: 24px;
+
+.polygon-edit-controls {
+  @include overlaySurface.floating-surface();
+
+  display: inline-flex;
+  gap: 12px;
+  padding: 8px;
+  border-radius: $dock-radius;
+}

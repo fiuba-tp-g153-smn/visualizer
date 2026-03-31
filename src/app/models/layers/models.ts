@@ -29,6 +29,51 @@ export enum LayerCategory {
  */
 export type BoundingBox = readonly [readonly [number, number], readonly [number, number]];
 
+export interface ScaleColorStop {
+  value: number;
+  color: string;
+  label?: string;
+}
+
+export enum ScaleType {
+  CONTINUOUS = 'continuous',
+  DISCRETE = 'discrete',
+  PALETTE_CONFIG = 'palette_config', // Para paletas con bounds y boundary_norm (radar)
+}
+
+export interface ContinuousScale {
+  type: ScaleType.CONTINUOUS;
+  unit: string;
+  stops: readonly ScaleColorStop[];
+}
+
+export interface DiscreteScaleStep {
+  value: number;
+  color: string;
+  label?: string;
+}
+
+export interface DiscreteScale {
+  type: ScaleType.DISCRETE;
+  unit: string;
+  steps: readonly DiscreteScaleStep[];
+}
+
+/**
+ * Escala basada en PaletteConfig (formato tiles-processor)
+ * Usado principalmente para capas de radar donde los colores están mapeados
+ * a rangos específicos definidos por bounds
+ */
+export interface PaletteConfigScale {
+  type: ScaleType.PALETTE_CONFIG;
+  unit: string;
+  hexColors: readonly string[]; // Array de colores hex
+  bounds: readonly number[]; // Límites de valores para cada color
+  useBoundaryNorm?: boolean; // Si true, usa normalizacion de límites
+}
+
+export type LayerScale = ContinuousScale | DiscreteScale | PaletteConfigScale;
+
 interface BaseLayer {
   id: string;
   name: string;
@@ -49,6 +94,7 @@ export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
   minNativeZoom: number; // Zoom mínimo nativo de la capa (nivel más alejado con datos disponibles)
   maxNativeZoom: number; // Zoom máximo nativo de la capa (nivel más cercano con datos disponibles)
+  scale?: LayerScale;
 }
 
 export interface GoesTileLayer extends TileLayer {

@@ -1,0 +1,26 @@
+@if (visible) {
+  <div class="point-panel">
+    <button
+      mat-icon-button
+      type="button"
+      class="close-button"
+      (click)="onClose()"
+      aria-label="Cerrar panel de valor del punto"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+
+    <span class="layer-name" [matTooltip]="layerName">{{ layerName }}</span>
+
+    @if (isLoading) {
+      <mat-progress-spinner diameter="14" mode="indeterminate"></mat-progress-spinner>
+    } @else if (valueData) {
+      <span class="value" [matTooltip]="valueTooltip">{{ formattedValue }}</span>
+      <span class="unit">{{ valueData.unit }}</span>
+    } @else if (!data || data.status === PointQueryStatus.NO_DATA) {
+      <span class="empty">Sin dato</span>
+    } @else {
+      <span class="empty">Error</span>
+    }
+  </div>
+}

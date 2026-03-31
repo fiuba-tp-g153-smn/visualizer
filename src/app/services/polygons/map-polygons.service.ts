@@ -1,20 +1,10 @@
-import {
-  Injectable,
-  inject,
-  ViewContainerRef,
-  Injector,
-  ComponentRef,
-  effect,
-} from '@angular/core';
-import { Overlay, OverlayRef } from '@angular/cdk/overlay';
-import { ComponentPortal } from '@angular/cdk/portal';
+import { Injectable, inject, effect, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
 import { Polygon } from '../../models/geo';
-import { PolygonContextMenuComponent } from '../../components/polygon-context-menu/polygon-context-menu';
 import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
@@ -22,7 +12,7 @@ import {
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
-} from '../../components/confirm-dialog/confirm-dialog';
+} from '../../components/floating/confirm-dialog/confirm-dialog';
 import { POLYGON_COLOR } from '../../config/polygon.config';
 import {
   LEAFLET_EDITABLE_EVENTS,
@@ -38,6 +28,19 @@ import {
 } from '../../utils/map-styles.utils';
 import { isSimplePolygon } from '../../utils/polygon-validation.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
+
+export interface PolygonContextMenuState {
+  x: number;
+  y: number;
+  polygonId: string;
+  polygonVisible: boolean;
+  hasDepartments: boolean;
+  departmentsVisible: boolean;
+  canUndoCut: boolean;
+  isLoadingCut: boolean;
+  isLoadingDepartments: boolean;
+  hasAlerts: boolean;
+}
 
 // Extended types for leaflet
 declare module 'leaflet' {
@@ -55,7 +58,6 @@ declare module 'leaflet' {
 export class MapPolygonsService {
   private polygonService = inject(PolygonService);
   private polygonDrawingService = inject(PolygonDrawingService);
-  private overlay = inject(Overlay);
   private dialog = inject(MatDialog);
 
   private map: L.Map | null = null;
@@ -66,12 +68,8 @@ export class MapPolygonsService {
     Map<string, { layer: L.GeoJSON; baseColor: string }>
   >(); // polygonId -> (departmentName -> layer)
   private currentDrawingPolygon: L.Polygon | null = null;
-  private contextMenuOverlayRef: OverlayRef | null = null;
   private originalCoordinates: Array<[number, number]> | null = null;
-
-  // These are needed for the context menu overlay
-  private viewContainerRef: ViewContainerRef | null = null;
-  private injector: Injector | null = null;
+  readonly contextMenuState = signal<PolygonContextMenuState | null>(null);
 
   constructor() {
     // Listen to hovered department changes and update styles
@@ -84,10 +82,8 @@ export class MapPolygonsService {
   /**
    * Initialize the service with a Leaflet map instance and Angular dependencies
    */
-  initialize(map: L.Map, viewContainerRef: ViewContainerRef, injector: Injector): void {
+  initialize(map: L.Map): void {
     this.map = map;
-    this.viewContainerRef = viewContainerRef;
-    this.injector = injector;
     this.initPolygonDrawing();
   }
 
@@ -281,7 +277,9 @@ export class MapPolygonsService {
       if (this.map && this.map.hasLayer(layer)) {
         this.map.removeLayer(layer);
       }
-      alert('Error: El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.');
+      alert(
+        'Error: El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.',
+      );
       return;
     }
 
@@ -581,68 +579,32 @@ export class MapPolygonsService {
   private showPolygonContextMenu(polygonId: string, point: L.Point): void {
     const polygon = this.polygonService.getPolygonById(polygonId);
 
-    if (!polygon || !this.map || !this.viewContainerRef || !this.injector) return;
+    if (!polygon || !this.map) return;
 
-    // Close any existing context menu
-    if (this.contextMenuOverlayRef) {
-      this.contextMenuOverlayRef.dispose();
-      this.contextMenuOverlayRef = null;
-    }
-
-    // Get the map container and calculate absolute position
-    const mapContainer = this.map.getContainer();
-    const containerRect = mapContainer.getBoundingClientRect();
-    const x = containerRect.left + point.x;
-    const y = containerRect.top + point.y;
-
-    // Create overlay at the click position
-    const positionStrategy = this.overlay.position().global().left(`${x}px`).top(`${y}px`);
-
-    this.contextMenuOverlayRef = this.overlay.create({
-      positionStrategy,
-      scrollStrategy: this.overlay.scrollStrategies.close(),
-      hasBackdrop: true,
-      backdropClass: 'cdk-overlay-transparent-backdrop',
+    this.contextMenuState.set({
+      x: point.x,
+      y: point.y,
+      polygonId,
+      polygonVisible: polygon.visible,
+      hasDepartments: !!polygon.departments && polygon.departments.length > 0,
+      departmentsVisible: polygon.departmentsVisible || false,
+      canUndoCut: !!polygon.originalCoordinates,
+      isLoadingCut: this.polygonService.isPolygonBeingCut(polygonId),
+      isLoadingDepartments: this.polygonService.isDepartmentsLoading(polygonId),
+      hasAlerts: this.polygonService.hasAlerts(polygonId),
     });
+  }
 
-    // Create and attach the context menu component
-    const portal = new ComponentPortal(
-      PolygonContextMenuComponent,
-      this.viewContainerRef,
-      this.injector,
-    );
-    const componentRef: ComponentRef<PolygonContextMenuComponent> =
-      this.contextMenuOverlayRef.attach(portal);
-
-    // Set component inputs
-    componentRef.instance.polygonId = polygonId;
-    componentRef.instance.polygonVisible = polygon.visible;
-    componentRef.instance.hasDepartments = !!polygon.departments && polygon.departments.length > 0;
-    componentRef.instance.departmentsVisible = polygon.departmentsVisible || false;
-    componentRef.instance.canUndoCut = !!polygon.originalCoordinates;
-    componentRef.instance.isLoadingCut = this.polygonService.isPolygonBeingCut(polygonId);
-    componentRef.instance.isLoadingDepartments =
-      this.polygonService.isDepartmentsLoading(polygonId);
-    componentRef.instance.hasAlerts = this.polygonService.hasAlerts(polygonId);
-
-    // Handle menu actions
-    componentRef.instance.action.subscribe((action: PolygonContextMenuAction) => {
-      this.handleContextMenuAction(action);
-      this.contextMenuOverlayRef?.dispose();
-      this.contextMenuOverlayRef = null;
-    });
-
-    // Close menu when backdrop is clicked
-    this.contextMenuOverlayRef.backdropClick().subscribe(() => {
-      this.contextMenuOverlayRef?.dispose();
-      this.contextMenuOverlayRef = null;
-    });
+  closeContextMenu(): void {
+    this.contextMenuState.set(null);
   }
 
   /**
    * Handle context menu actions
    */
-  private handleContextMenuAction(action: PolygonContextMenuAction): void {
+  handleContextMenuAction(action: PolygonContextMenuAction): void {
+    this.closeContextMenu();
+
     // Small delay to ensure menu closes before action execution
     setTimeout(() => {
       switch (action.type) {
@@ -749,11 +711,15 @@ export class MapPolygonsService {
 
         // Restore original coordinates
         if (this.originalCoordinates && this.originalCoordinates.length > 0) {
-          const originalLatLngs = this.originalCoordinates.map((coord) => L.latLng(coord[0], coord[1]));
+          const originalLatLngs = this.originalCoordinates.map((coord) =>
+            L.latLng(coord[0], coord[1]),
+          );
           layer.setLatLngs([originalLatLngs]);
         }
 
-        alert('Error: El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.');
+        alert(
+          'Error: El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.',
+        );
 
         // Disable editing
         if (layer.disableEdit) {
@@ -929,14 +895,8 @@ export class MapPolygonsService {
     });
     this.departmentLayers.clear();
     this.departmentLayersByName.clear();
-
-    if (this.contextMenuOverlayRef) {
-      this.contextMenuOverlayRef.dispose();
-      this.contextMenuOverlayRef = null;
-    }
+    this.closeContextMenu();
 
     this.map = null;
-    this.viewContainerRef = null;
-    this.injector = null;
   }
 }

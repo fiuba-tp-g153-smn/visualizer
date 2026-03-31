@@ -1,0 +1,422 @@
+:host {
+  display: block;
+}
+
+.layer-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tab-content {
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.layer-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+
+  ::ng-deep .mat-mdc-tab {
+    flex: 1;
+    min-width: 0;
+  }
+
+  ::ng-deep .mat-mdc-tab-labels {
+    display: flex;
+  }
+}
+
+.tab-label-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.tab-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.tab-label {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  height: 100%;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+  }
+}
+
+.disabled-state {
+  opacity: 0.7;
+  pointer-events: none;
+  height: 100%;
+}
+
+.active-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 20px;
+  padding: 0;
+  border-radius: 10px;
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0;
+  transform: scale(0);
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    width 0.3s ease,
+    padding 0.3s ease;
+
+  &.visible {
+    width: auto;
+    padding: 0 6px;
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Sync tab: pulse the icon while playback is running
+.tab-label-container.sync-playing {
+  .tab-icon {
+    animation: badge-pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px; // Reduced vertical padding
+  background-color: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    background: transparent;
+    color: var(--mat-sys-on-surface);
+
+    &::placeholder {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
+// Accordion
+.layers-accordion {
+  // Root panel styling (Group) - Gray background
+  .mat-expansion-panel {
+    border-radius: 0;
+    box-shadow: none;
+    background-color: var(--mat-sys-surface-container); // Gray for groups
+
+    // Tonal separation
+    &:not(.mat-expanded) .mat-expansion-panel-header {
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high);
+      }
+    }
+
+    &.mat-expanded {
+      margin: 0;
+    }
+  }
+
+  // Header styling
+  .mat-expansion-panel-header {
+    padding: 0 16px; // Balanced horizontal padding
+    height: 48px;
+    font-size: 14px;
+    font-weight: 500;
+
+    .mat-expansion-panel-header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1; // Take available space
+    }
+
+    .mat-expansion-panel-header-description {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto; // Don't grow, only use needed space
+    }
+  }
+
+  .mat-expansion-panel-body {
+    padding: 0;
+  }
+
+  // Nested accordion (subgroups) - Lighter gray
+  .subgroup-panel {
+    background-color: var(--mat-sys-surface-container-low); // Lighter gray for subgroups
+
+    // Adjust nesting padding via header
+    .mat-expansion-panel-header {
+      padding-left: 32px; // More indentation for hierarchy
+      font-weight: 400; // Lighter weight for hierarchy
+    }
+
+    .mat-expansion-panel-body {
+      padding: 0; // Remove padding, layers handle their own
+      background-color: var(--mat-sys-surface); // White for layer items
+    }
+  }
+
+  // Icon in panel title (major groups)
+  .panel-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
+  }
+}
+
+// Active indicator dot (replaces badge)
+.active-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--mat-sys-primary);
+  flex-shrink: 0;
+}
+
+// Layer Items
+.layer-list-container {
+  padding: 0;
+}
+
+// Active layers list
+.active-layers-list {
+  padding: 0;
+}
+
+// Active layer group panels (colapsables)
+.active-group-panel {
+  box-shadow: none;
+  border-radius: 0;
+  background-color: var(--mat-sys-surface-container); // Gray like available groups
+  padding: 0;
+
+  &::before {
+    display: none; // Remover línea divisoria de Material
+  }
+
+  .mat-expansion-panel-header {
+    padding: 0 16px;
+    height: 48px; // Standard height
+    background-color: var(--mat-sys-surface-container);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    font-weight: 500;
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-high);
+    }
+
+    .mat-expansion-panel-header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .mat-expansion-panel-header-description {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+  }
+
+  .mat-expansion-panel-body {
+    padding: 0;
+    background-color: var(--mat-sys-surface); // White for layer items
+  }
+
+  // Force zero padding on Material's internal wrapper
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0;
+  }
+
+  .group-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
+  }
+
+  .group-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+
+  .mat-panel-description {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  // Botón de limpiar grupo
+  .clear-group-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mat-sys-on-surface-variant);
+    transition:
+      color 0.2s,
+      background-color 0.2s;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      color: var(--mat-sys-error);
+      background-color: var(--mat-sys-error-container);
+    }
+  }
+}
+
+.active-layer-item {
+  background-color: var(--mat-sys-surface);
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  // Estilo del placeholder durante el drag
+  &.cdk-drag-placeholder {
+    opacity: 0;
+  }
+
+  &.cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+// Estilo del preview mientras se arrastra
+.cdk-drag-preview .active-layer-item {
+  box-shadow:
+    0 5px 5px -3px rgba(0, 0, 0, 0.2),
+    0 8px 10px 1px rgba(0, 0, 0, 0.14),
+    0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+.cdk-drop-list-dragging .active-layer-item:not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Empty State
+.empty-state,
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  height: 100%;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    opacity: 0.4;
+  }
+
+  p {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+    margin: 0;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.disabled-state {
+  opacity: 0.7;
+  pointer-events: none;
+  height: 100%;
+}

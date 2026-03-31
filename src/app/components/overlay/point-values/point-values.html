@@ -1,0 +1,31 @@
+<div class="point-value-container">
+  @if (visible()) {
+    @if (entryColumns().left.length > 0) {
+      <div class="point-value-column">
+        @for (entry of entryColumns().left; track entry.layerId) {
+          <app-point-value-panel
+            [visible]="true"
+            [isLoading]="entry.isLoading"
+            [layerName]="entry.layerName"
+            [data]="entry.data"
+            (close)="onClose(entry.layerId)"
+          />
+        }
+      </div>
+    }
+
+    @if (entryColumns().right.length > 0) {
+      <div class="point-value-column">
+        @for (entry of entryColumns().right; track entry.layerId) {
+          <app-point-value-panel
+            [visible]="true"
+            [isLoading]="entry.isLoading"
+            [layerName]="entry.layerName"
+            [data]="entry.data"
+            (close)="onClose(entry.layerId)"
+          />
+        }
+      </div>
+    }
+  }
+</div>
