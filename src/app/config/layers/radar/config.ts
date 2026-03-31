@@ -58,7 +58,7 @@ const RADAR_SCALES: Record<(typeof products)[number], LayerScale> = {
   ZDR: RADAR_ZDR_SCALE,
 };
 
-// Ubicaciones y configuraciones de los 17 radares de la red SINARAME (SMN/INTA)
+// Ubicaciones y configuraciones de los 18 radares de la red SINARAME (SMN/INTA)
 const RADARES_SMN = [
   {
     id: 'rma1',
@@ -247,17 +247,17 @@ const RADARES_SMN = [
       [-31.17, -61.05],
     ] as const,
   },
-  // {
-  //   id: 'rma18',
-  //   number: 18,
-  //   ubi: 'Santa Isabel',
-  //   minNativeZoom: MIN_ZOOM,
-  //   maxNativeZoom: MAX_ZOOM,
-  //   boundingBox: [
-  //     [0, 0], // TODO: if needed, set real bounding box for this radar when available
-  //     [0, 0],
-  //   ] as const,
-  // }
+  {
+    id: 'rma18',
+    number: 18,
+    ubi: 'Santa Isabel',
+    minNativeZoom: MIN_ZOOM,
+    maxNativeZoom: MAX_ZOOM,
+    boundingBox: [
+      [-38.38, -69.69],
+      [-34.04, -64.18],
+    ] as const,
+  }
 ];
 
 export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
