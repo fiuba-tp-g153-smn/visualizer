@@ -42,6 +42,9 @@
           <div class="tab-label-container" [class.sync-playing]="syncIsPlaying()">
             <mat-icon class="tab-icon">sync</mat-icon>
             <span class="tab-label">Sincronización</span>
+            <span class="active-count" [class.visible]="syncSelectedCount() > 0">
+              {{ syncSelectedCount() }}
+            </span>
           </div>
         </ng-template>
         <div class="tab-content">

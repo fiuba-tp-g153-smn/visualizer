@@ -65,7 +65,7 @@ export class NotificationService {
   error(message: string, layerId?: string): void {
     this.show(NotificationType.ERROR, message, {
       layerId,
-      duration: 10_000,
+      autoClose: false,
     });
   }
 
