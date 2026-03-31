@@ -40,6 +40,7 @@ export class LayerListComponent implements MenuPanelComponent {
   });
 
   readonly syncIsPlaying = computed(() => this.syncService.syncState().isPlaying);
+  readonly syncSelectedCount = computed(() => this.syncService.syncState().selectedLayerIds.length);
 
   getActiveLayersCount(): number {
     return this.controlService.activeLayers().length;

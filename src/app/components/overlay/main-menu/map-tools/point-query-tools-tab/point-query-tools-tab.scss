@@ -41,8 +41,9 @@
   padding: 4px 0 8px 0;
 
   .selected-count {
-    font-weight: normal;
+    font-weight: 500;
     margin-left: 4px;
+    color: var(--mat-sys-primary);
   }
 }
 

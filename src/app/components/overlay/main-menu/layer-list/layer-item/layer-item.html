@@ -161,11 +161,19 @@
 
       <!-- Control de Período -->
       @if (needsTimeControl()) {
-        <div class="layer-controls">
+        <div class="layer-controls" [class.synced-mode]="isSynced()">
           <div class="time-control">
             <!-- Header con label y botón de recarga -->
             <div class="time-control-header">
-              <span class="control-label">Período</span>
+              <span class="control-label">
+                Período
+                @if (isSynced()) {
+                  <span class="sync-badge" matTooltip="Controlado por sincronización">
+                    <mat-icon>sync</mat-icon>
+                    Sincronizado
+                  </span>
+                }
+              </span>
               <button
                 mat-icon-button
                 (click)="reloadChannelConfig()"
@@ -188,6 +196,7 @@
                   discrete
                   class="control-slider"
                   [displayWith]="formatTimeIndex"
+                  [disabled]="isSynced()"
                 >
                   <input
                     matSliderThumb
@@ -202,15 +211,16 @@
                   [disabled]="!canPlayback() && !isSynced()"
                   [matTooltip]="
                     isSynced()
-                      ? 'En sincronización — clic para desconectar'
+                      ? 'Desconectar de sincronización'
                       : isPlaying()
                         ? 'Pausar'
                         : 'Reproducir'
                   "
                   class="play-btn"
+                  [class.synced]="isSynced()"
                 >
                   <mat-icon>{{
-                    isSynced() ? 'sync' : isPlaying() ? 'pause' : 'play_arrow'
+                    isSynced() ? 'sync_disabled' : isPlaying() ? 'pause' : 'play_arrow'
                   }}</mat-icon>
                 </button>
               </div>
@@ -226,6 +236,7 @@
                       [value]="lastImagesCount()"
                       (selectionChange)="onLastImagesCountChange($event.value)"
                       panelClass="layer-select-panel"
+                      [disabled]="isSynced()"
                     >
                       @for (option of lastImagesOptions(); track option) {
                         <mat-option [value]="option">{{ option }}</mat-option>
@@ -245,6 +256,7 @@
                     step="0.1"
                     class="speed-input"
                     placeholder="1.0"
+                    [disabled]="isSynced()"
                   />
                   <span class="speed-label">s</span>
                 </div>

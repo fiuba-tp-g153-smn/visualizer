@@ -127,6 +127,8 @@
 
       .images-count-control {
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
 
         .images-count-select {
           width: 60px;
@@ -179,6 +181,32 @@
         flex-shrink: 0;
       }
     }
+
+    .reduced-frames-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: var(--mat-sys-surface-variant);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      strong {
+        font-weight: 600;
+        color: var(--mat-sys-on-surface);
+      }
+    }
   }
 }
 
@@ -208,8 +236,8 @@
   gap: 4px;
 
   .selected-count {
-    font-weight: 400;
-    color: var(--mat-sys-primary);
+    font-weight: 500;
+    color: var(--mat-sys-primary) !important;
   }
 }
 
@@ -222,14 +250,15 @@
 .layer-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 
-  .fewer-frames-icon {
-    font-size: 1rem;
-    width: 1rem;
-    height: 1rem;
-    color: var(--mat-sys-tertiary);
-    cursor: default;
+  .fewer-frames-chip {
+    --mdc-chip-elevated-container-color: var(--mat-sys-surface-variant);
+    --mdc-chip-label-text-color: var(--mat-sys-on-surface-variant);
+    --mdc-chip-container-height: 22px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: help;
   }
 }
 

@@ -54,7 +54,7 @@
   @include overlaySurface.floating-surface();
 
   width: 450px;
-  max-width: min(450px, calc(100vw - 160px));
+  max-width: 100%;
   min-height: 0;
   max-height: 100%;
   overflow: hidden;
@@ -91,7 +91,7 @@
   padding: 0;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 
@@ -99,9 +99,11 @@
     padding-bottom: 0;
   }
 
-  // Avoid forcing content to fill the full panel height.
+  // Child components fill available height
   > * {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
   }
 }

@@ -43,7 +43,7 @@ describe('BaseMapService', () => {
 
       const currentBaseMap = service.currentBaseMap();
       expect(currentBaseMap.id).toBe('satellite');
-      expect(currentBaseMap.name).toBe('Satélite');
+      expect(currentBaseMap.name).toBe('Imágenes satelitales Esri');
     });
 
     it('should change base map to topographic', () => {
@@ -51,7 +51,7 @@ describe('BaseMapService', () => {
 
       const currentBaseMap = service.currentBaseMap();
       expect(currentBaseMap.id).toBe('topographic');
-      expect(currentBaseMap.name).toBe('Topográfico');
+      expect(currentBaseMap.name).toBe('Mapa topográfico Esri');
     });
 
     it('should return to Argenmap', () => {
@@ -71,6 +71,7 @@ describe('BaseMapService', () => {
 
     it('should persist base map selection to localStorage', () => {
       service.setBaseMap('satellite');
+      TestBed.tick(); // Flush effects to trigger localStorage save
 
       const stored = localStorage.getItem('mapasmn_selected_base_map');
       expect(stored).toBe('satellite');
@@ -133,14 +134,20 @@ describe('BaseMapService', () => {
 
   describe('localStorage persistence', () => {
     it('should load basemap from localStorage on initialization', () => {
+      // Reset TestBed to get a fresh service instance
+      TestBed.resetTestingModule();
       localStorage.setItem('mapasmn_selected_base_map', 'satellite');
+      TestBed.configureTestingModule({});
 
       const newService = TestBed.inject(BaseMapService);
       expect(newService.currentBaseMap().id).toBe('satellite');
     });
 
     it('should fallback to default if stored ID is invalid', () => {
+      // Reset TestBed to get a fresh service instance
+      TestBed.resetTestingModule();
       localStorage.setItem('mapasmn_selected_base_map', 'invalid-id');
+      TestBed.configureTestingModule({});
 
       const newService = TestBed.inject(BaseMapService);
       expect(newService.currentBaseMap().id).toBe('argenmap');

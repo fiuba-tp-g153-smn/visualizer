@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSliderModule } from '@angular/material/slider';
+import { MatChipsModule } from '@angular/material/chips';
 import { SyncPlaybackService } from '../../../../../services/layers/sync-playback.service';
 import { LayersService } from '../../../../../services/layers/layers.service';
 import {
@@ -39,6 +40,7 @@ import { Layer, LayerCategory, RadarTileLayer } from '../../../../../models';
     MatSelectModule,
     MatFormFieldModule,
     MatSliderModule,
+    MatChipsModule,
   ],
   templateUrl: './sync-playback.html',
   styleUrl: './sync-playback.scss',
@@ -53,6 +55,16 @@ export class SyncPlaybackComponent {
   readonly layersWithFewerFrames = this.syncService.layersWithFewerFrames;
   readonly effectiveFrameCount = this.syncService.effectiveFrameCount;
   readonly isAligned = this.syncService.isAligned;
+
+  /**
+   * True when effectiveFrameCount differs from the user-selected frameCount.
+   * Used to show a visual indicator that fewer frames are actually being used.
+   */
+  readonly hasReducedFrameCount = computed(() => {
+    const selected = this.state().frameCount;
+    const effective = this.effectiveFrameCount();
+    return effective > 0 && effective < selected;
+  });
 
   readonly canPlay = computed(() => {
     const s = this.state();
@@ -112,5 +124,13 @@ export class SyncPlaybackComponent {
 
   fullNameForLayer(layer: Layer): string {
     return this.layersService.getLayerFullName(layer);
+  }
+
+  /**
+   * Returns the actual available tileset count for a layer.
+   * Used in the warning tooltip to show "tiene X imágenes disponibles".
+   */
+  getActualTilesetCount(layerId: string): number {
+    return this.syncService.getActualTilesetCount(layerId);
   }
 }
