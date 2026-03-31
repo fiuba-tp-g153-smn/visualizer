@@ -6,6 +6,7 @@ import {
   buildIntersectDepartmentsUrl,
   buildGenerateAlertsUrl,
   buildPhenomenaUrl,
+  getProvinceNameFromDepartmentCode,
 } from '../../config';
 import { DepartmentsResponse } from '../../models/geo';
 import { Phenomenon } from '../../models/phenomenon.model';
@@ -95,12 +96,15 @@ export class AlertsService {
       .pipe(
         map((response) => ({
           departments: response.departments
-            .map((dept) => ({
-              name: (dept.properties && dept.properties['nam']) || 'Desconocido',
-              province: dept.properties && dept.properties['pna'],
-              geometry: dept.geometry,
-              intersection: dept.intersection,
-            }))
+            .map((dept) => {
+              const departmentCode = dept.properties?.['in1'];
+              return {
+                name: (dept.properties && dept.properties['nam']) || 'Desconocido',
+                province: getProvinceNameFromDepartmentCode(departmentCode),
+                geometry: dept.geometry,
+                intersection: dept.intersection,
+              };
+            })
             .sort((a, b) => a.name.localeCompare(b.name)),
         })),
       );
