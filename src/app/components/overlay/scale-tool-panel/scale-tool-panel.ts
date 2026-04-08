@@ -6,6 +6,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ContinuousScale, DiscreteScale, ScaleType, PaletteConfigScale } from '../../../models';
 import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
+import {
+  convertValueForDisplay,
+  getDisplayUnit,
+  isKelvinUnit,
+} from '../../../utils/unit-conversion.utils';
 
 @Component({
   selector: 'app-scale-tool-panel',
@@ -48,31 +53,48 @@ export class ScaleToolPanelComponent {
   }
 
   get verticalLabel(): string {
-    return `${this.entry.layerName} (${this.entry.scale.unit})`;
+    return `${this.entry.layerName} (${getDisplayUnit(this.entry.scale.unit)})`;
   }
 
   get scaleTooltip(): string {
     const { min, max } = this.scaleRange;
-    return `${this.entry.layerName}\nRango: ${this.formatValue(min)} - ${this.formatValue(max)} ${this.entry.scale.unit}`;
+    return `${this.entry.layerName}\nRango: ${this.formatValue(min)} - ${this.formatValue(max)} ${getDisplayUnit(this.entry.scale.unit)}`;
   }
 
   get scaleRange(): { min: number; max: number } {
+    let min: number;
+    let max: number;
+
     switch (this.entry.scale.type) {
       case ScaleType.CONTINUOUS: {
         const stops = this.sortedContinuousStopsAsc;
-        return { min: stops[0]?.value ?? 0, max: stops[stops.length - 1]?.value ?? 0 };
+        min = stops[0]?.value ?? 0;
+        max = stops[stops.length - 1]?.value ?? 0;
+        break;
       }
       case ScaleType.DISCRETE: {
         const steps = this.sortedDiscreteStepsDesc;
-        return { min: steps[steps.length - 1]?.value ?? 0, max: steps[0]?.value ?? 0 };
+        min = steps[steps.length - 1]?.value ?? 0;
+        max = steps[0]?.value ?? 0;
+        break;
       }
       case ScaleType.PALETTE_CONFIG: {
         const bounds = this.paletteConfigScale.bounds;
-        return { min: bounds[0] ?? 0, max: bounds[bounds.length - 1] ?? 0 };
+        min = bounds[0] ?? 0;
+        max = bounds[bounds.length - 1] ?? 0;
+        break;
       }
       default:
-        return { min: 0, max: 0 };
+        min = 0;
+        max = 0;
     }
+
+    if (isKelvinUnit(this.entry.scale.unit)) {
+      min = convertValueForDisplay(min, this.entry.scale.unit);
+      max = convertValueForDisplay(max, this.entry.scale.unit);
+    }
+
+    return { min, max };
   }
 
   get continuousScaleLabels(): string[] {
@@ -103,10 +125,12 @@ export class ScaleToolPanelComponent {
     switch (this.entry.scale.type) {
       case ScaleType.PALETTE_CONFIG: {
         const pcScale = this.paletteConfigScale;
-        return pcScale.bounds.map((bound, index) => ({
+        const steps = pcScale.bounds.map((bound, index) => ({
           value: bound,
           color: pcScale.hexColors[index] ?? this.PALETTE_FALLBACK_COLOR,
         }));
+        // Invertir orden para que valores positivos queden arriba
+        return steps.slice().reverse();
       }
       case ScaleType.DISCRETE:
         return this.sortedDiscreteStepsDesc;
@@ -170,9 +194,11 @@ export class ScaleToolPanelComponent {
   }
 
   private formatValue(value: number): string {
-    if (Number.isInteger(value)) {
-      return value.toString();
+    const displayValue = convertValueForDisplay(value, this.entry.scale.unit);
+
+    if (Number.isInteger(displayValue)) {
+      return displayValue.toString();
     }
-    return value.toFixed(1);
+    return displayValue.toFixed(1);
   }
 }
