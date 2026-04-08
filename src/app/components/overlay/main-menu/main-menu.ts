@@ -27,15 +27,8 @@ const MENU_SECTIONS: MenuSection[] = [
     id: 'polygons',
     title: 'Polígonos',
     icon: 'polyline',
-    tooltip: 'Gestionar polígonos',
+    tooltip: 'Graficar polígono',
     component: PolygonManagerComponent,
-  },
-  {
-    id: 'basemaps',
-    title: 'Mapa Base',
-    icon: 'map',
-    tooltip: 'Seleccionar mapa base',
-    component: BaseMapSelectorComponent,
   },
   {
     id: 'map-tools',
@@ -43,6 +36,13 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: 'handyman',
     tooltip: 'Herramientas del mapa',
     component: MapToolsComponent,
+  },
+  {
+    id: 'basemaps',
+    title: 'Mapa Base',
+    icon: 'map',
+    tooltip: 'Seleccionar mapa base',
+    component: BaseMapSelectorComponent,
   },
 ];
 
