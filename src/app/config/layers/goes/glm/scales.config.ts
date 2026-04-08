@@ -1,8 +1,9 @@
 import { LayerScale, ScaleType } from '../../../../models';
+import { GLM_UNITS } from '../../../../constants';
 
 export const GLM_FED_SCALE = {
   type: ScaleType.DISCRETE,
-  unit: 'fl/km2',
+  unit: GLM_UNITS.FLASH_DENSITY,
   steps: [
     { value: 0, color: '#00008b' },
     { value: 1.00392157, color: '#0000ff' },
@@ -265,7 +266,7 @@ export const GLM_FED_SCALE = {
 
 export const GLM_TOE_SCALE = {
   type: ScaleType.DISCRETE,
-  unit: 'fJ',
+  unit: GLM_UNITS.ENERGY,
   steps: [
     { value: 0, color: '#4b0082' },
     { value: 5.88235294, color: '#000080' },
@@ -528,7 +529,7 @@ export const GLM_TOE_SCALE = {
 
 export const GLM_MFA_SCALE = {
   type: ScaleType.DISCRETE,
-  unit: 'km2',
+  unit: GLM_UNITS.AREA,
   steps: [
     { value: 0, color: '#ffff00' },
     { value: 11.76470588, color: '#ffff00' },
