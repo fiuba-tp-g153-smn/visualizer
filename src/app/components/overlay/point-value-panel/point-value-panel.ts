@@ -6,6 +6,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '../../../models';
+import {
+  convertValueForDisplay,
+  getDisplayUnit,
+  isKelvinUnit,
+} from '../../../utils/unit-conversion.utils';
 
 @Component({
   selector: 'app-point-value-panel',
@@ -47,7 +52,15 @@ export class PointValuePanelComponent {
     if (this.data?.status !== PointQueryStatus.VALUE) {
       return '';
     }
-    return this.decimalFormatter.format(this.data.value);
+    const value = convertValueForDisplay(this.data.value, this.data.unit);
+    return this.decimalFormatter.format(value);
+  }
+
+  get displayUnit(): string {
+    if (this.data?.status !== PointQueryStatus.VALUE) {
+      return '';
+    }
+    return getDisplayUnit(this.data.unit);
   }
 
   get valueTooltip(): string {
@@ -55,7 +68,10 @@ export class PointValuePanelComponent {
       return '';
     }
     const { min, max } = this.data.scaleRange;
-    return `Rango: ${this.format(min)} - ${this.format(max)} ${this.data.unit}`;
+    const displayMin = convertValueForDisplay(min, this.data.unit);
+    const displayMax = convertValueForDisplay(max, this.data.unit);
+    const displayUnit = getDisplayUnit(this.data.unit);
+    return `Rango: ${this.format(displayMin)} - ${this.format(displayMax)} ${displayUnit}`;
   }
 
   private format(num: number): string {
