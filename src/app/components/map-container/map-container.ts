@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angu
 import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
 import 'leaflet-editable';
-import { MAP_CONFIG } from '../../config';
+import { MAP_CONFIG, MAP_Z_INDEX } from '../../config';
 
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
@@ -213,7 +213,7 @@ export class MapContainer implements OnInit, OnDestroy {
     this.currentTileLayer = L.tileLayer(baseMap.url, {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
-      zIndex: 0,
+      zIndex: MAP_Z_INDEX.BASE_MAP,
     }).addTo(this.map);
   }
 }
