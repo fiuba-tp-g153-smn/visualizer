@@ -38,6 +38,16 @@ export class PointQueryToolsTabComponent {
     this.viewer.setInteractionMode(value);
   }
 
+  onToolEnabledChange(enabled: boolean): void {
+    if (enabled) {
+      // Activar herramienta con modo Manual por default
+      this.viewer.setInteractionMode(PointQueryInteractionMode.MANUAL);
+    } else {
+      // Desactivar herramienta
+      this.viewer.setInteractionMode(PointQueryInteractionMode.OFF);
+    }
+  }
+
   onMarkerChange(enabled: boolean): void {
     this.viewer.toggleMarker(enabled);
   }
