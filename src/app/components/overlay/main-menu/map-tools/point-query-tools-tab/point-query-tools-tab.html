@@ -3,28 +3,42 @@
     <p class="status-hint">No hay capas activas</p>
   } @else {
     <div class="mode-section">
-      <span class="section-label">Modo de consulta</span>
-      <mat-radio-group
-        [value]="viewer.interactionMode()"
-        (change)="onInteractionModeChange($event.value)"
-        class="interaction-radio-group"
-      >
-        @for (option of interactionModeOptions; track option.value) {
-          <mat-radio-button [value]="option.value" [matTooltip]="option.tooltip">{{
-            option.label
-          }}</mat-radio-button>
-        }
-      </mat-radio-group>
-
       <mat-checkbox
-        [checked]="viewer.showMarker()"
-        (change)="onMarkerChange($event.checked)"
+        [checked]="viewer.isViewerEnabled()"
+        (change)="onToolEnabledChange($event.checked)"
         color="primary"
-        matTooltip="Mostrar un marcador en el punto de consulta"
-        class="marker-checkbox"
+        matTooltip="Activar o desactivar la herramienta de consulta de valores puntuales"
+        class="tool-enabled-checkbox"
       >
-        Mostrar marcador
+        <span class="section-label">Activar herramienta</span>
       </mat-checkbox>
+
+      @if (viewer.isViewerEnabled()) {
+        <div class="interaction-mode-group">
+          <span class="mode-label">Modo de consulta</span>
+          <mat-radio-group
+            [value]="viewer.interactionMode()"
+            (change)="onInteractionModeChange($event.value)"
+            class="interaction-radio-group"
+          >
+            @for (option of interactionModeOptions; track option.value) {
+              <mat-radio-button [value]="option.value" [matTooltip]="option.tooltip">{{
+                option.label
+              }}</mat-radio-button>
+            }
+          </mat-radio-group>
+        </div>
+
+        <mat-checkbox
+          [checked]="viewer.showMarker()"
+          (change)="onMarkerChange($event.checked)"
+          color="primary"
+          matTooltip="Mostrar un marcador en el punto de consulta"
+          class="marker-checkbox"
+        >
+          Mostrar marcador
+        </mat-checkbox>
+      }
     </div>
 
     <div class="sources-section">
