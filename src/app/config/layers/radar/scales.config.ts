@@ -1,4 +1,5 @@
 import { ScaleType, LayerScale } from '../../../models';
+import { RADAR_UNITS } from '../../../constants';
 
 // ---------------------------------------------------------------------------
 // Paletas de color por producto (formato PaletteConfig de tiles-processor)
@@ -10,7 +11,7 @@ import { ScaleType, LayerScale } from '../../../models';
  */
 export const RADAR_DBZH_SCALE = {
   type: ScaleType.PALETTE_CONFIG,
-  unit: 'dBZ',
+  unit: RADAR_UNITS.REFLECTIVITY,
   hexColors: [
     '#3C426D',
     '#3C426D',
@@ -92,7 +93,7 @@ export const RADAR_DBZH_SCALE = {
  */
 export const RADAR_VRAD_SCALE = {
   type: ScaleType.PALETTE_CONFIG,
-  unit: 'm/s',
+  unit: RADAR_UNITS.VELOCITY,
   hexColors: [
     '#6C0498',
     '#550599',
@@ -175,7 +176,7 @@ export const RADAR_VRAD_SCALE = {
  */
 export const RADAR_RHOHV_SCALE = {
   type: ScaleType.PALETTE_CONFIG,
-  unit: 'ρhv',
+  unit: RADAR_UNITS.CORRELATION,
   hexColors: [
     '#151391',
     '#141296',
@@ -323,7 +324,7 @@ export const RADAR_RHOHV_SCALE = {
  */
 export const RADAR_ZDR_SCALE = {
   type: ScaleType.PALETTE_CONFIG,
-  unit: 'dB',
+  unit: RADAR_UNITS.DIFFERENTIAL_REFLECTIVITY,
   hexColors: [
     '#707070',
     '#767676',
@@ -448,7 +449,7 @@ export const RADAR_ZDR_SCALE = {
  */
 export const RADAR_KDP_SCALE = {
   type: ScaleType.PALETTE_CONFIG,
-  unit: '°/km',
+  unit: RADAR_UNITS.DIFFERENTIAL_PHASE,
   hexColors: [
     '#474747',
     '#444444',
