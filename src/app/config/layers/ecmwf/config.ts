@@ -1,8 +1,9 @@
 import { ActiveLayerGroupId, EcmwfTileLayer, LayerCategory, LayerType } from '../../../models';
 import { LayerSubgroup } from '../../../models/layers/groups.models';
+import { ECMWF_TP_SCALE } from './scales.config';
 
 /**
- * Valores por defecto para capas ECMWF
+ * Default values for ECMWF layers
  */
 const ECMWF_DEFAULTS = {
   type: LayerType.TILE,
@@ -29,6 +30,7 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
       variable: 'total-precipitation',
       name: 'Precipitación Total',
       description: 'Precipitación total acumulada por período de 3 horas — modelo ECMWF',
+      scale: ECMWF_TP_SCALE,
     },
   ] as EcmwfTileLayer[],
 };

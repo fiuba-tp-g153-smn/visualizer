@@ -319,7 +319,6 @@ export class LayerRenderService {
 
   /**
    * Creates a Leaflet TileLayer for an ECMWF layer with a specific forecast run.
-   * Similar to createRadarTileLayerForElevation.
    */
   createEcmwfTileLayerForForecast(
     layerId: string,
@@ -375,8 +374,8 @@ export class LayerRenderService {
 
   /**
    * Creates ECMWF layers for playback — one set per selected forecast run.
-   * Mirrors createRadarLayersForPlayback: each forecast gets its own tile layer(s)
-   * with per-forecast opacity and z-index stacking.
+   * Each forecast gets its own tile layer(s) with per-forecast opacity and
+   * z-index stacking.
    */
   createEcmwfLayersForPlayback(
     layerId: string,

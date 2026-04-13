@@ -11,6 +11,7 @@ import {
   RadarTileLayer,
   GoesTileLayer,
   EcmwfLayerControls,
+  EcmwfTileLayer,
   EcmwfTileLayerConfig,
   PointQueryDisplayData,
   PointQueryStatus,
@@ -204,6 +205,11 @@ export class PointQueryService {
 
     const url = buildEcmwfPointQueryUrl(forecastTs, periodTs, lat, lon);
 
+    const scaleRange = this.extractScaleRange(layer as EcmwfTileLayer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
     return this.http.get<PointQueryValueDto>(url).pipe(
       map(
         (response) =>
@@ -213,6 +219,7 @@ export class PointQueryService {
             value: response.value,
             unit: response.unit,
             status: PointQueryStatus.VALUE,
+            scaleRange,
           }) as const,
       ),
       catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
@@ -288,7 +295,9 @@ export class PointQueryService {
    * Extracts scale range information from a layer's scale definition.
    * Returns min, max, and total steps for visualization purposes.
    */
-  private extractScaleRange(layer: GoesTileLayer | RadarTileLayer): ScaleRangeInfo | undefined {
+  private extractScaleRange(
+    layer: GoesTileLayer | RadarTileLayer | EcmwfTileLayer,
+  ): ScaleRangeInfo | undefined {
     if (!layer.scale) {
       return undefined;
     }

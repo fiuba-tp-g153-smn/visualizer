@@ -20,6 +20,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import {
+  EcmwfLayerControls,
   EcmwfTileLayerConfig,
   Layer,
   LayerCategory,
@@ -618,7 +619,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Verifica si la capa necesita control de corridas (solo ECMWF)
+   * Checks if the layer requires forecast control (ECMWF only)
    */
   hasForecastControl = computed(() => {
     if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF) {
@@ -640,7 +641,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * IDs de las corridas seleccionadas
+   * IDs of selected forecasts
    */
   selectedForecastTimestamps = computed((): string[] => {
     const activeItem = this.getActiveLayer();
@@ -649,28 +650,27 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       activeItem.controls.type === LayerType.TILE &&
       activeItem.controls.category === LayerCategory.ECMWF
     ) {
-      return (activeItem.controls as import('../../../../../models').EcmwfLayerControls).forecast
-        .selectedForecastTimestamps;
+      return (activeItem.controls as EcmwfLayerControls).forecast.selectedForecastTimestamps;
     }
     return [];
   });
 
   /**
-   * Verifica si una corrida está seleccionada
+   * Checks if a forecast run is selected
    */
   isForecastSelected(forecastTs: string): boolean {
     return this.selectedForecastTimestamps().includes(forecastTs);
   }
 
   /**
-   * Toggle de una corrida (activar/desactivar)
+   * Toggles a forecast run (activate/deactivate)
    */
   onForecastToggle(forecastTs: string): void {
     this.controlService.toggleEcmwfForecast(this.layer.id, forecastTs);
   }
 
   /**
-   * Obtiene la opacidad de una corrida específica
+   * Gets the opacity of a specific forecast run
    */
   getForecastOpacity(forecastTs: string): number {
     const activeItem = this.getActiveLayer();
@@ -679,7 +679,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       activeItem.controls.type === LayerType.TILE &&
       activeItem.controls.category === LayerCategory.ECMWF
     ) {
-      const ecmwfControls = activeItem.controls as import('../../../../../models').EcmwfLayerControls;
+      const ecmwfControls = activeItem.controls as EcmwfLayerControls;
       const forecastOpacity = ecmwfControls.forecast.forecastOpacity[forecastTs];
       return forecastOpacity !== undefined ? forecastOpacity : activeItem.controls.opacity;
     }
@@ -687,14 +687,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Obtiene el porcentaje de opacidad de una corrida específica
+   * Gets the opacity percentage of a specific forecast run
    */
   getForecastOpacityPercent(forecastTs: string): number {
     return Math.round(this.getForecastOpacity(forecastTs) * 100);
   }
 
   /**
-   * Establece la opacidad de una corrida específica
+   * Sets the opacity of a specific forecast run
    */
   onForecastOpacityChange(forecastTs: string, opacity: number): void {
     this.controlService.setEcmwfForecastOpacity(this.layer.id, forecastTs, opacity);

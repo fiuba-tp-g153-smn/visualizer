@@ -51,8 +51,8 @@ export interface WmsLayerControls extends BaseLayerControls {
 }
 
 export interface EcmwfForecastControls {
-  selectedForecastTimestamps: string[]; // IDs de corridas seleccionadas
-  forecastOpacity: Record<string, number>; // Opacidad por corrida (0-1), undefined usa la opacidad global
+  selectedForecastTimestamps: string[]; // IDs of selected forecast runs
+  forecastOpacity: Record<string, number>; // Opacity per forecast run (0-1), undefined uses the layer's global opacity
 }
 
 export interface EcmwfLayerControls extends TileLayerControls {
