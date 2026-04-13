@@ -125,6 +125,11 @@ export class LayersService {
               parts.push(layer.name);
               break;
 
+            case LayerCategory.ECMWF:
+              parts.push('ECMWF');
+              parts.push(layer.name);
+              break;
+
             default:
               throw new Error(`Unknown layer category`);
           }
