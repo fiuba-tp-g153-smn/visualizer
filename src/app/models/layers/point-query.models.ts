@@ -30,7 +30,7 @@ export interface PointQueryValueData {
   value: number;
   unit: string;
   status: PointQueryStatus.VALUE;
-  scaleRange?: ScaleRangeInfo; // Absent for layers without scale definition (e.g. ECMWF)
+  scaleRange: ScaleRangeInfo;
   elevationId?: string; // Present only for radar layers
 }
 

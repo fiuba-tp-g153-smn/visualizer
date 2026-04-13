@@ -30,8 +30,7 @@ export interface WmsLayerConfig extends BaseLayerConfig {
 
 export interface EcmwfTileLayerConfig extends TileLayerConfig {
   category: LayerCategory.ECMWF;
-  // availableTilesets inherited as TilesetEntry[] — id = period string, time = parsed start date
-  availableForecasts: string[]; // Todos los forecast_ts disponibles, ordenados desc
-  periodsByForecast: Readonly<Record<string, string[]>>; // Todos los períodos por corrida (keys = period string IDs)
-  forecastsByPeriod: Readonly<Record<string, string[]>>; // Lookup inverso: período → corridas que lo tienen
+  availableForecasts: string[];
+  periodsByForecast: Readonly<Record<string, string[]>>;
+  forecastsByPeriod: Readonly<Record<string, string[]>>;
 }
