@@ -13,6 +13,7 @@ export {
   buildTileUrl,
   buildSatellitePointQueryUrl,
   buildRadarPointQueryUrl,
+  buildEcmwfPointQueryUrl,
 } from './backend.config';
 
 // Alerts Service configuration (polygon operations and departments)

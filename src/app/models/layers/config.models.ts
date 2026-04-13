@@ -4,7 +4,7 @@ export interface BaseLayerConfig {
   layerId: string;
 }
 
-export type LayerConfig = GoesTileLayerConfig | RadarTileLayerConfig | WmsLayerConfig;
+export type LayerConfig = GoesTileLayerConfig | RadarTileLayerConfig | WmsLayerConfig | EcmwfTileLayerConfig;
 
 export interface TilesetEntry {
   id: string;
@@ -26,4 +26,11 @@ export interface RadarTileLayerConfig extends TileLayerConfig {
 
 export interface WmsLayerConfig extends BaseLayerConfig {
   type: LayerType.WMS;
+}
+
+export interface EcmwfTileLayerConfig extends TileLayerConfig {
+  category: LayerCategory.ECMWF;
+  availableForecasts: string[];
+  periodsByForecast: Readonly<Record<string, string[]>>;
+  forecastsByPeriod: Readonly<Record<string, string[]>>;
 }

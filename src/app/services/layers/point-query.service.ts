@@ -10,6 +10,9 @@ import {
   RadarLayerControls,
   RadarTileLayer,
   GoesTileLayer,
+  EcmwfLayerControls,
+  EcmwfTileLayer,
+  EcmwfTileLayerConfig,
   PointQueryDisplayData,
   PointQueryStatus,
   PointQueryValueDto,
@@ -21,7 +24,11 @@ import {
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
-import { buildRadarPointQueryUrl, buildSatellitePointQueryUrl } from '../../config';
+import {
+  buildRadarPointQueryUrl,
+  buildSatellitePointQueryUrl,
+  buildEcmwfPointQueryUrl,
+} from '../../config';
 
 @Injectable({
   providedIn: 'root',
@@ -45,9 +52,16 @@ export class PointQueryService {
       return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
-    if (layer.category === LayerCategory.GOES_19 && !this.isWithinLayerBounds(layer, lat, lon)) {
-      // Optimization: no backend request if satellite cursor is outside configured bounds.
+    if (
+      (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF) &&
+      !this.isWithinLayerBounds(layer, lat, lon)
+    ) {
+      // Optimization: no backend request if cursor is outside configured bounds.
       return of(this.buildNoData(layerId, layerName, elevationId));
+    }
+
+    if (layer.category === LayerCategory.ECMWF) {
+      return this.queryEcmwfLayer(layer, controls as EcmwfLayerControls, lat, lon);
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
@@ -160,6 +174,58 @@ export class PointQueryService {
     );
   }
 
+  private queryEcmwfLayer(
+    layer: Layer,
+    controls: EcmwfLayerControls,
+    lat: number,
+    lon: number,
+  ): Observable<PointQueryDisplayData> {
+    const config = this.layerConfigService.getConfig(layer.id) as EcmwfTileLayerConfig | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    // Resolve the period from the union-based availableTilesets
+    const idx = Math.max(
+      0,
+      Math.min(
+        controls.playback.timeIndex ?? config.availableTilesets.length - 1,
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const periodTs = config.availableTilesets[idx].id;
+
+    // Pick the first selected forecast that has this period
+    const forecastsForPeriod = config.forecastsByPeriod[periodTs];
+    const selectedForecasts = controls.forecast.selectedForecastTimestamps;
+    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!forecastTs) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const url = buildEcmwfPointQueryUrl(forecastTs, periodTs, lat, lon);
+
+    const scaleRange = this.extractScaleRange(layer as EcmwfTileLayer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+          }) as const,
+      ),
+      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    );
+  }
+
   private resolveTilesetId(layerId: string, timeIndex?: number): string | null {
     const config = this.layerConfigService.getConfig(layerId);
     if (!config || config.type !== LayerType.TILE || config.availableTilesets.length === 0) {
@@ -229,7 +295,9 @@ export class PointQueryService {
    * Extracts scale range information from a layer's scale definition.
    * Returns min, max, and total steps for visualization purposes.
    */
-  private extractScaleRange(layer: GoesTileLayer | RadarTileLayer): ScaleRangeInfo | undefined {
+  private extractScaleRange(
+    layer: GoesTileLayer | RadarTileLayer | EcmwfTileLayer,
+  ): ScaleRangeInfo | undefined {
     if (!layer.scale) {
       return undefined;
     }
