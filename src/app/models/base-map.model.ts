@@ -1,27 +1,31 @@
 /**
  * Base map model
  *
- * Defines a base map (background map layer) configuration.
- * Each base map represents a different tileset source (e.g., OpenStreetMap, CartoDB, Argenmap).
+ * Represents a base map provider as exposed by the backend `/basemap/providers`
+ * endpoint, augmented with the client-side preview tile coordinates.
  */
 
 export interface BaseMap {
-  /** Unique identifier for the provider */
+  /** Stable provider identifier returned by the backend (camelCase, URL-safe) */
   id: string;
-  /** Display name shown in the UI */
+  /** Human-readable display name */
   name: string;
   /** Tile URL template with {z}, {x}, {y} placeholders */
   url: string;
-  /** Attribution text for the map provider */
+  /** Attribution HTML, ready to feed Leaflet's attribution control */
   attribution: string;
-  /** Maximum zoom level supported */
+  /** Lowest zoom the provider supports */
+  minZoom: number;
+  /**
+   * Highest zoom we are willing to request from the backend.
+   * Capped at the backend's `cache_max_zoom` so that offline mode never
+   * surfaces blank tiles above the locally-available range.
+   */
   maxZoom: number;
-  /** Minimum zoom level (optional, defaults to 0) */
-  minZoom?: number;
-  /** Preview zoom level for thumbnail generation */
-  previewZ?: number;
-  /** Preview X coordinate for thumbnail generation */
-  previewX?: number;
-  /** Preview Y coordinate for thumbnail generation */
-  previewY?: number;
+  /** Preview zoom for the selector thumbnail */
+  previewZ: number;
+  /** Preview X coordinate for the selector thumbnail */
+  previewX: number;
+  /** Preview Y coordinate for the selector thumbnail */
+  previewY: number;
 }

@@ -22,6 +22,29 @@
   overflow-y: auto;
 }
 
+.base-map-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  flex: 1;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+  text-align: center;
+
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+  }
+
+  &--error {
+    color: var(--mat-sys-error);
+  }
+}
+
 .base-map-card {
   display: flex;
   flex-direction: row;
