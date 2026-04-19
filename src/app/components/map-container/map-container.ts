@@ -52,7 +52,7 @@ export class MapContainer implements OnInit, OnDestroy {
       // Effect: change base map
       effect(() => {
         const baseMap = this.baseMapService.currentBaseMap();
-        if (this.map) {
+        if (this.map && baseMap) {
           this.changeBaseMap(baseMap);
         }
       });
@@ -157,9 +157,12 @@ export class MapContainer implements OnInit, OnDestroy {
       }
     });
 
-    // Initialize base map layer
+    // Initialize base map layer if providers have already loaded; otherwise
+    // the effect above will install it as soon as the API call resolves.
     const initialBaseMap = this.baseMapService.getCurrentBaseMap();
-    this.changeBaseMap(initialBaseMap);
+    if (initialBaseMap) {
+      this.changeBaseMap(initialBaseMap);
+    }
 
     this.map.on('mousemove', (event: L.LeafletMouseEvent) => {
       this.pointQueryViewerService.handleMouseMove(event.latlng.lat, event.latlng.lng);
