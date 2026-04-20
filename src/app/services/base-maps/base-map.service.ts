@@ -134,8 +134,10 @@ function toBaseMap(dto: BaseMapProviderDto): BaseMap {
     // Display ceiling: layer stays visible up to the map's overall max zoom;
     // past maxNativeZoom Leaflet upscales rather than refetching.
     maxZoom: MAP_CONFIG.maxZoom,
-    // Fetch ceiling: never request tiles past the backend cache (404 zone).
-    maxNativeZoom: dto.cache_max_zoom,
+    // Fetch ceiling: ride the backend relay all the way to the upstream
+    // provider's maximum. Past `cache_max_zoom` the data-service hits the
+    // upstream live; if offline, it returns a transparent PNG (never 404).
+    maxNativeZoom: dto.max_zoom,
     previewZ: BASE_MAP_PREVIEW_CONFIG.z,
     previewX: BASE_MAP_PREVIEW_CONFIG.x,
     previewY: BASE_MAP_PREVIEW_CONFIG.y,

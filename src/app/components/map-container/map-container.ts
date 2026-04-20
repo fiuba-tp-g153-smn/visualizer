@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { MAP_CONFIG } from '../../config';
+import { environment } from '../../../environments/environment';
 
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
@@ -217,7 +218,22 @@ export class MapContainer implements OnInit, OnDestroy {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
       maxNativeZoom: baseMap.maxNativeZoom,
+      // Wider tile ring smooths panning; backend's 1-week immutable cache
+      // makes the extra fetches near-free on warm caches.
+      keepBuffer: 4,
+      // Defer tile fetches during touch pinch/pan; smoother on coarse pointers.
+      updateWhenIdle: window.matchMedia?.('(pointer: coarse)').matches ?? false,
+      // Future-proofs canvas screenshot/print flows; backend already CORS-allows *.
+      crossOrigin: 'anonymous',
       zIndex: 0,
     }).addTo(this.map);
+
+    // Tripwire: backend is supposed to return a transparent PNG on miss, never a 404.
+    // If `tileerror` ever fires for the basemap layer, a backend regression is the prime suspect.
+    if (!environment.production) {
+      this.currentTileLayer.on('tileerror', (e) => {
+        console.warn('[basemap] unexpected tileerror — backend should serve transparent PNG on miss', e);
+      });
+    }
   }
 }

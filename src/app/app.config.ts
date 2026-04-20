@@ -11,6 +11,7 @@ import { routes } from './app.routes';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { LayerRefreshService } from './services/layers/layer-refresh.service';
 import { BaseMapService } from './services/base-maps/base-map.service';
+import { BasemapPerfService } from './services/base-maps/basemap-perf.service';
 import { TOOLTIP_DELAYS } from './config/timing.config';
 
 export const appConfig: ApplicationConfig = {
@@ -33,6 +34,9 @@ export const appConfig: ApplicationConfig = {
         inject(LayerRefreshService);
         // Eager load BaseMapService to fetch /basemap/providers at app boot
         inject(BaseMapService);
+        // Eager load BasemapPerfService so its PerformanceObserver attaches
+        // before the first tile request (no-op in production builds).
+        inject(BasemapPerfService);
       },
     },
     {

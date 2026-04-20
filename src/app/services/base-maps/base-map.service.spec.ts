@@ -69,9 +69,10 @@ describe('BaseMapService', () => {
       expect(service.providers().map((p) => p.id)).toEqual(['argenmap', 'satellite']);
     });
 
-    it('caps native fetch zoom at cache_max_zoom while keeping the display ceiling', () => {
+    it('exposes upstream max_zoom as the fetch ceiling and the map display cap as the visible ceiling', () => {
       const argenmap = service.providers().find((p) => p.id === 'argenmap')!;
-      expect(argenmap.maxNativeZoom).toBe(11);
+      // Lets Leaflet request tiles past cache_max_zoom; backend relays.
+      expect(argenmap.maxNativeZoom).toBe(21);
       expect(argenmap.maxZoom).toBe(MAP_CONFIG.maxZoom);
     });
 
