@@ -37,7 +37,13 @@ export class BaseMapSelectorComponent implements MenuPanelComponent {
   readonly currentBaseMapId = computed(() => this.baseMapService.currentBaseMap()?.id ?? null);
 
   onPanelOpen(): void {
-    // Hook for future initialization if needed
+    // Fire all preview-tile GETs in parallel so the grid renders cache-warm
+    // instead of waterfalling one <img> at a time. Browser dedups with the
+    // later real <img> requests, so no wasted bandwidth.
+    for (const baseMap of this.baseMaps()) {
+      const url = this.getPreviewUrl(baseMap);
+      if (url) new Image().src = url;
+    }
   }
 
   isActive(baseMapId: string): boolean {

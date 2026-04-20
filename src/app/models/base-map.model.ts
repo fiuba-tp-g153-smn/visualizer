@@ -24,8 +24,9 @@ export interface BaseMap {
   maxZoom: number;
   /**
    * Highest zoom for which we actually *fetch* tiles from the backend.
-   * Mirrors the backend's `cache_max_zoom` so offline mode never hits the
-   * 404 zone above the locally-available range.
+   * Mirrors the backend's `max_zoom` (upstream provider max). The relay
+   * serves cached tiles up to `cache_max_zoom` and falls through to the
+   * upstream beyond that; if offline, it returns a transparent PNG.
    */
   maxNativeZoom: number;
   /** Preview zoom for the selector thumbnail */
