@@ -17,11 +17,17 @@ export interface BaseMap {
   /** Lowest zoom the provider supports */
   minZoom: number;
   /**
-   * Highest zoom we are willing to request from the backend.
-   * Capped at the backend's `cache_max_zoom` so that offline mode never
-   * surfaces blank tiles above the locally-available range.
+   * Highest zoom at which the layer is still *displayed* on the map.
+   * Past `maxNativeZoom`, Leaflet upscales the last available tile rather
+   * than fetching new ones — so this can safely be the map's overall max.
    */
   maxZoom: number;
+  /**
+   * Highest zoom for which we actually *fetch* tiles from the backend.
+   * Mirrors the backend's `cache_max_zoom` so offline mode never hits the
+   * 404 zone above the locally-available range.
+   */
+  maxNativeZoom: number;
   /** Preview zoom for the selector thumbnail */
   previewZ: number;
   /** Preview X coordinate for the selector thumbnail */

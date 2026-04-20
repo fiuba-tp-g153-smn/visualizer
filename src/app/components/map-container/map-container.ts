@@ -216,6 +216,7 @@ export class MapContainer implements OnInit, OnDestroy {
     this.currentTileLayer = L.tileLayer(baseMap.url, {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
+      maxNativeZoom: baseMap.maxNativeZoom,
       zIndex: 0,
     }).addTo(this.map);
   }

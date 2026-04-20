@@ -5,7 +5,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { BaseMapService } from './base-map.service';
-import { buildBasemapProvidersUrl } from '../../config';
+import { MAP_CONFIG, buildBasemapProvidersUrl } from '../../config';
 import type { BaseMapProvidersResponse } from '../../config';
 
 const SAMPLE_RESPONSE: BaseMapProvidersResponse = {
@@ -69,9 +69,10 @@ describe('BaseMapService', () => {
       expect(service.providers().map((p) => p.id)).toEqual(['argenmap', 'satellite']);
     });
 
-    it('caps maxZoom at cache_max_zoom (offline-safe)', () => {
+    it('caps native fetch zoom at cache_max_zoom while keeping the display ceiling', () => {
       const argenmap = service.providers().find((p) => p.id === 'argenmap')!;
-      expect(argenmap.maxZoom).toBe(11);
+      expect(argenmap.maxNativeZoom).toBe(11);
+      expect(argenmap.maxZoom).toBe(MAP_CONFIG.maxZoom);
     });
 
     it('wraps known attribution patterns with anchor tags', () => {

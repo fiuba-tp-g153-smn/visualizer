@@ -131,8 +131,11 @@ function toBaseMap(dto: BaseMapProviderDto): BaseMap {
     url: buildBasemapTileUrl(dto.id),
     attribution: formatAttribution(dto.attribution),
     minZoom: dto.min_zoom,
-    // Cap at cache_max_zoom so offline mode never hits the 404 zone.
-    maxZoom: dto.cache_max_zoom,
+    // Display ceiling: layer stays visible up to the map's overall max zoom;
+    // past maxNativeZoom Leaflet upscales rather than refetching.
+    maxZoom: MAP_CONFIG.maxZoom,
+    // Fetch ceiling: never request tiles past the backend cache (404 zone).
+    maxNativeZoom: dto.cache_max_zoom,
     previewZ: BASE_MAP_PREVIEW_CONFIG.z,
     previewX: BASE_MAP_PREVIEW_CONFIG.x,
     previewY: BASE_MAP_PREVIEW_CONFIG.y,
