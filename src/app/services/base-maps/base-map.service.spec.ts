@@ -1,156 +1,153 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { BaseMapService } from './base-map.service';
+import { MAP_CONFIG, buildBasemapProvidersUrl } from '../../config';
+import type { BaseMapProvidersResponse } from '../../config';
+
+const SAMPLE_RESPONSE: BaseMapProvidersResponse = {
+  providers: [
+    {
+      id: 'argenmap',
+      name: 'Argenmap',
+      min_zoom: 3,
+      max_zoom: 21,
+      cache_max_zoom: 11,
+      attribution: 'Instituto Geográfico Nacional + OpenStreetMap contributors',
+    },
+    {
+      id: 'satellite',
+      name: 'Imágenes satelitales Esri',
+      min_zoom: 3,
+      max_zoom: 17,
+      cache_max_zoom: 11,
+      attribution: 'Tiles © Esri',
+    },
+  ],
+};
 
 describe('BaseMapService', () => {
   let service: BaseMapService;
+  let httpMock: HttpTestingController;
+
+  function flushProviders(response: BaseMapProvidersResponse = SAMPLE_RESPONSE): void {
+    const req = httpMock.expectOne(buildBasemapProvidersUrl());
+    expect(req.request.method).toBe('GET');
+    req.flush(response);
+  }
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(BaseMapService);
-    // Clear localStorage before each test
     localStorage.clear();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(BaseMapService);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
-  it('should be created', () => {
+  afterEach(() => {
+    httpMock.verify();
+  });
+
+  it('should be created and request the providers list at init', () => {
     expect(service).toBeTruthy();
+    expect(service.loadState()).toBe('loading');
+    flushProviders();
+    expect(service.loadState()).toBe('loaded');
   });
 
-  describe('Initial state', () => {
-    it('should have Argenmap as default base map', () => {
-      const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('argenmap');
+  describe('After providers load', () => {
+    beforeEach(() => {
+      flushProviders();
     });
 
-    it('should return readonly current base map', () => {
-      const baseMap = service.currentBaseMap();
-      expect(baseMap).toBeDefined();
-      expect(baseMap.name).toBeTruthy();
-      expect(baseMap.url).toBeTruthy();
-    });
-  });
-
-  describe('setBaseMap', () => {
-    it('should change base map to Argenmap gris', () => {
-      service.setBaseMap('argenmapGris');
-
-      const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('argenmapGris');
-      expect(currentBaseMap.name).toBe('Argenmap gris');
+    it('exposes the providers from the API', () => {
+      expect(service.providers().length).toBe(2);
+      expect(service.providers().map((p) => p.id)).toEqual(['argenmap', 'satellite']);
     });
 
-    it('should change base map to satellite', () => {
+    it('exposes upstream max_zoom as the fetch ceiling and the map display cap as the visible ceiling', () => {
+      const argenmap = service.providers().find((p) => p.id === 'argenmap')!;
+      // Lets Leaflet request tiles past cache_max_zoom; backend relays.
+      expect(argenmap.maxNativeZoom).toBe(21);
+      expect(argenmap.maxZoom).toBe(MAP_CONFIG.maxZoom);
+    });
+
+    it('wraps known attribution patterns with anchor tags', () => {
+      const argenmap = service.providers().find((p) => p.id === 'argenmap')!;
+      expect(argenmap.attribution).toContain('<a href="');
+      expect(argenmap.attribution).toContain('Instituto Geográfico Nacional</a>');
+      expect(argenmap.attribution).toContain('OpenStreetMap</a>');
+    });
+
+    it('selects the default base map when no preference is stored', () => {
+      expect(service.currentBaseMap()?.id).toBe('argenmap');
+    });
+
+    it('changes the current base map via setBaseMap', () => {
       service.setBaseMap('satellite');
-
-      const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('satellite');
-      expect(currentBaseMap.name).toBe('Imágenes satelitales Esri');
+      expect(service.currentBaseMap()?.id).toBe('satellite');
     });
 
-    it('should change base map to topographic', () => {
-      service.setBaseMap('topographic');
-
-      const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('topographic');
-      expect(currentBaseMap.name).toBe('Mapa topográfico Esri');
+    it('ignores unknown ids without throwing', () => {
+      service.setBaseMap('does-not-exist');
+      expect(service.currentBaseMap()?.id).toBe('argenmap');
     });
 
-    it('should return to Argenmap', () => {
+    it('persists the selection to localStorage', () => {
       service.setBaseMap('satellite');
-      service.setBaseMap('argenmap');
-
-      const currentBaseMap = service.currentBaseMap();
-      expect(currentBaseMap.id).toBe('argenmap');
-      expect(currentBaseMap.name).toBe('Argenmap');
-    });
-
-    it('should throw error on invalid base map ID', () => {
-      expect(() => {
-        service.setBaseMap('invalid-id');
-      }).toThrow("Base map 'invalid-id' not found");
-    });
-
-    it('should persist base map selection to localStorage', () => {
-      service.setBaseMap('satellite');
-      TestBed.tick(); // Flush effects to trigger localStorage save
-
-      const stored = localStorage.getItem('mapasmn_selected_base_map');
-      expect(stored).toBe('satellite');
+      TestBed.tick();
+      expect(localStorage.getItem('mapasmn_selected_base_map')).toBe('satellite');
     });
   });
 
-  describe('getAvailableBaseMaps', () => {
-    it('should return array of all base maps', () => {
-      const baseMaps = service.getAvailableBaseMaps();
-
-      expect(baseMaps.length).toBe(8);
-    });
-
-    it('should include all expected base maps', () => {
-      const baseMaps = service.getAvailableBaseMaps();
-      const ids = baseMaps.map((p) => p.id);
-
-      expect(ids).toContain('argenmap');
-      expect(ids).toContain('argenmapGris');
-      expect(ids).toContain('argenmapOscuro');
-      expect(ids).toContain('argenmapTopografico');
-      expect(ids).toContain('satellite');
-      expect(ids).toContain('topographic');
-      expect(ids).toContain('googleSatellite');
-      expect(ids).toContain('oceanBase');
-    });
-
-    it('should return base maps with all required properties', () => {
-      const baseMaps = service.getAvailableBaseMaps();
-
-      baseMaps.forEach((baseMap) => {
-        expect(baseMap.id).toBeTruthy();
-        expect(baseMap.name).toBeTruthy();
-        expect(baseMap.url).toBeTruthy();
-        expect(baseMap.attribution).toBeTruthy();
-        expect(typeof baseMap.maxZoom).toBe('number');
-      });
+  describe('Empty provider list', () => {
+    it('clears the current base map and reports loaded state', () => {
+      flushProviders({ providers: [] });
+      expect(service.providers().length).toBe(0);
+      expect(service.currentBaseMap()).toBeNull();
+      expect(service.loadState()).toBe('loaded');
+      expect(service.hasProviders()).toBe(false);
     });
   });
 
-  describe('Base map switching behavior', () => {
-    it('should maintain base map state across multiple reads', () => {
-      service.setBaseMap('satellite');
-
-      const baseMap1 = service.currentBaseMap();
-      const baseMap2 = service.currentBaseMap();
-
-      expect(baseMap1.id).toBe(baseMap2.id);
-      expect(baseMap1.name).toBe(baseMap2.name);
-    });
-
-    it('should emit new value when base map changes', () => {
-      const baseMapBefore = service.currentBaseMap();
-      service.setBaseMap('satellite');
-      const baseMapAfter = service.currentBaseMap();
-
-      expect(baseMapBefore.id).not.toBe(baseMapAfter.id);
+  describe('API failure', () => {
+    it('reports error state without falling back to a hardcoded list', () => {
+      const req = httpMock.expectOne(buildBasemapProvidersUrl());
+      req.error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
+      expect(service.loadState()).toBe('error');
+      expect(service.providers().length).toBe(0);
+      expect(service.currentBaseMap()).toBeNull();
     });
   });
+});
 
-  describe('localStorage persistence', () => {
-    it('should load basemap from localStorage on initialization', () => {
-      // Reset TestBed to get a fresh service instance
-      TestBed.resetTestingModule();
-      localStorage.setItem('mapasmn_selected_base_map', 'satellite');
-      TestBed.configureTestingModule({});
-
-      const newService = TestBed.inject(BaseMapService);
-      expect(newService.currentBaseMap().id).toBe('satellite');
+describe('BaseMapService — persisted preference', () => {
+  function bootWithStoredId(storedId: string | null) {
+    localStorage.clear();
+    if (storedId) localStorage.setItem('mapasmn_selected_base_map', storedId);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     });
+    const service = TestBed.inject(BaseMapService);
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne(buildBasemapProvidersUrl()).flush(SAMPLE_RESPONSE);
+    return { service, httpMock };
+  }
 
-    it('should fallback to default if stored ID is invalid', () => {
-      // Reset TestBed to get a fresh service instance
-      TestBed.resetTestingModule();
-      localStorage.setItem('mapasmn_selected_base_map', 'invalid-id');
-      TestBed.configureTestingModule({});
+  it('restores a stored base map id once providers load', () => {
+    const { service, httpMock } = bootWithStoredId('satellite');
+    expect(service.currentBaseMap()?.id).toBe('satellite');
+    httpMock.verify();
+  });
 
-      const newService = TestBed.inject(BaseMapService);
-      expect(newService.currentBaseMap().id).toBe('argenmap');
-    });
+  it('falls back to the default if the stored id is not in the list', () => {
+    const { service, httpMock } = bootWithStoredId('unknown');
+    expect(service.currentBaseMap()?.id).toBe('argenmap');
+    httpMock.verify();
   });
 });
