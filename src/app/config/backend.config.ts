@@ -63,3 +63,19 @@ export function buildRadarPointQueryUrl(
 ): string {
   return `${DATA_SERVICE_BASE_URL}/products/radar/${radarId}/${variableId}/${elevationId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
 }
+
+/**
+ * Construye URL template de tiles de mapa base para un provider.
+ * @param providerId - ID del provider devuelto por /basemap/providers
+ * @returns URL template para Leaflet con {z}/{x}/{y}
+ */
+export function buildBasemapTileUrl(providerId: string): string {
+  return `${DATA_SERVICE_BASE_URL}/basemap/${providerId}/{z}/{x}/{y}.png`;
+}
+
+/**
+ * URL del listado de providers de mapa base habilitados en el backend.
+ */
+export function buildBasemapProvidersUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/basemap/providers`;
+}

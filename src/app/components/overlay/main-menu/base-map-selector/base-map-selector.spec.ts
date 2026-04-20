@@ -1,42 +1,46 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { BaseMapSelectorComponent } from './base-map-selector';
-import { BaseMapService } from '../../../../services/base-maps/base-map.service';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
+import { BaseMapSelectorComponent } from './base-map-selector';
+import { BaseMapService } from '../../../../services/base-maps/base-map.service';
 
 describe('BaseMapSelectorComponent', () => {
   let component: BaseMapSelectorComponent;
   let fixture: ComponentFixture<BaseMapSelectorComponent>;
   let mockBaseMapService: any;
 
+  const argenmap = {
+    id: 'argenmap',
+    name: 'Argenmap',
+    url: 'https://example.com/basemap/argenmap/{z}/{x}/{y}.png',
+    attribution: '<a href="">IGN</a>',
+    minZoom: 3,
+    maxZoom: 18,
+    maxNativeZoom: 21,
+    previewZ: 2,
+    previewX: 1,
+    previewY: 2,
+  };
+  const satellite = {
+    id: 'satellite',
+    name: 'Satélite',
+    url: 'https://example.com/basemap/satellite/{z}/{x}/{y}.png',
+    attribution: '© Esri',
+    minZoom: 3,
+    maxZoom: 18,
+    maxNativeZoom: 21,
+    previewZ: 2,
+    previewX: 1,
+    previewY: 2,
+  };
+
   beforeEach(async () => {
     mockBaseMapService = {
-      getAvailableBaseMaps: vi.fn(),
+      providers: signal([argenmap, satellite]),
+      currentBaseMap: signal(argenmap),
+      loadState: signal<'idle' | 'loading' | 'loaded' | 'error'>('loaded'),
       setBaseMap: vi.fn(),
-      currentBaseMap: signal({
-        id: 'argenmap',
-        name: 'Argenmap',
-        url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',
-        attribution: 'IGN',
-        maxZoom: 21,
-      }),
     };
-    mockBaseMapService.getAvailableBaseMaps.mockReturnValue([
-      {
-        id: 'argenmap',
-        name: 'Argenmap',
-        url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',
-        attribution: 'IGN',
-        maxZoom: 21,
-      },
-      {
-        id: 'satellite',
-        name: 'Satélite',
-        url: 'https://example.com/{z}/{x}/{y}.png',
-        attribution: '© Esri',
-        maxZoom: 17,
-      },
-    ]);
 
     await TestBed.configureTestingModule({
       imports: [BaseMapSelectorComponent],
@@ -52,18 +56,22 @@ describe('BaseMapSelectorComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should get available base maps', () => {
-    expect(component.baseMaps.length).toBe(2);
-    expect(mockBaseMapService.getAvailableBaseMaps).toHaveBeenCalled();
+  it('exposes the providers signal from the service', () => {
+    expect(component.baseMaps().length).toBe(2);
   });
 
-  it('should identify active base map', () => {
+  it('marks the active base map', () => {
     expect(component.isActive('argenmap')).toBe(true);
     expect(component.isActive('satellite')).toBe(false);
   });
 
-  it('should select a base map', () => {
+  it('delegates selection to the service', () => {
     component.selectBaseMap('satellite');
     expect(mockBaseMapService.setBaseMap).toHaveBeenCalledWith('satellite');
+  });
+
+  it('builds preview URLs from preview coordinates', () => {
+    const url = component.getPreviewUrl(argenmap);
+    expect(url).toBe('https://example.com/basemap/argenmap/2/1/2.png');
   });
 });
