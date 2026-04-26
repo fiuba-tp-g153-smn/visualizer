@@ -63,45 +63,11 @@ export function parseEcmwfTimestamp(ts: string): Date | null {
 }
 
 /**
- * Extracts and parses the start timestamp from an ECMWF period range.
- * Example: "20260330T1500Z-20260330T1800Z" → Date for 2026-03-30 15:00
+ * Parses the centered timestamp of an ECMWF accumulation window.
+ * Example: "20260330T1500Z" → Date for 2026-03-30 15:00
  */
-export function parseEcmwfPeriodStart(periodTs: string): Date | null {
-  const dashIdx = periodTs.indexOf('-', 1);
-  const startTs = dashIdx === -1 ? periodTs : periodTs.substring(0, dashIdx);
-  return parseEcmwfTimestamp(startTs);
-}
-
-/**
- * Formats an ECMWF period range as "YYYY-MM-DD HH:MM - HH:MM".
- * Example: "20260330T1500Z-20260330T1800Z" → "2026-03-30 15:00 - 18:00"
- */
-export function formatEcmwfPeriodFull(periodTs: string): string {
-  const dashIdx = periodTs.indexOf('-', 1);
-  if (dashIdx === -1) return periodTs;
-
-  const startDate = parseEcmwfTimestamp(periodTs.substring(0, dashIdx));
-  const endDate = parseEcmwfTimestamp(periodTs.substring(dashIdx + 1));
-
-  if (!startDate || !endDate) return periodTs;
-
-  return `${formatDateFull(startDate)} - ${formatDateTimeOnly(endDate)}`;
-}
-
-/**
- * Formats an ECMWF period range as "HH:MM-HH:MM" (time only).
- * Example: "20260330T1500Z-20260330T1800Z" → "15:00-18:00"
- */
-export function formatEcmwfPeriodTimeOnly(periodTs: string): string {
-  const dashIdx = periodTs.indexOf('-', 1);
-  if (dashIdx === -1) return '--:--';
-
-  const startDate = parseEcmwfTimestamp(periodTs.substring(0, dashIdx));
-  const endDate = parseEcmwfTimestamp(periodTs.substring(dashIdx + 1));
-
-  if (!startDate || !endDate) return '--:--';
-
-  return `${formatDateTimeOnly(startDate)}-${formatDateTimeOnly(endDate)}`;
+export function parseEcmwfPeriodCenter(periodTs: string): Date | null {
+  return parseEcmwfTimestamp(periodTs);
 }
 
 /**

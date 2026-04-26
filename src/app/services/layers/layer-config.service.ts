@@ -20,7 +20,7 @@ import { LayersService } from './layers.service';
 import {
   parseGoesTimestamp,
   parseRadarTimestamp,
-  parseEcmwfPeriodStart,
+  parseEcmwfPeriodCenter,
 } from '../../utils/tileset-timestamp';
 
 /**
@@ -167,7 +167,7 @@ export class LayerConfigService {
               const firstPeriods = periodsByForecast[forecasts[0]] ?? [];
               const availableTilesets: TilesetEntry[] = firstPeriods.map((id) => ({
                 id,
-                time: parseEcmwfPeriodStart(id) ?? new Date(0),
+                time: parseEcmwfPeriodCenter(id) ?? new Date(0),
               }));
 
               const config: EcmwfTileLayerConfig = {
@@ -219,7 +219,7 @@ export class LayerConfigService {
     const sortedPeriods = [...periodSet].sort();
     const availableTilesets: TilesetEntry[] = sortedPeriods.map((id) => ({
       id,
-      time: parseEcmwfPeriodStart(id) ?? new Date(0),
+      time: parseEcmwfPeriodCenter(id) ?? new Date(0),
     }));
 
     this.updateConfigMap(layerId, {
