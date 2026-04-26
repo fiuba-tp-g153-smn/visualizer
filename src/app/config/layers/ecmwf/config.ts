@@ -29,7 +29,7 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
       id: 'ecmwf/total-precipitation',
       variable: 'total-precipitation',
       name: 'Precipitación Total',
-      description: 'Precipitación total acumulada por período de 3 horas — modelo ECMWF',
+      description: 'Precipitación total acumulada en una ventana centrada de 6 horas — modelo ECMWF',
       scale: ECMWF_TP_SCALE,
     },
   ] as EcmwfTileLayer[],
