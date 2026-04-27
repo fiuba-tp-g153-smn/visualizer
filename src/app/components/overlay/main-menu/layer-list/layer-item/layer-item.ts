@@ -35,8 +35,6 @@ import { SyncPlaybackService } from '../../../../../services/layers/sync-playbac
 import {
   formatDateFull,
   formatDateTimeOnly,
-  formatEcmwfPeriodFull,
-  formatEcmwfPeriodTimeOnly,
   formatEcmwfForecastTs,
 } from '../../../../../utils/tileset-timestamp';
 
@@ -591,11 +589,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.hasTimeControl()) return 'Cargando...';
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return 'Sin datos';
-
-    if (this.layer.category === LayerCategory.ECMWF) {
-      return formatEcmwfPeriodFull(tilesets[timeIndex].id);
-    }
-
     return formatDateFull(tilesets[timeIndex].time);
   }
 
@@ -603,11 +596,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.hasTimeControl()) return '--:--';
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return '--:--';
-
-    if (this.layer.category === LayerCategory.ECMWF) {
-      return formatEcmwfPeriodTimeOnly(tilesets[timeIndex].id);
-    }
-
     return formatDateTimeOnly(tilesets[timeIndex].time);
   }
 

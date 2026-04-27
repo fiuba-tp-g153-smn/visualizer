@@ -23,6 +23,7 @@ import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
 import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
+import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
 /**
  * Service responsible for creating and managing Leaflet tile layers.
@@ -124,8 +125,10 @@ export class LayerRenderService {
       throw new Error(`No tilesets available for radar layer '${layerId}'`);
     }
 
+    const radarLayer = this.layersService.getLayerById(layerId);
+    const radarIsForecast = radarLayer?.type === LayerType.TILE && radarLayer.isForecast;
     const timeIndex =
-      controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+      controls.playback.timeIndex ?? getDefaultCursorIndex(tilesets.length, radarIsForecast);
 
     if (timeIndex < 0 || timeIndex >= tilesets.length) {
       throw new Error(
@@ -223,12 +226,15 @@ export class LayerRenderService {
     result.set(`${layerId}#${currentTimeIndex}`, tileLayer);
 
     // Pre-render next N frames at opacity=0
+    const goesLayer = this.layersService.getLayerById(layerId);
+    const goesIsForecast = goesLayer?.type === LayerType.TILE && goesLayer.isForecast;
     this.prerenderNextFrames(
       result,
       currentTimeIndex,
       totalFrames,
       controls.playback.lastImagesCount,
       absoluteZIndex,
+      goesIsForecast,
       (adjIndex) => {
         const adjLayer = this.createTileLayerForTimeIndex(layerId, controls, adjIndex);
         return { layer: adjLayer, key: `${layerId}#${adjIndex}` };
@@ -302,6 +308,7 @@ export class LayerRenderService {
         totalFrames,
         controls.playback.lastImagesCount,
         elevationZIndex,
+        false,
         (adjIndex) => {
           const adjLayer = this.createRadarTileLayerForElevationAtTimeIndex(
             layerId,
@@ -417,6 +424,7 @@ export class LayerRenderService {
         totalFrames,
         controls.playback.lastImagesCount,
         forecastZIndex,
+        true,
         (adjIndex) => {
           const adjLayer = this.createEcmwfTileLayerForForecastAtTimeIndex(
             layerId, controls, forecastTs, adjIndex,
@@ -448,10 +456,11 @@ export class LayerRenderService {
     totalFrames: number,
     lastImagesCount: number,
     absoluteZIndex: number,
+    isForecast: boolean,
     createLayer: (timeIndex: number) => { layer: L.TileLayer; key: string } | null,
   ): void {
-    const minTimeIndex = Math.max(0, totalFrames - lastImagesCount);
-    const windowSize = totalFrames - minTimeIndex;
+    const minTimeIndex = computeWindowStart(totalFrames, lastImagesCount, isForecast);
+    const windowSize = Math.min(lastImagesCount, totalFrames - minTimeIndex);
 
     if (windowSize > 1) {
       for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {
@@ -507,7 +516,8 @@ export class LayerRenderService {
             if (tilesets.length === 0) return `${layerId}-empty`;
 
             const timeIndex =
-              goesControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+              goesControls.playback.timeIndex ??
+              getDefaultCursorIndex(tilesets.length, layer.isForecast);
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
@@ -529,7 +539,8 @@ export class LayerRenderService {
             if (tilesets.length === 0) return `${layerId}-empty`;
 
             const timeIndex =
-              radarControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+              radarControls.playback.timeIndex ??
+              getDefaultCursorIndex(tilesets.length, layer.isForecast);
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
@@ -546,10 +557,12 @@ export class LayerRenderService {
             const tilesets = config.availableTilesets;
             if (tilesets.length === 0) return `${layerId}-empty`;
 
+            const ecmwfLayer = layer as EcmwfTileLayer;
             const timeIndex = Math.max(
               0,
               Math.min(
-                ecmwfControls.playback.timeIndex ?? tilesets.length - 1,
+                ecmwfControls.playback.timeIndex ??
+                  getDefaultCursorIndex(tilesets.length, ecmwfLayer.isForecast),
                 tilesets.length - 1,
               ),
             );
@@ -755,8 +768,8 @@ export class LayerRenderService {
       throw new Error(`No tilesets available for layer '${layerId}'`);
     }
 
-    // If timeIndex is undefined, use the latest period
-    const resolvedTimeIndex = timeIndex ?? tilesets.length - 1;
+    // If timeIndex is undefined, fall back to the layer's default cursor.
+    const resolvedTimeIndex = timeIndex ?? getDefaultCursorIndex(tilesets.length, layer.isForecast);
 
     if (resolvedTimeIndex >= tilesets.length || resolvedTimeIndex < 0) {
       throw new Error(
