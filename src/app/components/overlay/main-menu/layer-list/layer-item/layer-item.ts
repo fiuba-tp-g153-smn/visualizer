@@ -20,8 +20,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import {
-  EcmwfLayerControls,
-  EcmwfTileLayerConfig,
+  EcmwfTpLayerControls,
+  EcmwfTpTileLayerConfig,
   Layer,
   LayerCategory,
   LayerType,
@@ -169,7 +169,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         return this.globalElevationOpacity();
       }
       // For ECMWF layers, check if forecasts have different opacities
-      if (activeLayer.controls.category === LayerCategory.ECMWF) {
+      if (activeLayer.controls.category === LayerCategory.ECMWF_TP) {
         return this.globalForecastOpacity();
       }
     }
@@ -237,7 +237,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         switch (this.layer.category) {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
-          case LayerCategory.ECMWF:
+          case LayerCategory.ECMWF_TP:
             return true;
           default:
             return false;
@@ -377,7 +377,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         switch (this.layer.category) {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
-          case LayerCategory.ECMWF:
+          case LayerCategory.ECMWF_TP:
             return this.configService.getAvailableTilesets(this.layer.id);
           default:
             return undefined;
@@ -461,10 +461,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         });
       }
       // For ECMWF layers, update ALL forecasts
-      if (activeLayer.controls.category === LayerCategory.ECMWF) {
+      if (activeLayer.controls.category === LayerCategory.ECMWF_TP) {
         const allForecasts = this.availableForecasts();
         allForecasts.forEach((ts) => {
-          this.controlService.setEcmwfForecastOpacity(this.layer.id, ts, opacity);
+          this.controlService.setEcmwfTpForecastOpacity(this.layer.id, ts, opacity);
         });
       }
     }
@@ -610,10 +610,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Checks if the layer requires forecast control (ECMWF only)
    */
   hasForecastControl = computed(() => {
-    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF) {
+    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
       return false;
     }
-    const config = this.configService.getConfig(this.layer.id) as EcmwfTileLayerConfig | undefined;
+    const config = this.configService.getConfig(this.layer.id) as EcmwfTpTileLayerConfig | undefined;
     return (config?.availableForecasts?.length ?? 0) > 0;
   });
 
@@ -621,10 +621,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Available forecast runs (ECMWF layers only)
    */
   availableForecasts = computed((): string[] => {
-    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF) {
+    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
       return [];
     }
-    const config = this.configService.getConfig(this.layer.id) as EcmwfTileLayerConfig | undefined;
+    const config = this.configService.getConfig(this.layer.id) as EcmwfTpTileLayerConfig | undefined;
     return config?.availableForecasts ?? [];
   });
 
@@ -636,9 +636,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!activeItem) return [];
     if (
       activeItem.controls.type === LayerType.TILE &&
-      activeItem.controls.category === LayerCategory.ECMWF
+      activeItem.controls.category === LayerCategory.ECMWF_TP
     ) {
-      return (activeItem.controls as EcmwfLayerControls).forecast.selectedForecastTimestamps;
+      return (activeItem.controls as EcmwfTpLayerControls).forecast.selectedForecastTimestamps;
     }
     return [];
   });
@@ -654,7 +654,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Toggles a forecast run (activate/deactivate)
    */
   onForecastToggle(forecastTs: string): void {
-    this.controlService.toggleEcmwfForecast(this.layer.id, forecastTs);
+    this.controlService.toggleEcmwfTpForecast(this.layer.id, forecastTs);
   }
 
   /**
@@ -665,9 +665,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!activeItem) return 1;
     if (
       activeItem.controls.type === LayerType.TILE &&
-      activeItem.controls.category === LayerCategory.ECMWF
+      activeItem.controls.category === LayerCategory.ECMWF_TP
     ) {
-      const ecmwfControls = activeItem.controls as EcmwfLayerControls;
+      const ecmwfControls = activeItem.controls as EcmwfTpLayerControls;
       const forecastOpacity = ecmwfControls.forecast.forecastOpacity[forecastTs];
       return forecastOpacity !== undefined ? forecastOpacity : activeItem.controls.opacity;
     }
@@ -685,7 +685,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Sets the opacity of a specific forecast run
    */
   onForecastOpacityChange(forecastTs: string, opacity: number): void {
-    this.controlService.setEcmwfForecastOpacity(this.layer.id, forecastTs, opacity);
+    this.controlService.setEcmwfTpForecastOpacity(this.layer.id, forecastTs, opacity);
   }
 
   // ==========================================================================

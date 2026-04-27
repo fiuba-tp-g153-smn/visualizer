@@ -50,7 +50,7 @@ export class LayerRefreshService {
           layer.type === LayerType.TILE &&
           (layer.category === LayerCategory.GOES_19 ||
             layer.category === LayerCategory.RADAR ||
-            layer.category === LayerCategory.ECMWF);
+            layer.category === LayerCategory.ECMWF_TP);
 
         if (!needsConfig) {
           continue; // Skip layers that don't need config (e.g., WMS layers)

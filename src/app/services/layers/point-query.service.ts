@@ -10,9 +10,9 @@ import {
   RadarLayerControls,
   RadarTileLayer,
   GoesTileLayer,
-  EcmwfLayerControls,
-  EcmwfTileLayer,
-  EcmwfTileLayerConfig,
+  EcmwfTpLayerControls,
+  EcmwfTpTileLayer,
+  EcmwfTpTileLayerConfig,
   PointQueryDisplayData,
   PointQueryStatus,
   PointQueryValueDto,
@@ -28,8 +28,19 @@ import { getDefaultCursorIndex } from '../../utils/playback-window';
 import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
-  buildEcmwfPointQueryUrl,
+  buildEcmwfTpPointQueryUrl,
 } from '../../config';
+
+/**
+ * Suffix appended to a layer's id when reporting results from its secondary
+ * vector overlay (e.g. ECMWF TP raster + MSLP isobars). Used as a synthetic
+ * key on the results map and on the displayed card.
+ */
+export const SECONDARY_LAYER_ID_SUFFIX = '#secondary';
+
+export function buildSecondaryLayerId(layerId: string): string {
+  return `${layerId}${SECONDARY_LAYER_ID_SUFFIX}`;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -54,15 +65,15 @@ export class PointQueryService {
     }
 
     if (
-      (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF) &&
+      (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF_TP) &&
       !this.isWithinLayerBounds(layer, lat, lon)
     ) {
       // Optimization: no backend request if cursor is outside configured bounds.
       return of(this.buildNoData(layerId, layerName, elevationId));
     }
 
-    if (layer.category === LayerCategory.ECMWF) {
-      return this.queryEcmwfLayer(layer, controls as EcmwfLayerControls, lat, lon);
+    if (layer.category === LayerCategory.ECMWF_TP) {
+      return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon);
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
@@ -86,6 +97,82 @@ export class PointQueryService {
     }
 
     return of(this.buildNoData(layerId, layerName, elevationId));
+  }
+
+  /**
+   * Issues the point query for the secondary overlay attached to a primary
+   * layer (e.g. MSLP isobars on top of ECMWF TP). Returns null when the layer
+   * has no secondary point endpoint configured.
+   *
+   * The result is reported under a synthetic layer id (`${layerId}#secondary`)
+   * so the UI can render it as a paired card alongside the primary value.
+   */
+  queryLayerSecondaryPoint(
+    layer: Layer,
+    controls: TileLayerControls,
+    lat: number,
+    lon: number,
+  ): Observable<PointQueryDisplayData> | null {
+    if (layer.type !== LayerType.TILE) return null;
+    if (layer.category !== LayerCategory.ECMWF_TP) return null;
+
+    const ecmwfLayer = layer as EcmwfTpTileLayer;
+    const secondary = ecmwfLayer.secondaryRender;
+    if (!secondary?.buildPointQueryUrl) return null;
+
+    if (!this.isWithinLayerBounds(layer, lat, lon)) {
+      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presión a nivel del mar'));
+    }
+
+    const ecmwfControls = controls as EcmwfTpLayerControls;
+    const config = this.layerConfigService.getConfig(layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presión a nivel del mar'));
+    }
+
+    const isForecast = layer.isForecast;
+    const idx = Math.max(
+      0,
+      Math.min(
+        ecmwfControls.playback.timeIndex ??
+          getDefaultCursorIndex(config.availableTilesets.length, isForecast),
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const timestampTs = config.availableTilesets[idx].id;
+
+    const forecastsForPeriod = config.forecastsByPeriod[timestampTs];
+    const selectedForecasts = ecmwfControls.forecast.selectedForecastTimestamps;
+    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!forecastTs) {
+      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presión a nivel del mar'));
+    }
+
+    const url = secondary.buildPointQueryUrl(forecastTs, timestampTs, lat, lon);
+    const secondaryLayerId = buildSecondaryLayerId(layer.id);
+    const secondaryLayerName = 'Presión a nivel del mar';
+    // MSLP no tiene un LayerScale configurado en el visualizator; el gauge usa
+    // un rango sinóptico estándar (950-1050 hPa).
+    const mslpScaleRange: ScaleRangeInfo = { min: 950, max: 1050, totalSteps: 100 };
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: secondaryLayerId,
+            layerName: secondaryLayerName,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange: mslpScaleRange,
+          }) as const,
+      ),
+      catchError((error) =>
+        of(this.mapErrorToDisplay(secondaryLayerId, secondaryLayerName, error)),
+      ),
+    );
   }
 
   private querySatelliteLayer(
@@ -175,13 +262,15 @@ export class PointQueryService {
     );
   }
 
-  private queryEcmwfLayer(
+  private queryEcmwfTpLayer(
     layer: Layer,
-    controls: EcmwfLayerControls,
+    controls: EcmwfTpLayerControls,
     lat: number,
     lon: number,
   ): Observable<PointQueryDisplayData> {
-    const config = this.layerConfigService.getConfig(layer.id) as EcmwfTileLayerConfig | undefined;
+    const config = this.layerConfigService.getConfig(layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
     if (!config || config.availableTilesets.length === 0) {
       return of(this.buildNoData(layer.id, layer.name));
     }
@@ -206,9 +295,9 @@ export class PointQueryService {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
-    const url = buildEcmwfPointQueryUrl(forecastTs, periodTs, lat, lon);
+    const url = buildEcmwfTpPointQueryUrl(forecastTs, periodTs, lat, lon);
 
-    const scaleRange = this.extractScaleRange(layer as EcmwfTileLayer);
+    const scaleRange = this.extractScaleRange(layer as EcmwfTpTileLayer);
     if (!scaleRange) {
       return of(this.buildNoData(layer.id, layer.name));
     }
@@ -302,7 +391,7 @@ export class PointQueryService {
    * Returns min, max, and total steps for visualization purposes.
    */
   private extractScaleRange(
-    layer: GoesTileLayer | RadarTileLayer | EcmwfTileLayer,
+    layer: GoesTileLayer | RadarTileLayer | EcmwfTpTileLayer,
   ): ScaleRangeInfo | undefined {
     if (!layer.scale) {
       return undefined;

@@ -63,10 +63,11 @@ export function parseEcmwfTimestamp(ts: string): Date | null {
 }
 
 /**
- * Parses the centered timestamp of an ECMWF accumulation window.
+ * Parses an ECMWF centered timestamp (shared between TP accumulation windows
+ * and other instantaneous ECMWF products such as MSLP).
  * Example: "20260330T1500Z" → Date for 2026-03-30 15:00
  */
-export function parseEcmwfPeriodCenter(periodTs: string): Date | null {
+export function parseEcmwfCenteredTimestamp(periodTs: string): Date | null {
   return parseEcmwfTimestamp(periodTs);
 }
 
