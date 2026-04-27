@@ -125,7 +125,7 @@ export class LayersService {
               parts.push(layer.name);
               break;
 
-            case LayerCategory.ECMWF:
+            case LayerCategory.ECMWF_TP:
               parts.push('ECMWF');
               parts.push(layer.name);
               break;

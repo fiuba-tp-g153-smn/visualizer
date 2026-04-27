@@ -39,15 +39,35 @@ export function buildSatellitePointQueryUrl(
 }
 
 /**
- * URL para consultar el valor puntual de una capa ECMWF en una coordenada.
+ * URL para consultar el valor puntual de la capa ECMWF Total Precipitation.
  */
-export function buildEcmwfPointQueryUrl(
+export function buildEcmwfTpPointQueryUrl(
   forecastTs: string,
   periodTs: string,
   lat: number,
   lon: number,
 ): string {
   return `${DATA_SERVICE_BASE_URL}/products/ecmwf/total-precipitation/${forecastTs}/${periodTs}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
+ * URL del GeoJSON de isobaras de la capa ECMWF Mean Sea Level Pressure.
+ * Renderizada como overlay vectorial sobre TP.
+ */
+export function buildEcmwfMslpGeojsonUrl(forecastTs: string, timestampTs: string): string {
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}.json`;
+}
+
+/**
+ * URL para consultar el valor puntual de la capa ECMWF Mean Sea Level Pressure.
+ */
+export function buildEcmwfMslpPointQueryUrl(
+  forecastTs: string,
+  timestampTs: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**

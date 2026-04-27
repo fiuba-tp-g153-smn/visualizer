@@ -16,6 +16,7 @@ import { PolygonService } from '../../services/polygons/polygon.service';
 import { PolygonDrawingService } from '../../services/polygons/polygon-drawing.service';
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
+import { VectorOverlayService } from '../../services/layers/vector-overlay.service';
 
 /**
  * Main map container component that orchestrates the map, layers, polygons and point-query UI.
@@ -41,6 +42,7 @@ export class MapContainer implements OnInit, OnDestroy {
   // Services
   private layersService = inject(MapLayersService);
   private polygonsService = inject(MapPolygonsService);
+  private vectorOverlayService = inject(VectorOverlayService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -65,6 +67,9 @@ export class MapContainer implements OnInit, OnDestroy {
 
         // Also track config signal to re-trigger when configs are loaded
         this.layerConfigService.configs();
+        // Track vector overlay loads so isobars/secondary overlays appear as
+        // soon as their GeoJSON arrives.
+        this.vectorOverlayService.loadTick();
 
         if (this.map) {
           this.layersService.syncLayers(layerIds);
@@ -232,7 +237,10 @@ export class MapContainer implements OnInit, OnDestroy {
     // If `tileerror` ever fires for the basemap layer, a backend regression is the prime suspect.
     if (!environment.production) {
       this.currentTileLayer.on('tileerror', (e) => {
-        console.warn('[basemap] unexpected tileerror — backend should serve transparent PNG on miss', e);
+        console.warn(
+          '[basemap] unexpected tileerror — backend should serve transparent PNG on miss',
+          e,
+        );
       });
     }
   }

@@ -7,7 +7,7 @@ import { ActiveLayerGroupId } from './groups.models';
 export enum LayerType {
   TILE = 'tile', // L.TileLayer - Tiles precalculados (satélites, mapas base)
   WMS = 'wms', // L.TileLayer.WMS - Web Map Service
-  // Futuros: VECTOR = 'vector', GEOJSON = 'geojson', etc.
+  VECTOR = 'vector', // L.GeoJSON - Vector overlays (isobaras MSLP, etc.) renderizados como overlay sobre raster
 }
 
 /**
@@ -20,7 +20,7 @@ export enum LayerCategory {
   GOES_19 = 'goes_19', // GOES 19
   RADAR = 'radar', // Radar meteorológico
   IGN_WMS = 'ign_wms', // IGN WMS layers
-  ECMWF = 'ecmwf', // Modelo numérico europeo (ECMWF)
+  ECMWF_TP = 'ecmwf_tp', // ECMWF Total Precipitation
 }
 
 /**
@@ -89,7 +89,12 @@ interface BaseLayer {
  * Unión discriminada de todos los tipos de capas
  * TypeScript puede inferir el tipo correcto basándose en la propiedad 'type'
  */
-export type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLayer | EcmwfTileLayer;
+export type Layer =
+  | ABIGoesTileLayer
+  | GLMGoesTileLayer
+  | RadarTileLayer
+  | WmsLayer
+  | EcmwfTpTileLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
@@ -127,10 +132,71 @@ export interface RadarElevation {
   zIndexPreference: number; // Z-index preference for stacking order (higher values render on top)
 }
 
-export interface EcmwfTileLayer extends TileLayer {
-  category: LayerCategory.ECMWF;
-  variable: string; // Variable del modelo (ej: 'total-precipitation')
-  availablePeriods?: readonly number[]; // Períodos de acumulación disponibles (ej: [1, 6, 12, 24, 47])
+export interface EcmwfTpTileLayer extends TileLayer {
+  category: LayerCategory.ECMWF_TP;
+  variable: string; // Variable del modelo (siempre 'total-precipitation')
+  availablePeriods?: readonly number[]; // Períodos disponibles para selección (cantidad de últimos timestamps a mostrar)
+  /**
+   * Render secundario asociado a esta capa (e.g. isobaras MSLP sobre el raster TP).
+   * El secondary se activa, anima y oculta junto con el primary; no es seleccionable
+   * por separado en la UI.
+   */
+  secondaryRender?: SecondaryVectorRender;
+}
+
+/**
+ * Estilo de una línea vectorial (isobaras, contornos, etc.). Se mapea casi
+ * 1:1 a `L.PathOptions` de Leaflet.
+ */
+export interface VectorLineStyle {
+  /** Stroke color en hex. */
+  color: string;
+  /** Ancho del stroke en píxeles. */
+  weight: number;
+  /** Patrón de dash (e.g. "4 2"). Opcional. */
+  dashArray?: string;
+  /** Opacidad del stroke 0..1. Opcional (por defecto 1). */
+  opacity?: number;
+}
+
+/**
+ * Opciones para `leaflet-textpath` (etiquetas a lo largo de la línea).
+ */
+export interface VectorTextpathOptions {
+  center?: boolean;
+  below?: boolean;
+  offset?: number;
+  orientation?: 'auto' | 'flip' | number;
+  attributes?: Record<string, string>;
+}
+
+/**
+ * Configuración de un overlay vectorial atado a una capa primaria (e.g. la
+ * capa de raster). El overlay se renderiza encima del primary; ambos comparten
+ * lifecycle (visibilidad, opacidad, timeline de animación).
+ */
+export interface SecondaryVectorRender {
+  /** ID estable del overlay; usado para cache y para nombrar el pane Leaflet. */
+  id: string;
+  /** Construye la URL del GeoJSON para un par (forecast_ts, timestamp_ts). */
+  buildUrl: (forecastTs: string, timestampTs: string) => string;
+  /** Construye la URL de point query del overlay (opcional). */
+  buildPointQueryUrl?: (
+    forecastTs: string,
+    timestampTs: string,
+    lat: number,
+    lon: number,
+  ) => string;
+  /** Nombre de la propiedad que contiene el valor numérico (e.g. 'pressure_hpa'). */
+  valueProperty: string;
+  /** Resuelve el estilo de cada feature según su valor numérico. */
+  styleFor: (value: number) => VectorLineStyle;
+  /** Resuelve el texto de la etiqueta para una feature; null/undefined → sin etiqueta. */
+  labelFor: (value: number) => string | null;
+  /** Opciones aplicadas a la etiqueta (centrado, font, etc.). */
+  textpathOptions?: VectorTextpathOptions;
+  /** Cantidad de frames adyacentes a precargar durante la animación. */
+  prefetchWindow?: number;
 }
 
 /**
