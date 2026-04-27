@@ -16,6 +16,7 @@ const GLM_DEFAULTS = {
     [-60.0, -110.0],
     [-15.0, -30.0],
   ] as const,
+  isForecast: false,
 };
 
 /**

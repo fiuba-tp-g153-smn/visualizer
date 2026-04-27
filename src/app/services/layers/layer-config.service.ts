@@ -22,6 +22,7 @@ import {
   parseRadarTimestamp,
   parseEcmwfPeriodCenter,
 } from '../../utils/tileset-timestamp';
+import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
 /**
  * Service responsible for fetching and caching layer configurations.
@@ -371,19 +372,23 @@ export class LayerConfigService {
 
     switch (config.type) {
       case LayerType.TILE: {
-        const maxIndex = config.availableTilesets.length - 1;
+        const totalTilesets = config.availableTilesets.length;
 
-        if (maxIndex < 0) {
+        if (totalTilesets === 0) {
           throw new Error(`No tilesets available for layer '${layerId}'`);
         }
 
+        const layer = this.layersService.getLayerById(layerId);
+        const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+
         if (lastImagesCount === 1) {
-          // Go to the latest period
-          return maxIndex;
-        } else {
-          // Go to the start of the lastImagesCount range
-          return Math.max(0, maxIndex - lastImagesCount + 1);
+          // Single-frame mode: jump to the layer's default cursor
+          // (first frame for forecasts, last for historical).
+          return getDefaultCursorIndex(totalTilesets, isForecast);
         }
+
+        // Multi-frame mode: position cursor at the start of the active window.
+        return computeWindowStart(totalTilesets, lastImagesCount, isForecast);
       }
       default:
         throw new Error(

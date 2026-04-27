@@ -96,6 +96,9 @@ export interface TileLayer extends BaseLayer {
   minNativeZoom: number; // Zoom mínimo nativo de la capa (nivel más alejado con datos disponibles)
   maxNativeZoom: number; // Zoom máximo nativo de la capa (nivel más cercano con datos disponibles)
   scale?: LayerScale;
+  // Forecast layers (e.g. ECMWF) animate from the first N tilesets (closest to "now");
+  // historical layers animate from the last N (most recent observations).
+  isForecast: boolean;
 }
 
 export interface GoesTileLayer extends TileLayer {
@@ -127,7 +130,7 @@ export interface RadarElevation {
 export interface EcmwfTileLayer extends TileLayer {
   category: LayerCategory.ECMWF;
   variable: string; // Variable del modelo (ej: 'total-precipitation')
-  availablePeriods?: readonly number[]; // Períodos de acumulación disponibles (ej: [1, 6, 12, 24, 48])
+  availablePeriods?: readonly number[]; // Períodos de acumulación disponibles (ej: [1, 6, 12, 24, 47])
 }
 
 /**
