@@ -20,8 +20,9 @@ import { LayersService } from './layers.service';
 import {
   parseGoesTimestamp,
   parseRadarTimestamp,
-  parseEcmwfPeriodStart,
+  parseEcmwfPeriodCenter,
 } from '../../utils/tileset-timestamp';
+import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
 /**
  * Service responsible for fetching and caching layer configurations.
@@ -167,7 +168,7 @@ export class LayerConfigService {
               const firstPeriods = periodsByForecast[forecasts[0]] ?? [];
               const availableTilesets: TilesetEntry[] = firstPeriods.map((id) => ({
                 id,
-                time: parseEcmwfPeriodStart(id) ?? new Date(0),
+                time: parseEcmwfPeriodCenter(id) ?? new Date(0),
               }));
 
               const config: EcmwfTileLayerConfig = {
@@ -219,7 +220,7 @@ export class LayerConfigService {
     const sortedPeriods = [...periodSet].sort();
     const availableTilesets: TilesetEntry[] = sortedPeriods.map((id) => ({
       id,
-      time: parseEcmwfPeriodStart(id) ?? new Date(0),
+      time: parseEcmwfPeriodCenter(id) ?? new Date(0),
     }));
 
     this.updateConfigMap(layerId, {
@@ -371,19 +372,23 @@ export class LayerConfigService {
 
     switch (config.type) {
       case LayerType.TILE: {
-        const maxIndex = config.availableTilesets.length - 1;
+        const totalTilesets = config.availableTilesets.length;
 
-        if (maxIndex < 0) {
+        if (totalTilesets === 0) {
           throw new Error(`No tilesets available for layer '${layerId}'`);
         }
 
+        const layer = this.layersService.getLayerById(layerId);
+        const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+
         if (lastImagesCount === 1) {
-          // Go to the latest period
-          return maxIndex;
-        } else {
-          // Go to the start of the lastImagesCount range
-          return Math.max(0, maxIndex - lastImagesCount + 1);
+          // Single-frame mode: jump to the layer's default cursor
+          // (first frame for forecasts, last for historical).
+          return getDefaultCursorIndex(totalTilesets, isForecast);
         }
+
+        // Multi-frame mode: position cursor at the start of the active window.
+        return computeWindowStart(totalTilesets, lastImagesCount, isForecast);
       }
       default:
         throw new Error(

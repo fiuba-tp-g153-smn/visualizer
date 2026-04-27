@@ -4,6 +4,7 @@ import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
 import { formatDurationMs, formatDateTimeOnly } from '../../utils/tileset-timestamp';
+import { computeWindowStart } from '../../utils/playback-window';
 
 const SYNC_ENGINE_ID = 'sync';
 
@@ -141,7 +142,11 @@ export class SyncPlaybackService {
     if (selectedLayerIds.length === 0) return EMPTY;
 
     // Build per-layer data: tilesets already have pre-parsed timestamps.
-    type LayerEntry = { tilesets: TilesetEntry[]; timestamps: number[] };
+    type LayerEntry = {
+      tilesets: TilesetEntry[];
+      timestamps: number[];
+      isForecast: boolean;
+    };
     const layerData = new Map<string, LayerEntry>();
 
     for (const layerId of selectedLayerIds) {
@@ -151,15 +156,16 @@ export class SyncPlaybackService {
       layerData.set(layerId, {
         tilesets,
         timestamps: tilesets.map((e) => e.time.getTime()),
+        isForecast: layer.isForecast,
       });
     }
 
     if (layerData.size === 0) return EMPTY;
 
-    // Initial base indices: last N tilesets per layer.
+    // Initial base indices: first N for forecasts, last N for historical.
     const initialBase = new Map<string, number>();
-    for (const [id, { tilesets }] of layerData) {
-      initialBase.set(id, Math.max(0, tilesets.length - N));
+    for (const [id, { tilesets, isForecast }] of layerData) {
+      initialBase.set(id, computeWindowStart(tilesets.length, N, isForecast));
     }
 
     // Single layer: no cross-layer alignment needed.
@@ -328,7 +334,10 @@ export class SyncPlaybackService {
     for (const layerId of selectedLayerIds) {
       const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
       if (!tilesets?.length) continue;
-      const baseIdx = baseIndices.get(layerId) ?? Math.max(0, tilesets.length - efc);
+      const layer = this.eligibleLayers().find((item) => item.layer.id === layerId)?.layer;
+      const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+      const baseIdx =
+        baseIndices.get(layerId) ?? computeWindowStart(tilesets.length, efc, isForecast);
       timestamps.push(tilesets[Math.min(baseIdx + frameIndex, tilesets.length - 1)].time);
     }
 

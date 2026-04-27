@@ -24,6 +24,7 @@ import {
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
+import { getDefaultCursorIndex } from '../../utils/playback-window';
 import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
@@ -186,10 +187,12 @@ export class PointQueryService {
     }
 
     // Resolve the period from the union-based availableTilesets
+    const isForecast = layer.type === LayerType.TILE && layer.isForecast;
     const idx = Math.max(
       0,
       Math.min(
-        controls.playback.timeIndex ?? config.availableTilesets.length - 1,
+        controls.playback.timeIndex ??
+          getDefaultCursorIndex(config.availableTilesets.length, isForecast),
         config.availableTilesets.length - 1,
       ),
     );
@@ -232,8 +235,11 @@ export class PointQueryService {
       return null;
     }
 
-    // Use the timeIndex from controls (synced by LayerControlService with latest config)
-    const fallbackIndex = config.availableTilesets.length - 1;
+    // Use the timeIndex from controls (synced by LayerControlService with latest config).
+    // Fallback to the layer's default cursor: first frame for forecasts, last otherwise.
+    const layer = this.layersService.getLayerById(layerId);
+    const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+    const fallbackIndex = getDefaultCursorIndex(config.availableTilesets.length, isForecast);
     const resolvedIndex = timeIndex ?? fallbackIndex;
     const clampedIndex = Math.max(0, Math.min(resolvedIndex, config.availableTilesets.length - 1));
 
