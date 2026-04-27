@@ -13,7 +13,9 @@ export {
   buildTileUrl,
   buildSatellitePointQueryUrl,
   buildRadarPointQueryUrl,
-  buildEcmwfPointQueryUrl,
+  buildEcmwfTpPointQueryUrl,
+  buildEcmwfMslpGeojsonUrl,
+  buildEcmwfMslpPointQueryUrl,
   buildBasemapTileUrl,
   buildBasemapProvidersUrl,
 } from './backend.config';
