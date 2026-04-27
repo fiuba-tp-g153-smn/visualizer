@@ -9,13 +9,14 @@ const ECMWF_DEFAULTS = {
   type: LayerType.TILE,
   category: LayerCategory.ECMWF,
   zIndexGroup: ActiveLayerGroupId.BASE,
-  availablePeriods: [1, 6, 12, 24, 48] as const,
+  availablePeriods: [1, 6, 12, 24, 47] as const,
   minNativeZoom: 3,
   maxNativeZoom: 7,
   boundingBox: [
     [-60.0, -110.0],
     [-15.0, -30.0],
   ] as const,
+  isForecast: true,
 } as const;
 
 export const ECMWF_SUBGROUP: LayerSubgroup = {
