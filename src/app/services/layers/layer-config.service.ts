@@ -13,14 +13,14 @@ import {
   GoesTileLayerConfig,
   TileLayerConfig,
   TilesetEntry,
-  EcmwfTileLayer,
-  EcmwfTileLayerConfig,
+  EcmwfTpTileLayer,
+  EcmwfTpTileLayerConfig,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
   parseGoesTimestamp,
   parseRadarTimestamp,
-  parseEcmwfPeriodCenter,
+  parseEcmwfCenteredTimestamp,
 } from '../../utils/tileset-timestamp';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
@@ -137,7 +137,7 @@ export class LayerConfigService {
    * Fetches and updates the configuration for an ECMWF layer.
    * Fetches all available forecast runs and all their periods in parallel via forkJoin.
    */
-  fetchEcmwfLayerConfig(layer: EcmwfTileLayer): Observable<EcmwfTileLayerConfig> {
+  fetchEcmwfTpLayerConfig(layer: EcmwfTpTileLayer): Observable<EcmwfTpTileLayerConfig> {
     const forecastsUrl = buildConfigUrl(layer.id);
     return this.http
       .get<{ forecasts: Array<{ forecast_ts: string }> }>(forecastsUrl)
@@ -168,13 +168,13 @@ export class LayerConfigService {
               const firstPeriods = periodsByForecast[forecasts[0]] ?? [];
               const availableTilesets: TilesetEntry[] = firstPeriods.map((id) => ({
                 id,
-                time: parseEcmwfPeriodCenter(id) ?? new Date(0),
+                time: parseEcmwfCenteredTimestamp(id) ?? new Date(0),
               }));
 
-              const config: EcmwfTileLayerConfig = {
+              const config: EcmwfTpTileLayerConfig = {
                 layerId: layer.id,
                 type: LayerType.TILE,
-                category: LayerCategory.ECMWF,
+                category: LayerCategory.ECMWF_TP,
                 availableTilesets,
                 availableForecasts: forecasts,
                 periodsByForecast,
@@ -196,9 +196,9 @@ export class LayerConfigService {
    * Updates the availableTilesets for an ECMWF layer based on the selected forecasts.
    * Uses the first selected forecast's periods for the time slider.
    */
-  updateEcmwfSelectedForecasts(layerId: string, selectedForecastTimestamps: string[]): void {
-    const config = this.getConfig(layerId) as EcmwfTileLayerConfig | undefined;
-    if (!config || config.category !== LayerCategory.ECMWF) return;
+  updateEcmwfTpSelectedForecasts(layerId: string, selectedForecastTimestamps: string[]): void {
+    const config = this.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
+    if (!config || config.category !== LayerCategory.ECMWF_TP) return;
 
     // Compute sorted union of all periods across selected forecasts
     const periodSet = new Set<string>();
@@ -220,7 +220,7 @@ export class LayerConfigService {
     const sortedPeriods = [...periodSet].sort();
     const availableTilesets: TilesetEntry[] = sortedPeriods.map((id) => ({
       id,
-      time: parseEcmwfPeriodCenter(id) ?? new Date(0),
+      time: parseEcmwfCenteredTimestamp(id) ?? new Date(0),
     }));
 
     this.updateConfigMap(layerId, {
@@ -242,8 +242,8 @@ export class LayerConfigService {
         return this.fetchGoesLayerConfig(layer as GoesTileLayer);
       case LayerCategory.RADAR:
         return this.fetchRadarLayerConfig(layer as RadarTileLayer);
-      case LayerCategory.ECMWF:
-        return this.fetchEcmwfLayerConfig(layer as EcmwfTileLayer);
+      case LayerCategory.ECMWF_TP:
+        return this.fetchEcmwfTpLayerConfig(layer as EcmwfTpTileLayer);
       default:
         throw new Error(`Layer category ${layer.category} does not require tileset configuration`);
     }

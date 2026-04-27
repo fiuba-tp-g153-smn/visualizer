@@ -4,17 +4,26 @@ import { LayerControlService } from './layer-control.service';
 import { LayerRenderService } from './layer-render.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
+import { VectorOverlayService } from './vector-overlay.service';
 import {
-  EcmwfLayerControls,
+  EcmwfTpLayerControls,
+  EcmwfTpTileLayer,
+  EcmwfTpTileLayerConfig,
   GoesLayerControls,
   LayerCategory,
   LayerType,
   RadarLayerControls,
+  SecondaryVectorRender,
 } from '../../models';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
  */
+/** Pane Leaflet sobre el cual se rendrizan los overlays vectoriales (isobaras, etc.). */
+const VECTOR_OVERLAY_PANE = 'data-vector-overlay';
+/** zIndex del pane vectorial: arriba de tilePane (200) y overlayPane (400), debajo de markers. */
+const VECTOR_OVERLAY_PANE_Z_INDEX = '650';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -23,15 +32,22 @@ export class MapLayersService {
   private controlService = inject(LayerControlService);
   private layerConfigService = inject(LayerConfigService);
   private layerRenderService = inject(LayerRenderService);
+  private vectorOverlay = inject(VectorOverlayService);
 
   private map: L.Map | null = null;
   private onMapLayers = new Map<string, L.TileLayer>();
+  private onMapOverlays = new Map<string, L.Layer>();
 
   /**
    * Initialize the service with a Leaflet map instance
    */
   initialize(map: L.Map): void {
     this.map = map;
+    if (!map.getPane(VECTOR_OVERLAY_PANE)) {
+      const pane = map.createPane(VECTOR_OVERLAY_PANE);
+      pane.style.zIndex = VECTOR_OVERLAY_PANE_Z_INDEX;
+      pane.style.pointerEvents = 'none';
+    }
   }
 
   /**
@@ -69,7 +85,7 @@ export class MapLayersService {
           switch (layer.category) {
             case LayerCategory.RADAR:
             case LayerCategory.GOES_19:
-            case LayerCategory.ECMWF:
+            case LayerCategory.ECMWF_TP:
               if (!this.layerConfigService.hasConfig(layerId)) {
                 continue;
               }
@@ -113,10 +129,10 @@ export class MapLayersService {
           break;
         }
 
-        case LayerCategory.ECMWF: {
-          const ecmwfControls = controls as EcmwfLayerControls;
+        case LayerCategory.ECMWF_TP: {
+          const ecmwfControls = controls as EcmwfTpLayerControls;
           const forecastCount = ecmwfControls.forecast.selectedForecastTimestamps.length;
-          const layers = this.layerRenderService.createEcmwfLayersForPlayback(
+          const layers = this.layerRenderService.createEcmwfTpLayersForPlayback(
             layerId,
             ecmwfControls,
             controls.opacity,
@@ -160,6 +176,115 @@ export class MapLayersService {
 
     // Update local state
     this.onMapLayers = desiredLayersOnMap;
+
+    // Sync vector overlays (e.g. MSLP isobars over TP raster).
+    this.syncVectorOverlays(sortedLayerIds);
+  }
+
+  /**
+   * Synchronizes secondary vector overlays (e.g. MSLP isobars) for layers that
+   * declare a `secondaryRender`. Only the *current* timestamp is rendered per
+   * layer; the data fetch is deduped + cached by VectorOverlayService.
+   *
+   * The overlay tracks the same forecast as the primary TP raster: when
+   * multiple forecasts are selected, only the *first* selected forecast is used
+   * for isobars to keep the visualization legible.
+   */
+  private syncVectorOverlays(sortedLayerIds: string[]): void {
+    if (!this.map) return;
+
+    const desired = new Map<string, L.Layer>();
+
+    for (const layerId of sortedLayerIds) {
+      const layer = this.layersService.getLayerById(layerId);
+      if (!layer || layer.type !== LayerType.TILE) continue;
+      if (layer.category !== LayerCategory.ECMWF_TP) continue;
+
+      const ecmwfLayer = layer as EcmwfTpTileLayer;
+      const secondary = ecmwfLayer.secondaryRender;
+      if (!secondary) continue;
+
+      const controls = this.controlService.getControls(layerId) as EcmwfTpLayerControls;
+      if (!controls.visible) continue;
+
+      const config = this.layerConfigService.getConfig(layerId) as
+        | EcmwfTpTileLayerConfig
+        | undefined;
+      if (!config) continue;
+
+      const currentTimeIndex = controls.playback.timeIndex ?? 0;
+      const currentEntry = config.availableTilesets[currentTimeIndex];
+      if (!currentEntry) continue;
+      const currentTimestampTs = currentEntry.id;
+
+      const primaryForecastTs = controls.forecast.selectedForecastTimestamps[0];
+      if (!primaryForecastTs) continue;
+
+      // Only render isobars if the chosen forecast actually has data for the
+      // current timestamp (mirrors the TP raster's check).
+      const forecastsForCurrent = config.forecastsByPeriod[currentTimestampTs];
+      if (!forecastsForCurrent || !forecastsForCurrent.includes(primaryForecastTs)) continue;
+
+      const url = secondary.buildUrl(primaryForecastTs, currentTimestampTs);
+      const overlayKey = `${layerId}#${secondary.id}#${primaryForecastTs}#${currentTimestampTs}`;
+      const cached = this.vectorOverlay.peek(url);
+
+      if (cached) {
+        const overlay = this.vectorOverlay.buildLayer(cached, secondary);
+        // Force the overlay onto our dedicated pane so it always sits above
+        // raster tiles regardless of insertion order.
+        overlay.options.pane = VECTOR_OVERLAY_PANE;
+        desired.set(overlayKey, overlay);
+      } else {
+        // Cache miss: trigger an async load. The service bumps `loadTick` on
+        // success, which re-runs the parent effect → re-runs syncLayers().
+        void this.vectorOverlay.load(url);
+      }
+
+      // Prefetch upcoming frames for smooth animation.
+      this.prefetchSecondary(secondary, config, currentTimeIndex, primaryForecastTs);
+    }
+
+    // Diff against the previously-rendered overlays.
+    for (const [key, oldOverlay] of this.onMapOverlays) {
+      const next = desired.get(key);
+      if (!next || next !== oldOverlay) {
+        this.map.removeLayer(oldOverlay);
+      }
+    }
+    for (const [key, overlay] of desired) {
+      const oldOverlay = this.onMapOverlays.get(key);
+      if (!oldOverlay || oldOverlay !== overlay) {
+        overlay.addTo(this.map);
+      }
+    }
+    this.onMapOverlays = desired;
+  }
+
+  /** Pre-fetches the GeoJSON for the next N frames (modular wrap inside the active window). */
+  private prefetchSecondary(
+    secondary: SecondaryVectorRender,
+    config: EcmwfTpTileLayerConfig,
+    currentTimeIndex: number,
+    forecastTs: string,
+  ): void {
+    const window = secondary.prefetchWindow ?? 0;
+    if (window <= 0) return;
+
+    const total = config.availableTilesets.length;
+    if (total <= 1) return;
+
+    const urls: string[] = [];
+    for (let offset = 1; offset <= window; offset++) {
+      const idx = (currentTimeIndex + offset) % total;
+      const entry = config.availableTilesets[idx];
+      if (!entry) continue;
+      // Only prefetch frames whose forecast actually has data for that timestamp.
+      const forecastsForFrame = config.forecastsByPeriod[entry.id];
+      if (!forecastsForFrame || !forecastsForFrame.includes(forecastTs)) continue;
+      urls.push(secondary.buildUrl(forecastTs, entry.id));
+    }
+    if (urls.length > 0) this.vectorOverlay.prefetch(urls);
   }
 
   /**
@@ -168,6 +293,8 @@ export class MapLayersService {
   destroy(): void {
     this.onMapLayers.forEach((layer) => layer.remove());
     this.onMapLayers.clear();
+    this.onMapOverlays.forEach((layer) => layer.remove());
+    this.onMapOverlays.clear();
     this.map = null;
   }
 }

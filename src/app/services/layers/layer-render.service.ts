@@ -14,9 +14,9 @@ import {
   TileLayer,
   Layer,
   LayerControls,
-  EcmwfLayerControls,
-  EcmwfTileLayerConfig,
-  EcmwfTileLayer,
+  EcmwfTpLayerControls,
+  EcmwfTpTileLayerConfig,
+  EcmwfTpTileLayer,
 } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
@@ -327,9 +327,9 @@ export class LayerRenderService {
   /**
    * Creates a Leaflet TileLayer for an ECMWF layer with a specific forecast run.
    */
-  createEcmwfTileLayerForForecast(
+  createEcmwfTpTileLayerForForecast(
     layerId: string,
-    controls: EcmwfLayerControls,
+    controls: EcmwfTpLayerControls,
     forecastTs: string,
     periodTs: string,
   ): L.TileLayer {
@@ -340,7 +340,7 @@ export class LayerRenderService {
     }
 
     const layer = this.layersService.getLayerById(layerId);
-    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.ECMWF) {
+    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.ECMWF_TP) {
       throw new Error(`Invalid ECMWF layer: '${layerId}'`);
     }
 
@@ -359,13 +359,13 @@ export class LayerRenderService {
    * Creates an ECMWF tile layer for a specific forecast at a given timeIndex.
    * Used for pre-fetching adjacent frames.
    */
-  createEcmwfTileLayerForForecastAtTimeIndex(
+  createEcmwfTpTileLayerForForecastAtTimeIndex(
     layerId: string,
-    controls: EcmwfLayerControls,
+    controls: EcmwfTpLayerControls,
     forecastTs: string,
     timeIndex: number,
   ): L.TileLayer | null {
-    const config = this.layerConfigService.getConfig(layerId) as EcmwfTileLayerConfig | undefined;
+    const config = this.layerConfigService.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
     if (!config) return null;
 
     const periodEntry = config.availableTilesets[timeIndex];
@@ -376,7 +376,7 @@ export class LayerRenderService {
     const forecastsForPeriod = config.forecastsByPeriod[periodTs];
     if (!forecastsForPeriod || !forecastsForPeriod.includes(forecastTs)) return null;
 
-    return this.createEcmwfTileLayerForForecast(layerId, controls, forecastTs, periodTs);
+    return this.createEcmwfTpTileLayerForForecast(layerId, controls, forecastTs, periodTs);
   }
 
   /**
@@ -384,9 +384,9 @@ export class LayerRenderService {
    * Each forecast gets its own tile layer(s) with per-forecast opacity and
    * z-index stacking.
    */
-  createEcmwfLayersForPlayback(
+  createEcmwfTpLayersForPlayback(
     layerId: string,
-    controls: EcmwfLayerControls,
+    controls: EcmwfTpLayerControls,
     targetOpacity: number,
     absoluteZIndex: number,
   ): Map<string, L.TileLayer> {
@@ -395,7 +395,7 @@ export class LayerRenderService {
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
     const totalFrames = this.getAvailableTilesetsCount(layerId);
 
-    const config = this.layerConfigService.getConfig(layerId) as EcmwfTileLayerConfig | undefined;
+    const config = this.layerConfigService.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
     if (!config || totalFrames === 0) return result;
 
     const currentPeriodEntry = config.availableTilesets[currentTimeIndex];
@@ -410,7 +410,7 @@ export class LayerRenderService {
       // Only create a tile if this forecast has data for the current period
       const forecastsForPeriod = config.forecastsByPeriod[currentPeriodTs];
       if (forecastsForPeriod && forecastsForPeriod.includes(forecastTs)) {
-        const tileLayer = this.createEcmwfTileLayerForForecast(
+        const tileLayer = this.createEcmwfTpTileLayerForForecast(
           layerId, controls, forecastTs, currentPeriodTs,
         );
         this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
@@ -426,7 +426,7 @@ export class LayerRenderService {
         forecastZIndex,
         true,
         (adjIndex) => {
-          const adjLayer = this.createEcmwfTileLayerForForecastAtTimeIndex(
+          const adjLayer = this.createEcmwfTpTileLayerForForecastAtTimeIndex(
             layerId, controls, forecastTs, adjIndex,
           );
           if (!adjLayer) return null;
@@ -547,17 +547,17 @@ export class LayerRenderService {
             const tilesetId = tilesets[clampedIndex].id;
             return `${layerId}-[${elevationsKey}]-${tilesetId}`;
           }
-          case LayerCategory.ECMWF: {
-            const ecmwfControls = tileControls as EcmwfLayerControls;
+          case LayerCategory.ECMWF_TP: {
+            const ecmwfControls = tileControls as EcmwfTpLayerControls;
             const config = this.layerConfigService.getConfig(layerId) as
-              | EcmwfTileLayerConfig
+              | EcmwfTpTileLayerConfig
               | undefined;
             if (!config) return `${layerId}-placeholder`;
 
             const tilesets = config.availableTilesets;
             if (tilesets.length === 0) return `${layerId}-empty`;
 
-            const ecmwfLayer = layer as EcmwfTileLayer;
+            const ecmwfLayer = layer as EcmwfTpTileLayer;
             const timeIndex = Math.max(
               0,
               Math.min(
@@ -600,9 +600,9 @@ export class LayerRenderService {
         throw new Error(
           `Radar layer ${layerId} should be created using createRadarTileLayerForElevation`,
         );
-      case LayerCategory.ECMWF:
+      case LayerCategory.ECMWF_TP:
         throw new Error(
-          `ECMWF layer ${layerId} should be created using createEcmwfTileLayerForForecast`,
+          `ECMWF layer ${layerId} should be created using createEcmwfTpTileLayerForForecast`,
         );
       default:
         throw new Error(`Unsupported tile layer category for layer ${layerId}`);
@@ -749,14 +749,14 @@ export class LayerRenderService {
     const config = this.layerConfigService.getConfig(layerId) as
       | RadarTileLayerConfig
       | GoesTileLayerConfig
-      | EcmwfTileLayerConfig
+      | EcmwfTpTileLayerConfig
       | undefined;
 
     if (!config) {
       const categoryName =
         layer.category === LayerCategory.RADAR
           ? 'Radar'
-          : layer.category === LayerCategory.ECMWF
+          : layer.category === LayerCategory.ECMWF_TP
             ? 'ECMWF'
             : 'GOES';
       throw new Error(`Configuration not loaded for ${categoryName} layer '${layerId}'`);
