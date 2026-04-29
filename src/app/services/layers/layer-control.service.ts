@@ -13,6 +13,9 @@ import {
   RadarTileLayer,
   TilesetEntry,
   ActiveLayerEntry,
+  EcmwfTpLayerControls,
+  EcmwfTpTileLayer,
+  EcmwfTpTileLayerConfig,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -22,6 +25,7 @@ import {
 } from '../../config/layers';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
+import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
 /**
  * Service responsible for managing layer controls, visibility, and playback state.
@@ -56,21 +60,25 @@ export class LayerControlService {
       this.saveControls();
     });
 
-    // Sync timeIndex to latest tileset when config changes (auto-refresh)
+    // Sync timeIndex to default cursor when config changes (auto-refresh).
+    // For historical layers this points to the most recent frame; for forecasts,
+    // to the first frame (closest to "now" within the forecast horizon).
     effect(() => {
       const configs = this.layerConfigService.configs();
 
       // Use untracked to avoid depending on controls signal (prevents infinite loops)
       untracked(() => {
-        const activeLayerIds = this.activeLayers().map(({ layer }) => layer.id);
+        const activeEntries = this.activeLayers();
 
-        for (const layerId of activeLayerIds) {
-          const config = configs.get(layerId);
+        for (const { layer } of activeEntries) {
+          if (layer.type !== LayerType.TILE) continue;
+
+          const config = configs.get(layer.id);
           if (!config || config.type !== LayerType.TILE) {
             continue;
           }
 
-          const controls = this.getControls(layerId);
+          const controls = this.getControls(layer.id);
           if (!controls || controls.type !== LayerType.TILE) {
             continue;
           }
@@ -80,9 +88,13 @@ export class LayerControlService {
             continue;
           }
 
-          const latestIndex = config.availableTilesets.length - 1;
-          if (latestIndex >= 0 && controls.playback.timeIndex !== latestIndex) {
-            this.setTimeIndex(layerId, latestIndex);
+          if (config.availableTilesets.length === 0) continue;
+          const defaultIndex = getDefaultCursorIndex(
+            config.availableTilesets.length,
+            layer.isForecast,
+          );
+          if (controls.playback.timeIndex !== defaultIndex) {
+            this.setTimeIndex(layer.id, defaultIndex);
           }
         }
       });
@@ -200,11 +212,16 @@ export class LayerControlService {
       // Initialize layer-specific defaults
       switch (controls.type) {
         case LayerType.TILE:
-          // Set timeIndex to latest if undefined and config exists
+          // Set default cursor if timeIndex is undefined and config exists.
+          // Forecast layers start at the first frame; historical at the last.
           if (controls.playback.timeIndex === undefined) {
             const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
             if (availablePeriods && availablePeriods.length > 0) {
-              controls.playback.timeIndex = availablePeriods.length - 1;
+              const isForecast = layer.type === LayerType.TILE && layer.isForecast;
+              controls.playback.timeIndex = getDefaultCursorIndex(
+                availablePeriods.length,
+                isForecast,
+              );
             }
           }
 
@@ -230,6 +247,25 @@ export class LayerControlService {
             case LayerCategory.GOES_19:
               // No special initialization needed for GOES layers
               break;
+            case LayerCategory.ECMWF_TP: {
+              // Set default forecasts if none are selected and config is available
+              const ecmwfControls = controls as EcmwfTpLayerControls;
+              if (ecmwfControls.forecast.selectedForecastTimestamps.length === 0) {
+                const ecmwfConfig = this.layerConfigService.getConfig(layerId);
+                if (
+                  ecmwfConfig &&
+                  ecmwfConfig.type === LayerType.TILE &&
+                  ecmwfConfig.category === LayerCategory.ECMWF_TP
+                ) {
+                  // Default: select the most recent forecast
+                  const firstForecast = ecmwfConfig.availableForecasts[0];
+                  if (firstForecast) {
+                    ecmwfControls.forecast.selectedForecastTimestamps = [firstForecast];
+                  }
+                }
+              }
+              break;
+            }
           }
           break;
         case LayerType.WMS:
@@ -424,6 +460,64 @@ export class LayerControlService {
   }
 
   /**
+   * Toggles a forecast run on/off for ECMWF layers (adds if not present, removes if present).
+   * If all forecasts are removed, the layer is automatically deactivated.
+   */
+  toggleEcmwfTpForecast(layerId: string, forecastTs: string): void {
+    this.updateControls(layerId, (controls) => {
+      if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.ECMWF_TP) return;
+      const ecmwf = controls as EcmwfTpLayerControls;
+      const current = ecmwf.forecast.selectedForecastTimestamps;
+      const index = current.indexOf(forecastTs);
+      if (index === -1) {
+        ecmwf.forecast.selectedForecastTimestamps = [...current, forecastTs];
+      } else {
+        ecmwf.forecast.selectedForecastTimestamps = current.filter((ts) => ts !== forecastTs);
+      }
+    });
+
+    // Update config availableTilesets based on new selection
+    const updatedControls = this.getControls(layerId) as EcmwfTpLayerControls;
+    this.layerConfigService.updateEcmwfTpSelectedForecasts(
+      layerId,
+      updatedControls.forecast.selectedForecastTimestamps,
+    );
+
+    // Deactivate if no forecasts selected
+    if (updatedControls.forecast.selectedForecastTimestamps.length === 0) {
+      this.deactivateLayer(layerId);
+      return;
+    }
+
+    // Clamp timeIndex if the union shrank — reset to the layer's default cursor.
+    const newConfig = this.layerConfigService.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
+    if (
+      newConfig &&
+      updatedControls.playback.timeIndex !== undefined &&
+      updatedControls.playback.timeIndex >= newConfig.availableTilesets.length
+    ) {
+      const layer = this.layersService.getLayerById(layerId);
+      const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+      this.setTimeIndex(
+        layerId,
+        getDefaultCursorIndex(newConfig.availableTilesets.length, isForecast),
+      );
+    }
+  }
+
+  /**
+   * Sets the opacity for a specific forecast run in an ECMWF layer.
+   */
+  setEcmwfTpForecastOpacity(layerId: string, forecastTs: string, opacity: number): void {
+    const clampedOpacity = Math.max(0, Math.min(1, opacity));
+    this.updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE && controls.category === LayerCategory.ECMWF_TP) {
+        (controls as EcmwfTpLayerControls).forecast.forecastOpacity[forecastTs] = clampedOpacity;
+      }
+    });
+  }
+
+  /**
    * Reorders layers within a group after drag and drop.
    * Receives the complete layer order for the group and recalculates z-indices.
    */
@@ -496,8 +590,10 @@ export class LayerControlService {
     if (!availablePeriods || availablePeriods.length === 0) return;
 
     const lastImagesCount = controls.playback.lastImagesCount;
-    const maxTimeIndex = availablePeriods.length - 1;
-    const minTimeIndex = Math.max(0, maxTimeIndex - lastImagesCount + 1);
+    const layer = this.layersService.getLayerById(layerId);
+    const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+    const minTimeIndex = computeWindowStart(availablePeriods.length, lastImagesCount, isForecast);
+    const maxTimeIndex = Math.min(minTimeIndex + lastImagesCount - 1, availablePeriods.length - 1);
     const frameCount = maxTimeIndex - minTimeIndex + 1;
 
     if (frameCount < 2) return;
@@ -564,6 +660,7 @@ export class LayerControlService {
         switch (layer.category) {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
+          case LayerCategory.ECMWF_TP:
             return this.layerConfigService.getAvailableTilesets(layerId);
           default:
             throw new Error(`Unsupported tile layer category for playback`);
@@ -646,10 +743,13 @@ export class LayerControlService {
             try {
               const availablePeriods = this.getAvailablePeriodsForLayer(layer.id);
               if (availablePeriods && availablePeriods.length > 0) {
-                // Clamp timeIndex to valid range
+                // Clamp timeIndex to valid range. Out-of-range values reset to
+                // the layer's default cursor (first frame for forecasts, last otherwise).
                 const maxIndex = availablePeriods.length - 1;
+                const isForecast = layer.type === LayerType.TILE && layer.isForecast;
+                const defaultIndex = getDefaultCursorIndex(availablePeriods.length, isForecast);
                 if (controls.playback.timeIndex > maxIndex) {
-                  controls.playback.timeIndex = maxIndex;
+                  controls.playback.timeIndex = defaultIndex;
                 } else if (controls.playback.timeIndex < 0) {
                   controls.playback.timeIndex = 0;
                 }
@@ -731,6 +831,16 @@ export class LayerControlService {
                 elevationOpacity: {},
               },
             } as RadarLayerControls;
+          case LayerCategory.ECMWF_TP:
+            return {
+              ...baseTileControls,
+              category: LayerCategory.ECMWF_TP,
+              availablePeriods: (layer as EcmwfTpTileLayer).availablePeriods,
+              forecast: {
+                selectedForecastTimestamps: [],
+                forecastOpacity: {},
+              },
+            } as EcmwfTpLayerControls;
           default:
             throw new Error(`Layer category does not have a defined controls template`);
         }

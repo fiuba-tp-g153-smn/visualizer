@@ -121,6 +121,18 @@ export class ScaleToolPanelComponent {
     });
   }
 
+  get discreteColorBlocks(): readonly { color: string }[] {
+    const steps = this.discreteStepsDesc;
+    if (steps.length === 0) return [];
+    const blocks: { color: string }[] = [{ color: steps[0].color }];
+    for (let i = 1; i < steps.length; i++) {
+      if (steps[i].color.toLowerCase() !== steps[i - 1].color.toLowerCase()) {
+        blocks.push({ color: steps[i].color });
+      }
+    }
+    return blocks;
+  }
+
   get discreteStepsDesc(): readonly { value: number; color: string; label?: string }[] {
     switch (this.entry.scale.type) {
       case ScaleType.PALETTE_CONFIG: {

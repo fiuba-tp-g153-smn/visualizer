@@ -1,150 +1,68 @@
 /**
  * Base map configuration
  *
- * Defines available base map styles and their tile sources.
- * Each base map provides different visualizations (street maps, satellite imagery, etc.)
+ * Holds purely-client concerns related to base maps:
+ *   - Preview tile coordinates for the selector thumbnails.
+ *   - The DTO shape of the backend `/basemap/providers` response.
+ *   - Attribution link-wrapping (backend returns plain text; Leaflet wants HTML).
+ *
+ * The list of available providers itself lives on the backend and is fetched
+ * at runtime by `BaseMapService` — never duplicate it here.
  */
 
-import { BaseMap } from '../models';
-
 /**
- * Preview tile coordinates configuration
- * Adjust these values to center previews on Argentina
+ * Preview tile coordinates configuration.
+ * The backend `/basemap/{provider}/{z}/{x}/{y}.png` endpoint serves XYZ tiles
+ * (Y=0 at top), so no TMS inversion is needed here.
  */
 export const BASE_MAP_PREVIEW_CONFIG = {
   z: 2,
   x: 1,
   y: 2,
-};
-
-/**
- * Converts standard Y coordinates to TMS Y coordinates
- * In TMS, Y is inverted: tms_y = (2^zoom - 1) - y
- */
-function getTmsY(y: number, zoom: number): number {
-  return Math.pow(2, zoom) - 1 - y;
-}
-
-/**
- * Available base map configurations
- */
-export const BASE_MAPS: Record<string, BaseMap> = {
-  argenmap: {
-    id: 'argenmap',
-    name: 'Argenmap',
-    url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png',
-    attribution:
-      '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a> + <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    minZoom: 3,
-    maxZoom: 21,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: getTmsY(BASE_MAP_PREVIEW_CONFIG.y, BASE_MAP_PREVIEW_CONFIG.z),
-  },
-
-  argenmapGris: {
-    id: 'argenmapGris',
-    name: 'Argenmap gris',
-    url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gris@EPSG%3A3857@png/{z}/{x}/{-y}.png',
-    attribution:
-      '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a>',
-    minZoom: 3,
-    maxZoom: 21,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: getTmsY(BASE_MAP_PREVIEW_CONFIG.y, BASE_MAP_PREVIEW_CONFIG.z),
-  },
-
-  argenmapOscuro: {
-    id: 'argenmapOscuro',
-    name: 'Argenmap oscuro',
-    url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/argenmap_oscuro@EPSG%3A3857@png/{z}/{x}/{-y}.png',
-    attribution:
-      '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a>',
-    minZoom: 3,
-    maxZoom: 21,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: getTmsY(BASE_MAP_PREVIEW_CONFIG.y, BASE_MAP_PREVIEW_CONFIG.z),
-  },
-
-  argenmapTopografico: {
-    id: 'argenmapTopografico',
-    name: 'Argenmap topográfico',
-    url: 'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_topo@EPSG%3A3857@png/{z}/{x}/{-y}.png',
-    attribution:
-      '<a href="http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2" target="_blank">Instituto Geográfico Nacional</a>',
-    minZoom: 3,
-    maxZoom: 21,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: getTmsY(BASE_MAP_PREVIEW_CONFIG.y, BASE_MAP_PREVIEW_CONFIG.z),
-  },
-
-  satellite: {
-    id: 'satellite',
-    name: 'Imágenes satelitales Esri',
-    url: 'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri',
-    minZoom: 3,
-    maxZoom: 17,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: BASE_MAP_PREVIEW_CONFIG.y,
-  },
-
-  topographic: {
-    id: 'topographic',
-    name: 'Mapa topográfico Esri',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri',
-    minZoom: 3,
-    maxZoom: 8,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: BASE_MAP_PREVIEW_CONFIG.y,
-  },
-
-  googleSatellite: {
-    id: 'googleSatellite',
-    name: 'Imágenes satelitales Google',
-    url: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-    attribution: '&copy; Google',
-    minZoom: 3,
-    maxZoom: 20,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: BASE_MAP_PREVIEW_CONFIG.y,
-  },
-
-  oceanBase: {
-    id: 'oceanBase',
-    name: 'Mapa Esri Fondo Oceánico',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri',
-    minZoom: 3,
-    maxZoom: 16,
-    previewZ: BASE_MAP_PREVIEW_CONFIG.z,
-    previewX: BASE_MAP_PREVIEW_CONFIG.x,
-    previewY: BASE_MAP_PREVIEW_CONFIG.y,
-  },
 } as const;
 
 /**
- * Get a base map configuration by ID
- * @throws {Error} If base map ID is not found
+ * Raw entry shape returned by `GET /basemap/providers`.
+ * Fields are snake_case on the wire; mapped to the `BaseMap` model on ingest.
  */
-export function getBaseMap(id: string): BaseMap {
-  const baseMap = BASE_MAPS[id];
-  if (!baseMap) {
-    throw new Error(`Base map '${id}' not found`);
-  }
-  return baseMap;
+export interface BaseMapProviderDto {
+  id: string;
+  name: string;
+  min_zoom: number;
+  max_zoom: number;
+  cache_max_zoom: number;
+  attribution: string;
+}
+
+export interface BaseMapProvidersResponse {
+  providers: ReadonlyArray<BaseMapProviderDto>;
 }
 
 /**
- * Get all available base map configurations
+ * Substrings inside an attribution string that we know how to turn into links.
+ * Backend returns plain text so we wrap known patterns here. Anything that
+ * doesn't match falls through unchanged.
  */
-export function getAllBaseMaps(): BaseMap[] {
-  return Object.values(BASE_MAPS);
+const ATTRIBUTION_LINKS: ReadonlyArray<{ pattern: string; url: string }> = [
+  {
+    pattern: 'Instituto Geográfico Nacional',
+    url: 'http://www.ign.gob.ar/AreaServicios/Argenmap/IntroduccionV2',
+  },
+  {
+    pattern: 'OpenStreetMap',
+    url: 'https://www.openstreetmap.org/copyright',
+  },
+];
+
+/**
+ * Wraps known provider/source names inside a plain-text attribution with
+ * anchor tags so Leaflet's attribution control renders them as links.
+ */
+export function formatAttribution(plainText: string): string {
+  let html = plainText;
+  for (const { pattern, url } of ATTRIBUTION_LINKS) {
+    if (!html.includes(pattern)) continue;
+    html = html.split(pattern).join(`<a href="${url}" target="_blank">${pattern}</a>`);
+  }
+  return html;
 }

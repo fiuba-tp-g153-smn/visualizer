@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -56,6 +57,7 @@ const MENU_SECTIONS: MenuSection[] = [
   imports: [
     CommonModule,
     NgComponentOutlet,
+    RouterLink,
     MatIconModule,
     MatButtonModule,
     MatCardModule,

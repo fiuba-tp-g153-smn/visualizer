@@ -15,6 +15,7 @@ import {
 import { buildTileUrl } from '../../config/backend.config';
 import { MAP_CONFIG } from '../../config';
 import { calcTileRange, TileRange } from '../../utils/tile-math';
+import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
 const MAX_CONCURRENT = 100;
 const MAX_TILES_PER_LAYER = 3000;
@@ -109,10 +110,18 @@ export class TilePrefetchService {
 
       // Sort frames by proximity to current playback position, forward-biased (ahead first)
       const currentTimeIndex =
-        tileControls.playback.timeIndex ?? tileConfig.availableTilesets.length - 1;
-      const windowStart = tileConfig.availableTilesets.length - lastImagesCount;
+        tileControls.playback.timeIndex ??
+        getDefaultCursorIndex(tileConfig.availableTilesets.length, layer.isForecast);
+      const windowStart = computeWindowStart(
+        tileConfig.availableTilesets.length,
+        lastImagesCount,
+        layer.isForecast,
+      );
       const posInWindow = Math.max(0, currentTimeIndex - windowStart);
-      const frameWindow = [...tileConfig.availableTilesets].slice(-lastImagesCount);
+      const frameWindow = [...tileConfig.availableTilesets].slice(
+        windowStart,
+        windowStart + lastImagesCount,
+      );
       const ordered = Array.from({ length: frameWindow.length }, (_, i) => i)
         .sort((a, b) => {
           const da = a > posInWindow ? a - posInWindow : (posInWindow - a) * 1.1;

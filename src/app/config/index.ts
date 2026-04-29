@@ -13,6 +13,11 @@ export {
   buildTileUrl,
   buildSatellitePointQueryUrl,
   buildRadarPointQueryUrl,
+  buildEcmwfTpPointQueryUrl,
+  buildEcmwfMslpGeojsonUrl,
+  buildEcmwfMslpPointQueryUrl,
+  buildBasemapTileUrl,
+  buildBasemapProvidersUrl,
 } from './backend.config';
 
 // Alerts Service configuration (polygon operations and departments)
@@ -29,8 +34,13 @@ export { TOOLTIP_DELAYS, ACTION_DELAYS } from './timing.config';
 // Map configuration (initial position, zoom levels, prerender)
 export { MAP_CONFIG, MAP_Z_INDEX } from './map.config';
 
-// Base map definitions and utilities
-export { BASE_MAPS, getBaseMap, getAllBaseMaps } from './base-maps.config';
+// Base map client-side configuration (preview coords, DTOs, attribution helper)
+export {
+  BASE_MAP_PREVIEW_CONFIG,
+  formatAttribution,
+  type BaseMapProviderDto,
+  type BaseMapProvidersResponse,
+} from './base-maps.config';
 
 // Map polygons configuration (styles, z-index)
 export {

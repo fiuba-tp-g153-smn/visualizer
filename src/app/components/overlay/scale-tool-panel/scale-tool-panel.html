@@ -21,9 +21,9 @@
     </div>
   } @else {
     <div class="scale-bar scale-bar-discrete">
-      @for (step of discreteStepsDesc; track trackByStepValue($index, step)) {
+      @for (block of discreteColorBlocks; track $index) {
         <div class="discrete-step-row">
-          <div class="discrete-step" [style.backgroundColor]="step.color"></div>
+          <div class="discrete-step" [style.backgroundColor]="block.color"></div>
         </div>
       }
     </div>

@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import {
   EMPTY,
+  Observable,
   Subject,
   Subscription,
   debounceTime,
@@ -12,8 +13,11 @@ import {
 
 import {
   ABIGoesTileLayer,
+  EcmwfTpLayerControls,
+  EcmwfTpTileLayer,
   GLMGoesTileLayer,
   GoesLayerControls,
+  Layer,
   LayerCategory,
   LayerType,
   PointQueryDisplayData,
@@ -24,7 +28,7 @@ import {
 } from '../../models';
 import { LayerControlService } from './layer-control.service';
 import { LayersService } from './layers.service';
-import { PointQueryService } from './point-query.service';
+import { PointQueryService, buildSecondaryLayerId } from './point-query.service';
 import { MapInfoService } from './map-info.service';
 import { DrawingMode, PolygonDrawingService } from '../polygons/polygon-drawing.service';
 
@@ -37,7 +41,7 @@ type DisplaySourceItem = {
   layerId: string;
   elevationId?: string;
   layerName: string;
-  layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer;
+  layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer;
   controls: TileLayerControls;
 };
 
@@ -116,13 +120,15 @@ export class PointQueryViewerService {
 
     const satelliteItems: DisplaySourceItem[] = activeLayers
       .filter(
-        ({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.GOES_19,
+        ({ layer }) =>
+          layer.type === LayerType.TILE &&
+          (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF_TP),
       )
       .map(({ layer, controls }) => ({
         layerId: layer.id,
         layerName: this.layersService.getLayerFullName(layer),
-        layer: layer as ABIGoesTileLayer | GLMGoesTileLayer,
-        controls: controls as GoesLayerControls,
+        layer: layer as ABIGoesTileLayer | GLMGoesTileLayer | EcmwfTpTileLayer,
+        controls: controls as GoesLayerControls | EcmwfTpLayerControls,
       }));
 
     const radarItems: DisplaySourceItem[] = activeLayers
@@ -153,16 +159,36 @@ export class PointQueryViewerService {
     const showMovingState =
       this.interactionMode() === PointQueryInteractionMode.AUTOMATIC && this.isPointerMoving();
 
-    return selectedEntries.map((entry) => {
-      const result = results.get(entry.layerId);
-      return {
+    return selectedEntries.flatMap((entry): PointQueryViewerEntry[] => {
+      const primary: PointQueryViewerEntry = {
         layerId: entry.layerId,
         layerName: this.layersService.getLayerFullName(entry.layer, entry.elevationId),
-        data: result ?? null,
+        data: results.get(entry.layerId) ?? null,
         isLoading: loadingIds.has(entry.layerId) || showMovingState,
       };
+
+      // Layers with a secondary vector overlay (e.g. ECMWF TP + MSLP isobars)
+      // emit a paired card with the secondary value (presión).
+      const secondary = this.getSecondaryRender(entry.layer);
+      if (!secondary?.buildPointQueryUrl) {
+        return [primary];
+      }
+      const secondaryLayerId = buildSecondaryLayerId(entry.layerId);
+      const secondaryEntry: PointQueryViewerEntry = {
+        layerId: secondaryLayerId,
+        layerName: 'Presión a nivel del mar',
+        data: results.get(secondaryLayerId) ?? null,
+        isLoading: loadingIds.has(secondaryLayerId) || showMovingState,
+      };
+      return [primary, secondaryEntry];
     });
   });
+
+  private getSecondaryRender(layer: DisplaySourceItem['layer']) {
+    if (layer.type !== LayerType.TILE) return undefined;
+    if (layer.category !== LayerCategory.ECMWF_TP) return undefined;
+    return (layer as EcmwfTpTileLayer).secondaryRender;
+  }
 
   constructor() {
     this.loadStateFromStorage();
@@ -259,23 +285,40 @@ export class PointQueryViewerService {
               return EMPTY;
             }
 
-            const layerIds = selectedEntries.map((entry) => entry.layerId);
-            this.loadingLayerIds.set(new Set(layerIds));
+            const loadingIds = new Set<string>();
+            for (const entry of selectedEntries) {
+              loadingIds.add(entry.layerId);
+              const secondary = this.getSecondaryRender(entry.layer);
+              if (secondary?.buildPointQueryUrl) {
+                loadingIds.add(buildSecondaryLayerId(entry.layerId));
+              }
+            }
+            this.loadingLayerIds.set(loadingIds);
 
-            return forkJoin(
-              selectedEntries.map(({ layerId, layer, controls, elevationId }) =>
-                this.pointQueryService
-                  .queryLayerPoint(layer, controls, coordinates.lat, coordinates.lon, elevationId)
-                  .pipe(
-                    map(
-                      (result): SourceQueryResult => ({
-                        layerId,
-                        result,
-                      }),
-                    ),
+            const requests: Array<Observable<SourceQueryResult>> = [];
+            for (const { layerId, layer, controls, elevationId } of selectedEntries) {
+              const primary$ = this.pointQueryService
+                .queryLayerPoint(layer, controls, coordinates.lat, coordinates.lon, elevationId)
+                .pipe(map((result): SourceQueryResult => ({ layerId, result })));
+              requests.push(primary$);
+
+              const secondary$ = this.pointQueryService.queryLayerSecondaryPoint(
+                layer,
+                controls,
+                coordinates.lat,
+                coordinates.lon,
+              );
+              if (secondary$) {
+                const secondaryLayerId = buildSecondaryLayerId(layerId);
+                requests.push(
+                  secondary$.pipe(
+                    map((result): SourceQueryResult => ({ layerId: secondaryLayerId, result })),
                   ),
-              ),
-            ).pipe(finalize(() => this.loadingLayerIds.set(new Set())));
+                );
+              }
+            }
+
+            return forkJoin(requests).pipe(finalize(() => this.loadingLayerIds.set(new Set())));
           }),
         )
         .subscribe((results) => {

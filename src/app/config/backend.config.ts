@@ -39,6 +39,38 @@ export function buildSatellitePointQueryUrl(
 }
 
 /**
+ * URL para consultar el valor puntual de la capa ECMWF Total Precipitation.
+ */
+export function buildEcmwfTpPointQueryUrl(
+  forecastTs: string,
+  periodTs: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/total-precipitation/${forecastTs}/${periodTs}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
+ * URL del GeoJSON de isobaras de la capa ECMWF Mean Sea Level Pressure.
+ * Renderizada como overlay vectorial sobre TP.
+ */
+export function buildEcmwfMslpGeojsonUrl(forecastTs: string, timestampTs: string): string {
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}.json`;
+}
+
+/**
+ * URL para consultar el valor puntual de la capa ECMWF Mean Sea Level Pressure.
+ */
+export function buildEcmwfMslpPointQueryUrl(
+  forecastTs: string,
+  timestampTs: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
  * URL para consultar el valor puntual de una capa de radar en una coordenada.
  */
 export function buildRadarPointQueryUrl(
@@ -50,4 +82,20 @@ export function buildRadarPointQueryUrl(
   lon: number,
 ): string {
   return `${DATA_SERVICE_BASE_URL}/products/radar/${radarId}/${variableId}/${elevationId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
+ * Construye URL template de tiles de mapa base para un provider.
+ * @param providerId - ID del provider devuelto por /basemap/providers
+ * @returns URL template para Leaflet con {z}/{x}/{y}
+ */
+export function buildBasemapTileUrl(providerId: string): string {
+  return `${DATA_SERVICE_BASE_URL}/basemap/${providerId}/{z}/{x}/{y}.png`;
+}
+
+/**
+ * URL del listado de providers de mapa base habilitados en el backend.
+ */
+export function buildBasemapProvidersUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/basemap/providers`;
 }
