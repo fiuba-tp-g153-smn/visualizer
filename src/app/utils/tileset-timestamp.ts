@@ -42,6 +42,49 @@ export function formatDurationMs(ms: number): string {
   return `${Math.round(ms / 60_000)}min`;
 }
 
+// ============================================================================
+// ECMWF Timestamp Parsing & Formatting
+// ============================================================================
+
+/**
+ * Parses ECMWF timestamp in format YYYYMMDDTHHMMZ (14 chars, no seconds).
+ * Example: "20260330T1500Z" → Date(2026, 2, 30, 15, 0)
+ */
+export function parseEcmwfTimestamp(ts: string): Date | null {
+  if (ts.length < 13) return null;
+
+  const year = parseInt(ts.substring(0, 4));
+  const month = parseInt(ts.substring(4, 6)) - 1;
+  const day = parseInt(ts.substring(6, 8));
+  const hour = parseInt(ts.substring(9, 11));
+  const minute = parseInt(ts.substring(11, 13));
+
+  return new Date(year, month, day, hour, minute, 0);
+}
+
+/**
+ * Parses an ECMWF centered timestamp (shared between TP accumulation windows
+ * and other instantaneous ECMWF products such as MSLP).
+ * Example: "20260330T1500Z" → Date for 2026-03-30 15:00
+ */
+export function parseEcmwfCenteredTimestamp(periodTs: string): Date | null {
+  return parseEcmwfTimestamp(periodTs);
+}
+
+/**
+ * Formats an ECMWF forecast timestamp as ISO 8601 for display.
+ * Example: "20260330T1200Z" → "2026-03-30T12:00Z"
+ */
+export function formatEcmwfForecastTs(forecastTs: string): string {
+  if (forecastTs.length < 13) return forecastTs;
+
+  return `${forecastTs.substring(0, 4)}-${forecastTs.substring(4, 6)}-${forecastTs.substring(6, 8)}T${forecastTs.substring(9, 11)}:${forecastTs.substring(11, 13)}Z`;
+}
+
+// ============================================================================
+// Generic Formatting
+// ============================================================================
+
 /**
  * Formats a Date as "HH:MM".
  */

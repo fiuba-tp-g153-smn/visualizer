@@ -14,12 +14,16 @@ import {
   TileLayer,
   Layer,
   LayerControls,
+  EcmwfTpLayerControls,
+  EcmwfTpTileLayerConfig,
+  EcmwfTpTileLayer,
 } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
 import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
+import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
 /**
  * Service responsible for creating and managing Leaflet tile layers.
@@ -121,8 +125,10 @@ export class LayerRenderService {
       throw new Error(`No tilesets available for radar layer '${layerId}'`);
     }
 
+    const radarLayer = this.layersService.getLayerById(layerId);
+    const radarIsForecast = radarLayer?.type === LayerType.TILE && radarLayer.isForecast;
     const timeIndex =
-      controls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+      controls.playback.timeIndex ?? getDefaultCursorIndex(tilesets.length, radarIsForecast);
 
     if (timeIndex < 0 || timeIndex >= tilesets.length) {
       throw new Error(
@@ -220,12 +226,15 @@ export class LayerRenderService {
     result.set(`${layerId}#${currentTimeIndex}`, tileLayer);
 
     // Pre-render next N frames at opacity=0
+    const goesLayer = this.layersService.getLayerById(layerId);
+    const goesIsForecast = goesLayer?.type === LayerType.TILE && goesLayer.isForecast;
     this.prerenderNextFrames(
       result,
       currentTimeIndex,
       totalFrames,
       controls.playback.lastImagesCount,
       absoluteZIndex,
+      goesIsForecast,
       (adjIndex) => {
         const adjLayer = this.createTileLayerForTimeIndex(layerId, controls, adjIndex);
         return { layer: adjLayer, key: `${layerId}#${adjIndex}` };
@@ -299,6 +308,7 @@ export class LayerRenderService {
         totalFrames,
         controls.playback.lastImagesCount,
         elevationZIndex,
+        false,
         (adjIndex) => {
           const adjLayer = this.createRadarTileLayerForElevationAtTimeIndex(
             layerId,
@@ -307,6 +317,120 @@ export class LayerRenderService {
             adjIndex,
           );
           return { layer: adjLayer, key: `${layerId}#${elevationId}#${adjIndex}` };
+        },
+      );
+    });
+
+    return result;
+  }
+
+  /**
+   * Creates a Leaflet TileLayer for an ECMWF layer with a specific forecast run.
+   */
+  createEcmwfTpTileLayerForForecast(
+    layerId: string,
+    controls: EcmwfTpLayerControls,
+    forecastTs: string,
+    periodTs: string,
+  ): L.TileLayer {
+    const poolKey = `${layerId}-${forecastTs}-${periodTs}`;
+
+    if (this.layerPool.has(poolKey)) {
+      return this.layerPool.get(poolKey)!;
+    }
+
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.ECMWF_TP) {
+      throw new Error(`Invalid ECMWF layer: '${layerId}'`);
+    }
+
+    const pathToTileset = `${layerId}/${forecastTs}/${periodTs}`;
+    const tileLayer = this.buildTileLayer(
+      buildTileUrl(pathToTileset),
+      layer as unknown as TileLayer,
+      controls.opacity,
+    );
+    this.attachErrorHandlers(tileLayer, layerId, forecastTs, this.formatForecastLabel(forecastTs));
+    this.layerPool.set(poolKey, tileLayer);
+    return tileLayer;
+  }
+
+  /**
+   * Creates an ECMWF tile layer for a specific forecast at a given timeIndex.
+   * Used for pre-fetching adjacent frames.
+   */
+  createEcmwfTpTileLayerForForecastAtTimeIndex(
+    layerId: string,
+    controls: EcmwfTpLayerControls,
+    forecastTs: string,
+    timeIndex: number,
+  ): L.TileLayer | null {
+    const config = this.layerConfigService.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
+    if (!config) return null;
+
+    const periodEntry = config.availableTilesets[timeIndex];
+    if (!periodEntry) return null;
+    const periodTs = periodEntry.id;
+
+    // Only render if this forecast has data for this period
+    const forecastsForPeriod = config.forecastsByPeriod[periodTs];
+    if (!forecastsForPeriod || !forecastsForPeriod.includes(forecastTs)) return null;
+
+    return this.createEcmwfTpTileLayerForForecast(layerId, controls, forecastTs, periodTs);
+  }
+
+  /**
+   * Creates ECMWF layers for playback — one set per selected forecast run.
+   * Each forecast gets its own tile layer(s) with per-forecast opacity and
+   * z-index stacking.
+   */
+  createEcmwfTpLayersForPlayback(
+    layerId: string,
+    controls: EcmwfTpLayerControls,
+    targetOpacity: number,
+    absoluteZIndex: number,
+  ): Map<string, L.TileLayer> {
+    const result = new Map<string, L.TileLayer>();
+    const selectedForecasts = controls.forecast.selectedForecastTimestamps;
+    const currentTimeIndex = controls.playback.timeIndex ?? 0;
+    const totalFrames = this.getAvailableTilesetsCount(layerId);
+
+    const config = this.layerConfigService.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
+    if (!config || totalFrames === 0) return result;
+
+    const currentPeriodEntry = config.availableTilesets[currentTimeIndex];
+    if (!currentPeriodEntry) return result;
+    const currentPeriodTs = currentPeriodEntry.id;
+
+    selectedForecasts.forEach((forecastTs, index) => {
+      const forecastZIndex = absoluteZIndex + index;
+      const forecastOpacity = controls.forecast.forecastOpacity[forecastTs];
+      const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
+
+      // Only create a tile if this forecast has data for the current period
+      const forecastsForPeriod = config.forecastsByPeriod[currentPeriodTs];
+      if (forecastsForPeriod && forecastsForPeriod.includes(forecastTs)) {
+        const tileLayer = this.createEcmwfTpTileLayerForForecast(
+          layerId, controls, forecastTs, currentPeriodTs,
+        );
+        this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
+        result.set(`${layerId}#${forecastTs}#${currentTimeIndex}`, tileLayer);
+      }
+
+      // Pre-render next N frames at opacity=0
+      this.prerenderNextFrames(
+        result,
+        currentTimeIndex,
+        totalFrames,
+        controls.playback.lastImagesCount,
+        forecastZIndex,
+        true,
+        (adjIndex) => {
+          const adjLayer = this.createEcmwfTpTileLayerForForecastAtTimeIndex(
+            layerId, controls, forecastTs, adjIndex,
+          );
+          if (!adjLayer) return null;
+          return { layer: adjLayer, key: `${layerId}#${forecastTs}#${adjIndex}` };
         },
       );
     });
@@ -332,10 +456,11 @@ export class LayerRenderService {
     totalFrames: number,
     lastImagesCount: number,
     absoluteZIndex: number,
-    createLayer: (timeIndex: number) => { layer: L.TileLayer; key: string },
+    isForecast: boolean,
+    createLayer: (timeIndex: number) => { layer: L.TileLayer; key: string } | null,
   ): void {
-    const minTimeIndex = Math.max(0, totalFrames - lastImagesCount);
-    const windowSize = totalFrames - minTimeIndex;
+    const minTimeIndex = computeWindowStart(totalFrames, lastImagesCount, isForecast);
+    const windowSize = Math.min(lastImagesCount, totalFrames - minTimeIndex);
 
     if (windowSize > 1) {
       for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {
@@ -343,9 +468,10 @@ export class LayerRenderService {
         const adjPosInWindow = (((posInWindow + offset) % windowSize) + windowSize) % windowSize;
         const adjIndex = minTimeIndex + adjPosInWindow;
 
-        const { layer, key } = createLayer(adjIndex);
-        this.applyLayerStyles(layer, 0, absoluteZIndex);
-        result.set(key, layer);
+        const created = createLayer(adjIndex);
+        if (!created) continue;
+        this.applyLayerStyles(created.layer, 0, absoluteZIndex);
+        result.set(created.key, created.layer);
       }
     }
   }
@@ -390,7 +516,8 @@ export class LayerRenderService {
             if (tilesets.length === 0) return `${layerId}-empty`;
 
             const timeIndex =
-              goesControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+              goesControls.playback.timeIndex ??
+              getDefaultCursorIndex(tilesets.length, layer.isForecast);
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
@@ -412,12 +539,35 @@ export class LayerRenderService {
             if (tilesets.length === 0) return `${layerId}-empty`;
 
             const timeIndex =
-              radarControls.playback.timeIndex ?? (tilesets.length > 0 ? tilesets.length - 1 : 0);
+              radarControls.playback.timeIndex ??
+              getDefaultCursorIndex(tilesets.length, layer.isForecast);
 
             // Clamp timeIndex to valid range for pool key generation
             const clampedIndex = Math.max(0, Math.min(timeIndex, tilesets.length - 1));
             const tilesetId = tilesets[clampedIndex].id;
             return `${layerId}-[${elevationsKey}]-${tilesetId}`;
+          }
+          case LayerCategory.ECMWF_TP: {
+            const ecmwfControls = tileControls as EcmwfTpLayerControls;
+            const config = this.layerConfigService.getConfig(layerId) as
+              | EcmwfTpTileLayerConfig
+              | undefined;
+            if (!config) return `${layerId}-placeholder`;
+
+            const tilesets = config.availableTilesets;
+            if (tilesets.length === 0) return `${layerId}-empty`;
+
+            const ecmwfLayer = layer as EcmwfTpTileLayer;
+            const timeIndex = Math.max(
+              0,
+              Math.min(
+                ecmwfControls.playback.timeIndex ??
+                  getDefaultCursorIndex(tilesets.length, ecmwfLayer.isForecast),
+                tilesets.length - 1,
+              ),
+            );
+            const forecastsKey = ecmwfControls.forecast.selectedForecastTimestamps.join(',');
+            return `${layerId}-[${forecastsKey}]-${tilesets[timeIndex].id}`;
           }
           default:
             return layerId;
@@ -449,6 +599,10 @@ export class LayerRenderService {
         // Radar layers should be created via createRadarTileLayerForElevation in map-viewer
         throw new Error(
           `Radar layer ${layerId} should be created using createRadarTileLayerForElevation`,
+        );
+      case LayerCategory.ECMWF_TP:
+        throw new Error(
+          `ECMWF layer ${layerId} should be created using createEcmwfTpTileLayerForForecast`,
         );
       default:
         throw new Error(`Unsupported tile layer category for layer ${layerId}`);
@@ -499,6 +653,16 @@ export class LayerRenderService {
     const tileLayer = this.buildTileLayer(tileUrl, layer, controls.opacity);
     this.attachErrorHandlers(tileLayer, layerId);
     return tileLayer;
+  }
+
+  /**
+   * Formats a forecast timestamp for display in error messages.
+   */
+  private formatForecastLabel(forecastTs: string): string {
+    if (forecastTs.length >= 13) {
+      return `${forecastTs.substring(0, 4)}-${forecastTs.substring(4, 6)}-${forecastTs.substring(6, 8)} ${forecastTs.substring(9, 11)}:${forecastTs.substring(11, 13)}`;
+    }
+    return forecastTs;
   }
 
   // ============================================================================
@@ -585,10 +749,16 @@ export class LayerRenderService {
     const config = this.layerConfigService.getConfig(layerId) as
       | RadarTileLayerConfig
       | GoesTileLayerConfig
+      | EcmwfTpTileLayerConfig
       | undefined;
 
     if (!config) {
-      const categoryName = layer.category === LayerCategory.RADAR ? 'Radar' : 'GOES';
+      const categoryName =
+        layer.category === LayerCategory.RADAR
+          ? 'Radar'
+          : layer.category === LayerCategory.ECMWF_TP
+            ? 'ECMWF'
+            : 'GOES';
       throw new Error(`Configuration not loaded for ${categoryName} layer '${layerId}'`);
     }
 
@@ -598,8 +768,8 @@ export class LayerRenderService {
       throw new Error(`No tilesets available for layer '${layerId}'`);
     }
 
-    // If timeIndex is undefined, use the latest period
-    const resolvedTimeIndex = timeIndex ?? tilesets.length - 1;
+    // If timeIndex is undefined, fall back to the layer's default cursor.
+    const resolvedTimeIndex = timeIndex ?? getDefaultCursorIndex(tilesets.length, layer.isForecast);
 
     if (resolvedTimeIndex >= tilesets.length || resolvedTimeIndex < 0) {
       throw new Error(

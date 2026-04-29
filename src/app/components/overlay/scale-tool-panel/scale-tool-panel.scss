@@ -108,7 +108,7 @@
 }
 
 .scale-values-discrete {
-  justify-content: initial;
+  justify-content: space-between;
   padding-block: 0;
 }
 
@@ -117,4 +117,10 @@
   display: flex;
   align-items: center;
   min-height: 0;
+}
+
+.scale-values-discrete .scale-value-row {
+  flex: initial;
+  height: 0;
+  overflow: visible;
 }

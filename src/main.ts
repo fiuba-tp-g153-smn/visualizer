@@ -4,6 +4,9 @@ import { App } from './app/app';
 import { AppLoaderComponent } from './app/components/floating/app-loader/app-loader';
 import { createApplication } from '@angular/platform-browser';
 
+// Side-effect import: monkey-patches L.Polyline.prototype.setText for isobar labels.
+import 'leaflet-textpath';
+
 // Bootstrap del loader primero para que se muestre inmediatamente
 createApplication(appConfig).then((appRef) => {
   appRef.bootstrap(AppLoaderComponent);

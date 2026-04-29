@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { MAP_CONFIG, MAP_Z_INDEX } from '../../config';
+import { environment } from '../../../environments/environment';
 
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
@@ -15,6 +16,7 @@ import { PolygonService } from '../../services/polygons/polygon.service';
 import { PolygonDrawingService } from '../../services/polygons/polygon-drawing.service';
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
+import { VectorOverlayService } from '../../services/layers/vector-overlay.service';
 
 /**
  * Main map container component that orchestrates the map, layers, polygons and point-query UI.
@@ -40,6 +42,7 @@ export class MapContainer implements OnInit, OnDestroy {
   // Services
   private layersService = inject(MapLayersService);
   private polygonsService = inject(MapPolygonsService);
+  private vectorOverlayService = inject(VectorOverlayService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -52,7 +55,7 @@ export class MapContainer implements OnInit, OnDestroy {
       // Effect: change base map
       effect(() => {
         const baseMap = this.baseMapService.currentBaseMap();
-        if (this.map) {
+        if (this.map && baseMap) {
           this.changeBaseMap(baseMap);
         }
       });
@@ -64,6 +67,9 @@ export class MapContainer implements OnInit, OnDestroy {
 
         // Also track config signal to re-trigger when configs are loaded
         this.layerConfigService.configs();
+        // Track vector overlay loads so isobars/secondary overlays appear as
+        // soon as their GeoJSON arrives.
+        this.vectorOverlayService.loadTick();
 
         if (this.map) {
           this.layersService.syncLayers(layerIds);
@@ -157,9 +163,12 @@ export class MapContainer implements OnInit, OnDestroy {
       }
     });
 
-    // Initialize base map layer
+    // Initialize base map layer if providers have already loaded; otherwise
+    // the effect above will install it as soon as the API call resolves.
     const initialBaseMap = this.baseMapService.getCurrentBaseMap();
-    this.changeBaseMap(initialBaseMap);
+    if (initialBaseMap) {
+      this.changeBaseMap(initialBaseMap);
+    }
 
     this.map.on('mousemove', (event: L.LeafletMouseEvent) => {
       this.pointQueryViewerService.handleMouseMove(event.latlng.lat, event.latlng.lng);
@@ -214,6 +223,26 @@ export class MapContainer implements OnInit, OnDestroy {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
       zIndex: MAP_Z_INDEX.BASE_MAP,
+      maxNativeZoom: baseMap.maxNativeZoom,
+      // Wider tile ring smooths panning; backend's 1-week immutable cache
+      // makes the extra fetches near-free on warm caches.
+      keepBuffer: 4,
+      // Defer tile fetches during touch pinch/pan; smoother on coarse pointers.
+      updateWhenIdle: window.matchMedia?.('(pointer: coarse)').matches ?? false,
+      // Future-proofs canvas screenshot/print flows; backend already CORS-allows *.
+      crossOrigin: 'anonymous',
+      zIndex: 0,
     }).addTo(this.map);
+
+    // Tripwire: backend is supposed to return a transparent PNG on miss, never a 404.
+    // If `tileerror` ever fires for the basemap layer, a backend regression is the prime suspect.
+    if (!environment.production) {
+      this.currentTileLayer.on('tileerror', (e) => {
+        console.warn(
+          '[basemap] unexpected tileerror — backend should serve transparent PNG on miss',
+          e,
+        );
+      });
+    }
   }
 }

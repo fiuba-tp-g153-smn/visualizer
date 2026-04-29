@@ -17,6 +17,7 @@ const ABI_DEFAULTS = {
     [-60.0, -110.0],
     [-15.0, -30.0],
   ] as const,
+  isForecast: false,
 };
 
 const idPrefix = 'goes-19/abi';
