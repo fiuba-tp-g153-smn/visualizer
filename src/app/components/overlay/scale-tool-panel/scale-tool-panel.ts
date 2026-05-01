@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ContinuousScale, DiscreteScale, ScaleType, PaletteConfigScale } from '../../../models';
 import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
+import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import {
   convertValueForDisplay,
   getDisplayUnit,
@@ -23,6 +31,7 @@ import {
 export class ScaleToolPanelComponent {
   private readonly MAX_DISCRETE_LABELS = 10;
   private readonly PALETTE_FALLBACK_COLOR = '#cccccc';
+  private readonly unitsSettings = inject(UnitsSettingsService);
 
   @Input({ required: true }) entry!: ScaleToolEntry;
   @Output() close = new EventEmitter<void>();
@@ -53,12 +62,12 @@ export class ScaleToolPanelComponent {
   }
 
   get verticalLabel(): string {
-    return `${this.entry.layerName} (${getDisplayUnit(this.entry.scale.unit)})`;
+    return `${this.entry.layerName} (${getDisplayUnit(this.entry.scale.unit, this.unitsSettings)})`;
   }
 
   get scaleTooltip(): string {
     const { min, max } = this.scaleRange;
-    return `${this.entry.layerName}\nRango: ${this.formatValue(min)} - ${this.formatValue(max)} ${getDisplayUnit(this.entry.scale.unit)}`;
+    return `${this.entry.layerName}\nRango: ${this.formatValue(min)} - ${this.formatValue(max)} ${getDisplayUnit(this.entry.scale.unit, this.unitsSettings)}`;
   }
 
   get scaleRange(): { min: number; max: number } {
@@ -90,8 +99,8 @@ export class ScaleToolPanelComponent {
     }
 
     if (isKelvinUnit(this.entry.scale.unit)) {
-      min = convertValueForDisplay(min, this.entry.scale.unit);
-      max = convertValueForDisplay(max, this.entry.scale.unit);
+      min = convertValueForDisplay(min, this.entry.scale.unit, this.unitsSettings);
+      max = convertValueForDisplay(max, this.entry.scale.unit, this.unitsSettings);
     }
 
     return { min, max };
@@ -206,11 +215,7 @@ export class ScaleToolPanelComponent {
   }
 
   private formatValue(value: number): string {
-    const displayValue = convertValueForDisplay(value, this.entry.scale.unit);
-
-    if (Number.isInteger(displayValue)) {
-      return displayValue.toString();
-    }
-    return displayValue.toFixed(1);
+    const displayValue = convertValueForDisplay(value, this.entry.scale.unit, this.unitsSettings);
+    return this.unitsSettings.numberFormatter().format(displayValue);
   }
 }
