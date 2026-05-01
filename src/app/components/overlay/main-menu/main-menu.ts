@@ -11,6 +11,7 @@ import { LayerListComponent } from './layer-list/layer-list';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
 import { PolygonManagerComponent } from './polygon-manager/polygon-manager';
 import { MapToolsComponent } from './map-tools/tools';
+import { GeneralSettingsComponent } from './general-settings/general-settings';
 import { MenuSection } from './menu-section.model';
 
 /**
@@ -44,6 +45,13 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: 'map',
     tooltip: 'Seleccionar mapa base',
     component: BaseMapSelectorComponent,
+  },
+  {
+    id: 'settings',
+    title: 'Configuración',
+    icon: 'tune',
+    tooltip: 'Configuración general',
+    component: GeneralSettingsComponent,
   },
 ];
 

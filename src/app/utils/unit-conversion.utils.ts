@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import { TEMPERATURE_UNITS, KELVIN_TO_CELSIUS_OFFSET } from '../constants';
+import { UnitsSettingsService } from '../services/settings/units-settings.service';
 
 /**
  * Utilidades para conversión de unidades
@@ -19,17 +21,35 @@ export function isKelvinUnit(unit: string): boolean {
 }
 
 /**
- * Obtiene la unidad de visualización para temperatura
- * (convierte Kelvin a Celsius para display)
+ * Obtiene la unidad de visualización para temperatura según configuración del usuario
  */
-export function getDisplayUnit(unit: string): string {
-  return isKelvinUnit(unit) ? TEMPERATURE_UNITS.CELSIUS : unit;
+export function getDisplayUnit(unit: string, unitsSettings: UnitsSettingsService): string {
+  if (!isKelvinUnit(unit)) {
+    return unit;
+  }
+
+  const targetUnit = unitsSettings.temperatureUnit();
+  return targetUnit;
 }
 
 /**
- * Convierte un valor según su unidad para visualización
- * (solo aplica a temperatura por ahora)
+ * Convierte un valor según su unidad para visualización según configuración del usuario
  */
-export function convertValueForDisplay(value: number, unit: string): number {
-  return isKelvinUnit(unit) ? convertKelvinToCelsius(value) : value;
+export function convertValueForDisplay(
+  value: number,
+  unit: string,
+  unitsSettings: UnitsSettingsService,
+): number {
+  if (!isKelvinUnit(unit)) {
+    return value;
+  }
+
+  const targetUnit = unitsSettings.temperatureUnit();
+
+  if (targetUnit === TEMPERATURE_UNITS.CELSIUS) {
+    return convertKelvinToCelsius(value);
+  }
+
+  // Si el usuario quiere Kelvin, retornar sin conversión
+  return value;
 }
