@@ -37,6 +37,7 @@ import {
   formatDateTimeOnly,
   formatEcmwfForecastTs,
 } from '../../../../../utils/tileset-timestamp';
+import { ScaleToolsService } from '../../../../../services/layers/scale-tools.service';
 
 /**
  * Modo de visualización del componente
@@ -78,6 +79,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
   private readonly syncService = inject(SyncPlaybackService);
+  private readonly scaleTools = inject(ScaleToolsService);
 
   /**
    * Capa a renderizar (requerido)
@@ -89,20 +91,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   @Input() mode: LayerItemMode = 'available';
 
-  /**
-   * Si se muestra el botón de información (solo en modo available)
-   */
-  @Input() showInfo: boolean = true;
-
-  /**
-   * Si se muestra el botón de cerrar (solo en modo active)
-   */
-  @Input() showClose: boolean = true;
-
-  /**
-   * Si se muestra el drag handle (solo en modo active)
-   */
-  @Input() showDragHandle: boolean = true;
+  // Propiedades derivadas del modo
+  readonly showClose = true;
+  readonly showDragHandle = true;
 
   // Estado local
   isLoadingConfig = signal(false);
@@ -613,7 +604,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
       return false;
     }
-    const config = this.configService.getConfig(this.layer.id) as EcmwfTpTileLayerConfig | undefined;
+    const config = this.configService.getConfig(this.layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
     return (config?.availableForecasts?.length ?? 0) > 0;
   });
 
@@ -624,7 +617,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
       return [];
     }
-    const config = this.configService.getConfig(this.layer.id) as EcmwfTpTileLayerConfig | undefined;
+    const config = this.configService.getConfig(this.layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
     return config?.availableForecasts ?? [];
   });
 
@@ -713,5 +708,24 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   private stopIfPlaying(): void {
     if (this.isPlaying()) this.controlService.stopPlayback(this.layer.id);
+  }
+
+  // ==========================================================================
+  // Control de Escalas
+  // ==========================================================================
+
+  hasScale(): boolean {
+    return this.layer.type === LayerType.TILE && this.layer.scale !== undefined;
+  }
+
+  isScaleSelected(): boolean {
+    return this.scaleTools.enabled() && this.scaleTools.isLayerSelected(this.layer.id);
+  }
+
+  toggleScale(): void {
+    if (!this.scaleTools.enabled()) {
+      this.scaleTools.setEnabled(true);
+    }
+    this.scaleTools.toggleLayerSelection(this.layer.id);
   }
 }

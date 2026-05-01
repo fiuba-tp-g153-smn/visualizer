@@ -17,9 +17,13 @@
       flex-shrink: 0;
 
       .config-btn,
-      .expand-btn {
+      .expand-btn,
+      .scale-toggle-btn {
         color: var(--mat-sys-on-surface-variant);
         &.active-config {
+          color: var(--mat-sys-primary);
+        }
+        &.scale-active {
           color: var(--mat-sys-primary);
         }
         &:hover {
