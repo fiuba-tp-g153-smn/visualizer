@@ -1,8 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config';
-
-const STORAGE_KEY = 'smn-map-tools-v3';
+import { STORAGE_KEYS } from '../../constants';
 
 interface MapToolsState {
   showCoordinates: boolean;
@@ -164,7 +163,7 @@ export class MapInfoService {
 
   private loadPersistedState(): void {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEYS.MAP_TOOLS);
       if (stored) {
         const state = JSON.parse(stored) as MapToolsState;
         this.showCoordinates.set(state.showCoordinates ?? MAP_CONFIG.defaultShowCoordinates);
@@ -189,7 +188,7 @@ export class MapInfoService {
         showCursorLines: this.showCursorLines(),
         showGraticule: this.showGraticule(),
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEYS.MAP_TOOLS, JSON.stringify(state));
     } catch {
       // Ignore storage errors
     }

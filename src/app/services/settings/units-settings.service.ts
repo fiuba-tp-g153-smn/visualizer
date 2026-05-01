@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { TEMPERATURE_UNITS } from '../../constants';
+import { STORAGE_KEYS, TEMPERATURE_UNITS } from '../../constants';
 
 export type TemperatureUnit = typeof TEMPERATURE_UNITS.KELVIN | typeof TEMPERATURE_UNITS.CELSIUS;
 export type DecimalPrecision = 0 | 1 | 2 | 3;
@@ -13,8 +13,6 @@ interface UnitsSettings {
   providedIn: 'root',
 })
 export class UnitsSettingsService {
-  private readonly STORAGE_KEY = 'smn-units-settings-v2';
-
   readonly temperatureUnit = signal<TemperatureUnit>(TEMPERATURE_UNITS.CELSIUS);
   readonly decimalPrecision = signal<DecimalPrecision>(2);
 
@@ -46,7 +44,7 @@ export class UnitsSettingsService {
     }
 
     try {
-      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEYS.UNITS_SETTINGS);
       if (!raw) {
         return;
       }
@@ -70,7 +68,7 @@ export class UnitsSettingsService {
     };
 
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(STORAGE_KEYS.UNITS_SETTINGS, JSON.stringify(payload));
     } catch (error) {
       console.warn('Failed to save units settings to localStorage:', error);
     }

@@ -22,3 +22,5 @@ export {
   DISTANCE_UNITS,
   KELVIN_TO_CELSIUS_OFFSET,
 } from './units.constants';
+
+export { STORAGE_KEYS } from './storage-keys.constants';

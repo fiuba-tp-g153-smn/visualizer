@@ -23,6 +23,7 @@ import {
   DEFAULT_ACTIVE_LAYERS,
   DEFAULT_LAYER_CONTROLS,
 } from '../../config/layers';
+import { STORAGE_KEYS } from '../../constants';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
@@ -44,8 +45,6 @@ import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-
   providedIn: 'root',
 })
 export class LayerControlService {
-  private readonly ACTIVE_LAYERS_LOCAL_STORAGE_KEY = 'smn-active-layers-v3';
-
   private readonly layersService = inject(LayersService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly engineService = inject(PlaybackEngineService);
@@ -490,7 +489,9 @@ export class LayerControlService {
     }
 
     // Clamp timeIndex if the union shrank — reset to the layer's default cursor.
-    const newConfig = this.layerConfigService.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
+    const newConfig = this.layerConfigService.getConfig(layerId) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
     if (
       newConfig &&
       updatedControls.playback.timeIndex !== undefined &&
@@ -854,7 +855,7 @@ export class LayerControlService {
    */
   private saveControls(): void {
     const state = this.activeLayers().map(({ controls }) => controls);
-    localStorage.setItem(this.ACTIVE_LAYERS_LOCAL_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_LAYERS, JSON.stringify(state));
   }
 
   /**
@@ -862,7 +863,7 @@ export class LayerControlService {
    */
   private loadControls(): LayerControls[] | undefined {
     try {
-      const saved = localStorage.getItem(this.ACTIVE_LAYERS_LOCAL_STORAGE_KEY);
+      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_LAYERS);
       return saved ? JSON.parse(saved) : undefined;
     } catch {
       return undefined;
