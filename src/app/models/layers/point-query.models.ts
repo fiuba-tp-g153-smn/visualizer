@@ -1,9 +1,3 @@
-export enum PointQueryInteractionMode {
-  OFF = 'off',
-  MANUAL = 'manual',
-  AUTOMATIC = 'automatic',
-}
-
 export enum PointQueryStatus {
   LOADING = 'loading',
   VALUE = 'value',

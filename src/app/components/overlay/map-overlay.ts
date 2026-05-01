@@ -50,7 +50,7 @@ export class MapOverlayComponent {
   );
 
   readonly floatingViewerEntries = this.pointQueryViewerService.floatingViewerEntries;
-  readonly isViewerEnabled = this.pointQueryViewerService.isViewerEnabled;
+  readonly isViewerEnabled = this.pointQueryViewerService.enabled;
   readonly scaleToolEntries = this.scaleToolsService.scaleEntries;
   readonly isScaleToolsEnabled = this.scaleToolsService.shouldShowScales;
 

@@ -170,10 +170,6 @@ export class MapContainer implements OnInit, OnDestroy {
       this.changeBaseMap(initialBaseMap);
     }
 
-    this.map.on('mousemove', (event: L.LeafletMouseEvent) => {
-      this.pointQueryViewerService.handleMouseMove(event.latlng.lat, event.latlng.lng);
-    });
-
     this.map.on('click', (event: L.LeafletMouseEvent) => {
       this.polygonsService.closeContextMenu();
       const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
@@ -231,7 +227,6 @@ export class MapContainer implements OnInit, OnDestroy {
       updateWhenIdle: window.matchMedia?.('(pointer: coarse)').matches ?? false,
       // Future-proofs canvas screenshot/print flows; backend already CORS-allows *.
       crossOrigin: 'anonymous',
-      zIndex: 0,
     }).addTo(this.map);
 
     // Tripwire: backend is supposed to return a transparent PNG on miss, never a 404.
