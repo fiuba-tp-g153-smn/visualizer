@@ -37,6 +37,7 @@ import {
   formatDateTimeOnly,
   formatEcmwfForecastTs,
 } from '../../../../../utils/tileset-timestamp';
+import { computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/layers/scale-tools.service';
 
 /**
@@ -306,7 +307,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   maxTimeIndex = computed(() => {
     const tilesets = this.getAvailableTilesetsForLayer();
-    return Math.max(0, (tilesets?.length ?? 1) - 1);
+    if (!tilesets || tilesets.length === 0) return 0;
+
+    const lastImagesCount = this.lastImagesCount();
+    if (lastImagesCount === 1) {
+      return tilesets.length - 1;
+    }
+
+    const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
+    const min = computeWindowStart(tilesets.length, lastImagesCount, isForecast);
+    return Math.min(min + lastImagesCount - 1, tilesets.length - 1);
   });
 
   layerShortName = computed(() => this.layersService.getLayerShortName(this.layer));
@@ -316,11 +326,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene el índice mínimo para el slider (limitado por el selector de últimas imágenes)
    */
   minTimeIndex = computed(() => {
-    const max = this.maxTimeIndex();
-    const options = this.lastImagesOptions();
-    const maxSelectableCount = options.length > 0 ? Math.max(...options) : 1;
-    const effectiveCount = Math.min(max + 1, maxSelectableCount);
-    return Math.max(0, max - effectiveCount + 1);
+    const tilesets = this.getAvailableTilesetsForLayer();
+    if (!tilesets || tilesets.length === 0) return 0;
+
+    const lastImagesCount = this.lastImagesCount();
+    if (lastImagesCount === 1) {
+      return 0;
+    }
+
+    const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
+    return computeWindowStart(tilesets.length, lastImagesCount, isForecast);
   });
 
   /**
