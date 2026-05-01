@@ -10,9 +10,8 @@ import {
   type BaseMapProviderDto,
   type BaseMapProvidersResponse,
 } from '../../config';
+import { STORAGE_KEYS } from '../../constants';
 import { BaseMap } from '../../models';
-
-const BASE_MAP_LOCAL_STORAGE_KEY = 'mapasmn_selected_base_map';
 
 export type BaseMapLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -108,7 +107,7 @@ export class BaseMapService {
 
   private readStoredBaseMapId(): string | null {
     try {
-      return localStorage.getItem(BASE_MAP_LOCAL_STORAGE_KEY);
+      return localStorage.getItem(STORAGE_KEYS.BASE_MAP);
     } catch (error) {
       console.warn('Failed to read base map from storage:', error);
       return null;
@@ -117,7 +116,7 @@ export class BaseMapService {
 
   private saveBaseMapToStorage(baseMapId: string): void {
     try {
-      localStorage.setItem(BASE_MAP_LOCAL_STORAGE_KEY, baseMapId);
+      localStorage.setItem(STORAGE_KEYS.BASE_MAP, baseMapId);
     } catch (error) {
       console.warn('Failed to save base map to storage:', error);
     }

@@ -14,6 +14,7 @@ import {
   RadarTileLayer,
   TileLayerControls,
 } from '../../models';
+import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from './layer-control.service';
 import { LayersService } from './layers.service';
 import { PointQueryService, buildSecondaryLayerId } from './point-query.service';
@@ -60,9 +61,6 @@ function createCompositeId(layerId: string, elevationId: string): string {
   providedIn: 'root',
 })
 export class PointQueryViewerService {
-  private readonly STORAGE_KEY = 'smn-point-query-viewer-v5';
-  private readonly RESULTS_STORAGE_KEY = 'smn-point-query-results-v1';
-
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
   private readonly pointQueryService = inject(PointQueryService);
@@ -73,7 +71,7 @@ export class PointQueryViewerService {
   private readonly queryTriggerSubject = new Subject<MouseCoordinates>();
   private initialized = false;
 
-  readonly enabled = signal<boolean>(true);
+  readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
   readonly lastClickCoordinates = signal<MouseCoordinates | null>(null);
   readonly showMarker = signal<boolean>(true);
@@ -180,20 +178,15 @@ export class PointQueryViewerService {
 
     effect(() => {
       // When active layers change, keep only selected layer IDs that still exist.
-      // Auto-select newly activated layers when enabled.
+      // Auto-select newly activated layers, but keep the tool itself disabled by default.
       const allItems = this.displayItems();
       const allLayerIds = new Set(allItems.map((item) => item.layerId));
-      const isEnabled = this.enabled();
 
       const currentSelection = this.selectedLayerIdsOrdered();
       const filteredSelection = currentSelection.filter((layerId) => allLayerIds.has(layerId));
-
-      // Auto-select newly activated layers only if enabled
-      const newLayerIds = isEnabled
-        ? allItems
-            .map((item) => item.layerId)
-            .filter((layerId) => !currentSelection.includes(layerId))
-        : [];
+      const newLayerIds = allItems
+        .map((item) => item.layerId)
+        .filter((layerId) => !currentSelection.includes(layerId));
 
       const updatedSelection = [...filteredSelection, ...newLayerIds];
 
@@ -431,7 +424,7 @@ export class PointQueryViewerService {
     }
 
     try {
-      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEYS.POINT_QUERY_VIEWER);
       if (!raw) {
         return;
       }
@@ -458,7 +451,7 @@ export class PointQueryViewerService {
     };
 
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(STORAGE_KEYS.POINT_QUERY_VIEWER, JSON.stringify(payload));
     } catch (error) {
       console.warn('Failed to save point query viewer state to localStorage:', error);
     }
@@ -470,7 +463,7 @@ export class PointQueryViewerService {
     }
 
     try {
-      const raw = localStorage.getItem(this.RESULTS_STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEYS.POINT_QUERY_RESULTS);
       if (!raw) {
         return;
       }
@@ -504,7 +497,7 @@ export class PointQueryViewerService {
     const results = this.resultsBySource();
     if (results.size === 0) {
       try {
-        localStorage.removeItem(this.RESULTS_STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEYS.POINT_QUERY_RESULTS);
       } catch {
         // Ignore remove errors
       }
@@ -513,7 +506,7 @@ export class PointQueryViewerService {
 
     try {
       const payload: Record<string, PointQueryDisplayData> = Object.fromEntries(results);
-      localStorage.setItem(this.RESULTS_STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(STORAGE_KEYS.POINT_QUERY_RESULTS, JSON.stringify(payload));
     } catch (error) {
       console.warn('Failed to save point query results to localStorage:', error);
     }

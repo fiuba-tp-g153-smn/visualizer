@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 
 import { Layer, LayerCategory, LayerControls, LayerType, ScaleType } from '../../models';
+import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from './layer-control.service';
 import { LayersService } from './layers.service';
 
@@ -32,13 +33,13 @@ interface PersistedScaleToolsState {
   providedIn: 'root',
 })
 export class ScaleToolsService {
-  private readonly STORAGE_KEY = 'smn-scale-tools-v2';
   private readonly MIN_CONTINUOUS_STOPS = 2;
   private readonly MIN_DISCRETE_STEPS = 1;
   private readonly MIN_PALETTE_ENTRIES = 1;
 
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
+  private previousDisplayLayerIds = new Set<string>();
 
   readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
@@ -118,9 +119,31 @@ export class ScaleToolsService {
         // Remove deactivated layers from selection
         const filteredSelection = currentSelection.filter((layerId) => activeLayerIds.has(layerId));
 
-        if (filteredSelection.length !== currentSelection.length) {
-          this.selectedLayerIdsOrdered.set(filteredSelection);
+        // Auto-select only truly newly activated layers.
+        const newLayerIds = Array.from(activeLayerIds).filter(
+          (layerId) => !this.previousDisplayLayerIds.has(layerId),
+        );
+
+        const updatedSelection = [...filteredSelection];
+        for (const layerId of newLayerIds) {
+          if (!updatedSelection.includes(layerId)) {
+            updatedSelection.push(layerId);
+          }
         }
+
+        if (
+          updatedSelection.length !== currentSelection.length ||
+          !updatedSelection.every((id, i) => currentSelection[i] === id)
+        ) {
+          this.selectedLayerIdsOrdered.set(updatedSelection);
+        }
+
+        // Default behavior: when a new layer is activated, show its palette.
+        if (newLayerIds.length > 0 && !this.enabled()) {
+          this.enabled.set(true);
+        }
+
+        this.previousDisplayLayerIds = activeLayerIds;
       });
     });
   }
@@ -179,7 +202,7 @@ export class ScaleToolsService {
     }
 
     try {
-      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEYS.SCALE_TOOLS);
       if (!raw) {
         return;
       }
@@ -205,7 +228,7 @@ export class ScaleToolsService {
     };
 
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(STORAGE_KEYS.SCALE_TOOLS, JSON.stringify(payload));
     } catch {
       // Ignore storage write errors.
     }

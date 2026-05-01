@@ -4,6 +4,7 @@ import { AlertsService } from './alerts.service';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
+import { STORAGE_KEYS } from '../../constants';
 
 /**
  * Servicio para gestionar polígonos en el mapa
@@ -13,8 +14,6 @@ import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
   providedIn: 'root',
 })
 export class PolygonService {
-  private readonly POLYGONS_LOCAL_STORAGE_KEY = 'mapasmn_polygons_v3';
-  private readonly SIMPLIFICATION_LEVEL_KEY = 'mapasmn_simplification_level';
   private readonly polygons = signal<Polygon[]>([]);
   private readonly alertsService = inject(AlertsService);
 
@@ -415,7 +414,7 @@ export class PolygonService {
   private saveToStorage(): void {
     try {
       const data = JSON.stringify(this.polygons());
-      localStorage.setItem(this.POLYGONS_LOCAL_STORAGE_KEY, data);
+      localStorage.setItem(STORAGE_KEYS.POLYGONS, data);
     } catch (error) {
       console.error('Error al guardar polígonos en localStorage:', error);
     }
@@ -426,7 +425,7 @@ export class PolygonService {
    */
   private loadFromStorage(): void {
     try {
-      const data = localStorage.getItem(this.POLYGONS_LOCAL_STORAGE_KEY);
+      const data = localStorage.getItem(STORAGE_KEYS.POLYGONS);
       if (data) {
         const parsed = JSON.parse(data) as Polygon[];
         // Convertir las fechas de string a Date
@@ -448,7 +447,7 @@ export class PolygonService {
    */
   private saveSimplificationLevelToStorage(level: number): void {
     try {
-      localStorage.setItem(this.SIMPLIFICATION_LEVEL_KEY, level.toString());
+      localStorage.setItem(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL, level.toString());
     } catch (error) {
       console.error('Error al guardar nivel de simplificación en localStorage:', error);
     }
@@ -459,7 +458,7 @@ export class PolygonService {
    */
   private loadSimplificationLevelFromStorage(): void {
     try {
-      const data = localStorage.getItem(this.SIMPLIFICATION_LEVEL_KEY);
+      const data = localStorage.getItem(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL);
       if (data !== null) {
         const level = parseInt(data, 10);
         if (!isNaN(level)) {
