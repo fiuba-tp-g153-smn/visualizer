@@ -1,15 +1,5 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import {
-  EMPTY,
-  Observable,
-  Subject,
-  Subscription,
-  debounceTime,
-  finalize,
-  forkJoin,
-  map,
-  switchMap,
-} from 'rxjs';
+import { EMPTY, Observable, Subject, Subscription, finalize, forkJoin, map, switchMap } from 'rxjs';
 
 import {
   ABIGoesTileLayer,
@@ -17,11 +7,9 @@ import {
   EcmwfTpTileLayer,
   GLMGoesTileLayer,
   GoesLayerControls,
-  Layer,
   LayerCategory,
   LayerType,
   PointQueryDisplayData,
-  PointQueryInteractionMode,
   RadarLayerControls,
   RadarTileLayer,
   TileLayerControls,
@@ -53,7 +41,7 @@ interface PointQueryViewerEntry {
 }
 
 interface PersistedPointQueryViewerState {
-  interactionMode: PointQueryInteractionMode;
+  enabled: boolean;
   selectedLayerIdsOrdered: string[];
   showMarker: boolean;
 }
@@ -72,9 +60,8 @@ function createCompositeId(layerId: string, elevationId: string): string {
   providedIn: 'root',
 })
 export class PointQueryViewerService {
-  private readonly STORAGE_KEY = 'smn-point-query-viewer-v4';
+  private readonly STORAGE_KEY = 'smn-point-query-viewer-v5';
   private readonly RESULTS_STORAGE_KEY = 'smn-point-query-results-v1';
-  private readonly automaticQueryDebounceMs = 500;
 
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
@@ -83,33 +70,20 @@ export class PointQueryViewerService {
   private readonly polygonDrawingService = inject(PolygonDrawingService);
 
   private readonly subscriptions = new Subscription();
-  private readonly mouseMoveSubject = new Subject<MouseCoordinates>();
   private readonly queryTriggerSubject = new Subject<MouseCoordinates>();
   private initialized = false;
 
-  readonly interactionMode = signal<PointQueryInteractionMode>(PointQueryInteractionMode.OFF);
-  readonly isViewerEnabled = computed<boolean>(
-    () => this.interactionMode() !== PointQueryInteractionMode.OFF,
-  );
+  readonly enabled = signal<boolean>(true);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
-  readonly isPointerMoving = signal<boolean>(false);
-  readonly lastMouseCoordinates = signal<MouseCoordinates | null>(null);
   readonly lastClickCoordinates = signal<MouseCoordinates | null>(null);
-  readonly showMarker = signal<boolean>(false);
+  readonly showMarker = signal<boolean>(true);
 
   // Current marker position (for rendering on map)
   readonly markerPosition = computed<MouseCoordinates | null>(() => {
-    if (!this.showMarker() || !this.isViewerEnabled()) {
+    if (!this.showMarker() || !this.enabled()) {
       return null;
     }
-    const mode = this.interactionMode();
-    if (mode === PointQueryInteractionMode.MANUAL) {
-      return this.lastClickCoordinates();
-    }
-    if (mode === PointQueryInteractionMode.AUTOMATIC) {
-      return this.lastMouseCoordinates();
-    }
-    return null;
+    return this.lastClickCoordinates();
   });
 
   private readonly resultsBySource = signal<Map<string, PointQueryDisplayData>>(new Map());
@@ -156,10 +130,10 @@ export class PointQueryViewerService {
     const selectedEntries = this.getSelectedDisplayItems();
     const results = this.resultsBySource();
     const loadingIds = this.loadingLayerIds();
-    const showMovingState =
-      this.interactionMode() === PointQueryInteractionMode.AUTOMATIC && this.isPointerMoving();
 
     return selectedEntries.flatMap((entry): PointQueryViewerEntry[] => {
+      const showMovingState = entry.controls.playback.isPlaying;
+
       const primary: PointQueryViewerEntry = {
         layerId: entry.layerId,
         layerName: this.layersService.getLayerFullName(entry.layer, entry.elevationId),
@@ -206,20 +180,59 @@ export class PointQueryViewerService {
 
     effect(() => {
       // When active layers change, keep only selected layer IDs that still exist.
-      const allLayerIds = new Set(this.displayItems().map((item) => item.layerId));
+      // Auto-select newly activated layers when enabled.
+      const allItems = this.displayItems();
+      const allLayerIds = new Set(allItems.map((item) => item.layerId));
+      const isEnabled = this.enabled();
 
       const currentSelection = this.selectedLayerIdsOrdered();
       const filteredSelection = currentSelection.filter((layerId) => allLayerIds.has(layerId));
 
-      if (filteredSelection.length !== currentSelection.length) {
-        this.selectedLayerIdsOrdered.set(filteredSelection);
-      }
+      // Auto-select newly activated layers only if enabled
+      const newLayerIds = isEnabled
+        ? allItems
+            .map((item) => item.layerId)
+            .filter((layerId) => !currentSelection.includes(layerId))
+        : [];
+
+      const updatedSelection = [...filteredSelection, ...newLayerIds];
 
       if (
-        filteredSelection.length === 0 &&
-        this.interactionMode() !== PointQueryInteractionMode.OFF
+        updatedSelection.length !== currentSelection.length ||
+        !updatedSelection.every((id, i) => currentSelection[i] === id)
       ) {
-        this.interactionMode.set(PointQueryInteractionMode.OFF);
+        this.selectedLayerIdsOrdered.set(updatedSelection);
+
+        // Clean up results and loading states for removed layers
+        const updatedSelectionSet = new Set(updatedSelection);
+        const currentResults = this.resultsBySource();
+        const currentLoading = this.loadingLayerIds();
+
+        // Remove results for deselected layers
+        const nextResults = new Map(currentResults);
+        let resultsChanged = false;
+        for (const layerId of currentResults.keys()) {
+          if (!updatedSelectionSet.has(layerId)) {
+            nextResults.delete(layerId);
+            resultsChanged = true;
+          }
+        }
+        if (resultsChanged) {
+          this.resultsBySource.set(nextResults);
+        }
+
+        // Remove loading states for deselected layers
+        const nextLoading = new Set(currentLoading);
+        let loadingChanged = false;
+        for (const layerId of currentLoading) {
+          if (!updatedSelectionSet.has(layerId)) {
+            nextLoading.delete(layerId);
+            loadingChanged = true;
+          }
+        }
+        if (loadingChanged) {
+          this.loadingLayerIds.set(nextLoading);
+        }
       }
     });
 
@@ -228,7 +241,6 @@ export class PointQueryViewerService {
         return;
       }
 
-      this.isPointerMoving.set(false);
       this.loadingLayerIds.set(new Set());
     });
 
@@ -253,22 +265,6 @@ export class PointQueryViewerService {
     }
 
     this.initialized = true;
-
-    this.subscriptions.add(
-      this.mouseMoveSubject
-        .pipe(debounceTime(this.automaticQueryDebounceMs))
-        .subscribe((coordinates) => {
-          this.isPointerMoving.set(false);
-          this.lastMouseCoordinates.set(coordinates);
-
-          if (
-            this.interactionMode() === PointQueryInteractionMode.AUTOMATIC &&
-            this.canRunQueries()
-          ) {
-            this.queryTriggerSubject.next(coordinates);
-          }
-        }),
-    );
 
     this.subscriptions.add(
       this.queryTriggerSubject
@@ -331,16 +327,6 @@ export class PointQueryViewerService {
     );
   }
 
-  handleMouseMove(lat: number, lon: number): void {
-    if (!this.canRunQueries() || this.interactionMode() !== PointQueryInteractionMode.AUTOMATIC) {
-      this.isPointerMoving.set(false);
-      return;
-    }
-
-    this.isPointerMoving.set(true);
-    this.mouseMoveSubject.next({ lat, lon });
-  }
-
   handleMapClick(lat: number, lon: number, button: number): void {
     if (button !== 0) {
       return;
@@ -349,16 +335,15 @@ export class PointQueryViewerService {
     const coordinates = { lat, lon };
     this.lastClickCoordinates.set(coordinates);
 
-    if (!this.canRunQueries() || this.interactionMode() !== PointQueryInteractionMode.MANUAL) {
+    if (!this.canRunQueries()) {
       return;
     }
 
     this.queryTriggerSubject.next(coordinates);
   }
 
-  setInteractionMode(mode: PointQueryInteractionMode): void {
-    this.interactionMode.set(mode);
-    this.isPointerMoving.set(false);
+  setEnabled(enabled: boolean): void {
+    this.enabled.set(enabled);
   }
 
   toggleMarker(enabled: boolean): void {
@@ -375,8 +360,8 @@ export class PointQueryViewerService {
 
       this.selectedLayerIdsOrdered.set([...currentSelection, layerId]);
 
-      if (this.interactionMode() === PointQueryInteractionMode.OFF) {
-        this.interactionMode.set(PointQueryInteractionMode.MANUAL);
+      if (!this.enabled()) {
+        this.enabled.set(true);
       }
 
       return;
@@ -387,16 +372,13 @@ export class PointQueryViewerService {
 
   removeSourceSelection(layerId: string): void {
     const currentSelection = this.selectedLayerIdsOrdered();
-    if (!currentSelection.includes(layerId)) {
-      return;
+
+    // Remove from selection if present
+    if (currentSelection.includes(layerId)) {
+      this.selectedLayerIdsOrdered.set(currentSelection.filter((id) => id !== layerId));
     }
 
-    this.selectedLayerIdsOrdered.set(currentSelection.filter((id) => id !== layerId));
-
-    if (this.selectedLayerIdsOrdered().length === 0) {
-      this.interactionMode.set(PointQueryInteractionMode.OFF);
-    }
-
+    // Always clean results and loading states
     const nextResults = new Map(this.resultsBySource());
     nextResults.delete(layerId);
     this.resultsBySource.set(nextResults);
@@ -428,23 +410,19 @@ export class PointQueryViewerService {
 
   private canRunQueries(): boolean {
     return (
-      this.interactionMode() !== PointQueryInteractionMode.OFF &&
+      this.enabled() &&
       this.selectedLayerIdsOrdered().length > 0 &&
       this.polygonDrawingService.drawingMode() === DrawingMode.NONE
     );
   }
 
   private disableViewerAndClearSources(): void {
-    if (
-      this.interactionMode() === PointQueryInteractionMode.OFF &&
-      this.selectedLayerIdsOrdered().length === 0
-    ) {
+    if (!this.enabled() && this.selectedLayerIdsOrdered().length === 0) {
       return;
     }
 
-    this.interactionMode.set(PointQueryInteractionMode.OFF);
+    this.enabled.set(false);
     this.clearSelectedSources();
-    this.isPointerMoving.set(false);
   }
 
   private loadStateFromStorage(): void {
@@ -458,27 +436,11 @@ export class PointQueryViewerService {
         return;
       }
 
-      const parsed = JSON.parse(raw) as Partial<PersistedPointQueryViewerState>;
+      const parsed = JSON.parse(raw) as PersistedPointQueryViewerState;
 
-      if (
-        parsed.interactionMode === PointQueryInteractionMode.OFF ||
-        parsed.interactionMode === PointQueryInteractionMode.MANUAL ||
-        parsed.interactionMode === PointQueryInteractionMode.AUTOMATIC
-      ) {
-        this.interactionMode.set(parsed.interactionMode);
-      }
-
-      if (Array.isArray(parsed.selectedLayerIdsOrdered)) {
-        this.selectedLayerIdsOrdered.set(
-          parsed.selectedLayerIdsOrdered.filter(
-            (value): value is string => typeof value === 'string',
-          ),
-        );
-      }
-
-      if (typeof parsed.showMarker === 'boolean') {
-        this.showMarker.set(parsed.showMarker);
-      }
+      this.enabled.set(parsed.enabled ?? false);
+      this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
+      this.showMarker.set(parsed.showMarker ?? false);
     } catch (error) {
       console.warn('Failed to load point query viewer state from localStorage:', error);
     }
@@ -490,7 +452,7 @@ export class PointQueryViewerService {
     }
 
     const payload: PersistedPointQueryViewerState = {
-      interactionMode: this.interactionMode(),
+      enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
       showMarker: this.showMarker(),
     };

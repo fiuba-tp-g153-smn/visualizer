@@ -72,11 +72,18 @@ const QUERY_MARKER_ICON = L.divIcon({
   iconSize: [20, 20],
   iconAnchor: [10, 10],
   html: `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="10" cy="10" r="4" fill="#0090d0" fill-opacity="0.3" stroke="#0090d0" stroke-width="1.5"/>
-    <line x1="10" y1="0" x2="10" y2="6" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="10" y1="14" x2="10" y2="20" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="0" y1="10" x2="6" y2="10" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="14" y1="10" x2="20" y2="10" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
+    <defs>
+      <filter id="shadow" x="-100%" y="-100%" width="300%" height="300%">
+        <feDropShadow dx="0" dy="0" stdDeviation="1" flood-color="#000000" flood-opacity="0.6"/>
+      </filter>
+    </defs>
+    <g filter="url(#shadow)">
+      <line x1="10" y1="0" x2="10" y2="6" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="10" y1="14" x2="10" y2="20" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="0" y1="10" x2="6" y2="10" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="14" y1="10" x2="20" y2="10" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="10" cy="10" r="2" fill="none" stroke="white" stroke-width="2"/>
+    </g>
   </svg>`,
 });
 
