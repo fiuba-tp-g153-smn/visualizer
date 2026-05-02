@@ -106,9 +106,14 @@ export class VectorOverlayService {
         const value = this.readValue(feature, config.valueProperty);
         if (value === null) return;
         const label = config.labelFor(value);
-        if (label && layer instanceof L.Polyline) {
-          layer.setText(label, config.textpathOptions);
-        }
+        if (!(label && layer instanceof L.Polyline)) return;
+        // SVG `<textPath>` sigue la dirección del path. Si el tramo va de
+        // derecha a izquierda el texto sale invertido. Reorientarlo evita
+        // tener que recurrir a `orientation: 'flip'` (que en este plugin
+        // rota el `<text>` entero alrededor del bbox y despega los glifos
+        // de la curva).
+        ensureLeftToRight(layer);
+        layer.setText(label, config.textpathOptions);
       },
     });
   }
@@ -173,6 +178,40 @@ export class VectorOverlayService {
     const next = this.waiters.shift();
     if (next) next();
   }
+}
+
+/**
+ * Garantiza que la polyline esté orientada izquierda→derecha (longitud
+ * creciente del primer al último vértice). Si el tramo va al revés invierte
+ * los latlngs in-place vía `setLatLngs`. Para `MultiLineString` aplica la
+ * heurística por anillo, ya que cada sub-tramo tiene su propio `<textPath>`.
+ *
+ * Comparar solo extremos es barato y suficiente: nos importa la dirección
+ * global del path para decidir si el texto saldría de cabeza, no la
+ * monotonía local.
+ */
+function ensureLeftToRight(layer: L.Polyline): void {
+  const latlngs = layer.getLatLngs() as L.LatLng[] | L.LatLng[][];
+  if (latlngs.length === 0) return;
+
+  if (latlngs[0] instanceof L.LatLng) {
+    const arr = latlngs as L.LatLng[];
+    if (arr.length >= 2 && arr[arr.length - 1].lng < arr[0].lng) {
+      layer.setLatLngs([...arr].reverse());
+    }
+    return;
+  }
+
+  const rings = latlngs as L.LatLng[][];
+  let mutated = false;
+  const fixed = rings.map((ring) => {
+    if (ring.length >= 2 && ring[ring.length - 1].lng < ring[0].lng) {
+      mutated = true;
+      return [...ring].reverse();
+    }
+    return ring;
+  });
+  if (mutated) layer.setLatLngs(fixed);
 }
 
 /**
