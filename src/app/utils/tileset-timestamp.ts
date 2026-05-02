@@ -72,13 +72,16 @@ export function parseEcmwfCenteredTimestamp(periodTs: string): Date | null {
 }
 
 /**
- * Formats an ECMWF forecast timestamp as ISO 8601 for display.
- * Example: "20260330T1200Z" → "2026-03-30T12:00Z"
+ * Formats an ECMWF forecast timestamp as "MM-DD HHh" for compact display.
+ * Example: "20260502T1200Z" → "05-02 12h"
  */
 export function formatEcmwfForecastTs(forecastTs: string): string {
   if (forecastTs.length < 13) return forecastTs;
 
-  return `${forecastTs.substring(0, 4)}-${forecastTs.substring(4, 6)}-${forecastTs.substring(6, 8)}T${forecastTs.substring(9, 11)}:${forecastTs.substring(11, 13)}Z`;
+  const month = forecastTs.substring(4, 6);
+  const day = forecastTs.substring(6, 8);
+  const hour = forecastTs.substring(9, 11);
+  return `${month}-${day} ${hour}h`;
 }
 
 // ============================================================================
