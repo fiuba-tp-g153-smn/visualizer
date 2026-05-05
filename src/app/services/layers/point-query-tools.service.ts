@@ -20,6 +20,7 @@ import { LayersService } from './layers.service';
 import { PointQueryService, buildSecondaryLayerId } from './point-query.service';
 import { MapInfoService } from './map-info.service';
 import { DrawingMode, PolygonDrawingService } from '../polygons/polygon-drawing.service';
+import { formatEcmwfForecastTs } from '../../utils/tileset-timestamp';
 
 interface MouseCoordinates {
   lat: number;
@@ -29,6 +30,7 @@ interface MouseCoordinates {
 type DisplaySourceItem = {
   layerId: string;
   elevationId?: string;
+  forecastTs?: string;
   layerName: string;
   layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer;
   controls: TileLayerControls;
@@ -52,9 +54,9 @@ interface SourceQueryResult {
   result: PointQueryDisplayData;
 }
 
-/** Helper to create composite IDs from layerId and elevationId */
-function createCompositeId(layerId: string, elevationId: string): string {
-  return `${layerId}:${elevationId}`;
+/** Helper to create composite IDs from a layer id and a sub-key (elevation or forecast). */
+function createCompositeId(layerId: string, subKey: string): string {
+  return `${layerId}:${subKey}`;
 }
 
 @Injectable({
@@ -93,15 +95,13 @@ export class PointQueryViewerService {
 
     const satelliteItems: DisplaySourceItem[] = activeLayers
       .filter(
-        ({ layer }) =>
-          layer.type === LayerType.TILE &&
-          (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF_TP),
+        ({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.GOES_19,
       )
       .map(({ layer, controls }) => ({
         layerId: layer.id,
         layerName: this.layersService.getLayerFullName(layer),
-        layer: layer as ABIGoesTileLayer | GLMGoesTileLayer | EcmwfTpTileLayer,
-        controls: controls as GoesLayerControls | EcmwfTpLayerControls,
+        layer: layer as ABIGoesTileLayer | GLMGoesTileLayer,
+        controls: controls as GoesLayerControls,
       }));
 
     const radarItems: DisplaySourceItem[] = activeLayers
@@ -122,7 +122,26 @@ export class PointQueryViewerService {
         }));
       });
 
-    return [...satelliteItems, ...radarItems];
+    const ecmwfItems: DisplaySourceItem[] = activeLayers
+      .filter(
+        ({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.ECMWF_TP,
+      )
+      .flatMap(({ layer, controls }): DisplaySourceItem[] => {
+        const ecmwfLayer = layer as EcmwfTpTileLayer;
+        const ecmwfControls = controls as EcmwfTpLayerControls;
+        const selectedForecasts = ecmwfControls.forecast.selectedForecastTimestamps;
+        const baseName = this.layersService.getLayerFullName(ecmwfLayer);
+
+        return selectedForecasts.map((forecastTs) => ({
+          layerId: createCompositeId(layer.id, forecastTs),
+          layerName: `${baseName} — ${formatEcmwfForecastTs(forecastTs)}`,
+          forecastTs,
+          layer: ecmwfLayer,
+          controls: ecmwfControls,
+        }));
+      });
+
+    return [...satelliteItems, ...radarItems, ...ecmwfItems];
   });
 
   readonly floatingViewerEntries = computed<PointQueryViewerEntry[]>(() => {
@@ -135,7 +154,7 @@ export class PointQueryViewerService {
 
       const primary: PointQueryViewerEntry = {
         layerId: entry.layerId,
-        layerName: this.layersService.getLayerFullName(entry.layer, entry.elevationId),
+        layerName: entry.layerName,
         data: results.get(entry.layerId) ?? null,
         isLoading: loadingIds.has(entry.layerId) || showMovingState,
       };
@@ -147,9 +166,12 @@ export class PointQueryViewerService {
         return [primary];
       }
       const secondaryLayerId = buildSecondaryLayerId(entry.layerId);
+      const secondaryLayerName = entry.forecastTs
+        ? `Presión a nivel del mar — ${formatEcmwfForecastTs(entry.forecastTs)}`
+        : 'Presión a nivel del mar';
       const secondaryEntry: PointQueryViewerEntry = {
         layerId: secondaryLayerId,
-        layerName: 'Presión a nivel del mar',
+        layerName: secondaryLayerName,
         data: results.get(secondaryLayerId) ?? null,
         isLoading: loadingIds.has(secondaryLayerId) || showMovingState,
       };
@@ -295,9 +317,16 @@ export class PointQueryViewerService {
             this.loadingLayerIds.set(loadingIds);
 
             const requests: Array<Observable<SourceQueryResult>> = [];
-            for (const { layerId, layer, controls, elevationId } of selectedEntries) {
+            for (const { layerId, layer, controls, elevationId, forecastTs } of selectedEntries) {
               const primary$ = this.pointQueryService
-                .queryLayerPoint(layer, controls, coordinates.lat, coordinates.lon, elevationId)
+                .queryLayerPoint(
+                  layer,
+                  controls,
+                  coordinates.lat,
+                  coordinates.lon,
+                  elevationId,
+                  forecastTs,
+                )
                 .pipe(map((result): SourceQueryResult => ({ layerId, result })));
               requests.push(primary$);
 
@@ -306,6 +335,7 @@ export class PointQueryViewerService {
                 controls,
                 coordinates.lat,
                 coordinates.lon,
+                forecastTs,
               );
               if (secondary$) {
                 const secondaryLayerId = buildSecondaryLayerId(layerId);
