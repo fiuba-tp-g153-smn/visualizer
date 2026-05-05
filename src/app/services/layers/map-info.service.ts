@@ -1,8 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import * as L from 'leaflet';
 import { MAP_CONFIG } from '../../config';
-
-const STORAGE_KEY = 'smn-map-tools-v3';
+import { STORAGE_KEYS } from '../../constants';
 
 interface MapToolsState {
   showCoordinates: boolean;
@@ -72,11 +71,18 @@ const QUERY_MARKER_ICON = L.divIcon({
   iconSize: [20, 20],
   iconAnchor: [10, 10],
   html: `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="10" cy="10" r="4" fill="#0090d0" fill-opacity="0.3" stroke="#0090d0" stroke-width="1.5"/>
-    <line x1="10" y1="0" x2="10" y2="6" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="10" y1="14" x2="10" y2="20" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="0" y1="10" x2="6" y2="10" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="14" y1="10" x2="20" y2="10" stroke="#0090d0" stroke-width="1.5" stroke-linecap="round"/>
+    <defs>
+      <filter id="shadow" x="-100%" y="-100%" width="300%" height="300%">
+        <feDropShadow dx="0" dy="0" stdDeviation="1" flood-color="#000000" flood-opacity="0.6"/>
+      </filter>
+    </defs>
+    <g filter="url(#shadow)">
+      <line x1="10" y1="0" x2="10" y2="6" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="10" y1="14" x2="10" y2="20" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="0" y1="10" x2="6" y2="10" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="14" y1="10" x2="20" y2="10" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="10" cy="10" r="2" fill="none" stroke="white" stroke-width="2"/>
+    </g>
   </svg>`,
 });
 
@@ -157,7 +163,7 @@ export class MapInfoService {
 
   private loadPersistedState(): void {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEYS.MAP_TOOLS);
       if (stored) {
         const state = JSON.parse(stored) as MapToolsState;
         this.showCoordinates.set(state.showCoordinates ?? MAP_CONFIG.defaultShowCoordinates);
@@ -182,7 +188,7 @@ export class MapInfoService {
         showCursorLines: this.showCursorLines(),
         showGraticule: this.showGraticule(),
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEYS.MAP_TOOLS, JSON.stringify(state));
     } catch {
       // Ignore storage errors
     }

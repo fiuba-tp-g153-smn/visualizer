@@ -1,0 +1,79 @@
+<div class="settings-panel">
+  <mat-tab-group class="settings-tabs" animationDuration="0ms">
+    <!-- Tab 1: Unidades -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
+          <mat-icon class="tab-icon">tune</mat-icon>
+          <span class="tab-label">Unidades</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <div class="settings-section">
+          <div class="setting-group">
+            <h3 class="setting-title">Temperatura</h3>
+            <mat-radio-group
+              [value]="unitsSettings.temperatureUnit()"
+              (change)="onTemperatureUnitChange($event.value)"
+              class="temperature-unit-group"
+            >
+              <mat-radio-button
+                [value]="TEMPERATURE_UNITS.CELSIUS"
+                color="primary"
+                matTooltip="Mostrar temperaturas en grados Celsius (°C)"
+              >
+                Celsius (°C)
+              </mat-radio-button>
+              <mat-radio-button
+                [value]="TEMPERATURE_UNITS.KELVIN"
+                color="primary"
+                matTooltip="Mostrar temperaturas en Kelvin (K)"
+              >
+                Kelvin (K)
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <div class="setting-group">
+            <h3 class="setting-title">Precisión decimal</h3>
+            <div class="precision-control">
+              <input
+                type="number"
+                [value]="unitsSettings.decimalPrecision()"
+                (input)="onDecimalPrecisionInput($any($event.target).value)"
+                (blur)="onDecimalPrecisionBlur($any($event.target))"
+                min="0"
+                max="3"
+                step="1"
+                class="precision-input"
+                matTooltip="Cantidad de decimales a mostrar (0-3)"
+              />
+              <span class="precision-label">decimales</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Tab 2: Atajos de teclado -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
+          <mat-icon class="tab-icon">keyboard</mat-icon>
+          <span class="tab-label">Atajos</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <div class="settings-section">
+          <div class="placeholder-section">
+            <mat-icon class="placeholder-icon">construction</mat-icon>
+            <h3 class="placeholder-title">A desarrollar</h3>
+            <p class="placeholder-description">
+              Configuración de atajos de teclado personalizados.
+            </p>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

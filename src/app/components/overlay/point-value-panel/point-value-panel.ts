@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '../../../models';
+import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
+import {
+  convertValueForDisplay,
+  getDisplayUnit,
+  isKelvinUnit,
+} from '../../../utils/unit-conversion.utils';
 
 @Component({
   selector: 'app-point-value-panel',
@@ -22,6 +28,7 @@ import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '..
 })
 export class PointValuePanelComponent {
   readonly PointQueryStatus = PointQueryStatus;
+  private readonly unitsSettings = inject(UnitsSettingsService);
 
   @Input() visible = false;
   @Input() isLoading = false;
@@ -29,11 +36,6 @@ export class PointValuePanelComponent {
   @Input() data: PointQueryDisplayData | null = null;
 
   @Output() close = new EventEmitter<void>();
-
-  private readonly decimalFormatter = new Intl.NumberFormat('es-AR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
   onClose(): void {
     this.close.emit();
@@ -47,7 +49,15 @@ export class PointValuePanelComponent {
     if (this.data?.status !== PointQueryStatus.VALUE) {
       return '';
     }
-    return this.decimalFormatter.format(this.data.value);
+    const value = convertValueForDisplay(this.data.value, this.data.unit, this.unitsSettings);
+    return this.unitsSettings.numberFormatter().format(value);
+  }
+
+  get displayUnit(): string {
+    if (this.data?.status !== PointQueryStatus.VALUE) {
+      return '';
+    }
+    return getDisplayUnit(this.data.unit, this.unitsSettings);
   }
 
   get valueTooltip(): string {
@@ -55,10 +65,10 @@ export class PointValuePanelComponent {
       return '';
     }
     const { min, max } = this.data.scaleRange;
-    return `Rango: ${this.format(min)} - ${this.format(max)} ${this.data.unit}`;
-  }
-
-  private format(num: number): string {
-    return this.decimalFormatter.format(num);
+    const displayMin = convertValueForDisplay(min, this.data.unit, this.unitsSettings);
+    const displayMax = convertValueForDisplay(max, this.data.unit, this.unitsSettings);
+    const displayUnit = getDisplayUnit(this.data.unit, this.unitsSettings);
+    const formatter = this.unitsSettings.numberFormatter();
+    return `Rango: ${formatter.format(displayMin)} - ${formatter.format(displayMax)} ${displayUnit}`;
   }
 }

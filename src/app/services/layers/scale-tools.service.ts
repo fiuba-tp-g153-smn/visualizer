@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 
 import { Layer, LayerCategory, LayerControls, LayerType, ScaleType } from '../../models';
+import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from './layer-control.service';
 import { LayersService } from './layers.service';
 
@@ -24,6 +25,7 @@ export interface ScaleToolEntry {
 }
 
 interface PersistedScaleToolsState {
+  enabled: boolean;
   selectedLayerIdsOrdered: string[];
 }
 
@@ -31,14 +33,15 @@ interface PersistedScaleToolsState {
   providedIn: 'root',
 })
 export class ScaleToolsService {
-  private readonly STORAGE_KEY = 'smn-scale-tools-v1';
   private readonly MIN_CONTINUOUS_STOPS = 2;
   private readonly MIN_DISCRETE_STEPS = 1;
   private readonly MIN_PALETTE_ENTRIES = 1;
 
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
+  private previousDisplayLayerIds = new Set<string>();
 
+  readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
 
   readonly displayItems = computed<ScaleLayerItem[]>(() => {
@@ -96,7 +99,7 @@ export class ScaleToolsService {
   });
 
   readonly shouldShowScales = computed<boolean>(() => {
-    return this.scaleEntries().length > 0;
+    return this.enabled() && this.scaleEntries().length > 0;
   });
 
   constructor() {
@@ -116,12 +119,17 @@ export class ScaleToolsService {
         // Remove deactivated layers from selection
         const filteredSelection = currentSelection.filter((layerId) => activeLayerIds.has(layerId));
 
-        // Auto-select newly activated layers
-        const newLayerIds = activeItems
-          .map((item) => item.layerId)
-          .filter((layerId) => !currentSelection.includes(layerId));
+        // Auto-select only truly newly activated layers.
+        const newLayerIds = Array.from(activeLayerIds).filter(
+          (layerId) => !this.previousDisplayLayerIds.has(layerId),
+        );
 
-        const updatedSelection = [...filteredSelection, ...newLayerIds];
+        const updatedSelection = [...filteredSelection];
+        for (const layerId of newLayerIds) {
+          if (!updatedSelection.includes(layerId)) {
+            updatedSelection.push(layerId);
+          }
+        }
 
         if (
           updatedSelection.length !== currentSelection.length ||
@@ -129,22 +137,64 @@ export class ScaleToolsService {
         ) {
           this.selectedLayerIdsOrdered.set(updatedSelection);
         }
+
+        // Default behavior: when a new layer is activated, show its palette.
+        if (newLayerIds.length > 0 && !this.enabled()) {
+          this.enabled.set(true);
+        }
+
+        this.previousDisplayLayerIds = activeLayerIds;
       });
     });
   }
 
+  setEnabled(enabled: boolean): void {
+    this.enabled.set(enabled);
+  }
+
   toggleLayerSelection(layerId: string): void {
+    const canonical = this.getCanonicalLayerId(layerId);
+    if (!canonical) return;
+
     const current = this.selectedLayerIdsOrdered();
-    if (current.includes(layerId)) {
-      this.selectedLayerIdsOrdered.set(current.filter((id) => id !== layerId));
+    if (current.includes(canonical)) {
+      this.selectedLayerIdsOrdered.set(current.filter((id) => id !== canonical));
       return;
     }
 
-    this.selectedLayerIdsOrdered.set([...current, layerId]);
+    this.selectedLayerIdsOrdered.set([...current, canonical]);
+
+    if (!this.enabled()) {
+      this.enabled.set(true);
+    }
   }
 
   isLayerSelected(layerId: string): boolean {
-    return this.selectedLayerIdsOrdered().includes(layerId);
+    const canonical = this.getCanonicalLayerId(layerId);
+    if (!canonical) return false;
+    return this.selectedLayerIdsOrdered().includes(canonical);
+  }
+
+  /**
+   * Map any layer id to the canonical display id used by the scale tools.
+   * For RADAR layers multiple layer ids may share the same scale; displayItems
+   * deduplicates by product name and uses a representative layer id. This
+   * method resolves a given layer id to that representative id when needed.
+   */
+  private getCanonicalLayerId(layerId: string): string | undefined {
+    const items = this.displayItems();
+
+    // If the layerId is already one of the display items, return it directly
+    if (items.some((it) => it.layerId === layerId)) return layerId;
+
+    // Otherwise, try to find a display item that represents the same logical
+    // layer. For RADAR layers we deduplicate by product name, so match by name.
+    const layer = this.layersService.getLayerById(layerId as string);
+    if (!layer) return undefined;
+
+    // Match by layer name to find the representative item
+    const match = items.find((it) => it.layer.name === layer.name);
+    return match?.layerId;
   }
 
   clearSelection(): void {
@@ -179,21 +229,17 @@ export class ScaleToolsService {
     }
 
     try {
-      const raw = localStorage.getItem(this.STORAGE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEYS.SCALE_TOOLS);
       if (!raw) {
         return;
       }
 
-      const parsed = JSON.parse(raw) as Partial<PersistedScaleToolsState>;
+      const parsed = JSON.parse(raw) as PersistedScaleToolsState;
 
-      if (Array.isArray(parsed.selectedLayerIdsOrdered)) {
-        this.selectedLayerIdsOrdered.set(
-          parsed.selectedLayerIdsOrdered.filter(
-            (value): value is string => typeof value === 'string',
-          ),
-        );
-      }
+      this.enabled.set(parsed.enabled ?? false);
+      this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
     } catch {
+      this.enabled.set(false);
       this.selectedLayerIdsOrdered.set([]);
     }
   }
@@ -204,11 +250,12 @@ export class ScaleToolsService {
     }
 
     const payload: PersistedScaleToolsState = {
+      enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
     };
 
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(payload));
+      localStorage.setItem(STORAGE_KEYS.SCALE_TOOLS, JSON.stringify(payload));
     } catch {
       // Ignore storage write errors.
     }

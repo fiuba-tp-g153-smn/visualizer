@@ -1,4 +1,5 @@
 import { LayerScale, ScaleType } from '../../../../models';
+import { ABI_UNITS, TEMPERATURE_UNITS } from '../../../../constants';
 
 interface AbiRangePaletteConfig {
   readonly min: number;
@@ -822,20 +823,20 @@ if (
 export const ABI_CH2_SCALE = buildDiscreteScaleFromRange({
   min: 0,
   max: 1,
-  unit: '%',
+  unit: ABI_UNITS.REFLECTANCE,
   colors: ABI_CH2_COLORS,
 });
 
 export const ABI_CH9_SCALE = buildDiscreteScaleFromRange({
   min: 161,
   max: 330,
-  unit: 'K',
+  unit: TEMPERATURE_UNITS.KELVIN,
   colors: ABI_CH9_COLORS,
 });
 
 export const ABI_CH13_SCALE = buildDiscreteScaleFromRange({
   min: 183.15,
   max: 323.15,
-  unit: 'K',
+  unit: TEMPERATURE_UNITS.KELVIN,
   colors: ABI_CH13_COLORS,
 });

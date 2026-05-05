@@ -16,7 +16,7 @@
       <mat-progress-spinner diameter="14" mode="indeterminate"></mat-progress-spinner>
     } @else if (valueData) {
       <span class="value" [matTooltip]="valueTooltip">{{ formattedValue }}</span>
-      <span class="unit">{{ valueData.unit }}</span>
+      <span class="unit">{{ displayUnit }}</span>
     } @else if (!data || data.status === PointQueryStatus.NO_DATA) {
       <span class="empty">Sin dato</span>
     } @else {

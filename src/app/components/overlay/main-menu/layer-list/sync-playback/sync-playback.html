@@ -129,11 +129,7 @@
                 <mat-chip
                   class="fewer-frames-chip"
                   [matTooltip]="
-                    'Solo ' +
-                    getActualTilesetCount(item.layer.id) +
-                    ' imágenes disponibles (se solicitaron ' +
-                    state().frameCount +
-                    ')'
+                    'Solo ' + getActualTilesetCount(item.layer.id) + ' imágenes disponibles'
                   "
                 >
                   {{ getActualTilesetCount(item.layer.id) }}
