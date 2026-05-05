@@ -33,6 +33,10 @@ export class MapToolsComponent implements MenuPanelComponent {
   }
 
   getPointSelectedCount(): number {
+    if (!this.viewer.enabled()) {
+      return 0;
+    }
+
     return this.viewer.selectedLayerIdsOrdered().length;
   }
 
