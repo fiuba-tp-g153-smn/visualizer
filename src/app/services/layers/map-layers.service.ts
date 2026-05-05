@@ -186,9 +186,9 @@ export class MapLayersService {
    * declare a `secondaryRender`. Only the *current* timestamp is rendered per
    * layer; the data fetch is deduped + cached by VectorOverlayService.
    *
-   * The overlay tracks the same forecast as the primary TP raster: when
-   * multiple forecasts are selected, only the *first* selected forecast is used
-   * for isobars to keep the visualization legible.
+   * One overlay is rendered per selected forecast — when several forecasts are
+   * active on the primary TP raster, each gets its own isobar net so that the
+   * vector overlay stays in lockstep with the rasters above it.
    */
   private syncVectorOverlays(sortedLayerIds: string[]): void {
     if (!this.map) return;
@@ -217,32 +217,33 @@ export class MapLayersService {
       if (!currentEntry) continue;
       const currentTimestampTs = currentEntry.id;
 
-      const primaryForecastTs = controls.forecast.selectedForecastTimestamps[0];
-      if (!primaryForecastTs) continue;
-
-      // Only render isobars if the chosen forecast actually has data for the
-      // current timestamp (mirrors the TP raster's check).
       const forecastsForCurrent = config.forecastsByPeriod[currentTimestampTs];
-      if (!forecastsForCurrent || !forecastsForCurrent.includes(primaryForecastTs)) continue;
+      if (!forecastsForCurrent) continue;
 
-      const url = secondary.buildUrl(primaryForecastTs, currentTimestampTs);
-      const overlayKey = `${layerId}#${secondary.id}#${primaryForecastTs}#${currentTimestampTs}`;
-      const cached = this.vectorOverlay.peek(url);
+      for (const forecastTs of controls.forecast.selectedForecastTimestamps) {
+        // Only render isobars if the forecast actually has data for the
+        // current timestamp (mirrors the TP raster's check).
+        if (!forecastsForCurrent.includes(forecastTs)) continue;
 
-      if (cached) {
-        const overlay = this.vectorOverlay.buildLayer(cached, secondary);
-        // Force the overlay onto our dedicated pane so it always sits above
-        // raster tiles regardless of insertion order.
-        overlay.options.pane = VECTOR_OVERLAY_PANE;
-        desired.set(overlayKey, overlay);
-      } else {
-        // Cache miss: trigger an async load. The service bumps `loadTick` on
-        // success, which re-runs the parent effect → re-runs syncLayers().
-        void this.vectorOverlay.load(url);
+        const url = secondary.buildUrl(forecastTs, currentTimestampTs);
+        const overlayKey = `${layerId}#${secondary.id}#${forecastTs}#${currentTimestampTs}`;
+        const cached = this.vectorOverlay.peek(url);
+
+        if (cached) {
+          const overlay = this.vectorOverlay.buildLayer(cached, secondary);
+          // Force the overlay onto our dedicated pane so it always sits above
+          // raster tiles regardless of insertion order.
+          overlay.options.pane = VECTOR_OVERLAY_PANE;
+          desired.set(overlayKey, overlay);
+        } else {
+          // Cache miss: trigger an async load. The service bumps `loadTick` on
+          // success, which re-runs the parent effect → re-runs syncLayers().
+          void this.vectorOverlay.load(url);
+        }
+
+        // Prefetch upcoming frames for smooth animation.
+        this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs);
       }
-
-      // Prefetch upcoming frames for smooth animation.
-      this.prefetchSecondary(secondary, config, currentTimeIndex, primaryForecastTs);
     }
 
     // Diff against the previously-rendered overlays.
