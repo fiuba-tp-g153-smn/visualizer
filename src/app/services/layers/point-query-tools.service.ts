@@ -75,6 +75,7 @@ export class PointQueryViewerService {
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
   readonly lastClickCoordinates = signal<MouseCoordinates | null>(null);
   readonly showMarker = signal<boolean>(true);
+  readonly isPaused = signal<boolean>(false);
 
   // Current marker position (for rendering on map)
   readonly markerPosition = computed<MouseCoordinates | null>(() => {
@@ -240,8 +241,17 @@ export class PointQueryViewerService {
     effect(() => {
       const mode = this.polygonDrawingService.drawingMode();
 
+      // Skip if not yet initialized to avoid race conditions with polygon drawing
+      if (!this.initialized) {
+        return;
+      }
+
       if (mode === DrawingMode.DRAW || mode === DrawingMode.EDIT) {
-        this.disableViewerAndClearSources();
+        // Pause queries while drawing/editing - keep enabled flag for UI, show previous results
+        this.isPaused.set(true);
+      } else {
+        // Resume when done drawing/editing
+        this.isPaused.set(false);
       }
     });
 
@@ -321,7 +331,11 @@ export class PointQueryViewerService {
   }
 
   handleMapClick(lat: number, lon: number, button: number): void {
-    if (button !== 0) {
+    if (
+      button !== 0 ||
+      this.isPaused() ||
+      this.polygonDrawingService.drawingMode() !== DrawingMode.NONE
+    ) {
       return;
     }
 
@@ -404,6 +418,7 @@ export class PointQueryViewerService {
   private canRunQueries(): boolean {
     return (
       this.enabled() &&
+      !this.isPaused() &&
       this.selectedLayerIdsOrdered().length > 0 &&
       this.polygonDrawingService.drawingMode() === DrawingMode.NONE
     );
