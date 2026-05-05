@@ -1,10 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { BaseMapService } from './base-map.service';
+import { STORAGE_KEYS } from '../../constants';
 import { MAP_CONFIG, buildBasemapProvidersUrl } from '../../config';
 import type { BaseMapProvidersResponse } from '../../config';
 
@@ -100,7 +98,7 @@ describe('BaseMapService', () => {
     it('persists the selection to localStorage', () => {
       service.setBaseMap('satellite');
       TestBed.tick();
-      expect(localStorage.getItem('mapasmn_selected_base_map')).toBe('satellite');
+      expect(localStorage.getItem(STORAGE_KEYS.BASE_MAP)).toBe('satellite');
     });
   });
 
@@ -128,7 +126,7 @@ describe('BaseMapService', () => {
 describe('BaseMapService — persisted preference', () => {
   function bootWithStoredId(storedId: string | null) {
     localStorage.clear();
-    if (storedId) localStorage.setItem('mapasmn_selected_base_map', storedId);
+    if (storedId) localStorage.setItem(STORAGE_KEYS.BASE_MAP, storedId);
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],

@@ -12,3 +12,15 @@ export { MAP_PANES, CSS_VARIABLES, LEAFLET_EDITABLE_EVENTS } from './map-polygon
 
 // Códigos de fenómenos meteorológicos para alertas
 export { PHENOMENON_CODES, type PhenomenonCode } from './phenomenon-codes.constants';
+
+// Constantes de unidades y conversiones
+export {
+  TEMPERATURE_UNITS,
+  RADAR_UNITS,
+  GLM_UNITS,
+  ABI_UNITS,
+  DISTANCE_UNITS,
+  KELVIN_TO_CELSIUS_OFFSET,
+} from './units.constants';
+
+export { STORAGE_KEYS } from './storage-keys.constants';

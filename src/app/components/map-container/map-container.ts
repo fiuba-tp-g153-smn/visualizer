@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angu
 import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
 import 'leaflet-editable';
-import { MAP_CONFIG } from '../../config';
+import { MAP_CONFIG, MAP_Z_INDEX } from '../../config';
 import { environment } from '../../../environments/environment';
 
 import { LayerControlService } from '../../services/layers/layer-control.service';
@@ -170,10 +170,6 @@ export class MapContainer implements OnInit, OnDestroy {
       this.changeBaseMap(initialBaseMap);
     }
 
-    this.map.on('mousemove', (event: L.LeafletMouseEvent) => {
-      this.pointQueryViewerService.handleMouseMove(event.latlng.lat, event.latlng.lng);
-    });
-
     this.map.on('click', (event: L.LeafletMouseEvent) => {
       this.polygonsService.closeContextMenu();
       const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
@@ -222,6 +218,7 @@ export class MapContainer implements OnInit, OnDestroy {
     this.currentTileLayer = L.tileLayer(baseMap.url, {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
+      zIndex: MAP_Z_INDEX.BASE_MAP,
       maxNativeZoom: baseMap.maxNativeZoom,
       // Wider tile ring smooths panning; backend's 1-week immutable cache
       // makes the extra fetches near-free on warm caches.
@@ -230,7 +227,6 @@ export class MapContainer implements OnInit, OnDestroy {
       updateWhenIdle: window.matchMedia?.('(pointer: coarse)').matches ?? false,
       // Future-proofs canvas screenshot/print flows; backend already CORS-allows *.
       crossOrigin: 'anonymous',
-      zIndex: 0,
     }).addTo(this.map);
 
     // Tripwire: backend is supposed to return a transparent PNG on miss, never a 404.

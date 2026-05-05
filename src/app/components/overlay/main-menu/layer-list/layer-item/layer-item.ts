@@ -37,6 +37,8 @@ import {
   formatDateTimeOnly,
   formatEcmwfForecastTs,
 } from '../../../../../utils/tileset-timestamp';
+import { computeWindowStart } from '../../../../../utils/playback-window';
+import { ScaleToolsService } from '../../../../../services/layers/scale-tools.service';
 
 /**
  * Modo de visualización del componente
@@ -78,6 +80,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
   private readonly syncService = inject(SyncPlaybackService);
+  private readonly scaleTools = inject(ScaleToolsService);
 
   /**
    * Capa a renderizar (requerido)
@@ -89,20 +92,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   @Input() mode: LayerItemMode = 'available';
 
-  /**
-   * Si se muestra el botón de información (solo en modo available)
-   */
-  @Input() showInfo: boolean = true;
-
-  /**
-   * Si se muestra el botón de cerrar (solo en modo active)
-   */
-  @Input() showClose: boolean = true;
-
-  /**
-   * Si se muestra el drag handle (solo en modo active)
-   */
-  @Input() showDragHandle: boolean = true;
+  // Propiedades derivadas del modo
+  readonly showClose = true;
+  readonly showDragHandle = true;
 
   // Estado local
   isLoadingConfig = signal(false);
@@ -315,7 +307,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   maxTimeIndex = computed(() => {
     const tilesets = this.getAvailableTilesetsForLayer();
-    return Math.max(0, (tilesets?.length ?? 1) - 1);
+    if (!tilesets || tilesets.length === 0) return 0;
+
+    const lastImagesCount = this.lastImagesCount();
+    if (lastImagesCount === 1) {
+      return tilesets.length - 1;
+    }
+
+    const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
+    const min = computeWindowStart(tilesets.length, lastImagesCount, isForecast);
+    return Math.min(min + lastImagesCount - 1, tilesets.length - 1);
   });
 
   layerShortName = computed(() => this.layersService.getLayerShortName(this.layer));
@@ -325,11 +326,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene el índice mínimo para el slider (limitado por el selector de últimas imágenes)
    */
   minTimeIndex = computed(() => {
-    const max = this.maxTimeIndex();
-    const options = this.lastImagesOptions();
-    const maxSelectableCount = options.length > 0 ? Math.max(...options) : 1;
-    const effectiveCount = Math.min(max + 1, maxSelectableCount);
-    return Math.max(0, max - effectiveCount + 1);
+    const tilesets = this.getAvailableTilesetsForLayer();
+    if (!tilesets || tilesets.length === 0) return 0;
+
+    const lastImagesCount = this.lastImagesCount();
+    if (lastImagesCount === 1) {
+      return 0;
+    }
+
+    const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
+    return computeWindowStart(tilesets.length, lastImagesCount, isForecast);
   });
 
   /**
@@ -613,7 +619,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
       return false;
     }
-    const config = this.configService.getConfig(this.layer.id) as EcmwfTpTileLayerConfig | undefined;
+    const config = this.configService.getConfig(this.layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
     return (config?.availableForecasts?.length ?? 0) > 0;
   });
 
@@ -624,7 +632,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
       return [];
     }
-    const config = this.configService.getConfig(this.layer.id) as EcmwfTpTileLayerConfig | undefined;
+    const config = this.configService.getConfig(this.layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
     return config?.availableForecasts ?? [];
   });
 
@@ -713,5 +723,24 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   private stopIfPlaying(): void {
     if (this.isPlaying()) this.controlService.stopPlayback(this.layer.id);
+  }
+
+  // ==========================================================================
+  // Control de Escalas
+  // ==========================================================================
+
+  hasScale(): boolean {
+    return this.layer.type === LayerType.TILE && this.layer.scale !== undefined;
+  }
+
+  isScaleSelected(): boolean {
+    return this.scaleTools.enabled() && this.scaleTools.isLayerSelected(this.layer.id);
+  }
+
+  toggleScale(): void {
+    if (!this.scaleTools.enabled()) {
+      this.scaleTools.setEnabled(true);
+    }
+    this.scaleTools.toggleLayerSelection(this.layer.id);
   }
 }

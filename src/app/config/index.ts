@@ -32,7 +32,7 @@ export {
 export { TOOLTIP_DELAYS, ACTION_DELAYS } from './timing.config';
 
 // Map configuration (initial position, zoom levels, prerender)
-export { MAP_CONFIG } from './map.config';
+export { MAP_CONFIG, MAP_Z_INDEX } from './map.config';
 
 // Base map client-side configuration (preview coords, DTOs, attribution helper)
 export {
@@ -52,10 +52,7 @@ export {
 } from './map-polygons.config';
 
 // INDEC province codes (department code -> province name mapping)
-export {
-  INDEC_PROVINCE_CODES,
-  getProvinceNameFromDepartmentCode,
-} from './indec-provinces.config';
+export { INDEC_PROVINCE_CODES, getProvinceNameFromDepartmentCode } from './indec-provinces.config';
 
 // Layer definitions and setup (re-export from layers folder)
 export {

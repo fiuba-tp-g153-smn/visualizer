@@ -11,6 +11,7 @@ import { LayerListComponent } from './layer-list/layer-list';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
 import { PolygonManagerComponent } from './polygon-manager/polygon-manager';
 import { MapToolsComponent } from './map-tools/tools';
+import { GeneralSettingsComponent } from './general-settings/general-settings';
 import { MenuSection } from './menu-section.model';
 
 /**
@@ -28,8 +29,15 @@ const MENU_SECTIONS: MenuSection[] = [
     id: 'polygons',
     title: 'Polígonos',
     icon: 'polyline',
-    tooltip: 'Gestionar polígonos',
+    tooltip: 'Graficar polígono',
     component: PolygonManagerComponent,
+  },
+  {
+    id: 'map-tools',
+    title: 'Herramientas del mapa',
+    icon: 'handyman',
+    tooltip: 'Herramientas del mapa',
+    component: MapToolsComponent,
   },
   {
     id: 'basemaps',
@@ -39,11 +47,11 @@ const MENU_SECTIONS: MenuSection[] = [
     component: BaseMapSelectorComponent,
   },
   {
-    id: 'map-tools',
-    title: 'Herramientas del mapa',
-    icon: 'handyman',
-    tooltip: 'Herramientas del mapa',
-    component: MapToolsComponent,
+    id: 'settings',
+    title: 'Configuración',
+    icon: 'tune',
+    tooltip: 'Configuración general',
+    component: GeneralSettingsComponent,
   },
 ];
 

@@ -17,6 +17,17 @@
       </mat-checkbox>
       <div class="header-actions">
         @if (isActive()) {
+          @if (hasScale()) {
+            <button
+              mat-icon-button
+              (click)="toggleScale()"
+              [matTooltip]="isScaleSelected() ? 'Ocultar escala' : 'Mostrar escala'"
+              class="scale-toggle-btn"
+              [class.scale-active]="isScaleSelected()"
+            >
+              <mat-icon>{{ isScaleSelected() ? 'palette' : 'palette_outlined' }}</mat-icon>
+            </button>
+          }
           <button
             mat-icon-button
             (click)="toggleExpansion()"
@@ -43,6 +54,17 @@
 
       <!-- Botones de control (derecha) -->
       <div class="header-actions">
+        @if (hasScale()) {
+          <button
+            mat-icon-button
+            (click)="toggleScale()"
+            [matTooltip]="isScaleSelected() ? 'Ocultar escala' : 'Mostrar escala'"
+            class="scale-toggle-btn"
+            [class.scale-active]="isScaleSelected()"
+          >
+            <mat-icon>{{ isScaleSelected() ? 'palette' : 'palette_outlined' }}</mat-icon>
+          </button>
+        }
         <button
           mat-icon-button
           (click)="toggleExpansion()"

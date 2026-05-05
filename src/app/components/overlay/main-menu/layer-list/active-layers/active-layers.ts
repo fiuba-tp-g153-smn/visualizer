@@ -37,6 +37,7 @@ export class ActiveLayersComponent {
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
 
+
   private groupExpansionState = new Map<ActiveLayerGroupId, ReturnType<typeof signal<boolean>>>(
     Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS).map((def) => [def.id, signal(true)]),
   );
