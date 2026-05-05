@@ -153,13 +153,16 @@ export class ScaleToolsService {
   }
 
   toggleLayerSelection(layerId: string): void {
+    const canonical = this.getCanonicalLayerId(layerId);
+    if (!canonical) return;
+
     const current = this.selectedLayerIdsOrdered();
-    if (current.includes(layerId)) {
-      this.selectedLayerIdsOrdered.set(current.filter((id) => id !== layerId));
+    if (current.includes(canonical)) {
+      this.selectedLayerIdsOrdered.set(current.filter((id) => id !== canonical));
       return;
     }
 
-    this.selectedLayerIdsOrdered.set([...current, layerId]);
+    this.selectedLayerIdsOrdered.set([...current, canonical]);
 
     if (!this.enabled()) {
       this.enabled.set(true);
@@ -167,7 +170,31 @@ export class ScaleToolsService {
   }
 
   isLayerSelected(layerId: string): boolean {
-    return this.selectedLayerIdsOrdered().includes(layerId);
+    const canonical = this.getCanonicalLayerId(layerId);
+    if (!canonical) return false;
+    return this.selectedLayerIdsOrdered().includes(canonical);
+  }
+
+  /**
+   * Map any layer id to the canonical display id used by the scale tools.
+   * For RADAR layers multiple layer ids may share the same scale; displayItems
+   * deduplicates by product name and uses a representative layer id. This
+   * method resolves a given layer id to that representative id when needed.
+   */
+  private getCanonicalLayerId(layerId: string): string | undefined {
+    const items = this.displayItems();
+
+    // If the layerId is already one of the display items, return it directly
+    if (items.some((it) => it.layerId === layerId)) return layerId;
+
+    // Otherwise, try to find a display item that represents the same logical
+    // layer. For RADAR layers we deduplicate by product name, so match by name.
+    const layer = this.layersService.getLayerById(layerId as string);
+    if (!layer) return undefined;
+
+    // Match by layer name to find the representative item
+    const match = items.find((it) => it.layer.name === layer.name);
+    return match?.layerId;
   }
 
   clearSelection(): void {
