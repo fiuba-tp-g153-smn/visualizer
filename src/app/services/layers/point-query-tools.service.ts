@@ -238,6 +238,14 @@ export class PointQueryViewerService {
       this.loadingLayerIds.set(new Set());
     });
 
+    // If there are no selected sources, ensure the viewer is disabled and state cleaned.
+    effect(() => {
+      const selected = this.selectedLayerIdsOrdered();
+      if (selected.length === 0 && this.enabled()) {
+        this.disableViewerAndClearSources();
+      }
+    });
+
     effect(() => {
       const mode = this.polygonDrawingService.drawingMode();
 
