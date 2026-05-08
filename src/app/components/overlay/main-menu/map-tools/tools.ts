@@ -29,6 +29,10 @@ export class MapToolsComponent implements MenuPanelComponent {
   private readonly scaleTools = inject(ScaleToolsService);
 
   getScaleItemsCount(): number {
+    if (!this.scaleTools.enabled()) {
+      return 0;
+    }
+
     return this.scaleTools.selectedLayerIdsOrdered().length;
   }
 
