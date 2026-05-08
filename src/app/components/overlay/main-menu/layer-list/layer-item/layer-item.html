@@ -6,15 +6,28 @@
   <!-- Modo: Available (checkbox + info button) -->
   @if (mode === 'available') {
     <div class="layer-header">
-      <mat-checkbox
-        [checked]="isActive()"
-        (change)="toggleActive($event.checked)"
-        color="primary"
-        class="layer-checkbox"
-        [matTooltip]="layer.description || 'Sin descripción'"
-      >
-        {{ layerShortName() }}
-      </mat-checkbox>
+      @if (selectionMode === 'single') {
+        <mat-radio-button
+          [name]="radioGroupName"
+          [checked]="isActive()"
+          (change)="onRadioSelected()"
+          color="primary"
+          class="layer-radio"
+          [matTooltip]="layer.description || 'Sin descripción'"
+        >
+          {{ layerShortName() }}
+        </mat-radio-button>
+      } @else {
+        <mat-checkbox
+          [checked]="isActive()"
+          (change)="toggleActive($event.checked)"
+          color="primary"
+          class="layer-checkbox"
+          [matTooltip]="layer.description || 'Sin descripción'"
+        >
+          {{ layerShortName() }}
+        </mat-checkbox>
+      }
       <div class="header-actions">
         @if (isActive()) {
           @if (hasScale()) {

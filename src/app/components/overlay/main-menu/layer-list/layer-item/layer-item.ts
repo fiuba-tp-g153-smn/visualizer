@@ -16,6 +16,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
@@ -24,6 +25,7 @@ import {
   EcmwfTpTileLayerConfig,
   Layer,
   LayerCategory,
+  LayerSelectionMode,
   LayerType,
   TilesetEntry,
 } from '../../../../../models';
@@ -67,6 +69,7 @@ export type LayerItemMode = 'available' | 'active';
     MatTooltipModule,
     MatSliderModule,
     MatCheckboxModule,
+    MatRadioModule,
     MatSelectModule,
     MatFormFieldModule,
     CdkDragHandle,
@@ -91,6 +94,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Modo de visualización: 'available' muestra checkbox, 'active' muestra drag handle
    */
   @Input() mode: LayerItemMode = 'available';
+
+  /**
+   * Selection behavior for available-mode controls.
+   * - MULTIPLE: checkbox behavior
+   * - SINGLE: radio-like behavior (exclusive within subgroup)
+   */
+  @Input() selectionMode: LayerSelectionMode = LayerSelectionMode.MULTIPLE;
+
+  /**
+   * Stable name used by Material radios to group options per subgroup.
+   */
+  @Input() radioGroupName = '';
 
   // Propiedades derivadas del modo
   readonly showClose = true;
@@ -419,6 +434,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
+  onRadioSelected(): void {
+    this.activateLayer();
+    this.isExpanded.set(true);
+  }
+
   /**
    * Alterna la expansión del card completo (opacidad + período)
    */
@@ -444,7 +464,28 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Activa la capa
    */
   private activateLayer(): void {
+    if (this.selectionMode === LayerSelectionMode.SINGLE) {
+      this.deactivateSiblingLayersInSubgroup();
+    }
     this.controlService.activateLayer(this.layer.id);
+  }
+
+  private deactivateSiblingLayersInSubgroup(): void {
+    const groups = this.layersService.getLayerGroups();
+    for (const group of groups) {
+      for (const subgroup of group.subgroups) {
+        if (!subgroup.layers.some((layer) => layer.id === this.layer.id)) {
+          continue;
+        }
+
+        for (const sibling of subgroup.layers) {
+          if (sibling.id !== this.layer.id) {
+            this.controlService.deactivateLayer(sibling.id);
+          }
+        }
+        return;
+      }
+    }
   }
 
   deactivateLayer(): void {
@@ -730,7 +771,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   hasScale(): boolean {
-    return this.layer.type === LayerType.TILE && this.layer.scale !== undefined;
+    return this.layer.scale !== undefined;
   }
 
   isScaleSelected(): boolean {
