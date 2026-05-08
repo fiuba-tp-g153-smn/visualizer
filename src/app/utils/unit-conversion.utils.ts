@@ -14,6 +14,13 @@ export function convertKelvinToCelsius(value: number): number {
 }
 
 /**
+ * Convierte un valor de Celsius a Kelvin
+ */
+export function convertCelsiusToKelvin(value: number): number {
+  return value + KELVIN_TO_CELSIUS_OFFSET;
+}
+
+/**
  * Verifica si una unidad es Kelvin
  */
 export function isKelvinUnit(unit: string): boolean {
@@ -21,10 +28,21 @@ export function isKelvinUnit(unit: string): boolean {
 }
 
 /**
+ * Verifica si una unidad es Celsius
+ */
+export function isCelsiusUnit(unit: string): boolean {
+  return unit === TEMPERATURE_UNITS.CELSIUS;
+}
+
+function isTemperatureUnit(unit: string): boolean {
+  return isKelvinUnit(unit) || isCelsiusUnit(unit);
+}
+
+/**
  * Obtiene la unidad de visualización para temperatura según configuración del usuario
  */
 export function getDisplayUnit(unit: string, unitsSettings: UnitsSettingsService): string {
-  if (!isKelvinUnit(unit)) {
+  if (!isTemperatureUnit(unit)) {
     return unit;
   }
 
@@ -40,16 +58,20 @@ export function convertValueForDisplay(
   unit: string,
   unitsSettings: UnitsSettingsService,
 ): number {
-  if (!isKelvinUnit(unit)) {
+  if (!isTemperatureUnit(unit)) {
     return value;
   }
 
   const targetUnit = unitsSettings.temperatureUnit();
 
-  if (targetUnit === TEMPERATURE_UNITS.CELSIUS) {
+  if (unit === TEMPERATURE_UNITS.KELVIN && targetUnit === TEMPERATURE_UNITS.CELSIUS) {
     return convertKelvinToCelsius(value);
   }
 
-  // Si el usuario quiere Kelvin, retornar sin conversión
+  if (unit === TEMPERATURE_UNITS.CELSIUS && targetUnit === TEMPERATURE_UNITS.KELVIN) {
+    return convertCelsiusToKelvin(value);
+  }
+
+  // Si ya está en la unidad de destino, retornar sin conversión.
   return value;
 }
