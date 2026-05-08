@@ -1,5 +1,10 @@
 import { Layer } from './models';
 
+export enum LayerSelectionMode {
+  MULTIPLE = 'multiple',
+  SINGLE = 'single',
+}
+
 /**
  * Grupos de capas activas para organizar por niveles
  * Las capas solo se pueden reordenar dentro de su propio grupo
@@ -33,4 +38,5 @@ export interface LayerSubgroup {
   description?: string;
   layers: Layer[];
   expanded: boolean;
+  selectionMode?: LayerSelectionMode;
 }
