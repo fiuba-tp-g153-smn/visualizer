@@ -46,6 +46,16 @@ export const DISTANCE_UNITS = {
 } as const;
 
 /**
+ * Unidades de estaciones SMN
+ */
+export const SMN_UNITS = {
+  HUMIDITY: '%',
+  PRESSURE: 'hPa',
+  VISIBILITY: DISTANCE_UNITS.KILOMETERS,
+  WIND_SPEED: 'km/h',
+} as const;
+
+/**
  * Offset de conversión de Kelvin a Celsius
  */
 export const KELVIN_TO_CELSIUS_OFFSET = 273.15;

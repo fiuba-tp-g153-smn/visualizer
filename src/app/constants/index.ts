@@ -20,6 +20,7 @@ export {
   GLM_UNITS,
   ABI_UNITS,
   DISTANCE_UNITS,
+  SMN_UNITS,
   KELVIN_TO_CELSIUS_OFFSET,
 } from './units.constants';
 
