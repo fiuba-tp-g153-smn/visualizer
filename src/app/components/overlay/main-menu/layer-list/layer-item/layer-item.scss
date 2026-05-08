@@ -48,11 +48,13 @@
       gap: 8px;
       width: 100%;
 
-      .layer-checkbox {
+      .layer-checkbox,
+      .layer-radio {
         flex: 1;
       }
     }
-    .layer-checkbox {
+    .layer-checkbox,
+    .layer-radio {
       flex: 1;
     }
   }

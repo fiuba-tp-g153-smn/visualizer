@@ -17,6 +17,7 @@ import { PolygonDrawingService } from '../../services/polygons/polygon-drawing.s
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
 import { VectorOverlayService } from '../../services/layers/vector-overlay.service';
+import { SmnStationsDataService } from '../../services/layers/smn-stations-data.service';
 
 /**
  * Main map container component that orchestrates the map, layers, polygons and point-query UI.
@@ -43,6 +44,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private layersService = inject(MapLayersService);
   private polygonsService = inject(MapPolygonsService);
   private vectorOverlayService = inject(VectorOverlayService);
+  private smnStationsDataService = inject(SmnStationsDataService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -70,6 +72,11 @@ export class MapContainer implements OnInit, OnDestroy {
         // Track vector overlay loads so isobars/secondary overlays appear as
         // soon as their GeoJSON arrives.
         this.vectorOverlayService.loadTick();
+        // Track station data loads so marker layers appear as soon as the data
+        // cache is populated.
+        this.smnStationsDataService.loadTick();
+        // Re-render point layers when the zoom changes so marker sizes can adapt.
+        this.mapInfoService.currentZoom();
 
         if (this.map) {
           this.layersService.syncLayers(layerIds);
