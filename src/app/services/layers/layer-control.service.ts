@@ -267,6 +267,9 @@ export class LayerControlService {
             }
           }
           break;
+        case LayerType.VECTOR:
+          // No special initialization needed for vector layers
+          break;
         case LayerType.WMS:
           // No special initialization needed for WMS layers
           break;
@@ -799,6 +802,11 @@ export class LayerControlService {
         return {
           ...baseControls,
           type: LayerType.WMS,
+        };
+      case LayerType.VECTOR:
+        return {
+          ...baseControls,
+          type: LayerType.VECTOR,
         };
       case LayerType.TILE:
         const baseTileControls: TileLayerControls = {

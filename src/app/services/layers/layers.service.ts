@@ -130,6 +130,12 @@ export class LayersService {
               parts.push(layer.name);
               break;
 
+            case LayerCategory.SMN_STATIONS:
+              parts.push('SMN');
+              parts.push(subgroup.name);
+              parts.push(layer.name);
+              break;
+
             default:
               throw new Error(`Unknown layer category`);
           }
