@@ -11,7 +11,12 @@ export interface BaseLayerControls {
   zIndex: number;
 }
 
-export type LayerControls = GoesLayerControls | RadarLayerControls | WmsLayerControls | EcmwfTpLayerControls;
+export type LayerControls =
+  | GoesLayerControls
+  | RadarLayerControls
+  | WmsLayerControls
+  | EcmwfTpLayerControls
+  | WrfLayerControls;
 
 /** A layer that is currently active (visible) on the map, paired with its controls. */
 export interface ActiveLayerEntry {
@@ -58,5 +63,21 @@ export interface EcmwfTpForecastControls {
 export interface EcmwfTpLayerControls extends TileLayerControls {
   category: LayerCategory.ECMWF_TP;
   forecast: EcmwfTpForecastControls;
+  availablePeriods?: readonly number[];
+}
+
+/**
+ * Controls WRF (corridas/init runs + opcional opacidad por corrida).
+ * Forma idéntica a ECMWF_TP — el campo `forecast.selectedForecastTimestamps`
+ * almacena init_tags ('20260430_060000').
+ */
+export interface WrfForecastControls {
+  selectedForecastTimestamps: string[];
+  forecastOpacity: Record<string, number>;
+}
+
+export interface WrfLayerControls extends TileLayerControls {
+  category: LayerCategory.WRF;
+  forecast: WrfForecastControls;
   availablePeriods?: readonly number[];
 }

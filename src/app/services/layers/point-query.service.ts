@@ -13,6 +13,9 @@ import {
   EcmwfTpLayerControls,
   EcmwfTpTileLayer,
   EcmwfTpTileLayerConfig,
+  WrfLayerControls,
+  WrfTileLayer,
+  WrfTileLayerConfig,
   PointQueryDisplayData,
   PointQueryStatus,
   PointQueryValueDto,
@@ -30,6 +33,7 @@ import {
   buildSatellitePointQueryUrl,
   buildEcmwfTpPointQueryUrl,
 } from '../../config';
+import { buildWrfPointQueryUrl } from '../../config/backend.config';
 
 /**
  * Suffix appended to a layer's id when reporting results from its secondary
@@ -65,7 +69,9 @@ export class PointQueryService {
     }
 
     if (
-      (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF_TP) &&
+      (layer.category === LayerCategory.GOES_19 ||
+        layer.category === LayerCategory.ECMWF_TP ||
+        layer.category === LayerCategory.WRF) &&
       !this.isWithinLayerBounds(layer, lat, lon)
     ) {
       // Optimization: no backend request if cursor is outside configured bounds.
@@ -74,6 +80,10 @@ export class PointQueryService {
 
     if (layer.category === LayerCategory.ECMWF_TP) {
       return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon);
+    }
+
+    if (layer.category === LayerCategory.WRF) {
+      return this.queryWrfLayer(layer, controls as WrfLayerControls, lat, lon);
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
@@ -313,6 +323,56 @@ export class PointQueryService {
             status: PointQueryStatus.VALUE,
             scaleRange,
           }) as const,
+      ),
+      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    );
+  }
+
+  private queryWrfLayer(
+    layer: Layer,
+    controls: WrfLayerControls,
+    lat: number,
+    lon: number,
+  ): Observable<PointQueryDisplayData> {
+    const config = this.layerConfigService.getConfig(layer.id) as
+      | WrfTileLayerConfig
+      | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const isForecast = layer.type === LayerType.TILE && layer.isForecast;
+    const idx = Math.max(
+      0,
+      Math.min(
+        controls.playback.timeIndex ??
+          getDefaultCursorIndex(config.availableTilesets.length, isForecast),
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const fxxx = config.availableTilesets[idx].id;
+
+    const forecastsForStep = config.forecastsByPeriod[fxxx];
+    const selectedInits = controls.forecast.selectedForecastTimestamps;
+    const initTag = selectedInits.find((ts) => forecastsForStep?.includes(ts));
+    if (!initTag) return of(this.buildNoData(layer.id, layer.name));
+
+    const wrfLayer = layer as WrfTileLayer;
+    const url = buildWrfPointQueryUrl(wrfLayer.productId, initTag, fxxx, lat, lon);
+
+    const scaleRange = this.extractScaleRange(layer as unknown as EcmwfTpTileLayer);
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange: scaleRange ?? undefined,
+          }) as PointQueryDisplayData,
       ),
       catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
     );

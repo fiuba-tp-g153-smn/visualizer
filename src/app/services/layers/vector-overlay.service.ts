@@ -91,12 +91,20 @@ export class VectorOverlayService {
    * Construye un `L.GeoJSON` con el estilo y las etiquetas declaradas en el
    * config. Para que las etiquetas funcionen el plugin `leaflet-textpath` debe
    * estar importado (ver main.ts).
+   *
+   * Soporta tanto Lines/Polygons (style + setText) como Points (cuando el
+   * config trae `pointToLayer`, e.g. barbas WRF). Leaflet sólo invoca
+   * `pointToLayer` para features Point y `style` / `onEachFeature` para
+   * non-Point, así que ambos pueden coexistir sin checks adicionales.
    */
   buildLayer(fc: FeatureCollection, config: SecondaryVectorRender): L.GeoJSON {
     // `leaflet-textpath` manipula el DOM SVG (<textPath>) — si el mapa global usa
     // canvas, hay que forzar el renderer SVG por feature en el style callback.
     const renderer = L.svg();
     return L.geoJSON(fc, {
+      pointToLayer: config.pointToLayer
+        ? (feature, latlng) => config.pointToLayer!(feature, latlng)
+        : undefined,
       style: (feature?: Feature) => {
         const value = this.readValue(feature, config.valueProperty);
         if (value === null) return { renderer };

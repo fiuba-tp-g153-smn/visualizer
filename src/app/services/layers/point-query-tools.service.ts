@@ -13,6 +13,8 @@ import {
   RadarLayerControls,
   RadarTileLayer,
   TileLayerControls,
+  WrfLayerControls,
+  WrfTileLayer,
 } from '../../models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from './layer-control.service';
@@ -30,7 +32,12 @@ type DisplaySourceItem = {
   layerId: string;
   elevationId?: string;
   layerName: string;
-  layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer;
+  layer:
+    | ABIGoesTileLayer
+    | GLMGoesTileLayer
+    | RadarTileLayer
+    | EcmwfTpTileLayer
+    | WrfTileLayer;
   controls: TileLayerControls;
 };
 
@@ -95,13 +102,19 @@ export class PointQueryViewerService {
       .filter(
         ({ layer }) =>
           layer.type === LayerType.TILE &&
-          (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF_TP),
+          (layer.category === LayerCategory.GOES_19 ||
+            layer.category === LayerCategory.ECMWF_TP ||
+            layer.category === LayerCategory.WRF),
       )
       .map(({ layer, controls }) => ({
         layerId: layer.id,
         layerName: this.layersService.getLayerFullName(layer),
-        layer: layer as ABIGoesTileLayer | GLMGoesTileLayer | EcmwfTpTileLayer,
-        controls: controls as GoesLayerControls | EcmwfTpLayerControls,
+        layer: layer as
+          | ABIGoesTileLayer
+          | GLMGoesTileLayer
+          | EcmwfTpTileLayer
+          | WrfTileLayer,
+        controls: controls as GoesLayerControls | EcmwfTpLayerControls | WrfLayerControls,
       }));
 
     const radarItems: DisplaySourceItem[] = activeLayers

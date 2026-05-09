@@ -17,11 +17,15 @@ import {
   EcmwfTpLayerControls,
   EcmwfTpTileLayerConfig,
   EcmwfTpTileLayer,
+  WrfLayerControls,
+  WrfTileLayer,
+  WrfTileLayerConfig,
 } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
+import { buildWrfTileUrl } from '../../config/backend.config';
 import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
@@ -439,6 +443,112 @@ export class LayerRenderService {
   }
 
   /**
+   * Crea un L.TileLayer WRF para una corrida (init_tag) y paso (fxxx).
+   * El productId se infiere del WrfTileLayer (capa).
+   */
+  createWrfTileLayerForForecast(
+    layerId: string,
+    controls: WrfLayerControls,
+    initTag: string,
+    fxxx: string,
+  ): L.TileLayer {
+    const poolKey = `${layerId}-${initTag}-${fxxx}`;
+    if (this.layerPool.has(poolKey)) {
+      return this.layerPool.get(poolKey)!;
+    }
+
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.TILE || layer.category !== LayerCategory.WRF) {
+      throw new Error(`Invalid WRF layer: '${layerId}'`);
+    }
+
+    const wrfLayer = layer as WrfTileLayer;
+    const tileUrl = buildWrfTileUrl(wrfLayer.productId, initTag, fxxx);
+    const tileLayer = this.buildTileLayer(tileUrl, layer as TileLayer, controls.opacity);
+    this.attachErrorHandlers(tileLayer, layerId, initTag, this.formatForecastLabel(initTag));
+    this.layerPool.set(poolKey, tileLayer);
+    return tileLayer;
+  }
+
+  /**
+   * Crea un tile WRF para un forecast en un timeIndex dado (prefetch frames).
+   */
+  createWrfTileLayerForForecastAtTimeIndex(
+    layerId: string,
+    controls: WrfLayerControls,
+    initTag: string,
+    timeIndex: number,
+  ): L.TileLayer | null {
+    const config = this.layerConfigService.getConfig(layerId) as WrfTileLayerConfig | undefined;
+    if (!config) return null;
+
+    const stepEntry = config.availableTilesets[timeIndex];
+    if (!stepEntry) return null;
+    const fxxx = stepEntry.id;
+
+    const forecastsForStep = config.forecastsByPeriod[fxxx];
+    if (!forecastsForStep || !forecastsForStep.includes(initTag)) return null;
+
+    return this.createWrfTileLayerForForecast(layerId, controls, initTag, fxxx);
+  }
+
+  /**
+   * Crea capas WRF para playback — un set por cada corrida seleccionada.
+   * Espejo de createEcmwfTpLayersForPlayback.
+   */
+  createWrfLayersForPlayback(
+    layerId: string,
+    controls: WrfLayerControls,
+    targetOpacity: number,
+    absoluteZIndex: number,
+  ): Map<string, L.TileLayer> {
+    const result = new Map<string, L.TileLayer>();
+    const selectedForecasts = controls.forecast.selectedForecastTimestamps;
+    const currentTimeIndex = controls.playback.timeIndex ?? 0;
+    const totalFrames = this.getAvailableTilesetsCount(layerId);
+
+    const config = this.layerConfigService.getConfig(layerId) as WrfTileLayerConfig | undefined;
+    if (!config || totalFrames === 0) return result;
+
+    const currentEntry = config.availableTilesets[currentTimeIndex];
+    if (!currentEntry) return result;
+    const currentFxxx = currentEntry.id;
+
+    selectedForecasts.forEach((initTag, index) => {
+      const forecastZIndex = absoluteZIndex + index;
+      const forecastOpacity = controls.forecast.forecastOpacity[initTag];
+      const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
+
+      const forecastsForStep = config.forecastsByPeriod[currentFxxx];
+      if (forecastsForStep && forecastsForStep.includes(initTag)) {
+        const tileLayer = this.createWrfTileLayerForForecast(
+          layerId, controls, initTag, currentFxxx,
+        );
+        this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
+        result.set(`${layerId}#${initTag}#${currentTimeIndex}`, tileLayer);
+      }
+
+      this.prerenderNextFrames(
+        result,
+        currentTimeIndex,
+        totalFrames,
+        controls.playback.lastImagesCount,
+        forecastZIndex,
+        true,
+        (adjIndex) => {
+          const adjLayer = this.createWrfTileLayerForForecastAtTimeIndex(
+            layerId, controls, initTag, adjIndex,
+          );
+          if (!adjLayer) return null;
+          return { layer: adjLayer, key: `${layerId}#${initTag}#${adjIndex}` };
+        },
+      );
+    });
+
+    return result;
+  }
+
+  /**
    * Applies opacity and z-index styles to a tile layer.
    */
   private applyLayerStyles(layer: L.TileLayer, opacity: number, zIndex: number): void {
@@ -569,6 +679,28 @@ export class LayerRenderService {
             const forecastsKey = ecmwfControls.forecast.selectedForecastTimestamps.join(',');
             return `${layerId}-[${forecastsKey}]-${tilesets[timeIndex].id}`;
           }
+          case LayerCategory.WRF: {
+            const wrfControls = tileControls as WrfLayerControls;
+            const config = this.layerConfigService.getConfig(layerId) as
+              | WrfTileLayerConfig
+              | undefined;
+            if (!config) return `${layerId}-placeholder`;
+
+            const tilesets = config.availableTilesets;
+            if (tilesets.length === 0) return `${layerId}-empty`;
+
+            const wrfLayer = layer as WrfTileLayer;
+            const timeIndex = Math.max(
+              0,
+              Math.min(
+                wrfControls.playback.timeIndex ??
+                  getDefaultCursorIndex(tilesets.length, wrfLayer.isForecast),
+                tilesets.length - 1,
+              ),
+            );
+            const forecastsKey = wrfControls.forecast.selectedForecastTimestamps.join(',');
+            return `${layerId}-[${forecastsKey}]-${tilesets[timeIndex].id}`;
+          }
           default:
             return layerId;
         }
@@ -603,6 +735,10 @@ export class LayerRenderService {
       case LayerCategory.ECMWF_TP:
         throw new Error(
           `ECMWF layer ${layerId} should be created using createEcmwfTpTileLayerForForecast`,
+        );
+      case LayerCategory.WRF:
+        throw new Error(
+          `WRF layer ${layerId} should be created using createWrfTileLayerForForecast`,
         );
       default:
         throw new Error(`Unsupported tile layer category for layer ${layerId}`);

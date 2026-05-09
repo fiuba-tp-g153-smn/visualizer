@@ -85,6 +85,51 @@ export function formatEcmwfForecastTs(forecastTs: string): string {
 }
 
 // ============================================================================
+// WRF Timestamp Parsing & Formatting
+// ============================================================================
+
+/**
+ * Parsea un init_tag WRF en formato 'YYYYMMDD_HHMMSS'.
+ * Ejemplo: '20260430_060000' → Date(2026, 3, 30, 6, 0, 0)
+ */
+export function parseWrfInitTag(initTag: string): Date | null {
+  if (initTag.length < 15 || initTag.charAt(8) !== '_') return null;
+  const year = parseInt(initTag.substring(0, 4));
+  const month = parseInt(initTag.substring(4, 6)) - 1;
+  const day = parseInt(initTag.substring(6, 8));
+  const hour = parseInt(initTag.substring(9, 11));
+  const minute = parseInt(initTag.substring(11, 13));
+  const second = parseInt(initTag.substring(13, 15));
+  if ([year, month, day, hour, minute, second].some((n) => Number.isNaN(n))) return null;
+  return new Date(year, month, day, hour, minute, second);
+}
+
+/**
+ * Sintetiza el Date de un (init_tag, fxxx) WRF como init + N horas.
+ * Ejemplo: ('20260430_060000', 'F003') → 2026-04-30 09:00.
+ */
+export function parseWrfStepTimestamp(initTag: string, fxxx: string): Date | null {
+  const init = parseWrfInitTag(initTag);
+  if (!init) return null;
+  if (!fxxx.startsWith('F')) return init;
+  const offsetH = parseInt(fxxx.substring(1));
+  if (Number.isNaN(offsetH)) return init;
+  return new Date(init.getTime() + offsetH * 3_600_000);
+}
+
+/**
+ * Formato compacto para init_tag WRF (mostrar en filtros): "MM-DD HHh".
+ */
+export function formatWrfInitTag(initTag: string): string {
+  const dt = parseWrfInitTag(initTag);
+  if (!dt) return initTag;
+  const mo = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  const hh = String(dt.getHours()).padStart(2, '0');
+  return `${mo}-${dd} ${hh}h`;
+}
+
+// ============================================================================
 // Generic Formatting
 // ============================================================================
 

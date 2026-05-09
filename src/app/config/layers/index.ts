@@ -25,3 +25,6 @@ export { GLM_SUBGROUP } from './goes/glm/config';
 
 // ECMWF configuration
 export { ECMWF_SUBGROUP } from './ecmwf/config';
+
+// WRF configuration
+export { WRF_SUBGROUP } from './wrf/config';

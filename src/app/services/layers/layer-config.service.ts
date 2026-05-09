@@ -15,12 +15,15 @@ import {
   TilesetEntry,
   EcmwfTpTileLayer,
   EcmwfTpTileLayerConfig,
+  WrfTileLayer,
+  WrfTileLayerConfig,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
   parseGoesTimestamp,
   parseRadarTimestamp,
   parseEcmwfCenteredTimestamp,
+  parseWrfStepTimestamp,
 } from '../../utils/tileset-timestamp';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
@@ -244,9 +247,130 @@ export class LayerConfigService {
         return this.fetchRadarLayerConfig(layer as RadarTileLayer);
       case LayerCategory.ECMWF_TP:
         return this.fetchEcmwfTpLayerConfig(layer as EcmwfTpTileLayer);
+      case LayerCategory.WRF:
+        return this.fetchWrfLayerConfig(layer as WrfTileLayer);
       default:
         throw new Error(`Layer category ${layer.category} does not require tileset configuration`);
     }
+  }
+
+  /**
+   * Fetches and updates the configuration for a WRF model product.
+   * Lists init runs (corridas) and the steps (fxxx) of each, plus the
+   * GeoJSON layers per step. Mirrors `fetchEcmwfTpLayerConfig`.
+   */
+  fetchWrfLayerConfig(layer: WrfTileLayer): Observable<WrfTileLayerConfig> {
+    const initRunsUrl = buildConfigUrl(layer.id);
+    return this.http
+      .get<{ init_runs: Array<{ init_tag: string; step_count: number }> }>(initRunsUrl)
+      .pipe(
+        switchMap((resp) => {
+          const initRuns = (resp.init_runs ?? []).map((r) => r.init_tag);
+          if (!initRuns.length) {
+            // Backend OK pero sin datos aún (sync no terminó / no hay tiles).
+            // Devolver config vacía para no bloquear la UI; el layer-refresh
+            // re-fetcheará periódicamente hasta que aparezcan corridas.
+            const emptyConfig: WrfTileLayerConfig = {
+              layerId: layer.id,
+              type: LayerType.TILE,
+              category: LayerCategory.WRF,
+              availableTilesets: [],
+              availableForecasts: [],
+              periodsByForecast: {},
+              forecastsByPeriod: {},
+              layersByStep: {},
+            };
+            this.updateConfigMap(layer.id, emptyConfig);
+            return of(emptyConfig);
+          }
+
+          const stepRequests = initRuns.map((initTag) =>
+            this.http
+              .get<{ steps: Array<{ fxxx: string; layers?: string[] }> }>(
+                buildConfigUrl(`${layer.id}/${initTag}`),
+              )
+              .pipe(
+                map((r) => {
+                  const steps = (r.steps ?? []).map((s) => s.fxxx).sort();
+                  const layersByStep: Record<string, readonly string[]> = {};
+                  for (const step of r.steps ?? []) {
+                    layersByStep[`${initTag}/${step.fxxx}`] = (step.layers ?? []).slice();
+                  }
+                  return { initTag, steps, layersByStep };
+                }),
+              ),
+          );
+
+          return forkJoin(stepRequests).pipe(
+            map((results) => {
+              const periodsByForecast: Record<string, string[]> = {};
+              const layersByStep: Record<string, readonly string[]> = {};
+              results.forEach((r) => {
+                periodsByForecast[r.initTag] = r.steps;
+                Object.assign(layersByStep, r.layersByStep);
+              });
+
+              const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
+
+              const firstSteps = periodsByForecast[initRuns[0]] ?? [];
+              const availableTilesets: TilesetEntry[] = firstSteps.map((fxxx) => ({
+                id: fxxx,
+                time: parseWrfStepTimestamp(initRuns[0], fxxx) ?? new Date(0),
+              }));
+
+              const config: WrfTileLayerConfig = {
+                layerId: layer.id,
+                type: LayerType.TILE,
+                category: LayerCategory.WRF,
+                availableTilesets,
+                availableForecasts: initRuns,
+                periodsByForecast,
+                forecastsByPeriod,
+                layersByStep,
+              };
+              this.updateConfigMap(layer.id, config);
+              return config;
+            }),
+          );
+        }),
+        catchError((error) => {
+          console.error(`Failed to fetch WRF config for ${layer.id}:`, error);
+          throw error;
+        }),
+      );
+  }
+
+  /**
+   * Recalcula `availableTilesets` para una capa WRF en base a los init_tags
+   * seleccionados. Espejo de `updateEcmwfTpSelectedForecasts`.
+   */
+  updateWrfSelectedForecasts(layerId: string, selectedInitTags: string[]): void {
+    const config = this.getConfig(layerId) as WrfTileLayerConfig | undefined;
+    if (!config || config.category !== LayerCategory.WRF) return;
+
+    const stepSet = new Set<string>();
+    for (const initTag of selectedInitTags) {
+      const steps = config.periodsByForecast[initTag];
+      if (steps) for (const s of steps) stepSet.add(s);
+    }
+
+    const selectedPeriodsByForecast: Record<string, string[]> = {};
+    for (const initTag of selectedInitTags) {
+      selectedPeriodsByForecast[initTag] = config.periodsByForecast[initTag] ?? [];
+    }
+
+    const sortedSteps = [...stepSet].sort();
+    const referenceInit = selectedInitTags[0] ?? config.availableForecasts[0];
+    const availableTilesets: TilesetEntry[] = sortedSteps.map((fxxx) => ({
+      id: fxxx,
+      time: parseWrfStepTimestamp(referenceInit, fxxx) ?? new Date(0),
+    }));
+
+    this.updateConfigMap(layerId, {
+      ...config,
+      availableTilesets,
+      forecastsByPeriod: this.buildForecastsByPeriod(selectedPeriodsByForecast),
+    });
   }
 
   // ============================================================================
