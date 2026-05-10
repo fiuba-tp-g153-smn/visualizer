@@ -6,17 +6,33 @@ import { LayerScale, ScaleType } from '../../../models';
  * tiles-processor (palettes definidas en `wrf_processor.py`).
  */
 
+// Verbatim from `WRF/generar_wrf.py::RADAR_COLORS` — 63 colors paired with 64
+// boundaries (-18 dBZ → 76.5 dBZ in 1.5-dBZ steps). The legend matches the
+// tile palette exactly, so the colorbar reads the same dBZ→color mapping the
+// raster pcolormesh uses.
+const WRF_COLMAX_COLORS = [
+  '#3C426D', '#3C426D', '#3C426D', '#3C426D', '#3C426D',
+  '#3D4E7B', '#3D4E7B', '#3D4E7B', '#3D5988', '#3D5988',
+  '#3D5988', '#3C6596', '#3C6596', '#3C6596', '#3971A3',
+  '#3971A3', '#3971A3', '#357DAF', '#357DAF', '#2F89BB',
+  '#2F89BB', '#2897C6', '#2897C6', '#26A3D1', '#2BB0DA',
+  '#53F337', '#4DE133', '#47D12F', '#40C02B', '#3AB027',
+  '#34A022', '#2C891D', '#247217', '#EDEF3D', '#E1E439',
+  '#D6DA34', '#CDD230', '#C0C62B', '#CEAD20', '#D69719',
+  '#DB8115', '#EB0B2E', '#CB001B', '#C10015', '#B20009',
+  '#9B0000', '#C2005F', '#D600A0', '#EA00EA', '#CB00CD',
+  '#B300B7', '#9A00A0', '#FFFFFF', '#DFF6ED', '#C6F1E1',
+  '#B7ECD8', '#A7ECCF', '#97E3C6', '#97E3C6', '#87DFBE',
+  '#87DFBE', '#87DFBE', '#87DFBE',
+];
+
+const WRF_COLMAX_BOUNDS = Array.from({ length: 64 }, (_, i) => -18 + i * 1.5);
+
 export const WRF_COLMAX_SCALE: LayerScale = {
   type: ScaleType.PALETTE_CONFIG,
   unit: 'dBZ',
-  hexColors: [
-    '#3C426D', '#3D4E7B', '#3D5988', '#3C6596', '#3971A3', '#357DAF',
-    '#2F89BB', '#2897C6', '#26A3D1', '#2BB0DA', '#53F337', '#47D12F',
-    '#3AB027', '#2C891D', '#247217', '#EDEF3D', '#D6DA34', '#C0C62B',
-    '#D69719', '#EB0B2E', '#C10015', '#9B0000', '#D600A0', '#EA00EA',
-    '#9A00A0',
-  ],
-  bounds: [-18, -10.5, -3, 4.5, 12, 19.5, 27, 34.5, 42, 49.5, 57, 64.5, 76.5],
+  hexColors: WRF_COLMAX_COLORS,
+  bounds: WRF_COLMAX_BOUNDS,
   useBoundaryNorm: true,
 };
 
