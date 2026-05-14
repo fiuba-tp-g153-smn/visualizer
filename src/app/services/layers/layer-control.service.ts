@@ -98,6 +98,76 @@ export class LayerControlService {
         }
       });
     });
+
+    // Reconcile persisted ECMWF forecast selections against the fresh config.
+    // Forecast tiles/data are pruned server-side after ~36h, but localStorage
+    // can hold timestamps from days-old sessions. Once the config arrives,
+    // drop selections that are no longer available; if none remain on a visible
+    // layer, deactivate it.
+    effect(() => {
+      const configs = this.layerConfigService.configs();
+
+      untracked(() => {
+        for (const layer of this.layersService.getAllLayers()) {
+          if (layer.type !== LayerType.TILE || layer.category !== LayerCategory.ECMWF_TP) {
+            continue;
+          }
+
+          const config = configs.get(layer.id);
+          if (
+            !config ||
+            config.type !== LayerType.TILE ||
+            config.category !== LayerCategory.ECMWF_TP
+          ) {
+            continue;
+          }
+
+          const controls = this.controls().get(layer.id);
+          if (
+            !controls ||
+            controls.type !== LayerType.TILE ||
+            controls.category !== LayerCategory.ECMWF_TP
+          ) {
+            continue;
+          }
+
+          const ecmwfControls = controls as EcmwfTpLayerControls;
+          const available = new Set(config.availableForecasts);
+          const currentSelected = ecmwfControls.forecast.selectedForecastTimestamps;
+          const validSelected = currentSelected.filter((ts) => available.has(ts));
+
+          const opacityEntries = Object.entries(ecmwfControls.forecast.forecastOpacity);
+          const hasStaleOpacity = opacityEntries.some(([ts]) => !available.has(ts));
+          const selectedChanged = validSelected.length !== currentSelected.length;
+
+          if (!selectedChanged && !hasStaleOpacity) continue;
+
+          this.updateControls(layer.id, (c) => {
+            if (c.type !== LayerType.TILE || c.category !== LayerCategory.ECMWF_TP) return;
+            const ec = c as EcmwfTpLayerControls;
+            ec.forecast.selectedForecastTimestamps = validSelected;
+            if (hasStaleOpacity) {
+              const pruned: Record<string, number> = {};
+              for (const [ts, op] of opacityEntries) {
+                if (available.has(ts)) pruned[ts] = op;
+              }
+              ec.forecast.forecastOpacity = pruned;
+            }
+          });
+
+          if (validSelected.length === 0) {
+            if (ecmwfControls.visible) {
+              this.deactivateLayer(layer.id);
+            }
+            continue;
+          }
+
+          // Recompute availableTilesets for the pruned selection. The timeIndex
+          // clamp effect above re-runs once the updated config emits.
+          this.layerConfigService.updateEcmwfTpSelectedForecasts(layer.id, validSelected);
+        }
+      });
+    });
   }
 
   // ============================================================================
