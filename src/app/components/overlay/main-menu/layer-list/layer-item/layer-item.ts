@@ -42,6 +42,7 @@ import {
 } from '../../../../../utils/tileset-timestamp';
 import { computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
+import { SmnStationsTemporalMode } from '../../../../../config/layers/smn-stations/controls.constants';
 
 /**
  * Modo de visualización del componente
@@ -80,6 +81,7 @@ export type LayerItemMode = 'available' | 'active';
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly LayerCategory = LayerCategory;
+  readonly SmnStationsTemporalMode = SmnStationsTemporalMode;
 
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
@@ -120,11 +122,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
   isForecastsExpanded = signal(false);
+  private smnPlaybackTimerId: number | null = null;
+  private readonly smnPlaybackIsPlaying = signal(false);
+  private readonly smnPlaybackSpeed = signal(1);
 
   /** True when this layer is currently controlled by the global sync playback. */
   isSynced = computed(() => this.syncService.isLayerSelected(this.layer.id));
 
   playSpeed = computed(() => {
+    if (this.isSmnStationsLayer()) {
+      return this.smnPlaybackSpeed();
+    }
+
     const controls = this.controlService.getControls(this.layer.id);
     switch (controls?.type) {
       case LayerType.TILE:
@@ -135,6 +144,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   lastImagesCount = computed(() => {
+    if (this.isSmnStationsLayer()) {
+      return this.controlService.getSmnStationsLastImagesCount();
+    }
+
     const controls = this.controlService.getControls(this.layer.id);
     switch (controls?.type) {
       case LayerType.TILE:
@@ -148,6 +161,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Obtiene las opciones de períodos disponibles desde la configuración de la capa
    */
   lastImagesOptions = computed(() => {
+    if (this.isSmnStationsLayer()) {
+      return this.smnLastImagesCountOptions();
+    }
+
     switch (this.layer.type) {
       case LayerType.TILE:
         return this.layer.availablePeriods ?? [1];
@@ -156,9 +173,19 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   });
 
-  isPlaying = computed(() => this.controlService.isPlaying(this.layer.id));
+  isPlaying = computed(() => {
+    if (this.isSmnStationsLayer()) {
+      return this.smnPlaybackIsPlaying();
+    }
+
+    return this.controlService.isPlaying(this.layer.id);
+  });
 
   canPlayback = computed(() => {
+    if (this.isSmnStationsLayer()) {
+      return this.maxTimeIndex() - this.minTimeIndex() >= 1;
+    }
+
     return this.maxTimeIndex() > 0 && this.lastImagesCount() > 1;
   });
 
@@ -404,6 +431,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnDestroy(): void {
+    if (this.isSmnStationsLayer()) {
+      this.stopSmnPlayback();
+    }
+
     // Don't stop playback on destroy - let it continue in the background
     // The layer service will manage playback lifecycle independently
   }
@@ -624,6 +655,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   onTimeIndexChange(timeIndex: number): void {
     if (this.layer.category === LayerCategory.SMN_STATIONS) {
+      this.stopSmnPlayback();
       const tilesetId = this.smnTilesetIds()[timeIndex];
       if (!tilesetId) {
         return;
@@ -839,16 +871,41 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   togglePlayback(): void {
+    if (this.isSmnStationsLayer()) {
+      if (this.isPlaying()) {
+        this.stopSmnPlayback();
+      } else {
+        this.startSmnPlayback();
+      }
+      return;
+    }
+
     this.detachIfSynced();
     this.controlService.togglePlayback(this.layer.id);
   }
 
   onPlaySpeedChange(speed: number): void {
+    if (this.isSmnStationsLayer()) {
+      this.smnPlaybackSpeed.set(this.clampPlaybackSpeed(speed));
+      if (this.isPlaying()) {
+        this.startSmnPlayback();
+      }
+      return;
+    }
+
     this.detachIfSynced();
     this.controlService.setPlaySpeed(this.layer.id, speed);
   }
 
   onLastImagesCountChange(count: number): void {
+    if (this.isSmnStationsLayer()) {
+      this.controlService.setSmnStationsLastImagesCount(count);
+      if (this.isPlaying()) {
+        this.startSmnPlayback();
+      }
+      return;
+    }
+
     this.detachIfSynced();
     this.controlService.setLastImagesCount(this.layer.id, count);
   }
@@ -896,11 +953,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   readonly smnTemporalMode = computed(() => this.controlService.getSmnStationsTemporalMode());
 
+  readonly isSmnSpecificTemporalMode = computed(
+    () => this.smnTemporalMode() === SmnStationsTemporalMode.SPECIFIC,
+  );
+
   readonly smnMaxPastHours = computed(() => this.controlService.getSmnStationsMaxPastHours());
 
-  readonly smnMaxPastHoursOptions = computed(() =>
-    this.refreshService.getSmnStationsMaxPastHoursOptions(),
-  );
+  readonly smnLastImagesCountOptions = computed(() => [1, 3, 6, 12, 24]);
 
   readonly smnTilesetIds = computed(() => this.refreshService.getSmnStationsAvailableTilesetIds());
 
@@ -919,30 +978,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return selectedIndex >= 0 ? selectedIndex : tilesetIds.length - 1;
   });
 
-  readonly smnTilesetMaxIndex = computed(() => Math.max(0, this.smnTilesetIds().length - 1));
-
-  readonly smnFirstTilesetId = computed(() => {
-    const tilesetIds = this.smnTilesetIds();
-    return tilesetIds.length > 0 ? tilesetIds[0] : '';
-  });
-
-  readonly smnLastTilesetId = computed(() => {
-    const tilesetIds = this.smnTilesetIds();
-    return tilesetIds.length > 0 ? tilesetIds[tilesetIds.length - 1] : '';
-  });
-
-  readonly smnSelectedTilesetId = computed(() => {
-    const tilesetIds = this.smnTilesetIds();
-    if (tilesetIds.length === 0) {
-      return '';
-    }
-
-    return tilesetIds[this.smnSelectedTilesetIndex()];
-  });
-
-  onSmnTemporalModeChange(mode: 'latest' | 'specific'): void {
+  onSmnTemporalModeChange(mode: SmnStationsTemporalMode): void {
     this.controlService.setSmnStationsTemporalMode(mode);
-    if (mode === 'latest') {
+    if (mode === SmnStationsTemporalMode.LATEST) {
+      this.stopSmnPlayback();
       const latestTilesetId = this.smnTilesetIds().at(-1) ?? null;
       this.controlService.setSmnStationsSelectedTilesetId(latestTilesetId);
     }
@@ -951,7 +990,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   onSmnMaxPastHoursChange(maxPastHours: number): void {
     this.controlService.setSmnStationsMaxPastHours(maxPastHours);
-    if (this.smnTemporalMode() === 'specific') {
+    if (this.smnTemporalMode() === SmnStationsTemporalMode.SPECIFIC) {
+      if (this.isPlaying()) {
+        this.startSmnPlayback();
+      }
       void this.refreshService.loadSmnStationsSnapshot(true);
     }
   }
@@ -963,14 +1005,53 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     this.controlService.setSmnStationsSelectedTilesetId(tilesetId);
-    if (this.smnTemporalMode() === 'specific') {
+    if (this.smnTemporalMode() === SmnStationsTemporalMode.SPECIFIC) {
       void this.refreshService.loadSmnStationsSnapshot(true);
     }
   }
 
-  formatSmnTilesetId(tilesetId: string): string {
-    const parsedDate = this.smnTilesetIdToDate(tilesetId);
-    return parsedDate ? formatDateTimeOnly(parsedDate) : tilesetId;
+  private startSmnPlayback(): void {
+    if (!this.isActive() || !this.isSmnSpecificTemporalMode()) {
+      return;
+    }
+
+    const min = this.minTimeIndex();
+    const max = this.maxTimeIndex();
+    if (max - min < 1) {
+      return;
+    }
+
+    this.stopSmnPlayback();
+    this.smnPlaybackIsPlaying.set(true);
+    const intervalMs = this.clampPlaybackSpeed(this.playSpeed()) * 1000;
+
+    this.smnPlaybackTimerId = window.setInterval(() => {
+      const dynamicMin = this.minTimeIndex();
+      const dynamicMax = this.maxTimeIndex();
+
+      if (dynamicMax - dynamicMin < 1) {
+        this.stopSmnPlayback();
+        return;
+      }
+
+      const nextIndex =
+        this.currentTimeIndex() >= dynamicMax ? dynamicMin : this.currentTimeIndex() + 1;
+
+      this.onSmnTilesetIndexChange(nextIndex);
+    }, intervalMs);
+  }
+
+  private stopSmnPlayback(): void {
+    if (this.smnPlaybackTimerId !== null) {
+      window.clearInterval(this.smnPlaybackTimerId);
+      this.smnPlaybackTimerId = null;
+    }
+
+    this.smnPlaybackIsPlaying.set(false);
+  }
+
+  private clampPlaybackSpeed(speed: number): number {
+    return Math.max(0.4, Math.min(10, speed));
   }
 
   private smnTilesetIdToDate(tilesetId: string): Date | null {

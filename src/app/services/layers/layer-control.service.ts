@@ -28,13 +28,19 @@ import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 import { SmnStationsAuthService } from '../auth/smn-stations-auth.service';
+import {
+  DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
+  isSmnStationsTemporalMode,
+  SmnStationsTemporalMode,
+} from '../../config/layers/smn-stations/controls.constants';
 
 interface PersistedSmnStationsSharedControlsState {
   opacity: number;
   zIndex: number | null;
   scaleVisible: boolean;
-  temporalMode: 'latest' | 'specific';
+  temporalMode: SmnStationsTemporalMode;
   maxPastHours: number;
+  lastImagesCount: number;
   selectedTilesetId: string | null;
 }
 
@@ -61,14 +67,15 @@ export class LayerControlService {
   private readonly smnStationsAuthService = inject(SmnStationsAuthService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
-  private smnStationsSharedState: PersistedSmnStationsSharedControlsState = {
+  private readonly smnStationsSharedState = signal<PersistedSmnStationsSharedControlsState>({
     opacity: 1,
     zIndex: null,
     scaleVisible: false,
-    temporalMode: 'latest',
-    maxPastHours: 24,
+    temporalMode: SmnStationsTemporalMode.LATEST,
+    maxPastHours: DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
+    lastImagesCount: 6,
     selectedTilesetId: null,
-  };
+  });
 
   constructor() {
     this.loadSmnStationsSharedState();
@@ -142,64 +149,95 @@ export class LayerControlService {
   }
 
   getSmnStationsSharedOpacity(): number {
-    return this.smnStationsSharedState.opacity;
+    return this.smnStationsSharedState().opacity;
   }
 
   getSmnStationsSharedZIndex(): number | null {
-    return this.smnStationsSharedState.zIndex;
+    return this.smnStationsSharedState().zIndex;
   }
 
   isSmnStationsScaleVisible(): boolean {
-    return this.smnStationsSharedState.scaleVisible;
+    return this.smnStationsSharedState().scaleVisible;
   }
 
-  getSmnStationsTemporalMode(): 'latest' | 'specific' {
-    return this.smnStationsSharedState.temporalMode;
+  getSmnStationsTemporalMode(): SmnStationsTemporalMode {
+    return this.smnStationsSharedState().temporalMode;
   }
 
   getSmnStationsMaxPastHours(): number {
-    return this.smnStationsSharedState.maxPastHours;
+    return this.smnStationsSharedState().maxPastHours;
   }
 
   getSmnStationsSelectedTilesetId(): string | null {
-    return this.smnStationsSharedState.selectedTilesetId;
+    return this.smnStationsSharedState().selectedTilesetId;
+  }
+
+  getSmnStationsLastImagesCount(): number {
+    return this.smnStationsSharedState().lastImagesCount;
   }
 
   captureSmnStationsSharedFromControls(controls: LayerControls): void {
-    this.smnStationsSharedState.opacity = this.clampSmnStationsOpacity(controls.opacity);
-    this.smnStationsSharedState.zIndex = Number.isFinite(controls.zIndex)
-      ? Math.max(0, controls.zIndex)
-      : null;
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      opacity: this.clampSmnStationsOpacity(controls.opacity),
+      zIndex: Number.isFinite(controls.zIndex) ? Math.max(0, controls.zIndex) : null,
+    }));
     this.saveSmnStationsSharedState();
   }
 
   setSmnStationsSharedOpacity(opacity: number): void {
-    this.smnStationsSharedState.opacity = this.clampSmnStationsOpacity(opacity);
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      opacity: this.clampSmnStationsOpacity(opacity),
+    }));
     this.saveSmnStationsSharedState();
   }
 
   setSmnStationsSharedZIndex(zIndex: number | null): void {
-    this.smnStationsSharedState.zIndex = zIndex === null ? null : Math.max(0, Math.round(zIndex));
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      zIndex: zIndex === null ? null : Math.max(0, Math.round(zIndex)),
+    }));
     this.saveSmnStationsSharedState();
   }
 
   setSmnStationsScaleVisible(scaleVisible: boolean): void {
-    this.smnStationsSharedState.scaleVisible = scaleVisible;
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      scaleVisible,
+    }));
     this.saveSmnStationsSharedState();
   }
 
-  setSmnStationsTemporalMode(temporalMode: 'latest' | 'specific'): void {
-    this.smnStationsSharedState.temporalMode = temporalMode;
+  setSmnStationsTemporalMode(temporalMode: SmnStationsTemporalMode): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      temporalMode,
+    }));
     this.saveSmnStationsSharedState();
   }
 
   setSmnStationsMaxPastHours(maxPastHours: number): void {
-    this.smnStationsSharedState.maxPastHours = Math.max(1, Math.round(maxPastHours));
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      maxPastHours: Math.max(0, Math.min(24, Math.round(maxPastHours))),
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsLastImagesCount(lastImagesCount: number): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      lastImagesCount: Math.max(1, Math.round(lastImagesCount)),
+    }));
     this.saveSmnStationsSharedState();
   }
 
   setSmnStationsSelectedTilesetId(selectedTilesetId: string | null): void {
-    this.smnStationsSharedState.selectedTilesetId = selectedTilesetId;
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      selectedTilesetId,
+    }));
     this.saveSmnStationsSharedState();
   }
 
@@ -1035,11 +1073,11 @@ export class LayerControlService {
 
       const parsed = JSON.parse(raw) as Partial<PersistedSmnStationsSharedControlsState>;
 
-      this.smnStationsSharedState = {
+      this.smnStationsSharedState.set({
         opacity:
           typeof parsed.opacity === 'number'
             ? this.clampSmnStationsOpacity(parsed.opacity)
-            : this.smnStationsSharedState.opacity,
+            : this.smnStationsSharedState().opacity,
         zIndex:
           typeof parsed.zIndex === 'number' && Number.isFinite(parsed.zIndex)
             ? Math.max(0, Math.round(parsed.zIndex))
@@ -1047,18 +1085,21 @@ export class LayerControlService {
         scaleVisible:
           typeof parsed.scaleVisible === 'boolean'
             ? parsed.scaleVisible
-            : this.smnStationsSharedState.scaleVisible,
-        temporalMode:
-          parsed.temporalMode === 'specific' || parsed.temporalMode === 'latest'
-            ? parsed.temporalMode
-            : this.smnStationsSharedState.temporalMode,
+            : this.smnStationsSharedState().scaleVisible,
+        temporalMode: isSmnStationsTemporalMode(parsed.temporalMode)
+          ? parsed.temporalMode
+          : this.smnStationsSharedState().temporalMode,
         maxPastHours:
           typeof parsed.maxPastHours === 'number' && Number.isFinite(parsed.maxPastHours)
-            ? Math.max(1, Math.round(parsed.maxPastHours))
-            : this.smnStationsSharedState.maxPastHours,
+            ? Math.max(0, Math.min(24, Math.round(parsed.maxPastHours)))
+            : this.smnStationsSharedState().maxPastHours,
+        lastImagesCount:
+          typeof parsed.lastImagesCount === 'number' && Number.isFinite(parsed.lastImagesCount)
+            ? Math.max(1, Math.round(parsed.lastImagesCount))
+            : this.smnStationsSharedState().lastImagesCount,
         selectedTilesetId:
           typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
-      };
+      });
     } catch {
       // Ignore malformed persisted state.
     }
@@ -1072,7 +1113,7 @@ export class LayerControlService {
     try {
       localStorage.setItem(
         STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS,
-        JSON.stringify(this.smnStationsSharedState),
+        JSON.stringify(this.smnStationsSharedState()),
       );
     } catch {
       // Ignore storage failures.
