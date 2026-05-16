@@ -5,6 +5,7 @@ import * as L from 'leaflet';
 import type { Feature, FeatureCollection } from 'geojson';
 
 import { SecondaryVectorRender } from '../../models';
+import { isTextPathLayer } from '../../utils/textpath-layer';
 
 const DEFAULT_MAX_CACHE_ENTRIES = 50;
 const DEFAULT_FETCH_CONCURRENCY = 3;
@@ -106,7 +107,7 @@ export class VectorOverlayService {
         const value = this.readValue(feature, config.valueProperty);
         if (value === null) return;
         const label = config.labelFor(value);
-        if (label && layer instanceof L.Polyline) {
+        if (label && isTextPathLayer(layer)) {
           layer.setText(label, config.textpathOptions);
         }
       },

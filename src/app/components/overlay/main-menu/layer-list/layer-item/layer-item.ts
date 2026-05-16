@@ -34,13 +34,14 @@ import { LayerControlService } from '../../../../../services/layers/layer-contro
 import { LayerConfigService } from '../../../../../services/layers/layer-config.service';
 import { LayerRefreshService } from '../../../../../services/layers/layer-refresh.service';
 import { SyncPlaybackService } from '../../../../../services/layers/sync-playback.service';
+import { SmnStationsAuthService } from '../../../../../services/auth/smn-stations-auth.service';
 import {
   formatDateFull,
   formatDateTimeOnly,
   formatEcmwfForecastTs,
 } from '../../../../../utils/tileset-timestamp';
 import { computeWindowStart } from '../../../../../utils/playback-window';
-import { ScaleToolsService } from '../../../../../services/layers/scale-tools.service';
+import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
 
 /**
  * Modo de visualización del componente
@@ -78,11 +79,14 @@ export type LayerItemMode = 'available' | 'active';
   styleUrl: './layer-item.scss',
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
+  readonly LayerCategory = LayerCategory;
+
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
   private readonly syncService = inject(SyncPlaybackService);
+  private readonly smnStationsAuthService = inject(SmnStationsAuthService);
   private readonly scaleTools = inject(ScaleToolsService);
 
   /**
@@ -210,6 +214,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   hasTimeControl = computed(() => {
+    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+      return this.smnTilesetIds().length > 0;
+    }
+
     // Debe tener configuración Y tilesets disponibles
     if (!this.configService.hasConfig(this.layer.id)) return false;
 
@@ -221,6 +229,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa requiere control de tiempo pero no hay períodos disponibles
    */
   hasNoPeriodsAvailable = computed(() => {
+    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+      return this.smnTilesetIds().length === 0;
+    }
+
     // Solo aplica a capas TILE
     if (this.layer.type !== LayerType.TILE) return false;
 
@@ -239,6 +251,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita control de período (TILE layers)
    */
   needsTimeControl = computed(() => {
+    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+      return true;
+    }
+
     switch (this.layer.type) {
       case LayerType.TILE:
         switch (this.layer.category) {
@@ -357,6 +373,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Índice de tiempo actual - lee directamente del servicio
    */
   currentTimeIndex = computed(() => {
+    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+      return this.smnSelectedTilesetIndex();
+    }
+
     const activeItem = this.getActiveLayer();
     let currentIndex: number;
 
@@ -393,6 +413,24 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Para GOES_19 y RADAR: devuelve todos los tilesets.
    */
   private getAvailableTilesetsForLayer(): TilesetEntry[] | undefined {
+    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+      const entries: TilesetEntry[] = [];
+
+      for (const tilesetId of this.smnTilesetIds()) {
+        const tilesetTime = this.smnTilesetIdToDate(tilesetId);
+        if (!tilesetTime) {
+          continue;
+        }
+
+        entries.push({
+          id: tilesetId,
+          time: tilesetTime,
+        });
+      }
+
+      return entries;
+    }
+
     switch (this.layer.type) {
       case LayerType.TILE:
         switch (this.layer.category) {
@@ -424,19 +462,33 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   /**
    * Alterna el estado de activación de la capa
    */
-  toggleActive(checked: boolean): void {
+  async toggleActive(checked: boolean): Promise<void> {
     if (checked) {
-      this.activateLayer();
-      // Expand details by default when activating
-      this.isExpanded.set(true);
+      await this.activateLayer();
+      if (this.isActive()) {
+        // Expand details by default when activating
+        this.isExpanded.set(true);
+      }
     } else {
       this.deactivateLayer();
     }
   }
 
-  onRadioSelected(): void {
-    this.activateLayer();
-    this.isExpanded.set(true);
+  async onRadioSelected(): Promise<void> {
+    await this.activateLayer();
+    if (this.isActive()) {
+      this.isExpanded.set(true);
+    }
+  }
+
+  onRadioClick(event: MouseEvent): void {
+    if (!this.isActive()) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.deactivateLayer();
   }
 
   /**
@@ -463,11 +515,39 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   /**
    * Activa la capa
    */
-  private activateLayer(): void {
+  private async activateLayer(): Promise<void> {
+    if (!(await this.ensureSmnStationsAuth())) {
+      return;
+    }
+
+    if (this.isSmnStationsLayer()) {
+      this.captureCurrentSmnSharedState();
+    }
+
     if (this.selectionMode === LayerSelectionMode.SINGLE) {
       this.deactivateSiblingLayersInSubgroup();
     }
+
     this.controlService.activateLayer(this.layer.id);
+
+    if (this.isSmnStationsLayer()) {
+      this.applySharedStateToSmnLayer();
+      await this.refreshService.ensureSmnStationsEndpointConfigLoaded();
+      await this.refreshService.loadSmnStationsSnapshot(true);
+    }
+  }
+
+  private async ensureSmnStationsAuth(): Promise<boolean> {
+    if (this.layer.category !== LayerCategory.SMN_STATIONS) {
+      return true;
+    }
+
+    if (this.smnStationsAuthService.hasValidToken()) {
+      return true;
+    }
+
+    const token = await this.smnStationsAuthService.ensureTokenWithPrompt();
+    return token !== null;
   }
 
   private deactivateSiblingLayersInSubgroup(): void {
@@ -518,6 +598,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     // Always update the layer's base opacity as well
     this.controlService.setOpacity(this.layer.id, opacity);
+
+    if (this.isSmnStationsLayer()) {
+      this.controlService.setSmnStationsSharedOpacity(opacity);
+    }
   }
 
   /**
@@ -539,6 +623,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   onTimeIndexChange(timeIndex: number): void {
+    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+      const tilesetId = this.smnTilesetIds()[timeIndex];
+      if (!tilesetId) {
+        return;
+      }
+
+      this.controlService.setSmnStationsSelectedTilesetId(tilesetId);
+      void this.refreshService.loadSmnStationsSnapshot(true);
+      return;
+    }
+
     this.detachIfSynced();
     this.stopIfPlaying();
 
@@ -771,6 +866,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   hasScale(): boolean {
+    if (this.layer.id === 'smn/stations/weather') {
+      return false;
+    }
+
     return this.layer.scale !== undefined;
   }
 
@@ -783,5 +882,159 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       this.scaleTools.setEnabled(true);
     }
     this.scaleTools.toggleLayerSelection(this.layer.id);
+
+    if (this.isSmnStationsLayer()) {
+      this.controlService.setSmnStationsScaleVisible(
+        this.scaleTools.enabled() && this.scaleTools.isLayerSelected(this.layer.id),
+      );
+    }
+  }
+
+  private isSmnStationsLayer(): boolean {
+    return this.layer.category === LayerCategory.SMN_STATIONS;
+  }
+
+  readonly smnTemporalMode = computed(() => this.controlService.getSmnStationsTemporalMode());
+
+  readonly smnMaxPastHours = computed(() => this.controlService.getSmnStationsMaxPastHours());
+
+  readonly smnMaxPastHoursOptions = computed(() =>
+    this.refreshService.getSmnStationsMaxPastHoursOptions(),
+  );
+
+  readonly smnTilesetIds = computed(() => this.refreshService.getSmnStationsAvailableTilesetIds());
+
+  readonly smnSelectedTilesetIndex = computed(() => {
+    const tilesetIds = this.smnTilesetIds();
+    if (tilesetIds.length === 0) {
+      return 0;
+    }
+
+    const selectedTilesetId = this.controlService.getSmnStationsSelectedTilesetId();
+    if (!selectedTilesetId) {
+      return tilesetIds.length - 1;
+    }
+
+    const selectedIndex = tilesetIds.indexOf(selectedTilesetId);
+    return selectedIndex >= 0 ? selectedIndex : tilesetIds.length - 1;
+  });
+
+  readonly smnTilesetMaxIndex = computed(() => Math.max(0, this.smnTilesetIds().length - 1));
+
+  readonly smnFirstTilesetId = computed(() => {
+    const tilesetIds = this.smnTilesetIds();
+    return tilesetIds.length > 0 ? tilesetIds[0] : '';
+  });
+
+  readonly smnLastTilesetId = computed(() => {
+    const tilesetIds = this.smnTilesetIds();
+    return tilesetIds.length > 0 ? tilesetIds[tilesetIds.length - 1] : '';
+  });
+
+  readonly smnSelectedTilesetId = computed(() => {
+    const tilesetIds = this.smnTilesetIds();
+    if (tilesetIds.length === 0) {
+      return '';
+    }
+
+    return tilesetIds[this.smnSelectedTilesetIndex()];
+  });
+
+  onSmnTemporalModeChange(mode: 'latest' | 'specific'): void {
+    this.controlService.setSmnStationsTemporalMode(mode);
+    if (mode === 'latest') {
+      const latestTilesetId = this.smnTilesetIds().at(-1) ?? null;
+      this.controlService.setSmnStationsSelectedTilesetId(latestTilesetId);
+    }
+    void this.refreshService.loadSmnStationsSnapshot(true);
+  }
+
+  onSmnMaxPastHoursChange(maxPastHours: number): void {
+    this.controlService.setSmnStationsMaxPastHours(maxPastHours);
+    if (this.smnTemporalMode() === 'specific') {
+      void this.refreshService.loadSmnStationsSnapshot(true);
+    }
+  }
+
+  onSmnTilesetIndexChange(tilesetIndex: number): void {
+    const tilesetId = this.smnTilesetIds()[tilesetIndex];
+    if (!tilesetId) {
+      return;
+    }
+
+    this.controlService.setSmnStationsSelectedTilesetId(tilesetId);
+    if (this.smnTemporalMode() === 'specific') {
+      void this.refreshService.loadSmnStationsSnapshot(true);
+    }
+  }
+
+  formatSmnTilesetId(tilesetId: string): string {
+    const parsedDate = this.smnTilesetIdToDate(tilesetId);
+    return parsedDate ? formatDateTimeOnly(parsedDate) : tilesetId;
+  }
+
+  private smnTilesetIdToDate(tilesetId: string): Date | null {
+    const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
+    if (!match) {
+      return null;
+    }
+
+    const [, year, month, day, hour] = match;
+    const parsed = new Date(
+      Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0),
+    );
+
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private captureCurrentSmnSharedState(): void {
+    const activeSmnLayer = this.controlService
+      .activeLayers()
+      .find((item) => item.layer.category === LayerCategory.SMN_STATIONS);
+
+    if (activeSmnLayer) {
+      this.controlService.captureSmnStationsSharedFromControls(activeSmnLayer.controls);
+      this.controlService.setSmnStationsScaleVisible(
+        this.scaleTools.enabled() && this.scaleTools.isLayerSelected(activeSmnLayer.layer.id),
+      );
+      return;
+    }
+
+    this.controlService.captureSmnStationsSharedFromControls(
+      this.controlService.getControls(this.layer.id),
+    );
+  }
+
+  private applySharedStateToSmnLayer(): void {
+    this.controlService.setOpacity(
+      this.layer.id,
+      this.controlService.getSmnStationsSharedOpacity(),
+    );
+
+    const sharedZIndex = this.controlService.getSmnStationsSharedZIndex();
+    if (sharedZIndex !== null) {
+      this.controlService.setZIndex(this.layer.id, sharedZIndex);
+    }
+
+    if (!this.hasScale()) {
+      return;
+    }
+
+    const shouldShowScale = this.controlService.isSmnStationsScaleVisible();
+    const isSelected = this.scaleTools.isLayerSelected(this.layer.id);
+
+    if (shouldShowScale) {
+      if (!this.scaleTools.enabled()) {
+        this.scaleTools.setEnabled(true);
+      }
+      if (!isSelected) {
+        this.scaleTools.toggleLayerSelection(this.layer.id);
+      }
+      return;
+    }
+
+    if (isSelected) {
+      this.scaleTools.toggleLayerSelection(this.layer.id);
+    }
   }
 }

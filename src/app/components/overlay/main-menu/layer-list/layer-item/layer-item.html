@@ -10,6 +10,7 @@
         <mat-radio-button
           [name]="radioGroupName"
           [checked]="isActive()"
+          (click)="onRadioClick($event)"
           (change)="onRadioSelected()"
           color="primary"
           class="layer-radio"
@@ -287,6 +288,57 @@
 
             <!-- Contenido condicional según estado -->
             @if (hasTimeControl()) {
+              @if (layer.category === LayerCategory.SMN_STATIONS) {
+                <div class="smn-temporal-control">
+                  <div class="smn-mode-control">
+                    <span class="control-label">Consulta</span>
+                    <mat-radio-group
+                      [value]="smnTemporalMode()"
+                      (change)="onSmnTemporalModeChange($event.value)"
+                      class="smn-mode-group"
+                    >
+                      <mat-radio-button value="latest" color="primary">Último</mat-radio-button>
+                      <mat-radio-button value="specific" color="primary">Específico</mat-radio-button>
+                    </mat-radio-group>
+                  </div>
+
+                  <div class="smn-hours-control">
+                    <span class="control-label">Horas hacia atrás permitidas</span>
+                    <mat-form-field appearance="fill" class="smn-hours-select">
+                      <mat-select
+                        [value]="smnMaxPastHours()"
+                        (selectionChange)="onSmnMaxPastHoursChange($event.value)"
+                        panelClass="layer-select-panel"
+                      >
+                        @for (hours of smnMaxPastHoursOptions(); track hours) {
+                          <mat-option [value]="hours">{{ hours }} h</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <div class="smn-tileset-slider" [class.disabled]="smnTemporalMode() !== 'specific'">
+                    <span class="smn-tileset-min">{{ formatSmnTilesetId(smnFirstTilesetId()) }}</span>
+                    <mat-slider
+                      [min]="0"
+                      [max]="smnTilesetMaxIndex()"
+                      [step]="1"
+                      [discrete]="true"
+                      class="control-slider"
+                      [disabled]="smnTemporalMode() !== 'specific' || smnTilesetIds().length === 0"
+                    >
+                      <input
+                        matSliderThumb
+                        [value]="smnSelectedTilesetIndex()"
+                        (valueChange)="onSmnTilesetIndexChange($event)"
+                      />
+                    </mat-slider>
+                    <span class="smn-tileset-max">{{ formatSmnTilesetId(smnLastTilesetId()) }}</span>
+                  </div>
+
+                  <div class="smn-selected-tileset">Tileset: {{ formatSmnTilesetId(smnSelectedTilesetId()) }}</div>
+                </div>
+              } @else {
               <!-- Slider de tiempo con play -->
               <div class="time-slider-container">
                 <span class="time-min">{{ getTimeOnly(minTimeIndex()) }}</span>
@@ -362,6 +414,7 @@
                   <span class="speed-label">s</span>
                 </div>
               </div>
+              }
             } @else if (isLoadingConfig()) {
               <div class="loading-config">
                 <mat-icon class="loading-icon">hourglass_empty</mat-icon>

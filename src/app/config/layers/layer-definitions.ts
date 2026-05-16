@@ -48,7 +48,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
   },
   {
     id: 'smn-estaciones',
-    name: 'Estaciones SMN',
+    name: 'Estaciones Meteorológicas',
     description: 'Observaciones actuales de estaciones meteorológicas del SMN',
     icon: 'thermostat',
     expanded: false,

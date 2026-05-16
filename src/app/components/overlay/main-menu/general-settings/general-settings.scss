@@ -42,10 +42,38 @@
   gap: 1.5rem;
 }
 
+.settings-section--units {
+  gap: 0.875rem;
+}
+
+.setting-row {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.375rem;
+}
+
 .setting-group {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+
+  &.setting-group--inline {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .token-control {
+    display: flex;
+    padding-left: 0;
+
+    button {
+      align-self: flex-start;
+    }
+  }
 }
 
 .setting-title {
@@ -62,18 +90,18 @@
   line-height: 1.4;
 }
 
-.temperature-unit-group {
+.units-selector-group {
   display: flex;
-  flex-direction: column;
+  flex-wrap: nowrap;
   gap: 0.5rem;
-  padding-left: 0.5rem;
+  justify-content: flex-end;
 }
 
 .precision-control {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-left: 0.5rem;
+  justify-content: flex-end;
 
   .precision-input {
     width: 60px;
@@ -95,6 +123,19 @@
   .precision-label {
     font-size: 0.75rem;
     color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+@media (max-width: 640px) {
+  .setting-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .units-selector-group,
+  .precision-control {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }
 

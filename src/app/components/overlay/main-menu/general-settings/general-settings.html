@@ -9,32 +9,56 @@
         </div>
       </ng-template>
       <div class="tab-content">
-        <div class="settings-section">
-          <div class="setting-group">
+        <div class="settings-section settings-section--units">
+          <div class="setting-row">
             <h3 class="setting-title">Temperatura</h3>
             <mat-radio-group
               [value]="unitsSettings.temperatureUnit()"
               (change)="onTemperatureUnitChange($event.value)"
-              class="temperature-unit-group"
+              class="units-selector-group"
             >
               <mat-radio-button
                 [value]="TEMPERATURE_UNITS.CELSIUS"
                 color="primary"
                 matTooltip="Mostrar temperaturas en grados Celsius (°C)"
               >
-                Celsius (°C)
+                Celsius
               </mat-radio-button>
               <mat-radio-button
                 [value]="TEMPERATURE_UNITS.KELVIN"
                 color="primary"
                 matTooltip="Mostrar temperaturas en Kelvin (K)"
               >
-                Kelvin (K)
+                Kelvin
               </mat-radio-button>
             </mat-radio-group>
           </div>
 
-          <div class="setting-group">
+          <div class="setting-row">
+            <h3 class="setting-title">Velocidad del viento</h3>
+            <mat-radio-group
+              [value]="unitsSettings.windSpeedUnit()"
+              (change)="onWindSpeedUnitChange($event.value)"
+              class="units-selector-group"
+            >
+              <mat-radio-button
+                [value]="WIND_SPEED_UNITS.KILOMETERS_PER_HOUR"
+                color="primary"
+                matTooltip="Mostrar velocidad del viento en km/h"
+              >
+                km/h
+              </mat-radio-button>
+              <mat-radio-button
+                [value]="WIND_SPEED_UNITS.KNOTS"
+                color="primary"
+                matTooltip="Mostrar velocidad del viento en nudos"
+              >
+                Nudos
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <div class="setting-row">
             <h3 class="setting-title">Precisión decimal</h3>
             <div class="precision-control">
               <input
@@ -49,6 +73,33 @@
                 matTooltip="Cantidad de decimales a mostrar (0-3)"
               />
               <span class="precision-label">decimales</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
+          <mat-icon class="tab-icon">vpn_key</mat-icon>
+          <span class="tab-label">SMN</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <div class="settings-section">
+          <div class="setting-group setting-group--inline">
+            <h3 class="setting-title">Token estaciones SMN</h3>
+            <div class="token-control">
+              @if (hasSmnToken()) {
+                <button mat-stroked-button type="button" (click)="clearSmnToken()">
+                  Borrar token
+                </button>
+              } @else {
+                <button mat-flat-button color="primary" type="button" (click)="addSmnToken()">
+                  Agregar token
+                </button>
+              }
             </div>
           </div>
         </div>
