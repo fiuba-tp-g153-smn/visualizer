@@ -26,6 +26,25 @@ export const IGN_WMS_WORKSPACE_URLS: Record<string, string> = {
   'relieve-suelo': 'https://wms.ign.gob.ar/geoserver/relieve-suelo/wms',
 };
 
+/**
+ * IGN WMS layer IDs whose tiles are also pre-scraped and cached by the
+ * data-service basemap pipeline. For these IDs the renderer serves XYZ
+ * tiles from `/basemap/{layerId}/{z}/{x}/{y}.png` (which itself relays
+ * to upstream WMS and falls back to Redis/S3 caches). Layers not in this
+ * set continue to hit `wms.ign.gob.ar` directly through Leaflet's WMS
+ * facade.
+ *
+ * Keep in sync with `data-service::basemap.providers` (settings.json).
+ */
+export const IGN_WMS_BACKED_UP_LAYER_IDS: ReadonlySet<string> = new Set([
+  'ign-provincia',
+  'ign-limite-internacional',
+  'ign-limite-interdepartamental-o-de-partido',
+  'ign-localidad',
+  'ign-sublocalidad',
+  'ign-gobierno-local',
+]);
+
 export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-limits',
