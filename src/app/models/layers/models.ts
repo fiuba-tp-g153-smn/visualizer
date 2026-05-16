@@ -215,8 +215,7 @@ export interface SmnStationLayer extends BaseLayer {
     | 'humidity'
     | 'pressure'
     | 'visibility'
-    | 'wind_speed'
-    | 'weather';
+    | 'wind_speed';
   scale: NonNullable<LayerScale>; // Las estaciones siempre tienen escala
 }
 

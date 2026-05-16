@@ -923,10 +923,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   hasScale(): boolean {
-    if (this.layer.id === 'smn/stations/weather') {
-      return false;
-    }
-
     return this.layer.scale !== undefined;
   }
 

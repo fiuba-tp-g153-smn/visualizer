@@ -1,6 +1,5 @@
 import { LayerScale, ScaleType } from '../../../models';
 import { SMN_UNITS, TEMPERATURE_UNITS } from '../../../constants';
-import { SMN_WEATHER_SCALE_STEPS } from './weather-scales.config';
 
 export const TEMPERATURE_SCALE: LayerScale = {
   type: ScaleType.CONTINUOUS,
@@ -79,8 +78,3 @@ export const WIND_SPEED_SCALE: LayerScale = {
   ],
 };
 
-export const WEATHER_SCALE: LayerScale = {
-  type: ScaleType.DISCRETE,
-  unit: '',
-  steps: SMN_WEATHER_SCALE_STEPS,
-};

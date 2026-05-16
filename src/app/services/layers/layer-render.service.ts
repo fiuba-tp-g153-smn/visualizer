@@ -32,17 +32,7 @@ import { LayerRefreshService } from './layer-refresh.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
 import { SMN_STATION_PANE } from '../../config/layers/smn-stations/config';
-import {
-  SmnWeatherTimePeriod,
-  SMN_STATION_RENDER_CONFIG,
-  SMN_WEATHER_DAY_START_HOUR,
-  SMN_WEATHER_NIGHT_START_HOUR,
-} from '../../config/layers/smn-stations/render.config';
-import {
-  SMN_SUPPORTED_WEATHER_ICON_IDS,
-  SMN_WEATHER_DAY_ICON_BY_PHENOMENON,
-  SMN_WEATHER_NIGHT_ICON_BY_PHENOMENON,
-} from '../../config/layers/smn-stations/weather-scales.config';
+import { SMN_STATION_RENDER_CONFIG } from '../../config/layers/smn-stations/render.config';
 import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 import { SMN_UNITS, TEMPERATURE_UNITS } from '../../constants';
@@ -299,27 +289,15 @@ export class LayerRenderService {
           interactive: true,
         });
       } else {
-        if (stationLayer.variable === 'weather') {
-          const weatherIconId = this.resolveSmnStationsWeatherIconId(observation);
-          const weatherIconSizePx = Math.max(22, Math.round(badgeDiameterPx + 2));
-          const icon = this.buildSmnStationsWeatherIcon(weatherIconId, weatherIconSizePx);
-          marker = L.marker(point.latLng, {
-            pane: SMN_STATION_PANE,
-            icon,
-            interactive: true,
-            opacity,
-          });
-        } else {
-          const textColor = this.resolveSmnStationsContrastingTextColor(color);
-          const { displayValue } = this.resolveSmnStationsDisplayValueAndUnit(
-            value,
-            stationLayer.scale?.unit ?? '',
-          );
-          const labelValue = Math.round(displayValue);
-          const iconDiameter = badgeDiameterPx;
-          const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
-          marker = L.marker(point.latLng, { pane: SMN_STATION_PANE, icon, interactive: true });
-        }
+        const textColor = this.resolveSmnStationsContrastingTextColor(color);
+        const { displayValue } = this.resolveSmnStationsDisplayValueAndUnit(
+          value,
+          stationLayer.scale?.unit ?? '',
+        );
+        const labelValue = Math.round(displayValue);
+        const iconDiameter = badgeDiameterPx;
+        const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
+        marker = L.marker(point.latLng, { pane: SMN_STATION_PANE, icon, interactive: true });
       }
 
       marker.on?.('click', (evt: L.LeafletMouseEvent) => {
@@ -395,49 +373,6 @@ export class LayerRenderService {
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
     });
-  }
-
-  private buildSmnStationsWeatherIcon(iconId: number, sizePx: number): L.DivIcon {
-    const fileIconId = String(iconId).padStart(2, '0');
-    return L.divIcon({
-      className: 'smn-station-weather-divicon',
-      html: `<img src="/smn-weather-icons/icons_${fileIconId}.png" alt="" width="${sizePx}" height="${sizePx}" draggable="false" />`,
-      iconSize: [sizePx, sizePx],
-      iconAnchor: [sizePx / 2, sizePx / 2],
-    });
-  }
-
-  private resolveSmnStationsWeatherIconId(observation: SmnStationObservationLike): number {
-    const fallbackIconId = SMN_STATION_RENDER_CONFIG.weather.fallbackIconId;
-    const phenomenonRaw = observation.weather.weather?.id;
-    if (phenomenonRaw === null || phenomenonRaw === undefined || Number.isNaN(phenomenonRaw)) {
-      return fallbackIconId;
-    }
-
-    const phenomenonId = Math.round(phenomenonRaw);
-    const period = this.resolveSmnStationsWeatherTimePeriod(observation.weather.date);
-
-    const dayIconId = SMN_WEATHER_DAY_ICON_BY_PHENOMENON.get(phenomenonId);
-    const nightIconId = SMN_WEATHER_NIGHT_ICON_BY_PHENOMENON.get(phenomenonId);
-    const resolvedIconId =
-      period === SmnWeatherTimePeriod.NIGHT && nightIconId !== undefined ? nightIconId : dayIconId;
-
-    if (resolvedIconId !== undefined && SMN_SUPPORTED_WEATHER_ICON_IDS.has(resolvedIconId)) {
-      return resolvedIconId;
-    }
-
-    return fallbackIconId;
-  }
-
-  private resolveSmnStationsWeatherTimePeriod(timestamp: string): SmnWeatherTimePeriod {
-    const observationDate = new Date(timestamp);
-    if (Number.isNaN(observationDate.getTime())) {
-      return SmnWeatherTimePeriod.DAY;
-    }
-
-    const hour = observationDate.getHours();
-    const isNight = hour >= SMN_WEATHER_NIGHT_START_HOUR || hour < SMN_WEATHER_DAY_START_HOUR;
-    return isNight ? SmnWeatherTimePeriod.NIGHT : SmnWeatherTimePeriod.DAY;
   }
 
   /**
@@ -805,8 +740,6 @@ export class LayerRenderService {
         return observation.weather.visibility;
       case 'wind_speed':
         return observation.weather.wind.speed ?? 0;
-      case 'weather':
-        return observation.weather.weather?.id ?? null;
       default:
         return null;
     }
@@ -1118,8 +1051,6 @@ export class LayerRenderService {
       case 'temperature':
       case 'feels_like':
         return 1;
-      case 'weather':
-        return 0;
       default:
         return 1;
     }
