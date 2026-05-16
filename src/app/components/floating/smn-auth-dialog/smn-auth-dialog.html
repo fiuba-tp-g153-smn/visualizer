@@ -1,0 +1,33 @@
+<h2 mat-dialog-title>Autenticacion requerida</h2>
+
+<mat-dialog-content>
+  <p class="dialog-message">
+    Para habilitar las estaciones meteorologicas, ingresa tu token de acceso del SMN.
+  </p>
+
+  @if (data?.errorMessage) {
+    <p class="dialog-error">{{ data?.errorMessage }}</p>
+  }
+
+  @if (validationError) {
+    <p class="dialog-error">{{ validationError }}</p>
+  }
+
+  <form class="auth-form" (ngSubmit)="onSubmit()">
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>Token</mat-label>
+      <input
+        matInput
+        type="text"
+        name="token"
+        [(ngModel)]="token"
+        autocomplete="off"
+      />
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="onCancel()">Cancelar</button>
+  <button mat-flat-button color="primary" type="button" (click)="onSubmit()">Continuar</button>
+</mat-dialog-actions>
