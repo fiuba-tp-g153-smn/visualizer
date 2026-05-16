@@ -11,6 +11,21 @@ export const TEMPERATURE_UNITS = {
 } as const;
 
 /**
+ * Unidades de velocidad del viento
+ */
+export const WIND_SPEED_UNITS = {
+  KILOMETERS_PER_HOUR: 'km/h',
+  KNOTS: 'kt',
+} as const;
+
+/**
+ * Alias legacy de unidades de velocidad del viento
+ */
+export const WIND_SPEED_UNIT_ALIASES = {
+  KNOTS_SPANISH: 'nudos',
+} as const;
+
+/**
  * Unidades de radar
  */
 export const RADAR_UNITS = {
@@ -52,10 +67,15 @@ export const SMN_UNITS = {
   HUMIDITY: '%',
   PRESSURE: 'hPa',
   VISIBILITY: DISTANCE_UNITS.KILOMETERS,
-  WIND_SPEED: 'km/h',
+  WIND_SPEED: WIND_SPEED_UNITS.KILOMETERS_PER_HOUR,
 } as const;
 
 /**
  * Offset de conversión de Kelvin a Celsius
  */
 export const KELVIN_TO_CELSIUS_OFFSET = 273.15;
+
+/**
+ * Factor de conversión de nudos a km/h
+ */
+export const KNOT_TO_KILOMETERS_PER_HOUR_FACTOR = 1.852;
