@@ -1,10 +1,12 @@
-import { Injectable, inject, effect } from '@angular/core';
-import { Observable, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, effect, signal } from '@angular/core';
+import { Observable, throwError, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
 import { NotificationService } from '../notifications/notification.service';
+import { SmnStationsAuthService } from '../auth/smn-stations-auth.service';
 import {
   LayerConfig,
   LayerType,
@@ -12,7 +14,25 @@ import {
   TileLayerConfig,
   NotificationType,
   TilesetEntry,
+  SmnCurrentWeatherStationDto,
+  SmnStationDto,
+  SmnStationObservation,
+  SmnStationSnapshot,
 } from '../../models';
+
+interface SmnStationsApiResponse {
+  stations: SmnStationDto[];
+  weather: SmnCurrentWeatherStationDto[];
+}
+
+interface SmnStationsEndpointConfig {
+  tilesetIds: readonly string[];
+  maxPastHoursOptions: readonly number[];
+}
+
+interface SmnStationsSnapshotMeta {
+  fetchedAt: string;
+}
 
 /**
  * Service responsible for managing layer configuration refresh cycles and notifications.
@@ -30,13 +50,22 @@ import {
   providedIn: 'root',
 })
 export class LayerRefreshService {
+  private readonly http = inject(HttpClient);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly layersService = inject(LayersService);
   private readonly notificationService = inject(NotificationService);
   private readonly layerControlService = inject(LayerControlService);
+  private readonly smnStationsAuthService = inject(SmnStationsAuthService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
+  private readonly smnStationsSnapshotSignal = signal<SmnStationSnapshot | null>(null);
+  private readonly smnStationsEndpointConfigSignal = signal<SmnStationsEndpointConfig | null>(null);
+  private readonly smnStationsLoadTickSignal = signal(0);
+  private readonly smnStationsBackupBasePath = '/testing/fixtures/smn-stations';
+  private smnStationsInflight: Promise<SmnStationSnapshot> | null = null;
+
+  readonly smnStationsLoadTick = this.smnStationsLoadTickSignal.asReadonly();
 
   constructor() {
     effect(() => {
@@ -105,6 +134,50 @@ export class LayerRefreshService {
       }),
     );
   }
+
+  peekSmnStationsSnapshot(): SmnStationSnapshot | null {
+    return this.smnStationsSnapshotSignal();
+  }
+
+  getSmnStationsAvailableTilesetIds(): readonly string[] {
+    return this.smnStationsEndpointConfigSignal()?.tilesetIds ?? [];
+  }
+
+  getSmnStationsMaxPastHoursOptions(): readonly number[] {
+    return this.smnStationsEndpointConfigSignal()?.maxPastHoursOptions ?? [];
+  }
+
+  async ensureSmnStationsEndpointConfigLoaded(): Promise<void> {
+    if (this.smnStationsEndpointConfigSignal()) {
+      return;
+    }
+
+    const token = await this.resolveSmnStationsTokenIfRequired();
+    const config = await this.fetchSmnStationsEndpointConfig(token);
+    this.smnStationsEndpointConfigSignal.set(config);
+    this.syncSmnStationsTemporalControlsWithConfig(config);
+  }
+
+  async loadSmnStationsSnapshot(force = false): Promise<SmnStationSnapshot> {
+    const currentSnapshot = this.smnStationsSnapshotSignal();
+    if (!force && currentSnapshot) {
+      return currentSnapshot;
+    }
+
+    if (this.smnStationsInflight) {
+      return this.smnStationsInflight;
+    }
+
+    this.smnStationsInflight = this.fetchSmnStationsSnapshot();
+    try {
+      const snapshot = await this.smnStationsInflight;
+      this.smnStationsSnapshotSignal.set(snapshot);
+      this.smnStationsLoadTickSignal.update((value) => value + 1);
+      return snapshot;
+    } finally {
+      this.smnStationsInflight = null;
+    }
+  }
   // ============================================================================
   // Private Helpers - Auto-refresh
   // ============================================================================
@@ -159,6 +232,259 @@ export class LayerRefreshService {
     });
   }
 
+  private async fetchSmnStationsSnapshot(): Promise<SmnStationSnapshot> {
+    const token = await this.resolveSmnStationsTokenIfRequired();
+    const temporalMode = this.layerControlService.getSmnStationsTemporalMode();
+
+    try {
+      const endpointConfig = await this.fetchSmnStationsEndpointConfig(token);
+      this.smnStationsEndpointConfigSignal.set(endpointConfig);
+      this.syncSmnStationsTemporalControlsWithConfig(endpointConfig);
+
+      const requestedTilesetId = this.resolveRequestedSmnStationsTilesetId(
+        endpointConfig.tilesetIds,
+      );
+      const maxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
+
+      const response =
+        temporalMode === 'specific'
+          ? await this.fetchSmnStationsTilesetSnapshot(token, requestedTilesetId, maxPastHours)
+          : await this.fetchSmnStationsLatestSnapshot(token);
+
+      const snapshotSource = temporalMode === 'specific' ? 'mock-tileset' : 'mock-latest';
+      const observations = this.toSmnStationsObservations(response.stations, response.weather);
+
+      if (observations.length > 0) {
+        return {
+          observations,
+          fetchedAt: new Date().toISOString(),
+          source: snapshotSource,
+        };
+      }
+    } catch (error) {
+      console.warn('[LayerRefreshService] failed to load SMN stations fallback JSON', {
+        error,
+      });
+    }
+
+    return {
+      observations: [],
+      fetchedAt: new Date().toISOString(),
+      source: temporalMode === 'specific' ? 'mock-tileset' : 'mock-latest',
+    };
+  }
+
+  private async resolveSmnStationsTokenIfRequired(): Promise<string | null> {
+    return this.smnStationsAuthService.getValidToken();
+  }
+
+  private async fetchSmnStationsEndpointConfig(
+    token: string | null,
+  ): Promise<SmnStationsEndpointConfig> {
+    void token;
+
+    const backupConfig = await this.fetchSmnStationsBackupEndpointConfig();
+    if (backupConfig) {
+      return backupConfig;
+    }
+
+    const latest = await this.fetchSmnStationsBackupLatestResponse();
+    if (latest) {
+      return this.buildSmnStationsEndpointConfigFromWeather(latest.weather);
+    }
+
+    return this.buildDefaultSmnStationsEndpointConfig();
+  }
+
+  private async fetchSmnStationsLatestSnapshot(
+    token: string | null,
+  ): Promise<SmnStationsApiResponse> {
+    void token;
+
+    const backupResponse = await this.fetchSmnStationsBackupLatestResponse();
+    if (backupResponse) {
+      return backupResponse;
+    }
+
+    throw new Error('SMN latest fallback JSON is unavailable');
+  }
+
+  private async fetchSmnStationsTilesetSnapshot(
+    token: string | null,
+    tilesetId: string,
+    maxPastHours: number,
+  ): Promise<SmnStationsApiResponse> {
+    void token;
+    const backupResponse = await this.fetchSmnStationsBackupLatestResponse();
+    if (backupResponse) {
+      return this.filterSmnStationsResponseByWindow(backupResponse, tilesetId, maxPastHours);
+    }
+
+    throw new Error('SMN tileset fallback JSON is unavailable');
+  }
+
+  private async fetchSmnStationsBackupEndpointConfig(): Promise<SmnStationsEndpointConfig | null> {
+    try {
+      const meta = await firstValueFrom(
+        this.http.get<SmnStationsSnapshotMeta>(
+          `${this.smnStationsBackupBasePath}/snapshot.meta.json`,
+        ),
+      );
+
+      const fetchedAtDate = new Date(meta.fetchedAt);
+      if (Number.isNaN(fetchedAtDate.getTime())) {
+        return null;
+      }
+
+      return {
+        tilesetIds: [this.toSmnStationsTilesetId(fetchedAtDate)],
+        maxPastHoursOptions: [6, 12, 24, 48],
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchSmnStationsBackupLatestResponse(): Promise<SmnStationsApiResponse | null> {
+    return this.fetchSmnStationsBackupApiResponse(
+      `${this.smnStationsBackupBasePath}/stations.latest.json`,
+      `${this.smnStationsBackupBasePath}/weather.latest.json`,
+    );
+  }
+
+  private async fetchSmnStationsBackupApiResponse(
+    stationsUrl: string,
+    weatherUrl: string,
+  ): Promise<SmnStationsApiResponse | null> {
+    try {
+      const [stations, weather] = await Promise.all([
+        firstValueFrom(this.http.get<SmnStationDto[]>(stationsUrl)),
+        firstValueFrom(this.http.get<SmnCurrentWeatherStationDto[]>(weatherUrl)),
+      ]);
+
+      if (!Array.isArray(stations) || !Array.isArray(weather)) {
+        return null;
+      }
+
+      return { stations, weather };
+    } catch {
+      return null;
+    }
+  }
+
+  private toSmnStationsObservations(
+    stations: readonly SmnStationDto[],
+    weather: readonly SmnCurrentWeatherStationDto[],
+  ): SmnStationObservation[] {
+    const weatherByStation = new Map<number, SmnCurrentWeatherStationDto>();
+    for (const entry of weather) {
+      weatherByStation.set(entry.station_id, entry);
+    }
+
+    return stations
+      .map((station) => {
+        const currentWeather = weatherByStation.get(station.id);
+        if (!currentWeather) {
+          return null;
+        }
+        return { station, weather: currentWeather } satisfies SmnStationObservation;
+      })
+      .filter((entry): entry is SmnStationObservation => entry !== null)
+      .sort((a, b) => a.station.name.localeCompare(b.station.name, 'es'));
+  }
+
+  private buildDefaultSmnStationsEndpointConfig(): SmnStationsEndpointConfig {
+    const now = Date.now();
+    const totalHours = 72;
+    const tilesetIds = Array.from({ length: totalHours + 1 }, (_, index) => {
+      const timestamp = new Date(now - (totalHours - index) * 60 * 60 * 1000);
+      return this.toSmnStationsTilesetId(timestamp);
+    });
+
+    return {
+      tilesetIds,
+      maxPastHoursOptions: [6, 12, 24, 48],
+    };
+  }
+
+  private filterSmnStationsResponseByWindow(
+    latest: SmnStationsApiResponse,
+    tilesetId: string,
+    maxPastHours: number,
+  ): SmnStationsApiResponse {
+    const requestedTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
+    const minTimestamp = new Date(requestedTimestamp.getTime() - maxPastHours * 60 * 60 * 1000);
+
+    const filteredWeather = latest.weather.filter((entry) => {
+      const entryTimestamp = new Date(entry.date);
+      return entryTimestamp >= minTimestamp && entryTimestamp <= requestedTimestamp;
+    });
+
+    if (filteredWeather.length === 0) {
+      return latest;
+    }
+
+    const allowedStationIds = new Set(filteredWeather.map((entry) => entry.station_id));
+    return {
+      stations: latest.stations.filter((station) => allowedStationIds.has(station.id)),
+      weather: filteredWeather,
+    };
+  }
+
+  private syncSmnStationsTemporalControlsWithConfig(config: SmnStationsEndpointConfig): void {
+    const selectedTilesetId = this.resolveRequestedSmnStationsTilesetId(config.tilesetIds);
+    this.layerControlService.setSmnStationsSelectedTilesetId(selectedTilesetId);
+
+    const currentMaxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
+    if (!config.maxPastHoursOptions.includes(currentMaxPastHours)) {
+      this.layerControlService.setSmnStationsMaxPastHours(config.maxPastHoursOptions[0]);
+    }
+  }
+
+  private resolveRequestedSmnStationsTilesetId(tilesetIds: readonly string[]): string {
+    const selectedTilesetId = this.layerControlService.getSmnStationsSelectedTilesetId();
+    if (selectedTilesetId && tilesetIds.includes(selectedTilesetId)) {
+      return selectedTilesetId;
+    }
+    return tilesetIds[tilesetIds.length - 1];
+  }
+
+  private toSmnStationsTilesetId(date: Date): string {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const hour = String(date.getUTCHours()).padStart(2, '0');
+    return `${year}${month}${day}T${hour}00Z`;
+  }
+
+  private fromSmnStationsTilesetId(tilesetId: string): Date | null {
+    const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
+    if (!match) {
+      return null;
+    }
+
+    const [, year, month, day, hour] = match;
+    const parsed = new Date(
+      Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0),
+    );
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private buildSmnStationsEndpointConfigFromWeather(
+    weather: readonly SmnCurrentWeatherStationDto[],
+  ): SmnStationsEndpointConfig {
+    const dateCandidates = weather
+      .map((entry) => new Date(entry.date))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    const lastDate = dateCandidates.at(-1) ?? new Date();
+    return {
+      tilesetIds: [this.toSmnStationsTilesetId(lastDate)],
+      maxPastHoursOptions: [6, 12, 24, 48],
+    };
+  }
+
   // ============================================================================
   // Private Helpers - Notifications
   // ============================================================================
@@ -206,8 +532,7 @@ export class LayerRefreshService {
 
     switch (after.type) {
       case LayerType.TILE:
-        const beforeTilesets = (before as TileLayerConfig)
-          .availableTilesets;
+        const beforeTilesets = (before as TileLayerConfig).availableTilesets;
         const afterTilesets = after.availableTilesets;
         const diff = this.calculateDiff(beforeTilesets, afterTilesets);
         this.showDiffNotification(layerName, diff, showNoChanges);

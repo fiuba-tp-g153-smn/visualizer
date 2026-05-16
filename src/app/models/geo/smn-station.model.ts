@@ -59,5 +59,5 @@ export interface SmnStationObservation {
 export interface SmnStationSnapshot {
   observations: readonly SmnStationObservation[];
   fetchedAt: string;
-  source: 'api' | 'demo';
+  source: 'api' | 'demo' | 'mock-latest' | 'mock-tileset';
 }

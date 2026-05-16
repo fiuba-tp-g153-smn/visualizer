@@ -9,6 +9,10 @@ export const environment = {
   alertsService: {
     baseUrl: $ENV.ALERTS_SERVICE_BASE_URL,
   },
+  smnApi: {
+    baseUrl: $ENV.DATA_SERVICE_BASE_URL,
+    promptForToken: $ENV.SMN_API_PROMPT_FOR_TOKEN === 'true',
+  },
   tiles: {
     format: $ENV.TILE_FORMAT,
   },

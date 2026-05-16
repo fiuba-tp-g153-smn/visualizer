@@ -27,6 +27,16 @@ import { STORAGE_KEYS } from '../../constants';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
+import { SmnStationsAuthService } from '../auth/smn-stations-auth.service';
+
+interface PersistedSmnStationsSharedControlsState {
+  opacity: number;
+  zIndex: number | null;
+  scaleVisible: boolean;
+  temporalMode: 'latest' | 'specific';
+  maxPastHours: number;
+  selectedTilesetId: string | null;
+}
 
 /**
  * Service responsible for managing layer controls, visibility, and playback state.
@@ -48,10 +58,20 @@ export class LayerControlService {
   private readonly layersService = inject(LayersService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly engineService = inject(PlaybackEngineService);
+  private readonly smnStationsAuthService = inject(SmnStationsAuthService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
+  private smnStationsSharedState: PersistedSmnStationsSharedControlsState = {
+    opacity: 1,
+    zIndex: null,
+    scaleVisible: false,
+    temporalMode: 'latest',
+    maxPastHours: 24,
+    selectedTilesetId: null,
+  };
 
   constructor() {
+    this.loadSmnStationsSharedState();
     this.initializeControls();
 
     // Auto-save controls when they change
@@ -98,6 +118,89 @@ export class LayerControlService {
         }
       });
     });
+
+    // Keep SMN layers disabled when token is missing (startup and runtime clears).
+    effect(() => {
+      this.smnStationsAuthService.tokenChanges();
+
+      if (this.smnStationsAuthService.hasValidToken()) {
+        return;
+      }
+
+      const activeEntries = this.activeLayers();
+      for (const { layer } of activeEntries) {
+        if (this.isSmnStationsLayer(layer.id)) {
+          this.deactivateLayer(layer.id);
+        }
+      }
+    });
+  }
+
+  isSmnStationsLayer(layerId: string): boolean {
+    const layer = this.layersService.getLayerById(layerId);
+    return layer?.category === LayerCategory.SMN_STATIONS;
+  }
+
+  getSmnStationsSharedOpacity(): number {
+    return this.smnStationsSharedState.opacity;
+  }
+
+  getSmnStationsSharedZIndex(): number | null {
+    return this.smnStationsSharedState.zIndex;
+  }
+
+  isSmnStationsScaleVisible(): boolean {
+    return this.smnStationsSharedState.scaleVisible;
+  }
+
+  getSmnStationsTemporalMode(): 'latest' | 'specific' {
+    return this.smnStationsSharedState.temporalMode;
+  }
+
+  getSmnStationsMaxPastHours(): number {
+    return this.smnStationsSharedState.maxPastHours;
+  }
+
+  getSmnStationsSelectedTilesetId(): string | null {
+    return this.smnStationsSharedState.selectedTilesetId;
+  }
+
+  captureSmnStationsSharedFromControls(controls: LayerControls): void {
+    this.smnStationsSharedState.opacity = this.clampSmnStationsOpacity(controls.opacity);
+    this.smnStationsSharedState.zIndex = Number.isFinite(controls.zIndex)
+      ? Math.max(0, controls.zIndex)
+      : null;
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsSharedOpacity(opacity: number): void {
+    this.smnStationsSharedState.opacity = this.clampSmnStationsOpacity(opacity);
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsSharedZIndex(zIndex: number | null): void {
+    this.smnStationsSharedState.zIndex = zIndex === null ? null : Math.max(0, Math.round(zIndex));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsScaleVisible(scaleVisible: boolean): void {
+    this.smnStationsSharedState.scaleVisible = scaleVisible;
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsTemporalMode(temporalMode: 'latest' | 'specific'): void {
+    this.smnStationsSharedState.temporalMode = temporalMode;
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsMaxPastHours(maxPastHours: number): void {
+    this.smnStationsSharedState.maxPastHours = Math.max(1, Math.round(maxPastHours));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsSelectedTilesetId(selectedTilesetId: string | null): void {
+    this.smnStationsSharedState.selectedTilesetId = selectedTilesetId;
+    this.saveSmnStationsSharedState();
   }
 
   // ============================================================================
@@ -317,6 +420,25 @@ export class LayerControlService {
     this.updateControls(layerId, (controls) => {
       controls.opacity = clampedOpacity;
     });
+
+    if (this.isSmnStationsLayer(layerId)) {
+      this.setSmnStationsSharedOpacity(clampedOpacity);
+    }
+  }
+
+  /**
+   * Sets the z-index for a layer.
+   */
+  setZIndex(layerId: string, zIndex: number): void {
+    const normalizedZIndex = Math.max(0, Math.round(zIndex));
+
+    this.updateControls(layerId, (controls) => {
+      controls.zIndex = normalizedZIndex;
+    });
+
+    if (this.isSmnStationsLayer(layerId)) {
+      this.setSmnStationsSharedZIndex(normalizedZIndex);
+    }
   }
 
   /**
@@ -547,6 +669,15 @@ export class LayerControlService {
         }
       });
     });
+
+    const activeSmnLayerId = filteredIds.find((layerId) => this.isSmnStationsLayer(layerId));
+
+    if (activeSmnLayerId) {
+      const controls = this.getControls(activeSmnLayerId);
+      if (controls.visible) {
+        this.setSmnStationsSharedZIndex(controls.zIndex ?? 0);
+      }
+    }
   }
 
   // ============================================================================
@@ -736,6 +867,15 @@ export class LayerControlService {
       if (savedControls) {
         // Restore saved state, but ensure isPlaying is false and zIndex is defined
         controls = { ...savedControls, zIndex: savedControls.zIndex ?? 0 };
+
+        if (
+          controls.visible &&
+          this.isSmnStationsLayer(layer.id) &&
+          !this.smnStationsAuthService.hasValidToken()
+        ) {
+          controls.visible = false;
+        }
+
         if (controls.type === LayerType.TILE) {
           controls.playback = {
             ...controls.playback,
@@ -875,6 +1015,67 @@ export class LayerControlService {
       return saved ? JSON.parse(saved) : undefined;
     } catch {
       return undefined;
+    }
+  }
+
+  private clampSmnStationsOpacity(opacity: number): number {
+    return Math.max(0, Math.min(1, opacity));
+  }
+
+  private loadSmnStationsSharedState(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS);
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Partial<PersistedSmnStationsSharedControlsState>;
+
+      this.smnStationsSharedState = {
+        opacity:
+          typeof parsed.opacity === 'number'
+            ? this.clampSmnStationsOpacity(parsed.opacity)
+            : this.smnStationsSharedState.opacity,
+        zIndex:
+          typeof parsed.zIndex === 'number' && Number.isFinite(parsed.zIndex)
+            ? Math.max(0, Math.round(parsed.zIndex))
+            : null,
+        scaleVisible:
+          typeof parsed.scaleVisible === 'boolean'
+            ? parsed.scaleVisible
+            : this.smnStationsSharedState.scaleVisible,
+        temporalMode:
+          parsed.temporalMode === 'specific' || parsed.temporalMode === 'latest'
+            ? parsed.temporalMode
+            : this.smnStationsSharedState.temporalMode,
+        maxPastHours:
+          typeof parsed.maxPastHours === 'number' && Number.isFinite(parsed.maxPastHours)
+            ? Math.max(1, Math.round(parsed.maxPastHours))
+            : this.smnStationsSharedState.maxPastHours,
+        selectedTilesetId:
+          typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
+      };
+    } catch {
+      // Ignore malformed persisted state.
+    }
+  }
+
+  private saveSmnStationsSharedState(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS,
+        JSON.stringify(this.smnStationsSharedState),
+      );
+    } catch {
+      // Ignore storage failures.
     }
   }
 }

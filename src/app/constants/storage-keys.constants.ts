@@ -15,4 +15,7 @@ export const STORAGE_KEYS = {
   UNITS_SETTINGS: buildStorageKey('units-settings'),
   POLYGONS: buildStorageKey('polygons'),
   POLYGON_SIMPLIFICATION_LEVEL: buildStorageKey('polygon-simplification-level'),
+  SMN_STATIONS_AUTH_PREFERENCES: buildStorageKey('smn-stations-auth-preferences'),
+  SMN_STATIONS_SHARED_CONTROLS: buildStorageKey('smn-stations-shared-controls'),
+  SMN_STATIONS_AUTH_TOKEN: buildStorageKey('smn-stations-auth-token'),
 } as const;
