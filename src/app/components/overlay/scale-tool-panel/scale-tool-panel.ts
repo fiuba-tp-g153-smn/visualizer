@@ -12,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ContinuousScale, DiscreteScale, ScaleType, PaletteConfigScale } from '../../../models';
-import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
+import { ScaleToolEntry } from '../../../services/tools/scale-tools.service';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import {
   convertValueForDisplay,

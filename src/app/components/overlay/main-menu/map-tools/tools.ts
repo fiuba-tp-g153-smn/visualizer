@@ -3,12 +3,12 @@ import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 
-import { PointQueryViewerService } from '../../../../services/layers/point-query-tools.service';
-import { ScaleToolsService } from '../../../../services/layers/scale-tools.service';
+import { PointQueryViewerService } from '../../../../services/tools/point-query-viewer.service';
+import { ScaleToolsService } from '../../../../services/tools/scale-tools.service';
 import { MenuPanelComponent } from '../menu-section.model';
-import { PointQueryToolsTabComponent } from './point-query-tools-tab/point-query-tools-tab';
-import { ScaleToolsTabComponent } from './scale-tools-tab/scale-tools-tab';
-import { GeneralToolsTabComponent } from './general-tools-tab/general-tools-tab';
+import { PointQueryViewerTabComponent } from './point-query-viewer-tab/point-query-viewer-tab';
+import { ScaleTabComponent } from './scale-tab/scale-tab';
+import { GeneralTabComponent } from './general-tab/general-tab';
 
 @Component({
   selector: 'app-map-tools',
@@ -17,9 +17,9 @@ import { GeneralToolsTabComponent } from './general-tools-tab/general-tools-tab'
     CommonModule,
     MatTabsModule,
     MatIconModule,
-    ScaleToolsTabComponent,
-    PointQueryToolsTabComponent,
-    GeneralToolsTabComponent,
+    ScaleTabComponent,
+    PointQueryViewerTabComponent,
+    GeneralTabComponent,
   ],
   templateUrl: './tools.html',
   styleUrl: './tools.scss',

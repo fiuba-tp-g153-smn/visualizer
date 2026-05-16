@@ -2,16 +2,16 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 
-import { ScaleToolsService } from '../../../../../services/layers/scale-tools.service';
+import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
 
 @Component({
-  selector: 'app-scale-tools-tab',
+  selector: 'app-scale-tab',
   standalone: true,
   imports: [CommonModule, MatCheckboxModule],
-  templateUrl: './scale-tools-tab.html',
-  styleUrl: './scale-tools-tab.scss',
+  templateUrl: './scale-tab.html',
+  styleUrl: './scale-tab.scss',
 })
-export class ScaleToolsTabComponent {
+export class ScaleTabComponent {
   readonly scaleTools = inject(ScaleToolsService);
 
   onToolEnabledChange(enabled: boolean): void {

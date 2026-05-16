@@ -2,8 +2,8 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 
 import { Layer, LayerCategory, LayerControls, ScaleType } from '../../models';
 import { STORAGE_KEYS } from '../../constants';
-import { LayerControlService } from './layer-control.service';
-import { LayersService } from './layers.service';
+import { LayerControlService } from '../layers/layer-control.service';
+import { LayersService } from '../layers/layers.service';
 
 type ScalableLayer = Layer & { scale?: NonNullable<Layer['scale']> };
 
@@ -195,6 +195,10 @@ export class ScaleToolsService {
   }
 
   private hasValidScale(layer: Layer): layer is ScalableLayer {
+    if (layer.id === 'smn/stations/weather') {
+      return false;
+    }
+
     if (!layer.scale) {
       return false;
     }
