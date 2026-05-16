@@ -77,4 +77,3 @@ export const WIND_SPEED_SCALE: LayerScale = {
     { value: 90, color: '#d73027', label: '90' },
   ],
 };
-
