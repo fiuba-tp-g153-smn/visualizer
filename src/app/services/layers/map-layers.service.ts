@@ -66,6 +66,9 @@ export class MapLayersService {
     if (!this.map) return;
 
     const desiredLayersOnMap = new Map<string, L.Layer>();
+    const previousSmnLayerIds = new Set(
+      [...this.onMapLayers.keys()].filter((layerId) => this.isSmnLayerId(layerId)),
+    );
 
     // Sort layers by z-index (low to high) so we process bottom layers first
     const sortedLayerIds = [...layerIds].sort((a, b) => {
@@ -209,8 +212,35 @@ export class MapLayersService {
     // Update local state
     this.onMapLayers = desiredLayersOnMap;
 
+    const nextSmnLayerIds = new Set(
+      [...this.onMapLayers.keys()].filter((layerId) => this.isSmnLayerId(layerId)),
+    );
+
+    if (!this.areIdSetsEqual(previousSmnLayerIds, nextSmnLayerIds)) {
+      this.map.closePopup();
+    }
+
     // Sync vector overlays (e.g. MSLP isobars over TP raster).
     this.syncVectorOverlays(sortedLayerIds);
+  }
+
+  private isSmnLayerId(layerId: string): boolean {
+    const layer = this.layersService.getLayerById(layerId);
+    return layer?.category === LayerCategory.SMN_STATIONS;
+  }
+
+  private areIdSetsEqual(left: Set<string>, right: Set<string>): boolean {
+    if (left.size !== right.size) {
+      return false;
+    }
+
+    for (const value of left) {
+      if (!right.has(value)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**

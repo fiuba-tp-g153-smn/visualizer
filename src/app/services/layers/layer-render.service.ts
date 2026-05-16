@@ -1,4 +1,10 @@
-import { Injectable, inject } from '@angular/core';
+import {
+  ApplicationRef,
+  EnvironmentInjector,
+  Injectable,
+  createComponent,
+  inject,
+} from '@angular/core';
 import * as L from 'leaflet';
 import {
   LayerType,
@@ -26,7 +32,17 @@ import { LayerRefreshService } from './layer-refresh.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
 import { SMN_STATION_PANE } from '../../config/layers/smn-stations/config';
-import { SMN_STATION_RENDER_CONFIG } from '../../config/layers/smn-stations/render.config';
+import {
+  SmnWeatherTimePeriod,
+  SMN_STATION_RENDER_CONFIG,
+  SMN_WEATHER_DAY_START_HOUR,
+  SMN_WEATHER_NIGHT_START_HOUR,
+} from '../../config/layers/smn-stations/render.config';
+import {
+  SMN_SUPPORTED_WEATHER_ICON_IDS,
+  SMN_WEATHER_DAY_ICON_BY_PHENOMENON,
+  SMN_WEATHER_NIGHT_ICON_BY_PHENOMENON,
+} from '../../config/layers/smn-stations/weather-scales.config';
 import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 import { SMN_UNITS, TEMPERATURE_UNITS } from '../../constants';
@@ -36,6 +52,10 @@ import {
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
+import {
+  SmnStationPopupComponent,
+  SmnStationPopupData,
+} from '../../components/floating/smn-station-popup/smn-station-popup.component';
 
 /**
  * Service responsible for creating and managing Leaflet tile layers.
@@ -54,6 +74,8 @@ import {
   providedIn: 'root',
 })
 export class LayerRenderService {
+  private readonly appRef = inject(ApplicationRef);
+  private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly notificationService = inject(NotificationService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly layerRefreshService = inject(LayerRefreshService);
@@ -277,15 +299,27 @@ export class LayerRenderService {
           interactive: true,
         });
       } else {
-        const textColor = this.resolveSmnStationsContrastingTextColor(color);
-        const { displayValue } = this.resolveSmnStationsDisplayValueAndUnit(
-          value,
-          stationLayer.scale?.unit ?? '',
-        );
-        const labelValue = Math.round(displayValue);
-        const iconDiameter = badgeDiameterPx;
-        const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
-        marker = L.marker(point.latLng, { pane: SMN_STATION_PANE, icon, interactive: true });
+        if (stationLayer.variable === 'weather') {
+          const weatherIconId = this.resolveSmnStationsWeatherIconId(observation);
+          const weatherIconSizePx = Math.max(22, Math.round(badgeDiameterPx + 2));
+          const icon = this.buildSmnStationsWeatherIcon(weatherIconId, weatherIconSizePx);
+          marker = L.marker(point.latLng, {
+            pane: SMN_STATION_PANE,
+            icon,
+            interactive: true,
+            opacity,
+          });
+        } else {
+          const textColor = this.resolveSmnStationsContrastingTextColor(color);
+          const { displayValue } = this.resolveSmnStationsDisplayValueAndUnit(
+            value,
+            stationLayer.scale?.unit ?? '',
+          );
+          const labelValue = Math.round(displayValue);
+          const iconDiameter = badgeDiameterPx;
+          const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
+          marker = L.marker(point.latLng, { pane: SMN_STATION_PANE, icon, interactive: true });
+        }
       }
 
       marker.on?.('click', (evt: L.LeafletMouseEvent) => {
@@ -303,11 +337,16 @@ export class LayerRenderService {
       });
 
       marker.on?.('contextmenu', (evt: L.LeafletMouseEvent) => {
-        const detail = this.buildSmnStationsPopup(stationLayer, observation, value);
-        L.popup({ pane: 'popupPane', className: 'smn-station-popup' })
+        const popupData = this.buildSmnStationsPopupData(stationLayer, observation, value);
+        const { element, destroy } = this.createSmnStationsPopupElement(popupData);
+        const popup = L.popup({ pane: 'popupPane', className: 'smn-station-popup' })
           .setLatLng(evt.latlng)
-          .setContent(detail)
+          .setContent(element)
           .openOn(map);
+
+        popup.once('remove', () => {
+          destroy();
+        });
       });
 
       markerGroup.addLayer(marker);
@@ -356,6 +395,49 @@ export class LayerRenderService {
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
     });
+  }
+
+  private buildSmnStationsWeatherIcon(iconId: number, sizePx: number): L.DivIcon {
+    const fileIconId = String(iconId).padStart(2, '0');
+    return L.divIcon({
+      className: 'smn-station-weather-divicon',
+      html: `<img src="/smn-weather-icons/icons_${fileIconId}.png" alt="" width="${sizePx}" height="${sizePx}" draggable="false" />`,
+      iconSize: [sizePx, sizePx],
+      iconAnchor: [sizePx / 2, sizePx / 2],
+    });
+  }
+
+  private resolveSmnStationsWeatherIconId(observation: SmnStationObservationLike): number {
+    const fallbackIconId = SMN_STATION_RENDER_CONFIG.weather.fallbackIconId;
+    const phenomenonRaw = observation.weather.weather?.id;
+    if (phenomenonRaw === null || phenomenonRaw === undefined || Number.isNaN(phenomenonRaw)) {
+      return fallbackIconId;
+    }
+
+    const phenomenonId = Math.round(phenomenonRaw);
+    const period = this.resolveSmnStationsWeatherTimePeriod(observation.weather.date);
+
+    const dayIconId = SMN_WEATHER_DAY_ICON_BY_PHENOMENON.get(phenomenonId);
+    const nightIconId = SMN_WEATHER_NIGHT_ICON_BY_PHENOMENON.get(phenomenonId);
+    const resolvedIconId =
+      period === SmnWeatherTimePeriod.NIGHT && nightIconId !== undefined ? nightIconId : dayIconId;
+
+    if (resolvedIconId !== undefined && SMN_SUPPORTED_WEATHER_ICON_IDS.has(resolvedIconId)) {
+      return resolvedIconId;
+    }
+
+    return fallbackIconId;
+  }
+
+  private resolveSmnStationsWeatherTimePeriod(timestamp: string): SmnWeatherTimePeriod {
+    const observationDate = new Date(timestamp);
+    if (Number.isNaN(observationDate.getTime())) {
+      return SmnWeatherTimePeriod.DAY;
+    }
+
+    const hour = observationDate.getHours();
+    const isNight = hour >= SMN_WEATHER_NIGHT_START_HOUR || hour < SMN_WEATHER_DAY_START_HOUR;
+    return isNight ? SmnWeatherTimePeriod.NIGHT : SmnWeatherTimePeriod.DAY;
   }
 
   /**
@@ -857,11 +939,11 @@ export class LayerRenderService {
       .join('')}`;
   }
 
-  private buildSmnStationsPopup(
+  private buildSmnStationsPopupData(
     layer: SmnStationLayer,
     observation: SmnStationObservationLike,
     rawValue: number,
-  ): string {
+  ): SmnStationPopupData {
     const sourceUnit = layer.scale?.unit ?? '';
     const { displayValue, displayUnit } = this.resolveSmnStationsDisplayValueAndUnit(
       rawValue,
@@ -905,25 +987,66 @@ export class LayerRenderService {
     const { value: feelsLikeValue, unit: feelsLikeUnit } =
       this.resolveSmnStationsTemperatureDisplay(observation.weather.feels_like);
 
-    return `
-      <div class="smn-popup">
-        <div class="smn-popup__station">
-          <div class="smn-popup__title">${stationName}</div>
-          <div class="smn-popup__meta">${province}</div>
-        </div>
-        <ul class="smn-popup__values">
-          <li><span>${layer.name}</span><strong>${displayValue.toFixed(this.getSmnStationsPrecision(layer.variable))} ${displayUnit}</strong></li>
-          <li><span>Tiempo</span><strong>${formatText(observation.weather.weather?.description)}</strong></li>
-          <li><span>Temperatura</span><strong>${formatValue(temperatureValue, 1, ` ${temperatureUnit}`)}</strong></li>
-          <li><span>Sensación térmica</span><strong>${formatValue(feelsLikeValue, 1, ` ${feelsLikeUnit}`)}</strong></li>
-          <li><span>Humedad</span><strong>${formatValue(observation.weather.humidity, 0, SMN_UNITS.HUMIDITY)}</strong></li>
-          <li><span>Presión</span><strong>${formatValue(observation.weather.pressure, 1, ` ${SMN_UNITS.PRESSURE}`)}</strong></li>
-          <li><span>Visibilidad</span><strong>${formatValue(observation.weather.visibility, 1, ` ${SMN_UNITS.VISIBILITY}`)}</strong></li>
-          <li><span>Viento</span><strong>${windText} (${windDirectionWithDegrees})</strong></li>
-        </ul>
-        <div class="smn-popup__updated">Actualizado: ${new Date(observation.weather.date).toLocaleString('es-AR', { hour12: false })}</div>
-      </div>
-    `;
+    return {
+      stationName,
+      province,
+      values: [
+        {
+          label: layer.name,
+          value: `${displayValue.toFixed(this.getSmnStationsPrecision(layer.variable))} ${displayUnit}`,
+        },
+        {
+          label: 'Tiempo',
+          value: formatText(observation.weather.weather?.description),
+        },
+        {
+          label: 'Temperatura',
+          value: formatValue(temperatureValue, 1, ` ${temperatureUnit}`),
+        },
+        {
+          label: 'Sensación térmica',
+          value: formatValue(feelsLikeValue, 1, ` ${feelsLikeUnit}`),
+        },
+        {
+          label: 'Humedad',
+          value: formatValue(observation.weather.humidity, 0, SMN_UNITS.HUMIDITY),
+        },
+        {
+          label: 'Presión',
+          value: formatValue(observation.weather.pressure, 1, ` ${SMN_UNITS.PRESSURE}`),
+        },
+        {
+          label: 'Visibilidad',
+          value: formatValue(observation.weather.visibility, 1, ` ${SMN_UNITS.VISIBILITY}`),
+        },
+        {
+          label: 'Viento',
+          value: `${windText} (${windDirectionWithDegrees})`,
+        },
+      ],
+      updatedAt: new Date(observation.weather.date).toLocaleString('es-AR', { hour12: false }),
+    };
+  }
+
+  private createSmnStationsPopupElement(data: SmnStationPopupData): {
+    element: HTMLElement;
+    destroy: () => void;
+  } {
+    const componentRef = createComponent(SmnStationPopupComponent, {
+      environmentInjector: this.environmentInjector,
+    });
+
+    componentRef.setInput('data', data);
+    this.appRef.attachView(componentRef.hostView);
+    componentRef.changeDetectorRef.detectChanges();
+
+    return {
+      element: componentRef.location.nativeElement as HTMLElement,
+      destroy: () => {
+        this.appRef.detachView(componentRef.hostView);
+        componentRef.destroy();
+      },
+    };
   }
 
   private resolveSmnStationsDisplayValueAndUnit(

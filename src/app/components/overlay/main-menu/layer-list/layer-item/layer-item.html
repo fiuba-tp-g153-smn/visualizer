@@ -265,166 +265,155 @@
       @if (needsTimeControl()) {
         <div class="layer-controls" [class.synced-mode]="isSynced()">
           <div class="time-control">
-            <!-- Header con label y botón de recarga -->
-            <div class="time-control-header">
-              <span class="control-label">
-                Período
-                @if (isSynced()) {
-                  <span class="sync-badge" matTooltip="Controlado por sincronización">
-                    <mat-icon>sync</mat-icon>
-                    Sincronizado
-                  </span>
-                }
-              </span>
-              <button
-                mat-icon-button
-                (click)="reloadChannelConfig()"
-                matTooltip="Actualizar períodos disponibles (se actualiza automáticamente cada 10 segundos)"
-                class="reload-btn"
-              >
-                <mat-icon>refresh</mat-icon>
-              </button>
-            </div>
-
             <!-- Contenido condicional según estado -->
-            @if (hasTimeControl()) {
-              @if (layer.category === LayerCategory.SMN_STATIONS) {
-                <div class="smn-temporal-control">
-                  <div class="smn-mode-control">
-                    <span class="control-label">Consulta</span>
-                    <mat-radio-group
-                      [value]="smnTemporalMode()"
-                      (change)="onSmnTemporalModeChange($event.value)"
-                      class="smn-mode-group"
+            @if (layer.category === LayerCategory.SMN_STATIONS) {
+              <div class="smn-temporal-control">
+                <div class="smn-mode-control">
+                  <span class="control-label">Consulta</span>
+                  <mat-radio-group
+                    [value]="smnTemporalMode()"
+                    (change)="onSmnTemporalModeChange($event.value)"
+                    class="smn-mode-group"
+                  >
+                    <mat-radio-button [value]="SmnStationsTemporalMode.LATEST" color="primary"
+                      >Más reciente</mat-radio-button
                     >
-                      <mat-radio-button value="latest" color="primary">Último</mat-radio-button>
-                      <mat-radio-button value="specific" color="primary">Específico</mat-radio-button>
-                    </mat-radio-group>
-                  </div>
+                    <mat-radio-button [value]="SmnStationsTemporalMode.SPECIFIC" color="primary"
+                      >Específico</mat-radio-button
+                    >
+                  </mat-radio-group>
+                </div>
 
-                  <div class="smn-hours-control">
-                    <span class="control-label">Horas hacia atrás permitidas</span>
-                    <mat-form-field appearance="fill" class="smn-hours-select">
-                      <mat-select
+                @if (isSmnSpecificTemporalMode()) {
+                  <div class="smn-tolerance-control">
+                    <span class="control-label">Tolerancia</span>
+                    <div class="tolerance-control">
+                      <input
+                        type="number"
                         [value]="smnMaxPastHours()"
-                        (selectionChange)="onSmnMaxPastHoursChange($event.value)"
+                        (change)="onSmnMaxPastHoursChange(+$any($event.target).value)"
+                        min="0"
+                        max="24"
+                        step="1"
+                        class="tolerance-input"
+                        placeholder="0"
+                        [disabled]="isSynced()"
+                      />
+                      <span class="tolerance-label">h</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (layer.category !== LayerCategory.SMN_STATIONS || isSmnSpecificTemporalMode()) {
+              <div class="time-control-header">
+                <span class="control-label">
+                  Período
+                  @if (isSynced()) {
+                    <span class="sync-badge" matTooltip="Controlado por sincronización">
+                      <mat-icon>sync</mat-icon>
+                      Sincronizado
+                    </span>
+                  }
+                </span>
+                <button
+                  mat-icon-button
+                  (click)="reloadChannelConfig()"
+                  matTooltip="Actualizar períodos disponibles (se actualiza automáticamente cada 10 segundos)"
+                  class="reload-btn"
+                >
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              </div>
+
+              @if (hasTimeControl()) {
+                <!-- Slider de tiempo con play -->
+                <div class="time-slider-container">
+                  <span class="time-min">{{ getTimeOnly(minTimeIndex()) }}</span>
+                  <mat-slider
+                    [min]="minTimeIndex()"
+                    [max]="maxTimeIndex()"
+                    step="1"
+                    discrete
+                    class="control-slider"
+                    [displayWith]="formatTimeIndex"
+                    [disabled]="isSynced()"
+                  >
+                    <input
+                      matSliderThumb
+                      [value]="currentTimeIndex()"
+                      (valueChange)="onTimeIndexChange($event)"
+                    />
+                  </mat-slider>
+                  <span class="time-max">{{ getTimeOnly(maxTimeIndex()) }}</span>
+                  <button
+                    mat-icon-button
+                    (click)="togglePlayback()"
+                    [disabled]="!canPlayback() && !isSynced()"
+                    [matTooltip]="
+                      isSynced()
+                        ? 'Desconectar de sincronización'
+                        : isPlaying()
+                          ? 'Pausar'
+                          : 'Reproducir'
+                    "
+                    class="play-btn"
+                    [class.synced]="isSynced()"
+                  >
+                    <mat-icon>{{
+                      isSynced() ? 'sync_disabled' : isPlaying() ? 'pause' : 'play_arrow'
+                    }}</mat-icon>
+                  </button>
+                </div>
+
+                <!-- Tiempo actual + Controles -->
+                <div class="time-controls-row">
+                  <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
+
+                  <!-- Selector de últimas imágenes -->
+                  <div class="images-count-control">
+                    <mat-form-field appearance="fill" class="images-count-select">
+                      <mat-select
+                        [value]="lastImagesCount()"
+                        (selectionChange)="onLastImagesCountChange($event.value)"
                         panelClass="layer-select-panel"
+                        [disabled]="isSynced()"
                       >
-                        @for (hours of smnMaxPastHoursOptions(); track hours) {
-                          <mat-option [value]="hours">{{ hours }} h</mat-option>
+                        @for (option of lastImagesOptions(); track option) {
+                          <mat-option [value]="option">{{ option }}</mat-option>
                         }
                       </mat-select>
                     </mat-form-field>
                   </div>
 
-                  <div class="smn-tileset-slider" [class.disabled]="smnTemporalMode() !== 'specific'">
-                    <span class="smn-tileset-min">{{ formatSmnTilesetId(smnFirstTilesetId()) }}</span>
-                    <mat-slider
-                      [min]="0"
-                      [max]="smnTilesetMaxIndex()"
-                      [step]="1"
-                      [discrete]="true"
-                      class="control-slider"
-                      [disabled]="smnTemporalMode() !== 'specific' || smnTilesetIds().length === 0"
-                    >
-                      <input
-                        matSliderThumb
-                        [value]="smnSelectedTilesetIndex()"
-                        (valueChange)="onSmnTilesetIndexChange($event)"
-                      />
-                    </mat-slider>
-                    <span class="smn-tileset-max">{{ formatSmnTilesetId(smnLastTilesetId()) }}</span>
-                  </div>
-
-                  <div class="smn-selected-tileset">Tileset: {{ formatSmnTilesetId(smnSelectedTilesetId()) }}</div>
-                </div>
-              } @else {
-              <!-- Slider de tiempo con play -->
-              <div class="time-slider-container">
-                <span class="time-min">{{ getTimeOnly(minTimeIndex()) }}</span>
-                <mat-slider
-                  [min]="minTimeIndex()"
-                  [max]="maxTimeIndex()"
-                  step="1"
-                  discrete
-                  class="control-slider"
-                  [displayWith]="formatTimeIndex"
-                  [disabled]="isSynced()"
-                >
-                  <input
-                    matSliderThumb
-                    [value]="currentTimeIndex()"
-                    (valueChange)="onTimeIndexChange($event)"
-                  />
-                </mat-slider>
-                <span class="time-max">{{ getTimeOnly(maxTimeIndex()) }}</span>
-                <button
-                  mat-icon-button
-                  (click)="togglePlayback()"
-                  [disabled]="!canPlayback() && !isSynced()"
-                  [matTooltip]="
-                    isSynced()
-                      ? 'Desconectar de sincronización'
-                      : isPlaying()
-                        ? 'Pausar'
-                        : 'Reproducir'
-                  "
-                  class="play-btn"
-                  [class.synced]="isSynced()"
-                >
-                  <mat-icon>{{
-                    isSynced() ? 'sync_disabled' : isPlaying() ? 'pause' : 'play_arrow'
-                  }}</mat-icon>
-                </button>
-              </div>
-
-              <!-- Tiempo actual + Controles -->
-              <div class="time-controls-row">
-                <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
-
-                <!-- Selector de últimas imágenes -->
-                <div class="images-count-control">
-                  <mat-form-field appearance="fill" class="images-count-select">
-                    <mat-select
-                      [value]="lastImagesCount()"
-                      (selectionChange)="onLastImagesCountChange($event.value)"
-                      panelClass="layer-select-panel"
+                  <!-- Velocidad -->
+                  <div class="speed-control">
+                    <input
+                      type="number"
+                      [value]="playSpeed()"
+                      (change)="onPlaySpeedChange(+$any($event.target).value)"
+                      min="0.4"
+                      max="10"
+                      step="0.1"
+                      class="speed-input"
+                      placeholder="1.0"
                       [disabled]="isSynced()"
-                    >
-                      @for (option of lastImagesOptions(); track option) {
-                        <mat-option [value]="option">{{ option }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
+                    />
+                    <span class="speed-label">s</span>
+                  </div>
                 </div>
-
-                <!-- Velocidad -->
-                <div class="speed-control">
-                  <input
-                    type="number"
-                    [value]="playSpeed()"
-                    (change)="onPlaySpeedChange(+$any($event.target).value)"
-                    min="0.4"
-                    max="10"
-                    step="0.1"
-                    class="speed-input"
-                    placeholder="1.0"
-                    [disabled]="isSynced()"
-                  />
-                  <span class="speed-label">s</span>
+              } @else if (isLoadingConfig()) {
+                <div class="loading-config">
+                  <mat-icon class="loading-icon">hourglass_empty</mat-icon>
+                  <span>Cargando períodos disponibles...</span>
                 </div>
-              </div>
+              } @else if (hasNoPeriodsAvailable()) {
+                <div class="no-periods-message">
+                  <mat-icon class="info-icon">info</mat-icon>
+                  <span>No hay períodos disponibles</span>
+                </div>
               }
-            } @else if (isLoadingConfig()) {
-              <div class="loading-config">
-                <mat-icon class="loading-icon">hourglass_empty</mat-icon>
-                <span>Cargando períodos disponibles...</span>
-              </div>
-            } @else if (hasNoPeriodsAvailable()) {
-              <div class="no-periods-message">
-                <mat-icon class="info-icon">info</mat-icon>
-                <span>No hay períodos disponibles</span>
-              </div>
             }
           </div>
         </div>

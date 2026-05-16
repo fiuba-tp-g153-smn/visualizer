@@ -361,14 +361,57 @@
 
         .smn-mode-control {
           display: flex;
-          flex-direction: column;
-          gap: 6px;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+
+          .control-label {
+            line-height: 1;
+          }
         }
 
         .smn-mode-group {
           display: flex;
+          align-items: center;
           gap: 12px;
-          padding-left: 4px;
+          padding-left: 0;
+        }
+
+        .smn-tolerance-control {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+
+          .tolerance-control {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+
+            .tolerance-input {
+              width: 60px;
+              height: 28px;
+              padding: 0 6px;
+              border: 1px solid var(--mat-sys-outline-variant);
+              border-radius: 4px;
+              background: var(--mat-sys-surface);
+              color: var(--mat-sys-on-surface);
+              font-size: 0.75rem;
+              text-align: center;
+
+              &:focus {
+                outline: none;
+                border-color: var(--mat-sys-primary);
+              }
+            }
+
+            .tolerance-label {
+              font-size: 0.75rem;
+              color: var(--mat-sys-on-surface-variant);
+              white-space: nowrap;
+            }
+          }
         }
 
         .smn-hours-control {

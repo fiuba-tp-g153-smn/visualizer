@@ -8,6 +8,10 @@ import { LayerControlService } from './layer-control.service';
 import { NotificationService } from '../notifications/notification.service';
 import { SmnStationsAuthService } from '../auth/smn-stations-auth.service';
 import {
+  SMN_STATIONS_MAX_PAST_HOURS_OPTIONS,
+  SmnStationsTemporalMode,
+} from '../../config/layers/smn-stations/controls.constants';
+import {
   LayerConfig,
   LayerType,
   LayerCategory,
@@ -247,11 +251,12 @@ export class LayerRefreshService {
       const maxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
 
       const response =
-        temporalMode === 'specific'
+        temporalMode === SmnStationsTemporalMode.SPECIFIC
           ? await this.fetchSmnStationsTilesetSnapshot(token, requestedTilesetId, maxPastHours)
           : await this.fetchSmnStationsLatestSnapshot(token);
 
-      const snapshotSource = temporalMode === 'specific' ? 'mock-tileset' : 'mock-latest';
+      const snapshotSource =
+        temporalMode === SmnStationsTemporalMode.SPECIFIC ? 'mock-tileset' : 'mock-latest';
       const observations = this.toSmnStationsObservations(response.stations, response.weather);
 
       if (observations.length > 0) {
@@ -270,7 +275,7 @@ export class LayerRefreshService {
     return {
       observations: [],
       fetchedAt: new Date().toISOString(),
-      source: temporalMode === 'specific' ? 'mock-tileset' : 'mock-latest',
+      source: temporalMode === SmnStationsTemporalMode.SPECIFIC ? 'mock-tileset' : 'mock-latest',
     };
   }
 
@@ -338,7 +343,7 @@ export class LayerRefreshService {
 
       return {
         tilesetIds: [this.toSmnStationsTilesetId(fetchedAtDate)],
-        maxPastHoursOptions: [6, 12, 24, 48],
+        maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
       };
     } catch {
       return null;
@@ -403,7 +408,7 @@ export class LayerRefreshService {
 
     return {
       tilesetIds,
-      maxPastHoursOptions: [6, 12, 24, 48],
+      maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
     };
   }
 
@@ -434,11 +439,6 @@ export class LayerRefreshService {
   private syncSmnStationsTemporalControlsWithConfig(config: SmnStationsEndpointConfig): void {
     const selectedTilesetId = this.resolveRequestedSmnStationsTilesetId(config.tilesetIds);
     this.layerControlService.setSmnStationsSelectedTilesetId(selectedTilesetId);
-
-    const currentMaxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
-    if (!config.maxPastHoursOptions.includes(currentMaxPastHours)) {
-      this.layerControlService.setSmnStationsMaxPastHours(config.maxPastHoursOptions[0]);
-    }
   }
 
   private resolveRequestedSmnStationsTilesetId(tilesetIds: readonly string[]): string {
@@ -481,7 +481,7 @@ export class LayerRefreshService {
     const lastDate = dateCandidates.at(-1) ?? new Date();
     return {
       tilesetIds: [this.toSmnStationsTilesetId(lastDate)],
-      maxPastHoursOptions: [6, 12, 24, 48],
+      maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
     };
   }
 
