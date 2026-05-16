@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
-import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
+import { PointQueryViewerService } from '../../services/tools/point-query-viewer.service';
 import { MapInfoService } from '../../services/layers/map-info.service';
 import { BaseMap } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
@@ -17,7 +17,7 @@ import { PolygonDrawingService } from '../../services/polygons/polygon-drawing.s
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
 import { VectorOverlayService } from '../../services/layers/vector-overlay.service';
-import { SmnStationsDataService } from '../../services/layers/smn-stations-data.service';
+import { LayerRefreshService } from '../../services/layers/layer-refresh.service';
 
 /**
  * Main map container component that orchestrates the map, layers, polygons and point-query UI.
@@ -44,7 +44,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private layersService = inject(MapLayersService);
   private polygonsService = inject(MapPolygonsService);
   private vectorOverlayService = inject(VectorOverlayService);
-  private smnStationsDataService = inject(SmnStationsDataService);
+  private layerRefreshService = inject(LayerRefreshService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -74,7 +74,7 @@ export class MapContainer implements OnInit, OnDestroy {
         this.vectorOverlayService.loadTick();
         // Track station data loads so marker layers appear as soon as the data
         // cache is populated.
-        this.smnStationsDataService.loadTick();
+        this.layerRefreshService.smnStationsLoadTick();
         // Re-render point layers when the zoom changes so marker sizes can adapt.
         this.mapInfoService.currentZoom();
 
@@ -227,13 +227,14 @@ export class MapContainer implements OnInit, OnDestroy {
       maxZoom: baseMap.maxZoom,
       zIndex: MAP_Z_INDEX.BASE_MAP,
       maxNativeZoom: baseMap.maxNativeZoom,
+      className: 'basemap-tile',
       // Wider tile ring smooths panning; backend's 1-week immutable cache
       // makes the extra fetches near-free on warm caches.
       keepBuffer: 4,
       // Defer tile fetches during touch pinch/pan; smoother on coarse pointers.
       updateWhenIdle: window.matchMedia?.('(pointer: coarse)').matches ?? false,
-      // Future-proofs canvas screenshot/print flows; backend already CORS-allows *.
-      crossOrigin: 'anonymous',
+      // Avoid subpixel cracks while zooming animated tiles in some browsers.
+      updateWhenZooming: false,
     }).addTo(this.map);
 
     // Tripwire: backend is supposed to return a transparent PNG on miss, never a 404.

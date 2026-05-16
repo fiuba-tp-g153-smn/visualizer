@@ -132,7 +132,6 @@ export class LayersService {
 
             case LayerCategory.SMN_STATIONS:
               parts.push('SMN');
-              parts.push(subgroup.name);
               parts.push(layer.name);
               break;
 

@@ -209,7 +209,14 @@ export interface SecondaryVectorRender {
 export interface SmnStationLayer extends BaseLayer {
   type: LayerType.VECTOR;
   category: LayerCategory.SMN_STATIONS;
-  variable: 'temperature' | 'feels_like' | 'humidity' | 'pressure' | 'visibility' | 'wind_speed';
+  variable:
+    | 'temperature'
+    | 'feels_like'
+    | 'humidity'
+    | 'pressure'
+    | 'visibility'
+    | 'wind_speed'
+    | 'weather';
   scale: NonNullable<LayerScale>; // Las estaciones siempre tienen escala
 }
 

@@ -4,7 +4,6 @@ import { LayerControlService } from './layer-control.service';
 import { LayerRenderService } from './layer-render.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
-import { SmnStationsLayerService } from './smn-stations-layer.service';
 import { VectorOverlayService } from './vector-overlay.service';
 import {
   EcmwfTpLayerControls,
@@ -37,7 +36,6 @@ export class MapLayersService {
   private controlService = inject(LayerControlService);
   private layerConfigService = inject(LayerConfigService);
   private layerRenderService = inject(LayerRenderService);
-  private smnStationsLayerService = inject(SmnStationsLayerService);
   private vectorOverlay = inject(VectorOverlayService);
 
   private map: L.Map | null = null;
@@ -171,11 +169,12 @@ export class MapLayersService {
           break;
 
         case LayerType.VECTOR: {
-          const stationLayer = this.smnStationsLayerService.createLayer(
+          const stationLayer = this.layerRenderService.createSmnStationsLayer(
             layerId,
             controls.opacity,
             Math.round(this.map.getZoom()),
             this.map!,
+            actualZIndex,
           );
           desiredLayersOnMap.set(layerId, stationLayer);
           break;
