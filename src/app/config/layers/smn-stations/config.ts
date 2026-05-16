@@ -6,7 +6,6 @@ import {
   PRESSURE_SCALE,
   TEMPERATURE_SCALE,
   VISIBILITY_SCALE,
-  WEATHER_SCALE,
   WIND_SPEED_SCALE,
 } from './scales.config';
 
@@ -83,13 +82,6 @@ export const SMN_STATIONS_SUBGROUP: LayerSubgroup = {
       'Intensidad del viento observada en estaciones meteorológicas del SMN',
       'wind_speed',
       WIND_SPEED_SCALE,
-    ),
-    createStationLayer(
-      'smn/stations/weather',
-      'Tiempo presente',
-      'Estado del tiempo observado en estaciones meteorológicas del SMN',
-      'weather',
-      WEATHER_SCALE,
     ),
   ],
 };

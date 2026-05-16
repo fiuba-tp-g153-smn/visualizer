@@ -195,10 +195,6 @@ export class ScaleToolsService {
   }
 
   private hasValidScale(layer: Layer): layer is ScalableLayer {
-    if (layer.id === 'smn/stations/weather') {
-      return false;
-    }
-
     if (!layer.scale) {
       return false;
     }
