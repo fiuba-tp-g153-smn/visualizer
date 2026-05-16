@@ -45,3 +45,10 @@ Thumbs.db
 .claude
 .agent
 referencia.html
+
+# SMN stations backup snapshots (timestamped exports)
+src/app/testing/fixtures/smn-stations/stations.*T*.json
+src/app/testing/fixtures/smn-stations/weather.*T*.json
+src/app/testing/fixtures/smn-stations/*.json
+public/testing/fixtures/smn-stations/stations.*T*.json
+public/testing/fixtures/smn-stations/weather.*T*.json

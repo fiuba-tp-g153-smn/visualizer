@@ -1,0 +1,82 @@
+[
+  {
+    "id": 87585,
+    "airport_code": "SABA",
+    "name": "BUENOS AIRES OBSERVATORIO",
+    "province": "Capital Federal",
+    "height": 25,
+    "coord": { "lat": -34.5875, "lon": -58.3722 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 97585 }
+  },
+  {
+    "id": 87576,
+    "airport_code": "SABA",
+    "name": "ROSARIO AERO",
+    "province": "Santa Fe",
+    "height": 22,
+    "coord": { "lat": -32.9044, "lon": -60.785 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 97576 }
+  },
+  {
+    "id": 87148,
+    "airport_code": "SABA",
+    "name": "CORDOBA AERO",
+    "province": "Cordoba",
+    "height": 474,
+    "coord": { "lat": -31.3236, "lon": -64.2079 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 97148 }
+  },
+  {
+    "id": 87217,
+    "airport_code": "SABA",
+    "name": "MENDOZA AERO",
+    "province": "Mendoza",
+    "height": 704,
+    "coord": { "lat": -32.8315, "lon": -68.7921 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 97217 }
+  },
+  {
+    "id": 89217,
+    "airport_code": "SABA",
+    "name": "NEUQUEN AERO",
+    "province": "Neuquen",
+    "height": 271,
+    "coord": { "lat": -38.9516, "lon": -68.1543 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 99217 }
+  },
+  {
+    "id": 87715,
+    "airport_code": "SABA",
+    "name": "MAR DEL PLATA AERO",
+    "province": "Buenos Aires",
+    "height": 22,
+    "coord": { "lat": -37.9345, "lon": -57.5736 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 97715 }
+  },
+  {
+    "id": 87925,
+    "airport_code": "SABA",
+    "name": "SALTA AERO",
+    "province": "Salta",
+    "height": 1221,
+    "coord": { "lat": -24.8558, "lon": -65.4864 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 97925 }
+  },
+  {
+    "id": 87791,
+    "airport_code": "SABA",
+    "name": "USHUAIA AERO",
+    "province": "Tierra del Fuego",
+    "height": 28,
+    "coord": { "lat": -54.8433, "lon": -68.2955 },
+    "type": "AUTOMATICA",
+    "ref": { "location_id": 97791 }
+  }
+]
