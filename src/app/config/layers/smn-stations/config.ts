@@ -7,12 +7,13 @@ import {
 } from '../../../models';
 import { SMN_UNITS, TEMPERATURE_UNITS } from '../../../constants';
 import { LayerSelectionMode, LayerSubgroup } from '../../../models/layers/groups.models';
+import { SMN_WEATHER_SCALE_STEPS } from './render.config';
 
 import { SmnStationLayer } from '../../../models/layers/models';
 
 export const SMN_STATION_PANE = 'smn-station-pane';
-// Keep this below the popupPane z-index so popups are always on top
-export const SMN_STATION_PANE_Z_INDEX = '600';
+// Fallback z-index; MapLayersService sets this dynamically per active-layer order.
+export const SMN_STATION_PANE_Z_INDEX = '560';
 
 const TEMPERATURE_SCALE: LayerScale = {
   type: ScaleType.CONTINUOUS,
@@ -68,11 +69,13 @@ const VISIBILITY_SCALE: LayerScale = {
   type: ScaleType.CONTINUOUS,
   unit: SMN_UNITS.VISIBILITY,
   stops: [
-    { value: 0, color: '#4d4d4d', label: '0' },
-    { value: 2, color: '#7b68ee', label: '2' },
-    { value: 5, color: '#4da3ff', label: '5' },
-    { value: 10, color: '#8bd3c7', label: '10' },
-    { value: 20, color: '#f9f871', label: '20' },
+    { value: 0, color: '#5e4fa2', label: '0' },
+    { value: 1, color: '#3288bd', label: '1' },
+    { value: 2, color: '#66c2a5', label: '2' },
+    { value: 5, color: '#abdda4', label: '5' },
+    { value: 10, color: '#e6f598', label: '10' },
+    { value: 20, color: '#fee08b', label: '20' },
+    { value: 50, color: '#f46d43', label: '50' },
   ],
 };
 
@@ -87,6 +90,12 @@ const WIND_SPEED_SCALE: LayerScale = {
     { value: 60, color: '#fc8d59', label: '60' },
     { value: 90, color: '#d73027', label: '90' },
   ],
+};
+
+const WEATHER_SCALE: LayerScale = {
+  type: ScaleType.DISCRETE,
+  unit: '',
+  steps: SMN_WEATHER_SCALE_STEPS,
 };
 
 function createStationLayer(
@@ -156,6 +165,13 @@ export const SMN_STATIONS_SUBGROUP: LayerSubgroup = {
       'Intensidad del viento observada en estaciones meteorológicas del SMN',
       'wind_speed',
       WIND_SPEED_SCALE,
+    ),
+    createStationLayer(
+      'smn/stations/weather',
+      'Tiempo presente',
+      'Estado del tiempo observado en estaciones meteorológicas del SMN',
+      'weather',
+      WEATHER_SCALE,
     ),
   ],
 };

@@ -4,6 +4,9 @@ import {
   LayerType,
   LayerCategory,
   WmsLayer,
+  SmnStationLayer,
+  LayerScale,
+  ScaleType,
   GoesTileLayerConfig,
   RadarTileLayerConfig,
   RadarTileLayer,
@@ -12,7 +15,6 @@ import {
   RadarLayerControls,
   WmsLayerControls,
   TileLayer,
-  Layer,
   LayerControls,
   EcmwfTpLayerControls,
   EcmwfTpTileLayerConfig,
@@ -20,10 +22,20 @@ import {
 } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
+import { LayerRefreshService } from './layer-refresh.service';
 import { LayersService } from './layers.service';
 import { buildTileUrl, MAP_CONFIG } from '../../config';
+import { SMN_STATION_PANE } from '../../config/layers/smn-stations/config';
+import { SMN_STATION_RENDER_CONFIG } from '../../config/layers/smn-stations/render.config';
 import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
+import { SMN_UNITS, TEMPERATURE_UNITS } from '../../constants';
+import { UnitsSettingsService } from '../settings/units-settings.service';
+import {
+  convertCelsiusToKelvin,
+  convertValueForDisplay,
+  getDisplayUnit,
+} from '../../utils/unit-conversion.utils';
 
 /**
  * Service responsible for creating and managing Leaflet tile layers.
@@ -44,7 +56,9 @@ import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-
 export class LayerRenderService {
   private readonly notificationService = inject(NotificationService);
   private readonly layerConfigService = inject(LayerConfigService);
+  private readonly layerRefreshService = inject(LayerRefreshService);
   private readonly layersService = inject(LayersService);
+  private readonly unitsSettings = inject(UnitsSettingsService);
 
   // Track errors per layer to avoid notification spam
   private readonly errorTracker = new Map<string, number>();
@@ -52,6 +66,7 @@ export class LayerRenderService {
 
   // Tile Layer Pool: cache of L.TileLayer instances for reuse
   private readonly layerPool = new Map<string, L.TileLayer>();
+  private readonly smnStationsLayerPool = new Map<string, L.Layer>();
 
   // ============================================================================
   // Public Methods - Layer Creation
@@ -98,6 +113,249 @@ export class LayerRenderService {
     // Store in pool for future reuse
     this.layerPool.set(poolKey, tileLayer);
     return tileLayer;
+  }
+
+  createSmnStationsLayer(
+    layerId: string,
+    opacity: number,
+    zoom: number,
+    map: L.Map,
+    actualZIndex?: number,
+  ): L.Layer {
+    const layer = this.layersService.getLayerById(layerId);
+    if (
+      !layer ||
+      layer.type !== LayerType.VECTOR ||
+      layer.category !== LayerCategory.SMN_STATIONS
+    ) {
+      throw new Error(`Layer '${layerId}' is not a SMN station layer`);
+    }
+
+    const snapshot = this.layerRefreshService.peekSmnStationsSnapshot();
+    if (!snapshot) {
+      void this.layerRefreshService.loadSmnStationsSnapshot();
+      return L.layerGroup();
+    }
+
+    this.applySmnStationsPaneZIndex(map, actualZIndex);
+
+    const paneZIndex = map.getPane(SMN_STATION_PANE)?.style.zIndex ?? '560';
+    const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}`;
+    const cachedLayer = this.smnStationsLayerPool.get(poolKey);
+    if (cachedLayer) {
+      return cachedLayer;
+    }
+
+    const stationLayer = layer as SmnStationLayer;
+    const markerGroup = L.layerGroup();
+    const markerRadius = this.resolveSmnStationsRadius(zoom);
+
+    type VisiblePoint = {
+      observation: SmnStationObservationLike;
+      latLng: L.LatLng;
+      px: L.Point;
+      value: number;
+      metersPerPixel: number;
+      nearestDistMeters: number;
+    };
+
+    const visiblePoints: VisiblePoint[] = [];
+    for (const observation of snapshot.observations) {
+      const latLng = L.latLng(observation.station.coord.lat, observation.station.coord.lon);
+      const value = this.resolveSmnStationsValue(stationLayer.variable, observation);
+      if (value === null) {
+        continue;
+      }
+
+      const px = map.latLngToLayerPoint(latLng);
+      visiblePoints.push({
+        observation,
+        latLng,
+        px,
+        value,
+        metersPerPixel: this.resolveSmnStationsMetersPerPixel(map, latLng, zoom),
+        nearestDistMeters: Number.POSITIVE_INFINITY,
+      });
+    }
+
+    const dotRadiusPx = Math.max(
+      SMN_STATION_RENDER_CONFIG.marker.dotMinRadiusPx,
+      markerRadius * SMN_STATION_RENDER_CONFIG.marker.dotRadiusFactor,
+    );
+    const circleRadiusPx = Math.max(
+      SMN_STATION_RENDER_CONFIG.marker.circleMinRadiusPx,
+      markerRadius * SMN_STATION_RENDER_CONFIG.marker.circleRadiusFactor,
+    );
+    const badgeDiameterPx = Math.max(
+      SMN_STATION_RENDER_CONFIG.marker.badgeMinDiameterPx,
+      Math.round(markerRadius * SMN_STATION_RENDER_CONFIG.marker.badgeDiameterFactor),
+    );
+    const circleDiameterPx = circleRadiusPx * 2;
+
+    const cellSize = Math.max(SMN_STATION_RENDER_CONFIG.minDistancePx, circleDiameterPx);
+    const grid = new Map<string, VisiblePoint[]>();
+    for (const point of visiblePoints) {
+      const gx = Math.floor(point.px.x / cellSize);
+      const gy = Math.floor(point.px.y / cellSize);
+      const key = `${gx},${gy}`;
+      const cell = grid.get(key);
+      if (cell) {
+        cell.push(point);
+      } else {
+        grid.set(key, [point]);
+      }
+    }
+
+    for (const point of visiblePoints) {
+      const gx = Math.floor(point.px.x / cellSize);
+      const gy = Math.floor(point.px.y / cellSize);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const key = `${gx + dx},${gy + dy}`;
+          const cell = grid.get(key);
+          if (!cell) {
+            continue;
+          }
+          for (const other of cell) {
+            if (other === point) {
+              continue;
+            }
+            const distMeters = map.distance(point.latLng, other.latLng);
+            if (distMeters < point.nearestDistMeters) {
+              point.nearestDistMeters = distMeters;
+            }
+          }
+        }
+      }
+    }
+
+    for (const point of visiblePoints) {
+      const observation = point.observation;
+      const value = point.value;
+      const color = this.resolveSmnStationsColor(stationLayer.scale, value);
+
+      const denseThresholdMeters =
+        circleDiameterPx *
+        point.metersPerPixel *
+        SMN_STATION_RENDER_CONFIG.density.denseDistanceMultiplier;
+      const mediumThresholdMeters =
+        badgeDiameterPx *
+        point.metersPerPixel *
+        SMN_STATION_RENDER_CONFIG.density.mediumDistanceMultiplier;
+
+      const level: SmnStationRenderLevel =
+        point.nearestDistMeters <= denseThresholdMeters
+          ? SmnStationRenderLevel.DOT
+          : point.nearestDistMeters <= mediumThresholdMeters
+            ? SmnStationRenderLevel.CIRCLE
+            : SmnStationRenderLevel.BADGE;
+
+      let marker: L.Layer;
+      if (level === SmnStationRenderLevel.DOT) {
+        marker = L.circleMarker(point.latLng, {
+          pane: SMN_STATION_PANE,
+          radius: dotRadiusPx,
+          fillColor: color,
+          color: color,
+          weight: 0,
+          opacity,
+          fillOpacity: Math.max(SMN_STATION_RENDER_CONFIG.marker.dotMinFillOpacity, opacity),
+          interactive: true,
+        });
+      } else if (level === SmnStationRenderLevel.CIRCLE) {
+        marker = L.circleMarker(point.latLng, {
+          pane: SMN_STATION_PANE,
+          radius: circleRadiusPx,
+          fillColor: color,
+          color: '#000',
+          weight: SMN_STATION_RENDER_CONFIG.marker.circleStrokeWeight,
+          opacity,
+          fillOpacity: Math.max(
+            SMN_STATION_RENDER_CONFIG.marker.minimumFillOpacity,
+            SMN_STATION_RENDER_CONFIG.marker.crowdedValueFillOpacityBase * opacity,
+          ),
+          interactive: true,
+        });
+      } else {
+        const textColor = this.resolveSmnStationsContrastingTextColor(color);
+        const { displayValue } = this.resolveSmnStationsDisplayValueAndUnit(
+          value,
+          stationLayer.scale?.unit ?? '',
+        );
+        const labelValue = Math.round(displayValue);
+        const iconDiameter = badgeDiameterPx;
+        const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
+        marker = L.marker(point.latLng, { pane: SMN_STATION_PANE, icon, interactive: true });
+      }
+
+      marker.on?.('click', (evt: L.LeafletMouseEvent) => {
+        const button = (evt.originalEvent as MouseEvent | undefined)?.button ?? 0;
+        if (button !== 0) {
+          return;
+        }
+
+        map.fire('click', {
+          latlng: evt.latlng,
+          layerPoint: evt.layerPoint,
+          containerPoint: evt.containerPoint,
+          originalEvent: evt.originalEvent,
+        } as L.LeafletMouseEvent);
+      });
+
+      marker.on?.('contextmenu', (evt: L.LeafletMouseEvent) => {
+        const detail = this.buildSmnStationsPopup(stationLayer, observation, value);
+        L.popup({ pane: 'popupPane', className: 'smn-station-popup' })
+          .setLatLng(evt.latlng)
+          .setContent(detail)
+          .openOn(map);
+      });
+
+      markerGroup.addLayer(marker);
+    }
+
+    this.smnStationsLayerPool.set(poolKey, markerGroup);
+    return markerGroup;
+  }
+
+  private resolveSmnStationsRadius(zoom: number): number {
+    const baseRadius = 2.5 + Math.max(0, zoom - 4) * 0.45;
+    return Math.min(11, Math.max(3, baseRadius));
+  }
+
+  private resolveSmnStationsMetersPerPixel(map: L.Map, latLng: L.LatLng, zoom: number): number {
+    const projected = map.project(latLng, zoom);
+    const onePixelEast = L.point(projected.x + 1, projected.y);
+    const shiftedLatLng = map.unproject(onePixelEast, zoom);
+    const meters = map.distance(latLng, shiftedLatLng);
+    return meters > 0 ? meters : 1;
+  }
+
+  private resolveSmnStationsContrastingTextColor(color: string): string {
+    const normalized = color.replace('#', '');
+    if (normalized.length !== 6) {
+      return '#111827';
+    }
+
+    const red = Number.parseInt(normalized.slice(0, 2), 16);
+    const green = Number.parseInt(normalized.slice(2, 4), 16);
+    const blue = Number.parseInt(normalized.slice(4, 6), 16);
+    const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+    return luminance > 0.58 ? '#111827' : '#f9fafb';
+  }
+
+  private buildSmnStationsBadgeIcon(
+    value: number,
+    diameterPx: number,
+    backgroundColor: string,
+    textColor: string,
+  ): L.DivIcon {
+    const fontSizePx = SMN_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
+    return L.divIcon({
+      className: 'smn-station-divicon',
+      html: `<div class="smn-station-badge" style="--smn-badge-size:${diameterPx}px;--smn-badge-bg:${backgroundColor};--smn-badge-fg:${textColor};--smn-badge-font-size:${fontSizePx}px;">${value}</div>`,
+      iconSize: [diameterPx, diameterPx],
+      iconAnchor: [diameterPx / 2, diameterPx / 2],
+    });
   }
 
   /**
@@ -411,7 +669,10 @@ export class LayerRenderService {
       const forecastsForPeriod = config.forecastsByPeriod[currentPeriodTs];
       if (forecastsForPeriod && forecastsForPeriod.includes(forecastTs)) {
         const tileLayer = this.createEcmwfTpTileLayerForForecast(
-          layerId, controls, forecastTs, currentPeriodTs,
+          layerId,
+          controls,
+          forecastTs,
+          currentPeriodTs,
         );
         this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
         result.set(`${layerId}#${forecastTs}#${currentTimeIndex}`, tileLayer);
@@ -427,7 +688,10 @@ export class LayerRenderService {
         true,
         (adjIndex) => {
           const adjLayer = this.createEcmwfTpTileLayerForForecastAtTimeIndex(
-            layerId, controls, forecastTs, adjIndex,
+            layerId,
+            controls,
+            forecastTs,
+            adjIndex,
           );
           if (!adjLayer) return null;
           return { layer: adjLayer, key: `${layerId}#${forecastTs}#${adjIndex}` };
@@ -436,6 +700,306 @@ export class LayerRenderService {
     });
 
     return result;
+  }
+
+  private resolveSmnStationsValue(
+    variable: SmnStationLayer['variable'],
+    observation: SmnStationObservationLike,
+  ): number | null {
+    switch (variable) {
+      case 'temperature':
+        return observation.weather.temperature === null
+          ? null
+          : convertCelsiusToKelvin(observation.weather.temperature);
+      case 'feels_like':
+        return observation.weather.feels_like === null
+          ? null
+          : convertCelsiusToKelvin(observation.weather.feels_like);
+      case 'humidity':
+        return observation.weather.humidity;
+      case 'pressure':
+        return observation.weather.pressure;
+      case 'visibility':
+        return observation.weather.visibility;
+      case 'wind_speed':
+        return observation.weather.wind.speed ?? 0;
+      case 'weather':
+        return observation.weather.weather?.id ?? null;
+      default:
+        return null;
+    }
+  }
+
+  private resolveSmnStationsColor(scale: LayerScale, value: number): string {
+    switch (scale.type) {
+      case ScaleType.CONTINUOUS:
+        return this.interpolateContinuousSmnStationsColor(scale.stops, value);
+      case ScaleType.DISCRETE:
+        return this.resolveDiscreteSmnStationsColor(scale.steps, value);
+      case ScaleType.PALETTE_CONFIG:
+        return this.resolvePaletteSmnStationsColor(
+          scale.hexColors,
+          scale.bounds,
+          value,
+          scale.useBoundaryNorm ?? false,
+        );
+      default:
+        return '#0090d0';
+    }
+  }
+
+  private interpolateContinuousSmnStationsColor(
+    stops: readonly { value: number; color: string }[],
+    value: number,
+  ): string {
+    if (stops.length === 0) {
+      return '#0090d0';
+    }
+
+    const sortedStops = [...stops].sort((a, b) => a.value - b.value);
+    if (value <= sortedStops[0].value) {
+      return sortedStops[0].color;
+    }
+
+    const lastStop = sortedStops[sortedStops.length - 1];
+    if (value >= lastStop.value) {
+      return lastStop.color;
+    }
+
+    for (let index = 0; index < sortedStops.length - 1; index++) {
+      const left = sortedStops[index];
+      const right = sortedStops[index + 1];
+      if (value < left.value || value > right.value) {
+        continue;
+      }
+
+      const ratio = (value - left.value) / (right.value - left.value || 1);
+      return this.mixSmnStationsHexColors(left.color, right.color, ratio);
+    }
+
+    return lastStop.color;
+  }
+
+  private resolveDiscreteSmnStationsColor(
+    steps: readonly { value: number; color: string }[],
+    value: number,
+  ): string {
+    if (steps.length === 0) {
+      return '#0090d0';
+    }
+
+    const sorted = [...steps].sort((a, b) => a.value - b.value);
+    let selected = sorted[0];
+    for (const step of sorted) {
+      if (value >= step.value) {
+        selected = step;
+      }
+    }
+    return selected.color;
+  }
+
+  private resolvePaletteSmnStationsColor(
+    colors: readonly string[],
+    bounds: readonly number[],
+    value: number,
+    useBoundaryNorm: boolean,
+  ): string {
+    if (colors.length === 0) {
+      return '#0090d0';
+    }
+
+    if (bounds.length === 0) {
+      return colors[0];
+    }
+
+    if (useBoundaryNorm) {
+      let index = 0;
+      for (let i = 0; i < bounds.length; i++) {
+        if (value >= bounds[i]) {
+          index = i;
+        }
+      }
+      return colors[Math.min(index, colors.length - 1)] ?? colors[0];
+    }
+
+    for (let i = 0; i < bounds.length; i++) {
+      if (value < bounds[i]) {
+        return colors[Math.max(0, i - 1)] ?? colors[0];
+      }
+    }
+
+    return colors[colors.length - 1] ?? colors[0];
+  }
+
+  private mixSmnStationsHexColors(startColor: string, endColor: string, ratio: number): string {
+    const start = this.hexToSmnStationsRgb(startColor);
+    const end = this.hexToSmnStationsRgb(endColor);
+    const clamped = Math.max(0, Math.min(1, ratio));
+
+    const red = Math.round(start.red + (end.red - start.red) * clamped);
+    const green = Math.round(start.green + (end.green - start.green) * clamped);
+    const blue = Math.round(start.blue + (end.blue - start.blue) * clamped);
+
+    return this.smnStationsRgbToHex(red, green, blue);
+  }
+
+  private hexToSmnStationsRgb(color: string): { red: number; green: number; blue: number } {
+    const normalized = color.replace('#', '');
+    const red = Number.parseInt(normalized.slice(0, 2), 16);
+    const green = Number.parseInt(normalized.slice(2, 4), 16);
+    const blue = Number.parseInt(normalized.slice(4, 6), 16);
+    return { red, green, blue };
+  }
+
+  private smnStationsRgbToHex(red: number, green: number, blue: number): string {
+    return `#${[red, green, blue]
+      .map((component) => component.toString(16).padStart(2, '0'))
+      .join('')}`;
+  }
+
+  private buildSmnStationsPopup(
+    layer: SmnStationLayer,
+    observation: SmnStationObservationLike,
+    rawValue: number,
+  ): string {
+    const sourceUnit = layer.scale?.unit ?? '';
+    const { displayValue, displayUnit } = this.resolveSmnStationsDisplayValueAndUnit(
+      rawValue,
+      sourceUnit,
+    );
+    const formatValue = (
+      input: number | null | undefined,
+      precision: number,
+      inputUnit = '',
+    ): string => {
+      if (input === null || input === undefined || Number.isNaN(input)) {
+        return '-';
+      }
+      return `${input.toFixed(precision)}${inputUnit}`;
+    };
+    const formatText = (input: string | null | undefined): string => {
+      if (!input) {
+        return '-';
+      }
+      const trimmed = input.trim();
+      return trimmed.length > 0 ? trimmed : '-';
+    };
+    const calmWind =
+      observation.weather.wind.direction === 'Calma' && observation.weather.wind.speed === null;
+    const { value: windSpeedValue, unit: windSpeedUnit } = this.resolveSmnStationsWindSpeedDisplay(
+      observation.weather.wind.speed,
+    );
+    const windText = calmWind
+      ? `0 ${windSpeedUnit}`
+      : formatValue(windSpeedValue, 0, ` ${windSpeedUnit}`);
+    const stationName = formatText(observation.station.name);
+    const province = formatText(observation.station.province);
+    const windDirection = formatText(observation.weather.wind.direction);
+    const windDegrees = observation.weather.wind.deg;
+    const windDirectionWithDegrees =
+      windDegrees === null || windDegrees === undefined || Number.isNaN(windDegrees)
+        ? windDirection
+        : `${windDirection} ${Math.round(windDegrees)}°`;
+    const { value: temperatureValue, unit: temperatureUnit } =
+      this.resolveSmnStationsTemperatureDisplay(observation.weather.temperature);
+    const { value: feelsLikeValue, unit: feelsLikeUnit } =
+      this.resolveSmnStationsTemperatureDisplay(observation.weather.feels_like);
+
+    return `
+      <div class="smn-popup">
+        <div class="smn-popup__station">
+          <div class="smn-popup__title">${stationName}</div>
+          <div class="smn-popup__meta">${province}</div>
+        </div>
+        <ul class="smn-popup__values">
+          <li><span>${layer.name}</span><strong>${displayValue.toFixed(this.getSmnStationsPrecision(layer.variable))} ${displayUnit}</strong></li>
+          <li><span>Tiempo</span><strong>${formatText(observation.weather.weather?.description)}</strong></li>
+          <li><span>Temperatura</span><strong>${formatValue(temperatureValue, 1, ` ${temperatureUnit}`)}</strong></li>
+          <li><span>Sensación térmica</span><strong>${formatValue(feelsLikeValue, 1, ` ${feelsLikeUnit}`)}</strong></li>
+          <li><span>Humedad</span><strong>${formatValue(observation.weather.humidity, 0, SMN_UNITS.HUMIDITY)}</strong></li>
+          <li><span>Presión</span><strong>${formatValue(observation.weather.pressure, 1, ` ${SMN_UNITS.PRESSURE}`)}</strong></li>
+          <li><span>Visibilidad</span><strong>${formatValue(observation.weather.visibility, 1, ` ${SMN_UNITS.VISIBILITY}`)}</strong></li>
+          <li><span>Viento</span><strong>${windText} (${windDirectionWithDegrees})</strong></li>
+        </ul>
+        <div class="smn-popup__updated">Actualizado: ${new Date(observation.weather.date).toLocaleString('es-AR', { hour12: false })}</div>
+      </div>
+    `;
+  }
+
+  private resolveSmnStationsDisplayValueAndUnit(
+    value: number,
+    sourceUnit: string,
+  ): { displayValue: number; displayUnit: string } {
+    const displayValue = convertValueForDisplay(value, sourceUnit, this.unitsSettings);
+    const displayUnit = getDisplayUnit(sourceUnit, this.unitsSettings);
+    return { displayValue, displayUnit };
+  }
+
+  private resolveSmnStationsTemperatureDisplay(value: number | null): {
+    value: number | null;
+    unit: string;
+  } {
+    if (value === null || Number.isNaN(value)) {
+      return {
+        value: null,
+        unit: getDisplayUnit(TEMPERATURE_UNITS.CELSIUS, this.unitsSettings),
+      };
+    }
+
+    const displayValue = convertValueForDisplay(
+      value,
+      TEMPERATURE_UNITS.CELSIUS,
+      this.unitsSettings,
+    );
+    const unit = getDisplayUnit(TEMPERATURE_UNITS.CELSIUS, this.unitsSettings);
+    return { value: displayValue, unit };
+  }
+
+  private resolveSmnStationsWindSpeedDisplay(value: number | null): {
+    value: number | null;
+    unit: string;
+  } {
+    if (value === null || Number.isNaN(value)) {
+      return { value: null, unit: getDisplayUnit(SMN_UNITS.WIND_SPEED, this.unitsSettings) };
+    }
+
+    const displayValue = convertValueForDisplay(value, SMN_UNITS.WIND_SPEED, this.unitsSettings);
+    const unit = getDisplayUnit(SMN_UNITS.WIND_SPEED, this.unitsSettings);
+    return { value: displayValue, unit };
+  }
+
+  private applySmnStationsPaneZIndex(map: L.Map, actualZIndex?: number): void {
+    if (actualZIndex === undefined) {
+      return;
+    }
+
+    const pane = map.getPane(SMN_STATION_PANE);
+    if (!pane) {
+      return;
+    }
+
+    const { minInput, maxInput, minOutput, maxOutput } = SMN_STATION_RENDER_CONFIG.paneZIndex;
+    const clamped = Math.max(minInput, Math.min(maxInput, actualZIndex));
+    const normalized = (clamped - minInput) / (maxInput - minInput || 1);
+    const mappedPaneZ = Math.round(minOutput + normalized * (maxOutput - minOutput));
+    pane.style.zIndex = String(mappedPaneZ);
+  }
+
+  private getSmnStationsPrecision(variable: SmnStationLayer['variable']): number {
+    switch (variable) {
+      case 'humidity':
+        return 0;
+      case 'pressure':
+      case 'visibility':
+      case 'wind_speed':
+      case 'temperature':
+      case 'feels_like':
+        return 1;
+      case 'weather':
+        return 0;
+      default:
+        return 1;
+    }
   }
 
   /**
@@ -882,4 +1446,38 @@ export class LayerRenderService {
       }
     });
   }
+}
+
+type SmnStationObservationLike = {
+  station: {
+    coord: {
+      lat: number;
+      lon: number;
+    };
+    name: string | null;
+    province: string | null;
+  };
+  weather: {
+    date: string;
+    temperature: number | null;
+    feels_like: number | null;
+    humidity: number | null;
+    pressure: number | null;
+    visibility: number | null;
+    weather: {
+      id: number | null;
+      description: string | null;
+    };
+    wind: {
+      speed: number | null;
+      deg: number | null;
+      direction: string | null;
+    };
+  };
+};
+
+enum SmnStationRenderLevel {
+  DOT = 'dot',
+  CIRCLE = 'circle',
+  BADGE = 'badge',
 }
