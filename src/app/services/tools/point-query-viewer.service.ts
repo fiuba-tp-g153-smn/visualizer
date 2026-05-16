@@ -1,25 +1,53 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import { EMPTY, Observable, Subject, Subscription, finalize, forkJoin, map, switchMap } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import {
+  EMPTY,
+  Observable,
+  Subject,
+  Subscription,
+  catchError,
+  finalize,
+  forkJoin,
+  map,
+  of,
+  switchMap,
+} from 'rxjs';
 
 import {
   ABIGoesTileLayer,
+  ContinuousScale,
   EcmwfTpLayerControls,
+  EcmwfTpTileLayerConfig,
   EcmwfTpTileLayer,
+  DiscreteScale,
   GLMGoesTileLayer,
+  GoesTileLayer,
   GoesLayerControls,
+  Layer,
   LayerCategory,
   LayerType,
   PointQueryDisplayData,
+  PointQueryStatus,
+  PointQueryValueDto,
+  PaletteConfigScale,
   RadarLayerControls,
   RadarTileLayer,
+  ScaleRangeInfo,
+  ScaleType,
   TileLayerControls,
 } from '../../models';
 import { STORAGE_KEYS } from '../../constants';
-import { LayerControlService } from './layer-control.service';
-import { LayersService } from './layers.service';
-import { PointQueryService, buildSecondaryLayerId } from './point-query.service';
-import { MapInfoService } from './map-info.service';
+import { LayerControlService } from '../layers/layer-control.service';
+import { LayerConfigService } from '../layers/layer-config.service';
+import { LayersService } from '../layers/layers.service';
+import { MapInfoService } from '../layers/map-info.service';
 import { DrawingMode, PolygonDrawingService } from '../polygons/polygon-drawing.service';
+import { getDefaultCursorIndex } from '../../utils/playback-window';
+import {
+  buildEcmwfTpPointQueryUrl,
+  buildRadarPointQueryUrl,
+  buildSatellitePointQueryUrl,
+} from '../../config';
 
 interface MouseCoordinates {
   lat: number;
@@ -52,6 +80,12 @@ interface SourceQueryResult {
   result: PointQueryDisplayData;
 }
 
+const SECONDARY_LAYER_ID_SUFFIX = '#secondary';
+
+function buildSecondaryLayerId(layerId: string): string {
+  return `${layerId}${SECONDARY_LAYER_ID_SUFFIX}`;
+}
+
 /** Helper to create composite IDs from layerId and elevationId */
 function createCompositeId(layerId: string, elevationId: string): string {
   return `${layerId}:${elevationId}`;
@@ -61,9 +95,10 @@ function createCompositeId(layerId: string, elevationId: string): string {
   providedIn: 'root',
 })
 export class PointQueryViewerService {
+  private readonly http = inject(HttpClient);
   private readonly controlService = inject(LayerControlService);
+  private readonly layerConfigService = inject(LayerConfigService);
   private readonly layersService = inject(LayersService);
-  private readonly pointQueryService = inject(PointQueryService);
   private readonly mapInfoService = inject(MapInfoService);
   private readonly polygonDrawingService = inject(PolygonDrawingService);
 
@@ -304,12 +339,16 @@ export class PointQueryViewerService {
 
             const requests: Array<Observable<SourceQueryResult>> = [];
             for (const { layerId, layer, controls, elevationId } of selectedEntries) {
-              const primary$ = this.pointQueryService
-                .queryLayerPoint(layer, controls, coordinates.lat, coordinates.lon, elevationId)
-                .pipe(map((result): SourceQueryResult => ({ layerId, result })));
+              const primary$ = this.queryLayerPoint(
+                layer,
+                controls,
+                coordinates.lat,
+                coordinates.lon,
+                elevationId,
+              ).pipe(map((result): SourceQueryResult => ({ layerId, result })));
               requests.push(primary$);
 
-              const secondary$ = this.pointQueryService.queryLayerSecondaryPoint(
+              const secondary$ = this.queryLayerSecondaryPoint(
                 layer,
                 controls,
                 coordinates.lat,
@@ -411,6 +450,374 @@ export class PointQueryViewerService {
 
   isSourceSelected(layerId: string): boolean {
     return this.selectedLayerIdsOrdered().includes(layerId);
+  }
+
+  private queryLayerPoint(
+    layer: Layer,
+    controls: TileLayerControls,
+    lat: number,
+    lon: number,
+    elevationId?: string,
+  ): Observable<PointQueryDisplayData> {
+    const layerId = layer.id;
+    const layerName = layer.name;
+
+    if (layer.type !== LayerType.TILE) {
+      return of(this.buildNoData(layerId, layerName, elevationId));
+    }
+
+    if (
+      (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF_TP) &&
+      !this.isWithinLayerBounds(layer, lat, lon)
+    ) {
+      return of(this.buildNoData(layerId, layerName, elevationId));
+    }
+
+    if (layer.category === LayerCategory.ECMWF_TP) {
+      return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon);
+    }
+
+    const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
+    if (!tilesetId) {
+      return of(this.buildNoData(layerId, layerName, elevationId));
+    }
+
+    if (layer.category === LayerCategory.GOES_19) {
+      return this.querySatelliteLayer(layer as GoesTileLayer, tilesetId, lat, lon);
+    }
+
+    if (layer.category === LayerCategory.RADAR) {
+      return this.queryRadarLayer(
+        layer as RadarTileLayer,
+        controls as RadarLayerControls,
+        tilesetId,
+        lat,
+        lon,
+        elevationId,
+      );
+    }
+
+    return of(this.buildNoData(layerId, layerName, elevationId));
+  }
+
+  private queryLayerSecondaryPoint(
+    layer: Layer,
+    controls: TileLayerControls,
+    lat: number,
+    lon: number,
+  ): Observable<PointQueryDisplayData> | null {
+    if (layer.type !== LayerType.TILE) return null;
+    if (layer.category !== LayerCategory.ECMWF_TP) return null;
+
+    const ecmwfLayer = layer as EcmwfTpTileLayer;
+    const secondary = ecmwfLayer.secondaryRender;
+    if (!secondary?.buildPointQueryUrl) return null;
+
+    if (!this.isWithinLayerBounds(layer, lat, lon)) {
+      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+    }
+
+    const ecmwfControls = controls as EcmwfTpLayerControls;
+    const config = this.layerConfigService.getConfig(layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+    }
+
+    const isForecast = layer.isForecast;
+    const idx = Math.max(
+      0,
+      Math.min(
+        ecmwfControls.playback.timeIndex ??
+          getDefaultCursorIndex(config.availableTilesets.length, isForecast),
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const timestampTs = config.availableTilesets[idx].id;
+
+    const forecastsForPeriod = config.forecastsByPeriod[timestampTs];
+    const selectedForecasts = ecmwfControls.forecast.selectedForecastTimestamps;
+    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!forecastTs) {
+      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+    }
+
+    const url = secondary.buildPointQueryUrl(forecastTs, timestampTs, lat, lon);
+    const secondaryLayerId = buildSecondaryLayerId(layer.id);
+    const secondaryLayerName = 'Presion a nivel del mar';
+    const mslpScaleRange: ScaleRangeInfo = { min: 950, max: 1050, totalSteps: 100 };
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: secondaryLayerId,
+            layerName: secondaryLayerName,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange: mslpScaleRange,
+          }) as const,
+      ),
+      catchError((error) =>
+        of(this.mapErrorToDisplay(secondaryLayerId, secondaryLayerName, error)),
+      ),
+    );
+  }
+
+  private querySatelliteLayer(
+    layer: GoesTileLayer,
+    tilesetId: string,
+    lat: number,
+    lon: number,
+  ): Observable<PointQueryDisplayData> {
+    const [productId, instrumentId, channelId] = layer.id.split('/');
+    const url = buildSatellitePointQueryUrl(
+      productId,
+      instrumentId,
+      channelId,
+      tilesetId,
+      lat,
+      lon,
+    );
+
+    const scaleRange = this.extractScaleRange(layer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+          }) as const,
+      ),
+      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    );
+  }
+
+  private queryRadarLayer(
+    layer: RadarTileLayer,
+    controls: RadarLayerControls,
+    tilesetId: string,
+    lat: number,
+    lon: number,
+    elevationId?: string,
+  ): Observable<PointQueryDisplayData> {
+    const parts = layer.id.split('/');
+    const radarId = parts[1];
+    const variableId = parts[2];
+    const resolvedElevationId = elevationId ?? this.resolveRadarElevation(layer, controls);
+
+    if (!resolvedElevationId) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const url = buildRadarPointQueryUrl(
+      radarId,
+      variableId,
+      resolvedElevationId,
+      tilesetId,
+      lat,
+      lon,
+    );
+
+    const scaleRange = this.extractScaleRange(layer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name, resolvedElevationId));
+    }
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+            elevationId: resolvedElevationId,
+          }) as const,
+      ),
+      catchError((error) =>
+        of(this.mapErrorToDisplay(layer.id, layer.name, error, resolvedElevationId)),
+      ),
+    );
+  }
+
+  private queryEcmwfTpLayer(
+    layer: Layer,
+    controls: EcmwfTpLayerControls,
+    lat: number,
+    lon: number,
+  ): Observable<PointQueryDisplayData> {
+    const config = this.layerConfigService.getConfig(layer.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const isForecast = layer.type === LayerType.TILE && layer.isForecast;
+    const idx = Math.max(
+      0,
+      Math.min(
+        controls.playback.timeIndex ??
+          getDefaultCursorIndex(config.availableTilesets.length, isForecast),
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const periodTs = config.availableTilesets[idx].id;
+
+    const forecastsForPeriod = config.forecastsByPeriod[periodTs];
+    const selectedForecasts = controls.forecast.selectedForecastTimestamps;
+    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!forecastTs) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const url = buildEcmwfTpPointQueryUrl(forecastTs, periodTs, lat, lon);
+
+    const scaleRange = this.extractScaleRange(layer as EcmwfTpTileLayer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange,
+          }) as const,
+      ),
+      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    );
+  }
+
+  private resolveTilesetId(layerId: string, timeIndex?: number): string | null {
+    const config = this.layerConfigService.getConfig(layerId);
+    if (!config || config.type !== LayerType.TILE || config.availableTilesets.length === 0) {
+      return null;
+    }
+
+    const layer = this.layersService.getLayerById(layerId);
+    const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+    const fallbackIndex = getDefaultCursorIndex(config.availableTilesets.length, isForecast);
+    const resolvedIndex = timeIndex ?? fallbackIndex;
+    const clampedIndex = Math.max(0, Math.min(resolvedIndex, config.availableTilesets.length - 1));
+
+    return config.availableTilesets[clampedIndex]?.id ?? null;
+  }
+
+  private resolveRadarElevation(
+    layer: RadarTileLayer,
+    controls: RadarLayerControls,
+  ): string | null {
+    if (controls.elevation.selectedElevationIds.length > 0) {
+      return controls.elevation.selectedElevationIds[0];
+    }
+
+    return layer.availableElevations[0]?.id ?? null;
+  }
+
+  private isWithinLayerBounds(layer: Layer, lat: number, lon: number): boolean {
+    if (!layer.boundingBox) {
+      return true;
+    }
+
+    const [[south, west], [north, east]] = layer.boundingBox;
+    return lat >= south && lat <= north && lon >= west && lon <= east;
+  }
+
+  private mapErrorToDisplay(
+    layerId: string,
+    layerName: string,
+    error: unknown,
+    elevationId?: string,
+  ): PointQueryDisplayData {
+    if (error instanceof HttpErrorResponse && error.status === 404) {
+      return this.buildNoData(layerId, layerName, elevationId);
+    }
+
+    return {
+      layerId,
+      layerName,
+      status: PointQueryStatus.ERROR,
+      ...(elevationId && { elevationId }),
+    } as const;
+  }
+
+  private buildNoData(
+    layerId: string,
+    layerName: string,
+    elevationId?: string,
+  ): PointQueryDisplayData {
+    return {
+      layerId,
+      layerName,
+      status: PointQueryStatus.NO_DATA,
+      ...(elevationId && { elevationId }),
+    } as const;
+  }
+
+  private extractScaleRange(
+    layer: GoesTileLayer | RadarTileLayer | EcmwfTpTileLayer,
+  ): ScaleRangeInfo | undefined {
+    if (!layer.scale) {
+      return undefined;
+    }
+
+    const scale = layer.scale;
+
+    try {
+      switch (scale.type) {
+        case ScaleType.CONTINUOUS:
+          const continuousScale = scale as ContinuousScale;
+          if (continuousScale.stops.length < 2) return undefined;
+          return {
+            min: continuousScale.stops[0].value,
+            max: continuousScale.stops[continuousScale.stops.length - 1].value,
+            totalSteps: continuousScale.stops.length,
+          };
+
+        case ScaleType.DISCRETE:
+          const discreteScale = scale as DiscreteScale;
+          if (discreteScale.steps.length < 1) return undefined;
+          return {
+            min: discreteScale.steps[0].value,
+            max: discreteScale.steps[discreteScale.steps.length - 1].value,
+            totalSteps: discreteScale.steps.length,
+          };
+
+        case ScaleType.PALETTE_CONFIG:
+          const paletteScale = scale as PaletteConfigScale;
+          if (!paletteScale.bounds || paletteScale.bounds.length < 2) return undefined;
+          const bounds = [...paletteScale.bounds].sort((a, b) => a - b);
+          return {
+            min: bounds[0],
+            max: bounds[bounds.length - 1],
+            totalSteps: paletteScale.hexColors.length,
+          };
+
+        default:
+          return undefined;
+      }
+    } catch {
+      return undefined;
+    }
   }
 
   private getSelectedDisplayItems(): DisplaySourceItem[] {
