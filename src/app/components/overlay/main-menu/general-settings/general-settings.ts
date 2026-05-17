@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatRadioModule } from '@angular/material/radio';
@@ -14,6 +14,7 @@ import {
   DecimalPrecision,
 } from '../../../../services/settings/units-settings.service';
 import { TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../../../constants';
+import { WeatherStationsApiKeyService } from '../../../../services/weather-stations/weather-stations-api-key.service';
 
 @Component({
   selector: 'app-general-settings',
@@ -31,11 +32,28 @@ import { TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../../../constants';
 })
 export class GeneralSettingsComponent implements MenuPanelComponent {
   readonly unitsSettings = inject(UnitsSettingsService);
+  readonly apiKeyService = inject(WeatherStationsApiKeyService);
   readonly TEMPERATURE_UNITS = TEMPERATURE_UNITS;
   readonly WIND_SPEED_UNITS = WIND_SPEED_UNITS;
 
+  /** True iff the user (not the env var fallback) has provided a key. */
+  readonly hasUserApiKey = computed(() => {
+    this.apiKeyService.keyChanges();
+    return this.apiKeyService.isUserProvided();
+  });
+
   onPanelOpen(): void {
-    // No state to refresh here; method retained to satisfy MenuPanelComponent contract.
+    // Touch the keyChanges signal so the computed re-evaluates when the
+    // panel is re-opened (covers a key set/cleared in another tab).
+    this.apiKeyService.keyChanges();
+  }
+
+  async setSmnApiKey(): Promise<void> {
+    await this.apiKeyService.promptForKey();
+  }
+
+  clearSmnApiKey(): void {
+    this.apiKeyService.clearKey();
   }
 
   onTemperatureUnitChange(unit: TemperatureUnit): void {

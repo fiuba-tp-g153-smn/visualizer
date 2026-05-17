@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>
+  <mat-icon class="dialog-icon">vpn_key</mat-icon>
+  API Key — Estaciones convencionales
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  @if (reason) {
+    <div class="dialog-reason" role="alert">
+      <mat-icon class="reason-icon">error_outline</mat-icon>
+      <span>{{ reason }}</span>
+    </div>
+  }
+
+  <p class="dialog-description">
+    Pegá la <strong>API Key</strong> que te entregó el operador del data-service
+    (creada con <code>POST /weather-stations/admin/keys</code>). Se guarda en
+    este navegador y se envía como header <code>X-API-Key</code> en cada
+    consulta a las estaciones del SMN.
+  </p>
+
+  <mat-form-field appearance="outline" class="key-field">
+    <mat-label>API Key</mat-label>
+    <input
+      matInput
+      type="password"
+      [(ngModel)]="key"
+      placeholder="kZ8sJ3w_2x..."
+      autocomplete="off"
+      spellcheck="false"
+      (keydown.enter)="save()"
+    />
+    <mat-icon matSuffix>vpn_key</mat-icon>
+  </mat-form-field>
+
+  <p class="dialog-hint">
+    La clave no es un secreto absoluto (queda visible en este navegador). Si
+    se filtra, pedí al operador que la revoque con
+    <code>DELETE /weather-stations/admin/keys/&#123;key_id&#125;</code> y
+    generá una nueva.
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button type="button" (click)="cancel()">Cancelar</button>
+  <button
+    mat-flat-button
+    color="primary"
+    type="button"
+    [disabled]="!key().trim()"
+    (click)="save()"
+  >
+    Guardar
+  </button>
+</mat-dialog-actions>

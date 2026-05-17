@@ -1,8 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, effect, signal } from '@angular/core';
 import { Observable, throwError, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
 import {
   buildWeatherStationsLatestUrl,
   buildWeatherStationsRegistryUrl,
@@ -13,6 +12,7 @@ import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
 import { NotificationService } from '../notifications/notification.service';
+import { WeatherStationsApiKeyService } from '../weather-stations/weather-stations-api-key.service';
 import {
   SMN_STATIONS_MAX_PAST_HOURS_OPTIONS,
   SmnStationsTemporalMode,
@@ -101,6 +101,7 @@ export class LayerRefreshService {
   private readonly layersService = inject(LayersService);
   private readonly notificationService = inject(NotificationService);
   private readonly layerControlService = inject(LayerControlService);
+  private readonly apiKeyService = inject(WeatherStationsApiKeyService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
@@ -281,68 +282,101 @@ export class LayerRefreshService {
     const source: SmnStationSnapshot['source'] =
       temporalMode === SmnStationsTemporalMode.SPECIFIC ? 'tileset' : 'latest';
 
-    try {
-      // Both calls hit the same backend; run them in parallel to cut latency.
-      const [endpointConfig, registry] = await Promise.all([
-        this.fetchSmnStationsEndpointConfig(),
-        this.ensureSmnStationsRegistryLoaded(),
-      ]);
-      this.smnStationsEndpointConfigSignal.set(endpointConfig);
-      this.syncSmnStationsTemporalControlsWithConfig(endpointConfig);
-
-      let backendSnapshot: BackendSnapshot;
-      let referenceTimestamp: Date;
-      let maxPastHours: number;
-
-      if (temporalMode === SmnStationsTemporalMode.SPECIFIC) {
-        const tilesetId = this.resolveRequestedSmnStationsTilesetId(endpointConfig.tilesetIds);
-        maxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
-        if (!tilesetId) {
-          throw new Error('No tilesets available for SMN stations specific mode');
+    // Two attempts at most: the second only fires if the first failed with
+    // 401 and the user provided a new API key via the re-prompt dialog.
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        return await this.runSmnStationsFetchAttempt(temporalMode, source);
+      } catch (error) {
+        if (this.isHttp401(error) && attempt === 1) {
+          const newKey = await this.apiKeyService.handleUnauthorized();
+          if (newKey) {
+            // Drop any cached registry so the retry re-fetches it with the
+            // new key (the previous load may have 401'd before populating).
+            this.smnStationsRegistrySignal.set(null);
+            continue;
+          }
+          console.warn(
+            '[LayerRefreshService] SMN stations 401 and no new key provided',
+          );
+        } else {
+          console.warn(
+            '[LayerRefreshService] failed to load SMN stations snapshot',
+            { error },
+          );
         }
-        backendSnapshot = await firstValueFrom(
-          this.http.get<BackendSnapshot>(
-            buildWeatherStationsTilesetUrl(tilesetId, maxPastHours),
-            { headers: this.buildSmnStationsAuthHeaders() },
-          ),
-        );
-        referenceTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
-      } else {
-        backendSnapshot = await firstValueFrom(
-          this.http.get<BackendSnapshot>(buildWeatherStationsLatestUrl(), {
-            headers: this.buildSmnStationsAuthHeaders(),
-          }),
-        );
-        referenceTimestamp = new Date(backendSnapshot.scraped_at);
-        // hasData is always true in latest mode; window doesn't matter.
-        maxPastHours = 0;
+        break;
       }
-
-      const observations = this.joinSnapshotWithRegistry(
-        backendSnapshot,
-        registry,
-        referenceTimestamp,
-        maxPastHours,
-        temporalMode === SmnStationsTemporalMode.LATEST,
-      );
-
-      return {
-        observations,
-        fetchedAt: new Date().toISOString(),
-        source,
-      };
-    } catch (error) {
-      console.warn('[LayerRefreshService] failed to load SMN stations snapshot', { error });
-      return {
-        observations: [],
-        fetchedAt: new Date().toISOString(),
-        source,
-      };
     }
+
+    return {
+      observations: [],
+      fetchedAt: new Date().toISOString(),
+      source,
+    };
+  }
+
+  private async runSmnStationsFetchAttempt(
+    temporalMode: SmnStationsTemporalMode,
+    source: SmnStationSnapshot['source'],
+  ): Promise<SmnStationSnapshot> {
+    // Both calls hit the same backend; run them in parallel to cut latency.
+    const [endpointConfig, registry] = await Promise.all([
+      this.fetchSmnStationsEndpointConfig(),
+      this.ensureSmnStationsRegistryLoaded(),
+    ]);
+    this.smnStationsEndpointConfigSignal.set(endpointConfig);
+    this.syncSmnStationsTemporalControlsWithConfig(endpointConfig);
+
+    let backendSnapshot: BackendSnapshot;
+    let referenceTimestamp: Date;
+    let maxPastHours: number;
+
+    if (temporalMode === SmnStationsTemporalMode.SPECIFIC) {
+      const tilesetId = this.resolveRequestedSmnStationsTilesetId(endpointConfig.tilesetIds);
+      maxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
+      if (!tilesetId) {
+        throw new Error('No tilesets available for SMN stations specific mode');
+      }
+      backendSnapshot = await firstValueFrom(
+        this.http.get<BackendSnapshot>(
+          buildWeatherStationsTilesetUrl(tilesetId, maxPastHours),
+          { headers: this.buildSmnStationsAuthHeaders() },
+        ),
+      );
+      referenceTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
+    } else {
+      backendSnapshot = await firstValueFrom(
+        this.http.get<BackendSnapshot>(buildWeatherStationsLatestUrl(), {
+          headers: this.buildSmnStationsAuthHeaders(),
+        }),
+      );
+      referenceTimestamp = new Date(backendSnapshot.scraped_at);
+      // hasData is always true in latest mode; window doesn't matter.
+      maxPastHours = 0;
+    }
+
+    const observations = this.joinSnapshotWithRegistry(
+      backendSnapshot,
+      registry,
+      referenceTimestamp,
+      maxPastHours,
+      temporalMode === SmnStationsTemporalMode.LATEST,
+    );
+
+    return {
+      observations,
+      fetchedAt: new Date().toISOString(),
+      source,
+    };
+  }
+
+  private isHttp401(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && error.status === 401;
   }
 
   private buildSmnStationsAuthHeaders(): Record<string, string> {
-    const apiKey = environment.weatherStations.apiKey;
+    const apiKey = this.apiKeyService.getKey();
     return apiKey ? { 'X-API-Key': apiKey } : {};
   }
 
@@ -358,6 +392,12 @@ export class LayerRefreshService {
         maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
       };
     } catch (error) {
+      // 401s must propagate so the outer fetcher can re-prompt for an API
+      // key. Other errors (network, 5xx) keep the existing fail-soft
+      // behavior of returning an empty config.
+      if (this.isHttp401(error)) {
+        throw error;
+      }
       console.warn('[LayerRefreshService] failed to load SMN tilesets', { error });
       return { tilesetIds: [], maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS] };
     }
