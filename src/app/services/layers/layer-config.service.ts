@@ -165,11 +165,23 @@ export class LayerConfigService {
 
               const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
 
-              const firstPeriods = periodsByForecast[forecasts[0]] ?? [];
-              const availableTilesets: TilesetEntry[] = firstPeriods.map((id) => ({
-                id,
-                time: parseEcmwfCenteredTimestamp(id) ?? new Date(0),
-              }));
+              // Preserve the existing availableTilesets when a config already
+              // exists — it's a selection-derived view maintained by
+              // updateEcmwfTpSelectedForecasts and the reconciliation effect in
+              // LayerControlService. Re-seeding it from forecasts[0] on every
+              // 10s auto-refresh would clobber the user's selection-aware union
+              // and cause downstream tile churn. On the initial fetch (no prior
+              // config), seed from forecasts[0]'s periods as a sensible default
+              // until the selection-aware reconciliation runs.
+              const existing = this.configMap().get(layer.id) as
+                | EcmwfTpTileLayerConfig
+                | undefined;
+              const availableTilesets: TilesetEntry[] = existing
+                ? [...existing.availableTilesets]
+                : (periodsByForecast[forecasts[0]] ?? []).map((id) => ({
+                    id,
+                    time: parseEcmwfCenteredTimestamp(id) ?? new Date(0),
+                  }));
 
               const config: EcmwfTpTileLayerConfig = {
                 layerId: layer.id,
@@ -314,16 +326,57 @@ export class LayerConfigService {
 
   /**
    * Compares two layer configurations to determine if they're equal.
+   *
+   * For ECMWF, we must also compare the backend-sourced fields
+   * (availableForecasts, periodsByForecast). availableTilesets alone is a
+   * selection-derived view and stays untouched on auto-refresh, so it cannot
+   * detect backend changes like a newly published forecast run or a new period
+   * added to an existing run.
    */
   private configsAreEqual(a: LayerConfig, b: LayerConfig): boolean {
     if (a.type !== b.type) return false;
 
     switch (a.type) {
       case LayerType.TILE:
-        return this.arraysAreEqual(a.availableTilesets, (b as TileLayerConfig).availableTilesets);
+        if (
+          !this.arraysAreEqual(a.availableTilesets, (b as TileLayerConfig).availableTilesets)
+        ) {
+          return false;
+        }
+        if (a.category === LayerCategory.ECMWF_TP) {
+          const ae = a as EcmwfTpTileLayerConfig;
+          const be = b as EcmwfTpTileLayerConfig;
+          return (
+            this.stringArraysAreEqual(ae.availableForecasts, be.availableForecasts) &&
+            this.periodsByForecastAreEqual(ae.periodsByForecast, be.periodsByForecast)
+          );
+        }
+        return true;
       default:
         return false;
     }
+  }
+
+  private stringArraysAreEqual(a: readonly string[], b: readonly string[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
+  private periodsByForecastAreEqual(
+    a: Readonly<Record<string, string[]>>,
+    b: Readonly<Record<string, string[]>>,
+  ): boolean {
+    const aKeys = Object.keys(a);
+    if (aKeys.length !== Object.keys(b).length) return false;
+    for (const key of aKeys) {
+      const bArr = b[key];
+      if (bArr === undefined) return false;
+      if (!this.stringArraysAreEqual(a[key], bArr)) return false;
+    }
+    return true;
   }
 
   /**
