@@ -108,3 +108,32 @@ export function buildBasemapProvidersUrl(): string {
 export function buildDataServiceHealthUrl(): string {
   return `${DATA_SERVICE_BASE_URL}/health`;
 }
+
+/**
+ * URL del snapshot más reciente de estaciones meteorológicas SMN.
+ */
+export function buildWeatherStationsLatestUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/weather-stations/latest`;
+}
+
+/**
+ * URL del snapshot para un tilesetId específico (hora bucket) con
+ * tolerancia de N horas hacia atrás. N=0 fuerza match exacto.
+ */
+export function buildWeatherStationsTilesetUrl(tilesetId: string, maxPastHours: number): string {
+  return `${DATA_SERVICE_BASE_URL}/weather-stations/${tilesetId}?N=${maxPastHours}`;
+}
+
+/**
+ * URL del listado de hour-buckets disponibles en la ventana de retención.
+ */
+export function buildWeatherStationsTilesetsUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/weather-stations/tilesets`;
+}
+
+/**
+ * URL del registro canónico de estaciones (metadatos: nombre, coords, provincia).
+ */
+export function buildWeatherStationsRegistryUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/weather-stations/stations`;
+}
