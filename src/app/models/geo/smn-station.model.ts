@@ -54,10 +54,14 @@ export interface SmnCurrentWeatherStationDto {
 export interface SmnStationObservation {
   station: SmnStationDto;
   weather: SmnCurrentWeatherStationDto;
+  // True when `weather.date` is within the requested tolerance window.
+  // Always true in LATEST mode (no window). In SPECIFIC mode the renderer
+  // uses this to apply the "no data for the requested period" styling.
+  hasData: boolean;
 }
 
 export interface SmnStationSnapshot {
   observations: readonly SmnStationObservation[];
   fetchedAt: string;
-  source: 'api' | 'demo' | 'mock-latest' | 'mock-tileset';
+  source: 'latest' | 'tileset';
 }

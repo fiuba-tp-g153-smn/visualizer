@@ -2,11 +2,17 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, effect, signal } from '@angular/core';
 import { Observable, throwError, firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+import {
+  buildWeatherStationsLatestUrl,
+  buildWeatherStationsRegistryUrl,
+  buildWeatherStationsTilesetUrl,
+  buildWeatherStationsTilesetsUrl,
+} from '../../config/backend.config';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
 import { NotificationService } from '../notifications/notification.service';
-import { SmnStationsAuthService } from '../auth/smn-stations-auth.service';
 import {
   SMN_STATIONS_MAX_PAST_HOURS_OPTIONS,
   SmnStationsTemporalMode,
@@ -24,18 +30,54 @@ import {
   SmnStationSnapshot,
 } from '../../models';
 
-interface SmnStationsApiResponse {
-  stations: SmnStationDto[];
-  weather: SmnCurrentWeatherStationDto[];
-}
-
 interface SmnStationsEndpointConfig {
   tilesetIds: readonly string[];
   maxPastHoursOptions: readonly number[];
 }
 
-interface SmnStationsSnapshotMeta {
-  fetchedAt: string;
+// Shape of `/weather-stations/{latest,tilesetId}` from the data-service.
+interface BackendStationObservation {
+  station_id: number;
+  observed_at: string | null;
+  temperature: number | null;
+  feels_like: number | null;
+  humidity: number | null;
+  pressure: number | null;
+  visibility: number | null;
+  weather: { id: number; description: string } | null;
+  wind: SmnCurrentWeatherStationDto['wind'] | null;
+}
+
+interface BackendSnapshot {
+  scraped_at: string;
+  source_url: string;
+  stations: BackendStationObservation[];
+}
+
+interface BackendTilesetEntry {
+  tileset_id: string;
+  scraped_at: string;
+  station_count: number;
+}
+
+interface BackendTilesetsResponse {
+  tilesets: BackendTilesetEntry[];
+}
+
+interface BackendRegistryEntry {
+  station_id: number;
+  name: string;
+  province: string;
+  latitude: number;
+  longitude: number;
+  altitude_meters: number;
+  oaci_code: string | null;
+}
+
+interface BackendRegistryResponse {
+  fetched_at: string;
+  source_url: string;
+  stations: BackendRegistryEntry[];
 }
 
 /**
@@ -59,15 +101,15 @@ export class LayerRefreshService {
   private readonly layersService = inject(LayersService);
   private readonly notificationService = inject(NotificationService);
   private readonly layerControlService = inject(LayerControlService);
-  private readonly smnStationsAuthService = inject(SmnStationsAuthService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
   private readonly smnStationsSnapshotSignal = signal<SmnStationSnapshot | null>(null);
   private readonly smnStationsEndpointConfigSignal = signal<SmnStationsEndpointConfig | null>(null);
   private readonly smnStationsLoadTickSignal = signal(0);
-  private readonly smnStationsBackupBasePath = '/testing/fixtures/smn-stations';
+  private readonly smnStationsRegistrySignal = signal<readonly SmnStationDto[] | null>(null);
   private smnStationsInflight: Promise<SmnStationSnapshot> | null = null;
+  private smnStationsRegistryInflight: Promise<readonly SmnStationDto[]> | null = null;
 
   readonly smnStationsLoadTick = this.smnStationsLoadTickSignal.asReadonly();
 
@@ -155,9 +197,7 @@ export class LayerRefreshService {
     if (this.smnStationsEndpointConfigSignal()) {
       return;
     }
-
-    const token = await this.resolveSmnStationsTokenIfRequired();
-    const config = await this.fetchSmnStationsEndpointConfig(token);
+    const config = await this.fetchSmnStationsEndpointConfig();
     this.smnStationsEndpointConfigSignal.set(config);
     this.syncSmnStationsTemporalControlsWithConfig(config);
   }
@@ -237,206 +277,181 @@ export class LayerRefreshService {
   }
 
   private async fetchSmnStationsSnapshot(): Promise<SmnStationSnapshot> {
-    const token = await this.resolveSmnStationsTokenIfRequired();
     const temporalMode = this.layerControlService.getSmnStationsTemporalMode();
+    const source: SmnStationSnapshot['source'] =
+      temporalMode === SmnStationsTemporalMode.SPECIFIC ? 'tileset' : 'latest';
 
     try {
-      const endpointConfig = await this.fetchSmnStationsEndpointConfig(token);
+      // Both calls hit the same backend; run them in parallel to cut latency.
+      const [endpointConfig, registry] = await Promise.all([
+        this.fetchSmnStationsEndpointConfig(),
+        this.ensureSmnStationsRegistryLoaded(),
+      ]);
       this.smnStationsEndpointConfigSignal.set(endpointConfig);
       this.syncSmnStationsTemporalControlsWithConfig(endpointConfig);
 
-      const requestedTilesetId = this.resolveRequestedSmnStationsTilesetId(
-        endpointConfig.tilesetIds,
-      );
-      const maxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
+      let backendSnapshot: BackendSnapshot;
+      let referenceTimestamp: Date;
+      let maxPastHours: number;
 
-      const response =
-        temporalMode === SmnStationsTemporalMode.SPECIFIC
-          ? await this.fetchSmnStationsTilesetSnapshot(token, requestedTilesetId, maxPastHours)
-          : await this.fetchSmnStationsLatestSnapshot(token);
-
-      const snapshotSource =
-        temporalMode === SmnStationsTemporalMode.SPECIFIC ? 'mock-tileset' : 'mock-latest';
-      const observations = this.toSmnStationsObservations(response.stations, response.weather);
-
-      if (observations.length > 0) {
-        return {
-          observations,
-          fetchedAt: new Date().toISOString(),
-          source: snapshotSource,
-        };
+      if (temporalMode === SmnStationsTemporalMode.SPECIFIC) {
+        const tilesetId = this.resolveRequestedSmnStationsTilesetId(endpointConfig.tilesetIds);
+        maxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
+        if (!tilesetId) {
+          throw new Error('No tilesets available for SMN stations specific mode');
+        }
+        backendSnapshot = await firstValueFrom(
+          this.http.get<BackendSnapshot>(
+            buildWeatherStationsTilesetUrl(tilesetId, maxPastHours),
+            { headers: this.buildSmnStationsAuthHeaders() },
+          ),
+        );
+        referenceTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
+      } else {
+        backendSnapshot = await firstValueFrom(
+          this.http.get<BackendSnapshot>(buildWeatherStationsLatestUrl(), {
+            headers: this.buildSmnStationsAuthHeaders(),
+          }),
+        );
+        referenceTimestamp = new Date(backendSnapshot.scraped_at);
+        // hasData is always true in latest mode; window doesn't matter.
+        maxPastHours = 0;
       }
-    } catch (error) {
-      console.warn('[LayerRefreshService] failed to load SMN stations fallback JSON', {
-        error,
-      });
-    }
 
-    return {
-      observations: [],
-      fetchedAt: new Date().toISOString(),
-      source: temporalMode === SmnStationsTemporalMode.SPECIFIC ? 'mock-tileset' : 'mock-latest',
-    };
-  }
-
-  private async resolveSmnStationsTokenIfRequired(): Promise<string | null> {
-    return this.smnStationsAuthService.getValidToken();
-  }
-
-  private async fetchSmnStationsEndpointConfig(
-    token: string | null,
-  ): Promise<SmnStationsEndpointConfig> {
-    void token;
-
-    const backupConfig = await this.fetchSmnStationsBackupEndpointConfig();
-    if (backupConfig) {
-      return backupConfig;
-    }
-
-    const latest = await this.fetchSmnStationsBackupLatestResponse();
-    if (latest) {
-      return this.buildSmnStationsEndpointConfigFromWeather(latest.weather);
-    }
-
-    return this.buildDefaultSmnStationsEndpointConfig();
-  }
-
-  private async fetchSmnStationsLatestSnapshot(
-    token: string | null,
-  ): Promise<SmnStationsApiResponse> {
-    void token;
-
-    const backupResponse = await this.fetchSmnStationsBackupLatestResponse();
-    if (backupResponse) {
-      return backupResponse;
-    }
-
-    throw new Error('SMN latest fallback JSON is unavailable');
-  }
-
-  private async fetchSmnStationsTilesetSnapshot(
-    token: string | null,
-    tilesetId: string,
-    maxPastHours: number,
-  ): Promise<SmnStationsApiResponse> {
-    void token;
-    const backupResponse = await this.fetchSmnStationsBackupLatestResponse();
-    if (backupResponse) {
-      return this.filterSmnStationsResponseByWindow(backupResponse, tilesetId, maxPastHours);
-    }
-
-    throw new Error('SMN tileset fallback JSON is unavailable');
-  }
-
-  private async fetchSmnStationsBackupEndpointConfig(): Promise<SmnStationsEndpointConfig | null> {
-    try {
-      const meta = await firstValueFrom(
-        this.http.get<SmnStationsSnapshotMeta>(
-          `${this.smnStationsBackupBasePath}/snapshot.meta.json`,
-        ),
+      const observations = this.joinSnapshotWithRegistry(
+        backendSnapshot,
+        registry,
+        referenceTimestamp,
+        maxPastHours,
+        temporalMode === SmnStationsTemporalMode.LATEST,
       );
-
-      const fetchedAtDate = new Date(meta.fetchedAt);
-      if (Number.isNaN(fetchedAtDate.getTime())) {
-        return null;
-      }
 
       return {
-        tilesetIds: [this.toSmnStationsTilesetId(fetchedAtDate)],
+        observations,
+        fetchedAt: new Date().toISOString(),
+        source,
+      };
+    } catch (error) {
+      console.warn('[LayerRefreshService] failed to load SMN stations snapshot', { error });
+      return {
+        observations: [],
+        fetchedAt: new Date().toISOString(),
+        source,
+      };
+    }
+  }
+
+  private buildSmnStationsAuthHeaders(): Record<string, string> {
+    const apiKey = environment.weatherStations.apiKey;
+    return apiKey ? { 'X-API-Key': apiKey } : {};
+  }
+
+  private async fetchSmnStationsEndpointConfig(): Promise<SmnStationsEndpointConfig> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<BackendTilesetsResponse>(buildWeatherStationsTilesetsUrl(), {
+          headers: this.buildSmnStationsAuthHeaders(),
+        }),
+      );
+      return {
+        tilesetIds: resp.tilesets.map((t) => t.tileset_id),
         maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
       };
-    } catch {
-      return null;
+    } catch (error) {
+      console.warn('[LayerRefreshService] failed to load SMN tilesets', { error });
+      return { tilesetIds: [], maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS] };
     }
   }
 
-  private async fetchSmnStationsBackupLatestResponse(): Promise<SmnStationsApiResponse | null> {
-    return this.fetchSmnStationsBackupApiResponse(
-      `${this.smnStationsBackupBasePath}/stations.latest.json`,
-      `${this.smnStationsBackupBasePath}/weather.latest.json`,
-    );
-  }
-
-  private async fetchSmnStationsBackupApiResponse(
-    stationsUrl: string,
-    weatherUrl: string,
-  ): Promise<SmnStationsApiResponse | null> {
+  private async ensureSmnStationsRegistryLoaded(): Promise<readonly SmnStationDto[]> {
+    const cached = this.smnStationsRegistrySignal();
+    if (cached) {
+      return cached;
+    }
+    if (this.smnStationsRegistryInflight) {
+      return this.smnStationsRegistryInflight;
+    }
+    this.smnStationsRegistryInflight = this.fetchSmnStationsRegistry();
     try {
-      const [stations, weather] = await Promise.all([
-        firstValueFrom(this.http.get<SmnStationDto[]>(stationsUrl)),
-        firstValueFrom(this.http.get<SmnCurrentWeatherStationDto[]>(weatherUrl)),
-      ]);
-
-      if (!Array.isArray(stations) || !Array.isArray(weather)) {
-        return null;
-      }
-
-      return { stations, weather };
-    } catch {
-      return null;
+      const registry = await this.smnStationsRegistryInflight;
+      this.smnStationsRegistrySignal.set(registry);
+      return registry;
+    } finally {
+      this.smnStationsRegistryInflight = null;
     }
   }
 
-  private toSmnStationsObservations(
-    stations: readonly SmnStationDto[],
-    weather: readonly SmnCurrentWeatherStationDto[],
-  ): SmnStationObservation[] {
-    const weatherByStation = new Map<number, SmnCurrentWeatherStationDto>();
-    for (const entry of weather) {
-      weatherByStation.set(entry.station_id, entry);
-    }
-
-    return stations
-      .map((station) => {
-        const currentWeather = weatherByStation.get(station.id);
-        if (!currentWeather) {
-          return null;
-        }
-        return { station, weather: currentWeather } satisfies SmnStationObservation;
-      })
-      .filter((entry): entry is SmnStationObservation => entry !== null)
-      .sort((a, b) => a.station.name.localeCompare(b.station.name, 'es'));
+  private async fetchSmnStationsRegistry(): Promise<readonly SmnStationDto[]> {
+    const resp = await firstValueFrom(
+      this.http.get<BackendRegistryResponse>(buildWeatherStationsRegistryUrl(), {
+        headers: this.buildSmnStationsAuthHeaders(),
+      }),
+    );
+    return resp.stations.map((s) => this.adaptBackendStationToDto(s));
   }
 
-  private buildDefaultSmnStationsEndpointConfig(): SmnStationsEndpointConfig {
-    const now = Date.now();
-    const totalHours = 72;
-    const tilesetIds = Array.from({ length: totalHours + 1 }, (_, index) => {
-      const timestamp = new Date(now - (totalHours - index) * 60 * 60 * 1000);
-      return this.toSmnStationsTilesetId(timestamp);
-    });
-
+  private adaptBackendStationToDto(s: BackendRegistryEntry): SmnStationDto {
     return {
-      tilesetIds,
-      maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
+      id: s.station_id,
+      name: s.name,
+      province: s.province,
+      coord: { lat: s.latitude, lon: s.longitude },
+      height: s.altitude_meters,
+      airport_code: s.oaci_code ?? '',
+      type: 'AUTOMATICA',
+      ref: { location_id: s.station_id },
     };
   }
 
-  private filterSmnStationsResponseByWindow(
-    latest: SmnStationsApiResponse,
-    tilesetId: string,
+  private joinSnapshotWithRegistry(
+    snapshot: BackendSnapshot,
+    registry: readonly SmnStationDto[],
+    referenceTimestamp: Date,
     maxPastHours: number,
-  ): SmnStationsApiResponse {
-    const requestedTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
-    const minTimestamp = new Date(requestedTimestamp.getTime() - maxPastHours * 60 * 60 * 1000);
-
-    const filteredWeather = latest.weather.filter((entry) => {
-      const entryTimestamp = new Date(entry.date);
-      return entryTimestamp >= minTimestamp && entryTimestamp <= requestedTimestamp;
-    });
-
-    if (filteredWeather.length === 0) {
-      return latest;
+    isLatestMode: boolean,
+  ): SmnStationObservation[] {
+    const observationsById = new Map<number, BackendStationObservation>();
+    for (const o of snapshot.stations) {
+      observationsById.set(o.station_id, o);
     }
+    const windowStart = new Date(
+      referenceTimestamp.getTime() - maxPastHours * 60 * 60 * 1000,
+    );
 
-    const allowedStationIds = new Set(filteredWeather.map((entry) => entry.station_id));
+    const result: SmnStationObservation[] = [];
+    for (const station of registry) {
+      const obs = observationsById.get(station.id);
+      if (!obs) {
+        continue;
+      }
+      const weather = this.adaptBackendObservationToDto(obs);
+      const hasData =
+        isLatestMode ||
+        (weather.date ? new Date(weather.date).getTime() >= windowStart.getTime() : false);
+      result.push({ station, weather, hasData });
+    }
+    return result.sort((a, b) => a.station.name.localeCompare(b.station.name, 'es'));
+  }
+
+  private adaptBackendObservationToDto(o: BackendStationObservation): SmnCurrentWeatherStationDto {
     return {
-      stations: latest.stations.filter((station) => allowedStationIds.has(station.id)),
-      weather: filteredWeather,
+      date: o.observed_at ?? '',
+      station_id: o.station_id,
+      temperature: o.temperature ?? 0,
+      feels_like: o.feels_like ?? 0,
+      humidity: o.humidity ?? 0,
+      pressure: o.pressure ?? 0,
+      visibility: o.visibility ?? 0,
+      weather: o.weather ?? { id: 0, description: '' },
+      wind: o.wind ?? { direction: 'Calma', deg: 0, speed: null },
     };
   }
 
   private syncSmnStationsTemporalControlsWithConfig(config: SmnStationsEndpointConfig): void {
+    if (config.tilesetIds.length === 0) {
+      this.layerControlService.setSmnStationsSelectedTilesetId(null);
+      return;
+    }
     const selectedTilesetId = this.resolveRequestedSmnStationsTilesetId(config.tilesetIds);
     this.layerControlService.setSmnStationsSelectedTilesetId(selectedTilesetId);
   }
@@ -446,43 +461,20 @@ export class LayerRefreshService {
     if (selectedTilesetId && tilesetIds.includes(selectedTilesetId)) {
       return selectedTilesetId;
     }
-    return tilesetIds[tilesetIds.length - 1];
-  }
-
-  private toSmnStationsTilesetId(date: Date): string {
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const hour = String(date.getUTCHours()).padStart(2, '0');
-    return `${year}${month}${day}T${hour}00Z`;
+    return tilesetIds[tilesetIds.length - 1] ?? '';
   }
 
   private fromSmnStationsTilesetId(tilesetId: string): Date | null {
+    // Backend emits `YYYYMMDDTHH00Z` (always hour-bucketed; minutes are 00).
     const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
     if (!match) {
       return null;
     }
-
     const [, year, month, day, hour] = match;
     const parsed = new Date(
       Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0),
     );
     return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  private buildSmnStationsEndpointConfigFromWeather(
-    weather: readonly SmnCurrentWeatherStationDto[],
-  ): SmnStationsEndpointConfig {
-    const dateCandidates = weather
-      .map((entry) => new Date(entry.date))
-      .filter((date) => !Number.isNaN(date.getTime()))
-      .sort((a, b) => a.getTime() - b.getTime());
-
-    const lastDate = dateCandidates.at(-1) ?? new Date();
-    return {
-      tilesetIds: [this.toSmnStationsTilesetId(lastDate)],
-      maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
-    };
   }
 
   // ============================================================================
