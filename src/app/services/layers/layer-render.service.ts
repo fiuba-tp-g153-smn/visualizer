@@ -18,6 +18,7 @@ import {
   EcmwfTpTileLayerConfig,
   EcmwfTpTileLayer,
 } from '../../models';
+import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
@@ -49,6 +50,7 @@ export class LayerRenderService {
   private readonly notificationService = inject(NotificationService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly layersService = inject(LayersService);
+  private readonly healthService = inject(DataServiceHealthService);
 
   // Track errors per layer to avoid notification spam
   private readonly errorTracker = new Map<string, number>();
@@ -884,8 +886,19 @@ export class LayerRenderService {
         `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`,
       );
 
-      // After several consecutive errors, notify the user
+      // After several consecutive errors, surface the issue.
       if (errorCount >= this.MAX_ERRORS_BEFORE_NOTIFY) {
+        // Ask the health service to probe /health. If the data-service
+        // itself is down, this raises a single global banner so we can
+        // skip the per-layer toast and avoid notification spam across
+        // every active layer.
+        this.healthService.reportFailure();
+
+        if (!this.healthService.isAvailable()) {
+          errorCount = 0;
+          return;
+        }
+
         const currentErrors = this.errorTracker.get(trackingKey) || 0;
 
         // Only notify once to avoid spam
