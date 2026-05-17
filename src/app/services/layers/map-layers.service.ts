@@ -225,12 +225,18 @@ export class MapLayersService {
         // current timestamp (mirrors the TP raster's check).
         if (!forecastsForCurrent.includes(forecastTs)) continue;
 
+        // Match the tile renderer's opacity resolution so the isobars fade
+        // in sync with their associated TP raster (per-forecast override,
+        // falling back to the layer-wide opacity).
+        const forecastOpacity =
+          controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
+
         const url = secondary.buildUrl(forecastTs, currentTimestampTs);
         const overlayKey = `${layerId}#${secondary.id}#${forecastTs}#${currentTimestampTs}`;
         const cached = this.vectorOverlay.peek(url);
 
         if (cached) {
-          const overlay = this.vectorOverlay.buildLayer(cached, secondary);
+          const overlay = this.vectorOverlay.buildLayer(cached, secondary, forecastOpacity);
           // Force the overlay onto our dedicated pane so it always sits above
           // raster tiles regardless of insertion order.
           overlay.options.pane = VECTOR_OVERLAY_PANE;
