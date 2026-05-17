@@ -27,7 +27,6 @@ import { STORAGE_KEYS } from '../../constants';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
-import { SmnStationsAuthService } from '../auth/smn-stations-auth.service';
 import {
   DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
   isSmnStationsTemporalMode,
@@ -68,7 +67,6 @@ export class LayerControlService {
   private readonly layersService = inject(LayersService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly engineService = inject(PlaybackEngineService);
-  private readonly smnStationsAuthService = inject(SmnStationsAuthService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
   private readonly smnStationsSharedState = signal<PersistedSmnStationsSharedControlsState>({
@@ -131,21 +129,6 @@ export class LayerControlService {
       });
     });
 
-    // Keep SMN layers disabled when token is missing (startup and runtime clears).
-    effect(() => {
-      this.smnStationsAuthService.tokenChanges();
-
-      if (this.smnStationsAuthService.hasValidToken()) {
-        return;
-      }
-
-      const activeEntries = this.activeLayers();
-      for (const { layer } of activeEntries) {
-        if (this.isSmnStationsLayer(layer.id)) {
-          this.deactivateLayer(layer.id);
-        }
-      }
-    });
   }
 
   isSmnStationsLayer(layerId: string): boolean {
@@ -928,14 +911,6 @@ export class LayerControlService {
       if (savedControls) {
         // Restore saved state, but ensure isPlaying is false and zIndex is defined
         controls = { ...savedControls, zIndex: savedControls.zIndex ?? 0 };
-
-        if (
-          controls.visible &&
-          this.isSmnStationsLayer(layer.id) &&
-          !this.smnStationsAuthService.hasValidToken()
-        ) {
-          controls.visible = false;
-        }
 
         if (controls.type === LayerType.TILE) {
           controls.playback = {

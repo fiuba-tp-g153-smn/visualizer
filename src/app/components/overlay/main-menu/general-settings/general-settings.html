@@ -79,33 +79,6 @@
       </div>
     </mat-tab>
 
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <div class="tab-label-container">
-          <mat-icon class="tab-icon">vpn_key</mat-icon>
-          <span class="tab-label">SMN</span>
-        </div>
-      </ng-template>
-      <div class="tab-content">
-        <div class="settings-section">
-          <div class="setting-group setting-group--inline">
-            <h3 class="setting-title">Token estaciones SMN</h3>
-            <div class="token-control">
-              @if (hasSmnToken()) {
-                <button mat-stroked-button type="button" (click)="clearSmnToken()">
-                  Borrar token
-                </button>
-              } @else {
-                <button mat-flat-button color="primary" type="button" (click)="addSmnToken()">
-                  Agregar token
-                </button>
-              }
-            </div>
-          </div>
-        </div>
-      </div>
-    </mat-tab>
-
     <!-- Tab 2: Atajos de teclado -->
     <mat-tab>
       <ng-template mat-tab-label>
