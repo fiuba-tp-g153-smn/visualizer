@@ -99,11 +99,18 @@ export class LayerControlService {
       });
     });
 
-    // Reconcile persisted ECMWF forecast selections against the fresh config.
-    // Forecast tiles/data are pruned server-side after ~36h, but localStorage
-    // can hold timestamps from days-old sessions. Once the config arrives,
-    // drop selections that are no longer available; if none remain on a visible
-    // layer, deactivate it.
+    // Reconcile ECMWF state against the fresh config on every config emission.
+    // Two responsibilities, both triggered by the same configs() signal:
+    //   1. Prune persisted forecast selections that are no longer available
+    //      (tiles expire server-side after ~36h while localStorage can hold
+    //      timestamps from days-old sessions). If nothing valid remains on a
+    //      visible layer, deactivate it.
+    //   2. Re-derive availableTilesets from the current selection. The full
+    //      fetch in LayerConfigService.fetchEcmwfTpLayerConfig always seeds
+    //      availableTilesets from forecasts[0], ignoring the user's selection;
+    //      without this reconciliation, the 10s auto-refresh would clobber
+    //      the union built by toggleEcmwfTpForecast. configsAreEqual inside
+    //      updateConfigMap breaks the loop once availableTilesets matches.
     effect(() => {
       const configs = this.layerConfigService.configs();
 
@@ -136,35 +143,53 @@ export class LayerControlService {
           const currentSelected = ecmwfControls.forecast.selectedForecastTimestamps;
           const validSelected = currentSelected.filter((ts) => available.has(ts));
 
+          // First-activation race: the user toggled the layer ON before its
+          // config was fetched, so activateLayer couldn't seed the default
+          // forecast. Apply the default now that the config arrived — without
+          // this, the "no valid selection on a visible layer" branch below
+          // would deactivate the layer (flickering it off after one click).
+          // The "all selections became stale" case is distinguished by
+          // currentSelected.length > 0.
+          const isFirstActivationRace =
+            currentSelected.length === 0 &&
+            ecmwfControls.visible &&
+            config.availableForecasts.length > 0;
+          const effectiveSelected = isFirstActivationRace
+            ? [config.availableForecasts[0]]
+            : validSelected;
+
           const opacityEntries = Object.entries(ecmwfControls.forecast.forecastOpacity);
           const hasStaleOpacity = opacityEntries.some(([ts]) => !available.has(ts));
-          const selectedChanged = validSelected.length !== currentSelected.length;
+          const selectionMutated =
+            effectiveSelected.length !== currentSelected.length ||
+            effectiveSelected.some((ts, i) => ts !== currentSelected[i]);
 
-          if (!selectedChanged && !hasStaleOpacity) continue;
-
-          this.updateControls(layer.id, (c) => {
-            if (c.type !== LayerType.TILE || c.category !== LayerCategory.ECMWF_TP) return;
-            const ec = c as EcmwfTpLayerControls;
-            ec.forecast.selectedForecastTimestamps = validSelected;
-            if (hasStaleOpacity) {
-              const pruned: Record<string, number> = {};
-              for (const [ts, op] of opacityEntries) {
-                if (available.has(ts)) pruned[ts] = op;
+          if (selectionMutated || hasStaleOpacity) {
+            this.updateControls(layer.id, (c) => {
+              if (c.type !== LayerType.TILE || c.category !== LayerCategory.ECMWF_TP) return;
+              const ec = c as EcmwfTpLayerControls;
+              ec.forecast.selectedForecastTimestamps = effectiveSelected;
+              if (hasStaleOpacity) {
+                const pruned: Record<string, number> = {};
+                for (const [ts, op] of opacityEntries) {
+                  if (available.has(ts)) pruned[ts] = op;
+                }
+                ec.forecast.forecastOpacity = pruned;
               }
-              ec.forecast.forecastOpacity = pruned;
-            }
-          });
+            });
+          }
 
-          if (validSelected.length === 0) {
+          if (effectiveSelected.length === 0) {
             if (ecmwfControls.visible) {
               this.deactivateLayer(layer.id);
             }
             continue;
           }
 
-          // Recompute availableTilesets for the pruned selection. The timeIndex
-          // clamp effect above re-runs once the updated config emits.
-          this.layerConfigService.updateEcmwfTpSelectedForecasts(layer.id, validSelected);
+          // Always re-derive availableTilesets from the effective selection —
+          // even when nothing was pruned — so the fetch's forecasts[0]-based
+          // seed gets replaced by the actual selection-based union.
+          this.layerConfigService.updateEcmwfTpSelectedForecasts(layer.id, effectiveSelected);
         }
       });
     });
