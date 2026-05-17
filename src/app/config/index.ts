@@ -18,6 +18,7 @@ export {
   buildEcmwfMslpPointQueryUrl,
   buildBasemapTileUrl,
   buildBasemapProvidersUrl,
+  buildDataServiceHealthUrl,
 } from './backend.config';
 
 // Alerts Service configuration (polygon operations and departments)
