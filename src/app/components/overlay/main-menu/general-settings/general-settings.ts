@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatRadioModule } from '@angular/material/radio';
@@ -14,7 +14,6 @@ import {
   DecimalPrecision,
 } from '../../../../services/settings/units-settings.service';
 import { TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../../../constants';
-import { SmnStationsAuthService } from '../../../../services/auth/smn-stations-auth.service';
 
 @Component({
   selector: 'app-general-settings',
@@ -32,20 +31,11 @@ import { SmnStationsAuthService } from '../../../../services/auth/smn-stations-a
 })
 export class GeneralSettingsComponent implements MenuPanelComponent {
   readonly unitsSettings = inject(UnitsSettingsService);
-  readonly smnAuthService = inject(SmnStationsAuthService);
   readonly TEMPERATURE_UNITS = TEMPERATURE_UNITS;
   readonly WIND_SPEED_UNITS = WIND_SPEED_UNITS;
-  readonly hasSmnToken = computed(() => {
-    this.smnAuthService.tokenChanges();
-    return this.smnAuthService.hasValidToken();
-  });
 
-  /**
-   * MenuPanelComponent lifecycle hook
-   * Called when the panel is opened
-   */
   onPanelOpen(): void {
-    this.smnAuthService.tokenChanges();
+    // No state to refresh here; method retained to satisfy MenuPanelComponent contract.
   }
 
   onTemperatureUnitChange(unit: TemperatureUnit): void {
@@ -65,19 +55,8 @@ export class GeneralSettingsComponent implements MenuPanelComponent {
 
   onDecimalPrecisionBlur(input: HTMLInputElement): void {
     const precision = parseInt(input.value, 10);
-
-    // Si el valor es inválido, restaurar el valor almacenado
     if (isNaN(precision) || precision < 0 || precision > 3) {
       input.value = this.unitsSettings.decimalPrecision().toString();
     }
   }
-
-  async addSmnToken(): Promise<void> {
-    await this.smnAuthService.promptAndStoreToken();
-  }
-
-  clearSmnToken(): void {
-    this.smnAuthService.clearToken();
-  }
 }
-``;

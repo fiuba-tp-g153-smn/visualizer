@@ -34,7 +34,6 @@ import { LayerControlService } from '../../../../../services/layers/layer-contro
 import { LayerConfigService } from '../../../../../services/layers/layer-config.service';
 import { LayerRefreshService } from '../../../../../services/layers/layer-refresh.service';
 import { SyncPlaybackService } from '../../../../../services/layers/sync-playback.service';
-import { SmnStationsAuthService } from '../../../../../services/auth/smn-stations-auth.service';
 import {
   formatDateFull,
   formatDateTimeOnly,
@@ -88,7 +87,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
   private readonly syncService = inject(SyncPlaybackService);
-  private readonly smnStationsAuthService = inject(SmnStationsAuthService);
   private readonly scaleTools = inject(ScaleToolsService);
 
   /**
@@ -547,10 +545,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Activa la capa
    */
   private async activateLayer(): Promise<void> {
-    if (!(await this.ensureSmnStationsAuth())) {
-      return;
-    }
-
     if (this.isSmnStationsLayer()) {
       this.captureCurrentSmnSharedState();
     }
@@ -566,19 +560,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       await this.refreshService.ensureSmnStationsEndpointConfigLoaded();
       await this.refreshService.loadSmnStationsSnapshot(true);
     }
-  }
-
-  private async ensureSmnStationsAuth(): Promise<boolean> {
-    if (this.layer.category !== LayerCategory.SMN_STATIONS) {
-      return true;
-    }
-
-    if (this.smnStationsAuthService.hasValidToken()) {
-      return true;
-    }
-
-    const token = await this.smnStationsAuthService.ensureTokenWithPrompt();
-    return token !== null;
   }
 
   private deactivateSiblingLayersInSubgroup(): void {
