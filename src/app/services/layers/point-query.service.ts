@@ -56,6 +56,7 @@ export class PointQueryService {
     lat: number,
     lon: number,
     elevationId?: string,
+    forecastTs?: string,
   ): Observable<PointQueryDisplayData> {
     const layerId = layer.id;
     const layerName = layer.name;
@@ -73,7 +74,7 @@ export class PointQueryService {
     }
 
     if (layer.category === LayerCategory.ECMWF_TP) {
-      return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon);
+      return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon, forecastTs);
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
@@ -112,6 +113,7 @@ export class PointQueryService {
     controls: TileLayerControls,
     lat: number,
     lon: number,
+    forecastTs?: string,
   ): Observable<PointQueryDisplayData> | null {
     if (layer.type !== LayerType.TILE) return null;
     if (layer.category !== LayerCategory.ECMWF_TP) return null;
@@ -144,13 +146,18 @@ export class PointQueryService {
     const timestampTs = config.availableTilesets[idx].id;
 
     const forecastsForPeriod = config.forecastsByPeriod[timestampTs];
-    const selectedForecasts = ecmwfControls.forecast.selectedForecastTimestamps;
-    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
-    if (!forecastTs) {
+    const resolvedForecastTs = forecastTs
+      ? forecastsForPeriod?.includes(forecastTs)
+        ? forecastTs
+        : undefined
+      : ecmwfControls.forecast.selectedForecastTimestamps.find((ts) =>
+          forecastsForPeriod?.includes(ts),
+        );
+    if (!resolvedForecastTs) {
       return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presión a nivel del mar'));
     }
 
-    const url = secondary.buildPointQueryUrl(forecastTs, timestampTs, lat, lon);
+    const url = secondary.buildPointQueryUrl(resolvedForecastTs, timestampTs, lat, lon);
     const secondaryLayerId = buildSecondaryLayerId(layer.id);
     const secondaryLayerName = 'Presión a nivel del mar';
     // MSLP no tiene un LayerScale configurado en el visualizator; el gauge usa
@@ -267,6 +274,7 @@ export class PointQueryService {
     controls: EcmwfTpLayerControls,
     lat: number,
     lon: number,
+    forecastTs?: string,
   ): Observable<PointQueryDisplayData> {
     const config = this.layerConfigService.getConfig(layer.id) as
       | EcmwfTpTileLayerConfig
@@ -287,15 +295,19 @@ export class PointQueryService {
     );
     const periodTs = config.availableTilesets[idx].id;
 
-    // Pick the first selected forecast that has this period
+    // If a specific forecast was requested, validate it covers the current period;
+    // otherwise pick the first selected forecast that has this period.
     const forecastsForPeriod = config.forecastsByPeriod[periodTs];
-    const selectedForecasts = controls.forecast.selectedForecastTimestamps;
-    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
-    if (!forecastTs) {
+    const resolvedForecastTs = forecastTs
+      ? forecastsForPeriod?.includes(forecastTs)
+        ? forecastTs
+        : undefined
+      : controls.forecast.selectedForecastTimestamps.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!resolvedForecastTs) {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
-    const url = buildEcmwfTpPointQueryUrl(forecastTs, periodTs, lat, lon);
+    const url = buildEcmwfTpPointQueryUrl(resolvedForecastTs, periodTs, lat, lon);
 
     const scaleRange = this.extractScaleRange(layer as EcmwfTpTileLayer);
     if (!scaleRange) {
