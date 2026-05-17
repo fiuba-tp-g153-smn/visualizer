@@ -42,6 +42,10 @@ interface PersistedSmnStationsSharedControlsState {
   maxPastHours: number;
   lastImagesCount: number;
   selectedTilesetId: string | null;
+  // When false, the renderer filters out stations whose `hasData` is false
+  // (i.e. their last observation falls outside the requested tolerance window).
+  // Default true preserves "show everything" until the user opts to declutter.
+  showStationsWithoutData: boolean;
 }
 
 /**
@@ -75,6 +79,7 @@ export class LayerControlService {
     maxPastHours: DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
     lastImagesCount: 6,
     selectedTilesetId: null,
+    showStationsWithoutData: true,
   });
 
   constructor() {
@@ -240,6 +245,24 @@ export class LayerControlService {
     }));
     this.saveSmnStationsSharedState();
   }
+
+  getSmnStationsShowStationsWithoutData(): boolean {
+    return this.smnStationsSharedState().showStationsWithoutData;
+  }
+
+  setSmnStationsShowStationsWithoutData(showStationsWithoutData: boolean): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      showStationsWithoutData,
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  // Public readonly signal so component templates can react via computed/effect
+  // without having to call the getter inside a tracking context.
+  readonly smnStationsShowStationsWithoutData = computed(
+    () => this.smnStationsSharedState().showStationsWithoutData,
+  );
 
   // ============================================================================
   // Public Computed Signals
@@ -1099,6 +1122,10 @@ export class LayerControlService {
             : this.smnStationsSharedState().lastImagesCount,
         selectedTilesetId:
           typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
+        showStationsWithoutData:
+          typeof parsed.showStationsWithoutData === 'boolean'
+            ? parsed.showStationsWithoutData
+            : this.smnStationsSharedState().showStationsWithoutData,
       });
     } catch {
       // Ignore malformed persisted state.

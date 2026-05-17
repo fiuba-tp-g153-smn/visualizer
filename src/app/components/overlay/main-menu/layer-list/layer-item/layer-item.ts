@@ -955,6 +955,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   readonly smnMaxPastHours = computed(() => this.controlService.getSmnStationsMaxPastHours());
 
+  // Bound to the "Mostrar estaciones sin datos" checkbox. When false, the
+  // renderer drops stations whose `hasData` is false (last observation falls
+  // outside the requested tolerance window).
+  readonly smnShowStationsWithoutData = this.controlService.smnStationsShowStationsWithoutData;
+
   readonly smnLastImagesCountOptions = computed(() => [1, 3, 6, 12, 24]);
 
   readonly smnTilesetIds = computed(() => this.refreshService.getSmnStationsAvailableTilesetIds());
@@ -992,6 +997,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       }
       void this.refreshService.loadSmnStationsSnapshot(true);
     }
+  }
+
+  onSmnShowStationsWithoutDataChange(showStationsWithoutData: boolean): void {
+    // Pure display-side toggle: no re-fetch needed, the renderer reads the
+    // signal on its next render pass.
+    this.controlService.setSmnStationsShowStationsWithoutData(showStationsWithoutData);
   }
 
   onSmnTilesetIndexChange(tilesetIndex: number): void {
