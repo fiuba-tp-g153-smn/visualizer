@@ -36,11 +36,17 @@ export function isobarLabelFor(pressureHpa: number): string | null {
 
 /**
  * Opciones de `leaflet-textpath` para las etiquetas de isobaras.
+ *
+ * No se usa `orientation: 'flip'`: en `leaflet-textpath@1.3.0` esa opción
+ * aplica un `transform="rotate(180 cx,cy)"` al `<text>` completo, lo que
+ * espeja los glifos respecto al centro del bbox y los despega del trazo
+ * en cualquier path curvo. La orientación correcta del texto se garantiza
+ * reorientando el LineString a izquierda→derecha en `VectorOverlayService`
+ * antes de invocar `setText`.
  */
 export const ISOBAR_TEXTPATH_OPTIONS: VectorTextpathOptions = {
   center: true,
   offset: -4,
-  orientation: 'flip',
   attributes: {
     fill: '#1a1a1a',
     'font-size': '10px',

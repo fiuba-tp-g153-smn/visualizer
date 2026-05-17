@@ -14,7 +14,11 @@ export { DEFAULT_ACTIVE_LAYERS } from './layers-setup.config';
 export { DEFAULT_LAYER_CONTROLS } from './layer-controls.config';
 
 // IGN WMS configuration
-export { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from './ign-wms/config';
+export {
+  IGN_WMS_BASE_CONFIG,
+  IGN_WMS_WORKSPACE_URLS,
+  IGN_WMS_BACKED_UP_LAYER_IDS,
+} from './ign-wms/config';
 
 // Radar configuration
 export { RADAR_SUBGROUPS } from './radar/config';
