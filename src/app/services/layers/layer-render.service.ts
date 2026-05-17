@@ -18,11 +18,16 @@ import {
   EcmwfTpTileLayerConfig,
   EcmwfTpTileLayer,
 } from '../../models';
+import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
-import { buildTileUrl, MAP_CONFIG } from '../../config';
-import { IGN_WMS_BASE_CONFIG, IGN_WMS_WORKSPACE_URLS } from '../../config/layers';
+import { buildBasemapTileUrl, buildTileUrl, MAP_CONFIG } from '../../config';
+import {
+  IGN_WMS_BACKED_UP_LAYER_IDS,
+  IGN_WMS_BASE_CONFIG,
+  IGN_WMS_WORKSPACE_URLS,
+} from '../../config/layers';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 
 /**
@@ -45,6 +50,7 @@ export class LayerRenderService {
   private readonly notificationService = inject(NotificationService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly layersService = inject(LayersService);
+  private readonly healthService = inject(DataServiceHealthService);
 
   // Track errors per layer to avoid notification spam
   private readonly errorTracker = new Map<string, number>();
@@ -611,8 +617,12 @@ export class LayerRenderService {
 
   /**
    * Creates a WMS layer based on category.
+   *
+   * Returns the parent `L.TileLayer` type because some categories (IGN
+   * layers backed up by the data-service) render as plain XYZ tiles
+   * instead of going through `L.TileLayer.WMS`.
    */
-  private createWmsLayer(layerId: string, controls: WmsLayerControls): L.TileLayer.WMS {
+  private createWmsLayer(layerId: string, controls: WmsLayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer || layer.type !== LayerType.WMS) {
       throw new Error(`Layer ${layerId} is not a WMS layer`);
@@ -622,6 +632,9 @@ export class LayerRenderService {
 
     switch (wmsLayer.category) {
       case LayerCategory.IGN_WMS:
+        if (IGN_WMS_BACKED_UP_LAYER_IDS.has(wmsLayer.id)) {
+          return this.createIgnCachedTileLayer(wmsLayer, controls);
+        }
         return this.createIgnWmsLayer(wmsLayer, controls);
       default:
         throw new Error(`Unsupported WMS layer category for layer ${layerId}`);
@@ -732,6 +745,27 @@ export class LayerRenderService {
 
     this.attachErrorHandlers(wmsLayer, layer.id);
     return wmsLayer;
+  }
+
+  /**
+   * Creates a plain XYZ TileLayer pointing at the data-service basemap
+   * endpoint for IGN layers that are pre-scraped and cached server-side.
+   *
+   * The data-service does prod-first internally (upstream WMS → Redis →
+   * S3), so the frontend doesn't need a manual WMS fallback — every miss
+   * is already absorbed by the cache chain or relayed live.
+   */
+  private createIgnCachedTileLayer(layer: WmsLayer, controls: WmsLayerControls): L.TileLayer {
+    const tileUrl = buildBasemapTileUrl(layer.id);
+    const tileLayer = L.tileLayer(tileUrl, {
+      minZoom: MAP_CONFIG.minZoom,
+      maxZoom: MAP_CONFIG.maxZoom,
+      noWrap: true,
+      opacity: controls.opacity,
+      attribution: IGN_WMS_BASE_CONFIG.attribution,
+    });
+    this.attachErrorHandlers(tileLayer, layer.id);
+    return tileLayer;
   }
 
   // ============================================================================
@@ -852,8 +886,19 @@ export class LayerRenderService {
         `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`,
       );
 
-      // After several consecutive errors, notify the user
+      // After several consecutive errors, surface the issue.
       if (errorCount >= this.MAX_ERRORS_BEFORE_NOTIFY) {
+        // Ask the health service to probe /health. If the data-service
+        // itself is down, this raises a single global banner so we can
+        // skip the per-layer toast and avoid notification spam across
+        // every active layer.
+        this.healthService.reportFailure();
+
+        if (!this.healthService.isAvailable()) {
+          errorCount = 0;
+          return;
+        }
+
         const currentErrors = this.errorTracker.get(trackingKey) || 0;
 
         // Only notify once to avoid spam

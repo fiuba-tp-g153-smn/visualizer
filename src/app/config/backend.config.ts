@@ -99,3 +99,12 @@ export function buildBasemapTileUrl(providerId: string): string {
 export function buildBasemapProvidersUrl(): string {
   return `${DATA_SERVICE_BASE_URL}/basemap/providers`;
 }
+
+/**
+ * URL del health-check del data-service. Devuelve 200 cuando el servicio
+ * está arriba; cualquier otra respuesta (o timeout/network error) indica
+ * indisponibilidad.
+ */
+export function buildDataServiceHealthUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/health`;
+}
