@@ -29,6 +29,7 @@ import {
 import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { NotificationService } from '../notifications/notification.service';
 import { LayerConfigService } from './layer-config.service';
+import { LayerControlService } from './layer-control.service';
 import { LayerRefreshService } from './layer-refresh.service';
 import { LayersService } from './layers.service';
 import { buildBasemapTileUrl, buildTileUrl, MAP_CONFIG } from '../../config';
@@ -77,6 +78,7 @@ export class LayerRenderService {
   private readonly layersService = inject(LayersService);
   private readonly unitsSettings = inject(UnitsSettingsService);
   private readonly healthService = inject(DataServiceHealthService);
+  private readonly layerControlService = inject(LayerControlService);
 
   // Track errors per layer to avoid notification spam
   private readonly errorTracker = new Map<string, number>();
@@ -157,8 +159,10 @@ export class LayerRenderService {
 
     this.applySmnStationsPaneZIndex(map, actualZIndex);
 
+    const showStationsWithoutData =
+      this.layerControlService.getSmnStationsShowStationsWithoutData();
     const paneZIndex = map.getPane(SMN_STATION_PANE)?.style.zIndex ?? '560';
-    const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}`;
+    const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}-show=${showStationsWithoutData}`;
     const cachedLayer = this.smnStationsLayerPool.get(poolKey);
     if (cachedLayer) {
       return cachedLayer;
@@ -175,10 +179,19 @@ export class LayerRenderService {
       value: number;
       metersPerPixel: number;
       nearestDistMeters: number;
+      isStale: boolean;
     };
 
     const visiblePoints: VisiblePoint[] = [];
     for (const observation of snapshot.observations) {
+      // `hasData === false` ⇔ the station's last observation falls outside the
+      // requested tolerance window. Default-true fallback keeps LATEST mode
+      // (where the field is irrelevant) rendering normally.
+      const isStale = observation.hasData === false;
+      if (isStale && !showStationsWithoutData) {
+        continue;
+      }
+
       const latLng = L.latLng(observation.station.coord.lat, observation.station.coord.lon);
       const value = this.resolveSmnStationsValue(stationLayer.variable, observation);
       if (value === null) {
@@ -193,6 +206,7 @@ export class LayerRenderService {
         value,
         metersPerPixel: this.resolveSmnStationsMetersPerPixel(map, latLng, zoom),
         nearestDistMeters: Number.POSITIVE_INFINITY,
+        isStale,
       });
     }
 
@@ -247,10 +261,17 @@ export class LayerRenderService {
       }
     }
 
+    // Neutral gray for stations whose observation is outside the requested
+    // tolerance window. Soft and desaturated — visible but clearly inactive.
+    const STALE_COLOR = '#9ca3af';
+    const STALE_TOOLTIP = 'Sin datos en el período solicitado';
+
     for (const point of visiblePoints) {
       const observation = point.observation;
       const value = point.value;
-      const color = this.resolveSmnStationsColor(stationLayer.scale, value);
+      const color = point.isStale
+        ? STALE_COLOR
+        : this.resolveSmnStationsColor(stationLayer.scale, value);
 
       const denseThresholdMeters =
         circleDiameterPx *
@@ -304,6 +325,10 @@ export class LayerRenderService {
         const iconDiameter = badgeDiameterPx;
         const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
         marker = L.marker(point.latLng, { pane: SMN_STATION_PANE, icon, interactive: true });
+      }
+
+      if (point.isStale && typeof marker.bindTooltip === 'function') {
+        marker.bindTooltip(STALE_TOOLTIP, { direction: 'top', opacity: 0.9, sticky: false });
       }
 
       marker.on?.('click', (evt: L.LeafletMouseEvent) => {
@@ -1548,6 +1573,10 @@ export class LayerRenderService {
 }
 
 type SmnStationObservationLike = {
+  // Optional so the renderer's structural type stays compatible with snapshots
+  // that pre-date the field. When absent the renderer treats the station as
+  // having data (true).
+  hasData?: boolean;
   station: {
     coord: {
       lat: number;

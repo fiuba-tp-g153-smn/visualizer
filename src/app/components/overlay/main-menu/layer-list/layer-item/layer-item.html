@@ -302,6 +302,16 @@
                       <span class="tolerance-label">h</span>
                     </div>
                   </div>
+
+                  <mat-checkbox
+                    color="primary"
+                    [checked]="smnShowStationsWithoutData()"
+                    (change)="onSmnShowStationsWithoutDataChange($event.checked)"
+                    class="smn-no-data-toggle"
+                    matTooltip="Cuando se desactiva, las estaciones sin observación dentro del período solicitado se ocultan del mapa."
+                  >
+                    Mostrar estaciones sin datos
+                  </mat-checkbox>
                 }
               </div>
             }
