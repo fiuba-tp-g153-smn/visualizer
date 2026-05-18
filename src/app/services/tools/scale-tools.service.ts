@@ -1,27 +1,27 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 
-import { Layer, LayerCategory, LayerControls, LayerType, ScaleType } from '../../models';
+import { Layer, LayerCategory, LayerControls, ScaleType } from '../../models';
 import { STORAGE_KEYS } from '../../constants';
-import { LayerControlService } from './layer-control.service';
-import { LayersService } from './layers.service';
+import { LayerControlService } from '../layers/layer-control.service';
+import { LayersService } from '../layers/layers.service';
 
-type TileLayerVariant = Extract<Layer, { type: LayerType.TILE }>;
+type ScalableLayer = Layer & { scale?: NonNullable<Layer['scale']> };
 
-type ActiveTileLayerEntry = {
-  layer: TileLayerVariant;
+type ActiveLayerEntryWithScale = {
+  layer: ScalableLayer;
   controls: LayerControls;
 };
 
 export interface ScaleLayerItem {
   layerId: string;
-  layer: TileLayerVariant;
+  layer: ScalableLayer;
   layerName: string;
 }
 
 export interface ScaleToolEntry {
   layerId: string;
   layerName: string;
-  scale: NonNullable<TileLayerVariant['scale']>;
+  scale: NonNullable<Layer['scale']>;
 }
 
 interface PersistedScaleToolsState {
@@ -49,27 +49,21 @@ export class ScaleToolsService {
 
     return this.controlService
       .activeLayers()
-      .filter((entry): entry is ActiveTileLayerEntry => entry.layer.type === LayerType.TILE)
+      .filter((entry): entry is ActiveLayerEntryWithScale => this.hasValidScale(entry.layer))
       .flatMap(({ layer }): ScaleLayerItem[] => {
-        const tileLayer = layer;
-        if (!this.hasValidScale(tileLayer)) {
-          return [];
-        }
-
-        // Deduplicate radar layers by product name — all radars share the same scale per product.
-        if (tileLayer.category === LayerCategory.RADAR) {
-          if (seenRadarProducts.has(tileLayer.name)) {
+        if (layer.category === LayerCategory.RADAR) {
+          if (seenRadarProducts.has(layer.name)) {
             return [];
           }
-          seenRadarProducts.add(tileLayer.name);
-          return [{ layerId: tileLayer.id, layer: tileLayer, layerName: tileLayer.name }];
+          seenRadarProducts.add(layer.name);
+          return [{ layerId: layer.id, layer, layerName: layer.name }];
         }
 
         return [
           {
-            layerId: tileLayer.id,
-            layer: tileLayer,
-            layerName: this.layersService.getLayerFullName(tileLayer),
+            layerId: layer.id,
+            layer,
+            layerName: this.layersService.getLayerFullName(layer),
           },
         ];
       });
@@ -84,17 +78,16 @@ export class ScaleToolsService {
       .map((layerId) => itemsById.get(layerId) ?? null)
       .filter((item): item is ScaleLayerItem => item !== null)
       .flatMap((item): ScaleToolEntry[] => {
-        if (!this.hasValidScale(item.layer)) {
-          return [];
+        if (this.hasValidScale(item.layer)) {
+          return [
+            {
+              layerId: item.layerId,
+              layerName: item.layerName,
+              scale: item.layer.scale as NonNullable<Layer['scale']>,
+            },
+          ];
         }
-
-        return [
-          {
-            layerId: item.layerId,
-            layerName: item.layerName,
-            scale: item.layer.scale,
-          },
-        ];
+        return [];
       });
   });
 
@@ -201,9 +194,7 @@ export class ScaleToolsService {
     this.selectedLayerIdsOrdered.set([]);
   }
 
-  private hasValidScale(
-    layer: TileLayerVariant,
-  ): layer is TileLayerVariant & { scale: NonNullable<TileLayerVariant['scale']> } {
+  private hasValidScale(layer: Layer): layer is ScalableLayer {
     if (!layer.scale) {
       return false;
     }

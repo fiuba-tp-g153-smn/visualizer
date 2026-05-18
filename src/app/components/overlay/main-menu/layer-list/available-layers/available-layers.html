@@ -40,6 +40,7 @@
             <mat-expansion-panel
               class="subgroup-panel"
               [expanded]="subgroup._shouldExpandSubgroup"
+              (opened)="onSubgroupOpened(subgroup)"
               #subPanel="matExpansionPanel"
             >
               <mat-expansion-panel-header>
@@ -58,7 +59,12 @@
               <!-- Lista de capas -->
               <div class="layer-list-container">
                 @for (layer of subgroup.layers; track layer.id; let isLastLayer = $last) {
-                  <app-layer-item [layer]="layer" mode="available" />
+                  <app-layer-item
+                    [layer]="layer"
+                    mode="available"
+                    [selectionMode]="subgroup.selectionMode ?? LayerSelectionMode.MULTIPLE"
+                    [radioGroupName]="subgroup.id"
+                  />
                   @if (!isLastLayer) {
                     <mat-divider />
                   }

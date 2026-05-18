@@ -11,7 +11,12 @@ export interface BaseLayerControls {
   zIndex: number;
 }
 
-export type LayerControls = GoesLayerControls | RadarLayerControls | WmsLayerControls | EcmwfTpLayerControls;
+export type LayerControls =
+  | GoesLayerControls
+  | RadarLayerControls
+  | WmsLayerControls
+  | EcmwfTpLayerControls
+  | VectorLayerControls;
 
 /** A layer that is currently active (visible) on the map, paired with its controls. */
 export interface ActiveLayerEntry {
@@ -44,6 +49,10 @@ export interface PlaybackControls {
 export interface ElevationControls {
   selectedElevationIds: string[]; // IDs de elevaciones seleccionadas (puede estar vacío si no se ha seleccionado ninguna)
   elevationOpacity: Record<string, number>; // Opacity per elevation (0-1), undefined uses the layer's global opacity
+}
+
+export interface VectorLayerControls extends BaseLayerControls {
+  type: LayerType.VECTOR;
 }
 
 export interface WmsLayerControls extends BaseLayerControls {

@@ -7,7 +7,7 @@ import { ActiveLayerGroupId } from './groups.models';
 export enum LayerType {
   TILE = 'tile', // L.TileLayer - Tiles precalculados (satélites, mapas base)
   WMS = 'wms', // L.TileLayer.WMS - Web Map Service
-  VECTOR = 'vector', // L.GeoJSON - Vector overlays (isobaras MSLP, etc.) renderizados como overlay sobre raster
+  VECTOR = 'vector', // L.GeoJSON / L.LayerGroup - Overlays vectoriales y puntos
 }
 
 /**
@@ -21,6 +21,7 @@ export enum LayerCategory {
   RADAR = 'radar', // Radar meteorológico
   IGN_WMS = 'ign_wms', // IGN WMS layers
   ECMWF_TP = 'ecmwf_tp', // ECMWF Total Precipitation
+  SMN_STATIONS = 'smn_stations', // Estaciones meteorológicas SMN
 }
 
 /**
@@ -82,6 +83,7 @@ interface BaseLayer {
   category: LayerCategory;
   zIndexGroup: ActiveLayerGroupId;
   boundingBox?: BoundingBox;
+  scale?: LayerScale;
   tms?: boolean;
 }
 
@@ -94,7 +96,8 @@ export type Layer =
   | GLMGoesTileLayer
   | RadarTileLayer
   | WmsLayer
-  | EcmwfTpTileLayer;
+  | EcmwfTpTileLayer
+  | SmnStationLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
@@ -200,9 +203,22 @@ export interface SecondaryVectorRender {
 }
 
 /**
- * Capa de tipo WMS (servicios Web Map Service)
- * Usa L.TileLayer.WMS de Leaflet
+ * Estaciones meteorológicas del SMN
+ * Capa de tipo VECTOR (puntos)
  */
+export interface SmnStationLayer extends BaseLayer {
+  type: LayerType.VECTOR;
+  category: LayerCategory.SMN_STATIONS;
+  variable:
+    | 'temperature'
+    | 'feels_like'
+    | 'humidity'
+    | 'pressure'
+    | 'visibility'
+    | 'wind_speed';
+  scale: NonNullable<LayerScale>; // Las estaciones siempre tienen escala
+}
+
 export interface WmsLayer extends BaseLayer {
   type: LayerType.WMS;
   wmsLayerName: string;

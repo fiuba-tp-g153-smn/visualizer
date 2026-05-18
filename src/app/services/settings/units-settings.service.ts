@@ -1,11 +1,15 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { STORAGE_KEYS, TEMPERATURE_UNITS } from '../../constants';
+import { STORAGE_KEYS, TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../constants';
 
 export type TemperatureUnit = typeof TEMPERATURE_UNITS.KELVIN | typeof TEMPERATURE_UNITS.CELSIUS;
+export type WindSpeedUnit =
+  | typeof WIND_SPEED_UNITS.KILOMETERS_PER_HOUR
+  | typeof WIND_SPEED_UNITS.KNOTS;
 export type DecimalPrecision = 0 | 1 | 2 | 3;
 
 interface UnitsSettings {
   temperatureUnit: TemperatureUnit;
+  windSpeedUnit: WindSpeedUnit;
   decimalPrecision: DecimalPrecision;
 }
 
@@ -14,6 +18,7 @@ interface UnitsSettings {
 })
 export class UnitsSettingsService {
   readonly temperatureUnit = signal<TemperatureUnit>(TEMPERATURE_UNITS.CELSIUS);
+  readonly windSpeedUnit = signal<WindSpeedUnit>(WIND_SPEED_UNITS.KILOMETERS_PER_HOUR);
   readonly decimalPrecision = signal<DecimalPrecision>(2);
 
   // Computed formatter que se actualiza cuando cambia la precisión
@@ -30,6 +35,11 @@ export class UnitsSettingsService {
 
   setTemperatureUnit(unit: TemperatureUnit): void {
     this.temperatureUnit.set(unit);
+    this.saveToStorage();
+  }
+
+  setWindSpeedUnit(unit: WindSpeedUnit): void {
+    this.windSpeedUnit.set(unit);
     this.saveToStorage();
   }
 
@@ -51,6 +61,7 @@ export class UnitsSettingsService {
 
       const parsed = JSON.parse(raw) as UnitsSettings;
       this.temperatureUnit.set(parsed.temperatureUnit ?? TEMPERATURE_UNITS.CELSIUS);
+      this.windSpeedUnit.set(parsed.windSpeedUnit ?? WIND_SPEED_UNITS.KILOMETERS_PER_HOUR);
       this.decimalPrecision.set(parsed.decimalPrecision ?? 2);
     } catch (error) {
       console.warn('Failed to load units settings from localStorage:', error);
@@ -64,6 +75,7 @@ export class UnitsSettingsService {
 
     const payload: UnitsSettings = {
       temperatureUnit: this.temperatureUnit(),
+      windSpeedUnit: this.windSpeedUnit(),
       decimalPrecision: this.decimalPrecision(),
     };
 

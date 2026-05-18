@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
-import { PointQueryViewerService } from '../../services/layers/point-query-tools.service';
-import { ScaleToolsService } from '../../services/layers/scale-tools.service';
+import { PointQueryViewerService } from '../../services/tools/point-query-viewer.service';
+import { ScaleToolsService } from '../../services/tools/scale-tools.service';
 import { MapInfoService } from '../../services/layers/map-info.service';
 import {
   DrawingMode,

@@ -1,0 +1,17 @@
+<div class="smn-popup">
+  <div class="smn-popup__station">
+    <div class="smn-popup__title">{{ data.stationName }}</div>
+    <div class="smn-popup__meta">{{ data.province }}</div>
+  </div>
+
+  <ul class="smn-popup__values">
+    @for (item of data.values; track item.label) {
+      <li>
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
+      </li>
+    }
+  </ul>
+
+  <div class="smn-popup__updated">Actualizado: {{ data.updatedAt }}</div>
+</div>

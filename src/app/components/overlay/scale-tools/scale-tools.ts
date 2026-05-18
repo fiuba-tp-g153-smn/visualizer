@@ -1,5 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import { ScaleToolEntry } from '../../../services/layers/scale-tools.service';
+import { ScaleToolEntry } from '../../../services/tools/scale-tools.service';
 import { ScaleToolPanelComponent } from '../scale-tool-panel/scale-tool-panel';
 
 @Component({

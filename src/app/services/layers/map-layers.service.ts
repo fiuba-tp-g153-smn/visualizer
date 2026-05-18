@@ -15,6 +15,10 @@ import {
   RadarLayerControls,
   SecondaryVectorRender,
 } from '../../models';
+import {
+  SMN_STATION_PANE,
+  SMN_STATION_PANE_Z_INDEX,
+} from '../../config/layers/smn-stations/config';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -35,7 +39,7 @@ export class MapLayersService {
   private vectorOverlay = inject(VectorOverlayService);
 
   private map: L.Map | null = null;
-  private onMapLayers = new Map<string, L.TileLayer>();
+  private onMapLayers = new Map<string, L.Layer>();
   private onMapOverlays = new Map<string, L.Layer>();
 
   /**
@@ -48,6 +52,11 @@ export class MapLayersService {
       pane.style.zIndex = VECTOR_OVERLAY_PANE_Z_INDEX;
       pane.style.pointerEvents = 'none';
     }
+    if (!map.getPane(SMN_STATION_PANE)) {
+      const pane = map.createPane(SMN_STATION_PANE);
+      pane.style.zIndex = SMN_STATION_PANE_Z_INDEX;
+      pane.style.pointerEvents = 'auto';
+    }
   }
 
   /**
@@ -56,7 +65,10 @@ export class MapLayersService {
   syncLayers(layerIds: string[]): void {
     if (!this.map) return;
 
-    const desiredLayersOnMap = new Map<string, L.TileLayer>();
+    const desiredLayersOnMap = new Map<string, L.Layer>();
+    const previousSmnLayerIds = new Set(
+      [...this.onMapLayers.keys()].filter((layerId) => this.isSmnLayerId(layerId)),
+    );
 
     // Sort layers by z-index (low to high) so we process bottom layers first
     const sortedLayerIds = [...layerIds].sort((a, b) => {
@@ -97,58 +109,81 @@ export class MapLayersService {
       const baseZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
       const actualZIndex = baseZIndex + zIndexOffset;
 
-      // Render layer based on category
-      switch (layer.category) {
-        case LayerCategory.RADAR: {
-          const radarControls = controls as RadarLayerControls;
-          const elevationCount = radarControls.elevation.selectedElevationIds.length;
-          const layers = this.layerRenderService.createRadarLayersForPlayback(
-            layerId,
-            radarControls,
-            controls.opacity,
-            actualZIndex,
-          );
-          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+      // Render layer based on type
+      switch (layer.type) {
+        case LayerType.TILE:
+          switch (layer.category) {
+            case LayerCategory.RADAR: {
+              const radarControls = controls as RadarLayerControls;
+              const elevationCount = radarControls.elevation.selectedElevationIds.length;
+              const layers = this.layerRenderService.createRadarLayersForPlayback(
+                layerId,
+                radarControls,
+                controls.opacity,
+                actualZIndex,
+              );
+              layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
 
-          // Add offset for multiple elevations
-          if (elevationCount > 1) {
-            zIndexOffset += elevationCount - 1;
+              // Add offset for multiple elevations
+              if (elevationCount > 1) {
+                zIndexOffset += elevationCount - 1;
+              }
+              break;
+            }
+
+            case LayerCategory.GOES_19: {
+              const goesControls = controls as GoesLayerControls;
+              const layers = this.layerRenderService.createGoesLayersForPlayback(
+                layerId,
+                goesControls,
+                controls.opacity,
+                actualZIndex,
+              );
+              layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+              break;
+            }
+
+            case LayerCategory.ECMWF_TP: {
+              const ecmwfControls = controls as EcmwfTpLayerControls;
+              const forecastCount = ecmwfControls.forecast.selectedForecastTimestamps.length;
+              const layers = this.layerRenderService.createEcmwfTpLayersForPlayback(
+                layerId,
+                ecmwfControls,
+                controls.opacity,
+                actualZIndex,
+              );
+              layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+
+              // Add offset for multiple forecasts
+              if (forecastCount > 1) {
+                zIndexOffset += forecastCount - 1;
+              }
+              break;
+            }
+
+            default: {
+              const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
+              tileLayer.setOpacity(controls.opacity);
+              tileLayer.setZIndex(actualZIndex);
+              desiredLayersOnMap.set(layerId, tileLayer);
+              break;
+            }
           }
           break;
-        }
 
-        case LayerCategory.GOES_19: {
-          const goesControls = controls as GoesLayerControls;
-          const layers = this.layerRenderService.createGoesLayersForPlayback(
+        case LayerType.VECTOR: {
+          const stationLayer = this.layerRenderService.createSmnStationsLayer(
             layerId,
-            goesControls,
             controls.opacity,
+            Math.round(this.map.getZoom()),
+            this.map!,
             actualZIndex,
           );
-          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+          desiredLayersOnMap.set(layerId, stationLayer);
           break;
         }
 
-        case LayerCategory.ECMWF_TP: {
-          const ecmwfControls = controls as EcmwfTpLayerControls;
-          const forecastCount = ecmwfControls.forecast.selectedForecastTimestamps.length;
-          const layers = this.layerRenderService.createEcmwfTpLayersForPlayback(
-            layerId,
-            ecmwfControls,
-            controls.opacity,
-            actualZIndex,
-          );
-          layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
-
-          // Add offset for multiple forecasts
-          if (forecastCount > 1) {
-            zIndexOffset += forecastCount - 1;
-          }
-          break;
-        }
-
-        default: {
-          // WMS and other non-animated layers
+        case LayerType.WMS: {
           const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
           tileLayer.setOpacity(controls.opacity);
           tileLayer.setZIndex(actualZIndex);
@@ -167,18 +202,45 @@ export class MapLayersService {
     }
 
     // 2. Add new or update existing layers
-    for (const [key, tileLayer] of desiredLayersOnMap) {
+    for (const [key, nextLayer] of desiredLayersOnMap) {
       const oldLayer = this.onMapLayers.get(key);
-      if (!oldLayer || oldLayer !== tileLayer) {
-        tileLayer.addTo(this.map!);
+      if (!oldLayer || oldLayer !== nextLayer) {
+        nextLayer.addTo(this.map!);
       }
     }
 
     // Update local state
     this.onMapLayers = desiredLayersOnMap;
 
+    const nextSmnLayerIds = new Set(
+      [...this.onMapLayers.keys()].filter((layerId) => this.isSmnLayerId(layerId)),
+    );
+
+    if (!this.areIdSetsEqual(previousSmnLayerIds, nextSmnLayerIds)) {
+      this.map.closePopup();
+    }
+
     // Sync vector overlays (e.g. MSLP isobars over TP raster).
     this.syncVectorOverlays(sortedLayerIds);
+  }
+
+  private isSmnLayerId(layerId: string): boolean {
+    const layer = this.layersService.getLayerById(layerId);
+    return layer?.category === LayerCategory.SMN_STATIONS;
+  }
+
+  private areIdSetsEqual(left: Set<string>, right: Set<string>): boolean {
+    if (left.size !== right.size) {
+      return false;
+    }
+
+    for (const value of left) {
+      if (!right.has(value)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**
