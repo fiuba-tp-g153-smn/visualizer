@@ -17,7 +17,7 @@ interface UnitsSettings {
   providedIn: 'root',
 })
 export class UnitsSettingsService {
-  readonly temperatureUnit = signal<TemperatureUnit>(TEMPERATURE_UNITS.KELVIN);
+  readonly temperatureUnit = signal<TemperatureUnit>(TEMPERATURE_UNITS.CELSIUS);
   readonly windSpeedUnit = signal<WindSpeedUnit>(WIND_SPEED_UNITS.KILOMETERS_PER_HOUR);
   readonly decimalPrecision = signal<DecimalPrecision>(2);
 
@@ -60,7 +60,7 @@ export class UnitsSettingsService {
       }
 
       const parsed = JSON.parse(raw) as UnitsSettings;
-      this.temperatureUnit.set(parsed.temperatureUnit ?? TEMPERATURE_UNITS.KELVIN);
+      this.temperatureUnit.set(parsed.temperatureUnit ?? TEMPERATURE_UNITS.CELSIUS);
       this.windSpeedUnit.set(parsed.windSpeedUnit ?? WIND_SPEED_UNITS.KILOMETERS_PER_HOUR);
       this.decimalPrecision.set(parsed.decimalPrecision ?? 2);
     } catch (error) {

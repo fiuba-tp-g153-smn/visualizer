@@ -337,15 +337,6 @@ export class LayerRenderService {
           return;
         }
 
-        map.fire('click', {
-          latlng: evt.latlng,
-          layerPoint: evt.layerPoint,
-          containerPoint: evt.containerPoint,
-          originalEvent: evt.originalEvent,
-        } as L.LeafletMouseEvent);
-      });
-
-      marker.on?.('contextmenu', (evt: L.LeafletMouseEvent) => {
         const popupData = this.buildSmnStationsPopupData(stationLayer, observation, value);
         const { element, destroy } = this.createSmnStationsPopupElement(popupData);
         const popup = L.popup({ pane: 'popupPane', className: 'smn-station-popup' })
