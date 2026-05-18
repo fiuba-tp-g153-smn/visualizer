@@ -92,16 +92,26 @@ export class VectorOverlayService {
    * Construye un `L.GeoJSON` con el estilo y las etiquetas declaradas en el
    * config. Para que las etiquetas funcionen el plugin `leaflet-textpath` debe
    * estar importado (ver main.ts).
+   *
+   * `opacity` (0..1) multiplica la opacidad declarada en el style del feature
+   * y se inyecta como `fill-opacity` en los atributos del textpath, para que
+   * tanto la línea como su etiqueta se atenúen juntas siguiendo la opacidad
+   * de la capa primaria asociada (raster TP). Default 1 = sin atenuación.
    */
-  buildLayer(fc: FeatureCollection, config: SecondaryVectorRender): L.GeoJSON {
+  buildLayer(
+    fc: FeatureCollection,
+    config: SecondaryVectorRender,
+    opacity: number = 1,
+  ): L.GeoJSON {
     // `leaflet-textpath` manipula el DOM SVG (<textPath>) — si el mapa global usa
     // canvas, hay que forzar el renderer SVG por feature en el style callback.
     const renderer = L.svg();
+    const textpathOptions = withFillOpacity(config.textpathOptions, opacity);
     return L.geoJSON(fc, {
       style: (feature?: Feature) => {
         const value = this.readValue(feature, config.valueProperty);
         if (value === null) return { renderer };
-        return { ...styleToLeaflet(config.styleFor(value)), renderer };
+        return { ...styleToLeaflet(config.styleFor(value), opacity), renderer };
       },
       onEachFeature: (feature: Feature, layer: L.Layer) => {
         const value = this.readValue(feature, config.valueProperty);
@@ -114,7 +124,7 @@ export class VectorOverlayService {
         // rota el `<text>` entero alrededor del bbox y despega los glifos
         // de la curva).
         ensureLeftToRight(layer);
-        layer.setText(label, config.textpathOptions);
+        layer.setText(label, textpathOptions);
       },
     });
   }
@@ -217,18 +227,42 @@ function ensureLeftToRight(layer: L.Polyline): void {
 
 /**
  * Convierte un `VectorLineStyle` plano a `L.PathOptions`.
+ * `opacityMultiplier` (0..1) atenúa la opacidad declarada en el style.
  */
-function styleToLeaflet(style: {
-  color: string;
-  weight: number;
-  dashArray?: string;
-  opacity?: number;
-}): L.PathOptions {
+function styleToLeaflet(
+  style: {
+    color: string;
+    weight: number;
+    dashArray?: string;
+    opacity?: number;
+  },
+  opacityMultiplier: number = 1,
+): L.PathOptions {
   return {
     color: style.color,
     weight: style.weight,
     dashArray: style.dashArray,
-    opacity: style.opacity ?? 1,
+    opacity: (style.opacity ?? 1) * opacityMultiplier,
     fill: false,
+  };
+}
+
+/**
+ * Returns a copy of `options` with `fill-opacity` injected into `attributes`
+ * so that textpath labels fade alongside their underlying polyline. Returns
+ * undefined when the caller didn't provide options (preserves the original
+ * "no textpath" behavior).
+ */
+function withFillOpacity(
+  options: SecondaryVectorRender['textpathOptions'],
+  opacity: number,
+): SecondaryVectorRender['textpathOptions'] {
+  if (!options) return undefined;
+  return {
+    ...options,
+    attributes: {
+      ...(options.attributes ?? {}),
+      'fill-opacity': String(opacity),
+    },
   };
 }

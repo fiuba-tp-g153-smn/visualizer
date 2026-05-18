@@ -16,6 +16,8 @@ import {
   EcmwfTpLayerControls,
   EcmwfTpTileLayer,
   EcmwfTpTileLayerConfig,
+  WmsLayerControls,
+  VectorLayerControls,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -46,6 +48,29 @@ interface PersistedSmnStationsSharedControlsState {
   // Default true preserves "show everything" until the user opts to declutter.
   showStationsWithoutData: boolean;
 }
+
+/**
+ * Shape of ECMWF forecast state when persisted to localStorage. Indices
+ * reference `availableForecasts[i]` in the layer's config; using indices
+ * instead of raw timestamps keeps the persisted intent ("the latest run",
+ * "the previous run") stable across sessions, even when the underlying
+ * timestamps have rolled forward.
+ */
+interface PersistedEcmwfForecast {
+  selectedForecastIndices: number[];
+  forecastOpacityByIndex: Record<number, number>;
+}
+
+type PersistedEcmwfTpLayerControls = Omit<EcmwfTpLayerControls, 'forecast'> & {
+  forecast: PersistedEcmwfForecast;
+};
+
+type PersistedLayerControls =
+  | GoesLayerControls
+  | RadarLayerControls
+  | WmsLayerControls
+  | VectorLayerControls
+  | PersistedEcmwfTpLayerControls;
 
 /**
  * Service responsible for managing layer controls, visibility, and playback state.
@@ -79,6 +104,18 @@ export class LayerControlService {
     selectedTilesetId: null,
     showStationsWithoutData: true,
   });
+
+  /**
+   * Transient buffer for ECMWF forecast indices loaded from localStorage. The
+   * indices can't be translated to timestamps at `initializeControls()` time
+   * because `availableForecasts` is only known after the config fetch. The
+   * reconciliation effect drains this map on the first config emission per
+   * layer.
+   */
+  private readonly pendingEcmwfIndices = new Map<
+    string,
+    { indices: number[]; opacityByIndex: Record<number, number> }
+  >();
 
   constructor() {
     this.loadSmnStationsSharedState();
@@ -129,6 +166,135 @@ export class LayerControlService {
       });
     });
 
+    // Reconcile ECMWF state against the fresh config on every config emission.
+    // Two responsibilities, both triggered by the same configs() signal:
+    //   1. Prune persisted forecast selections that are no longer available
+    //      (tiles expire server-side after ~36h while localStorage can hold
+    //      timestamps from days-old sessions). If nothing valid remains on a
+    //      visible layer, deactivate it.
+    //   2. Re-derive availableTilesets from the current selection. The full
+    //      fetch in LayerConfigService.fetchEcmwfTpLayerConfig always seeds
+    //      availableTilesets from forecasts[0], ignoring the user's selection;
+    //      without this reconciliation, the 10s auto-refresh would clobber
+    //      the union built by toggleEcmwfTpForecast. configsAreEqual inside
+    //      updateConfigMap breaks the loop once availableTilesets matches.
+    effect(() => {
+      const configs = this.layerConfigService.configs();
+
+      untracked(() => {
+        for (const layer of this.layersService.getAllLayers()) {
+          if (layer.type !== LayerType.TILE || layer.category !== LayerCategory.ECMWF_TP) {
+            continue;
+          }
+
+          const config = configs.get(layer.id);
+          if (
+            !config ||
+            config.type !== LayerType.TILE ||
+            config.category !== LayerCategory.ECMWF_TP
+          ) {
+            continue;
+          }
+
+          const controls = this.controls().get(layer.id);
+          if (
+            !controls ||
+            controls.type !== LayerType.TILE ||
+            controls.category !== LayerCategory.ECMWF_TP
+          ) {
+            continue;
+          }
+
+          let ecmwfControls = controls as EcmwfTpLayerControls;
+
+          // Hydration: translate persisted forecast indices to timestamps now
+          // that availableForecasts is known. Indices come from localStorage;
+          // they're buffered in pendingEcmwfIndices by initializeControls
+          // because the config wasn't available then. After translation we
+          // drop the buffer entry and re-read controls so the rest of the
+          // effect operates on the hydrated state.
+          const pending = this.pendingEcmwfIndices.get(layer.id);
+          if (pending) {
+            this.pendingEcmwfIndices.delete(layer.id);
+            const translatedTs: string[] = [];
+            for (const i of pending.indices) {
+              const ts = config.availableForecasts[i];
+              if (ts !== undefined) translatedTs.push(ts);
+            }
+            const translatedOpacity: Record<string, number> = {};
+            for (const [idxStr, op] of Object.entries(pending.opacityByIndex)) {
+              const ts = config.availableForecasts[Number(idxStr)];
+              if (ts !== undefined) translatedOpacity[ts] = op;
+            }
+            this.updateControls(layer.id, (c) => {
+              if (c.type !== LayerType.TILE || c.category !== LayerCategory.ECMWF_TP) return;
+              const ec = c as EcmwfTpLayerControls;
+              ec.forecast.selectedForecastTimestamps = translatedTs;
+              ec.forecast.forecastOpacity = translatedOpacity;
+            });
+            const refreshed = this.controls().get(layer.id);
+            if (
+              refreshed?.type === LayerType.TILE &&
+              refreshed.category === LayerCategory.ECMWF_TP
+            ) {
+              ecmwfControls = refreshed as EcmwfTpLayerControls;
+            }
+          }
+
+          const available = new Set(config.availableForecasts);
+          const currentSelected = ecmwfControls.forecast.selectedForecastTimestamps;
+          const validSelected = currentSelected.filter((ts) => available.has(ts));
+
+          // First-activation race: the user toggled the layer ON before its
+          // config was fetched, so activateLayer couldn't seed the default
+          // forecast. Apply the default now that the config arrived — without
+          // this, the "no valid selection on a visible layer" branch below
+          // would deactivate the layer (flickering it off after one click).
+          // The "all selections became stale" case is distinguished by
+          // currentSelected.length > 0.
+          const isFirstActivationRace =
+            currentSelected.length === 0 &&
+            ecmwfControls.visible &&
+            config.availableForecasts.length > 0;
+          const effectiveSelected = isFirstActivationRace
+            ? [config.availableForecasts[0]]
+            : validSelected;
+
+          const opacityEntries = Object.entries(ecmwfControls.forecast.forecastOpacity);
+          const hasStaleOpacity = opacityEntries.some(([ts]) => !available.has(ts));
+          const selectionMutated =
+            effectiveSelected.length !== currentSelected.length ||
+            effectiveSelected.some((ts, i) => ts !== currentSelected[i]);
+
+          if (selectionMutated || hasStaleOpacity) {
+            this.updateControls(layer.id, (c) => {
+              if (c.type !== LayerType.TILE || c.category !== LayerCategory.ECMWF_TP) return;
+              const ec = c as EcmwfTpLayerControls;
+              ec.forecast.selectedForecastTimestamps = effectiveSelected;
+              if (hasStaleOpacity) {
+                const pruned: Record<string, number> = {};
+                for (const [ts, op] of opacityEntries) {
+                  if (available.has(ts)) pruned[ts] = op;
+                }
+                ec.forecast.forecastOpacity = pruned;
+              }
+            });
+          }
+
+          if (effectiveSelected.length === 0) {
+            if (ecmwfControls.visible) {
+              this.deactivateLayer(layer.id);
+            }
+            continue;
+          }
+
+          // Always re-derive availableTilesets from the effective selection —
+          // even when nothing was pruned — so the fetch's forecasts[0]-based
+          // seed gets replaced by the actual selection-based union.
+          this.layerConfigService.updateEcmwfTpSelectedForecasts(layer.id, effectiveSelected);
+        }
+      });
+    });
   }
 
   isSmnStationsLayer(layerId: string): boolean {
@@ -909,9 +1075,10 @@ export class LayerControlService {
       const savedControls = stateMap.get(layer.id);
 
       if (savedControls) {
-        // Restore saved state, but ensure isPlaying is false and zIndex is defined
-        controls = { ...savedControls, zIndex: savedControls.zIndex ?? 0 };
-
+        // Restore saved state, but ensure isPlaying is false and zIndex is defined.
+        // For ECMWF, also buffer the persisted forecast indices for later
+        // hydration in the reconciliation effect (config not yet available).
+        controls = { ...this.fromPersistedControls(savedControls), zIndex: savedControls.zIndex ?? 0 };
         if (controls.type === LayerType.TILE) {
           controls.playback = {
             ...controls.playback,
@@ -1035,20 +1202,81 @@ export class LayerControlService {
   }
 
   /**
-   * Saves active layer controls to localStorage.
+   * Saves active layer controls to localStorage. ECMWF forecast selection
+   * (timestamps at runtime) is translated to indices into `availableForecasts`
+   * so that "the latest run" stays "the latest run" across sessions, even
+   * when the underlying timestamps have rolled forward.
    */
   private saveControls(): void {
-    const state = this.activeLayers().map(({ controls }) => controls);
+    const state = this.activeLayers().map(({ controls }) => this.toPersistedControls(controls));
     localStorage.setItem(STORAGE_KEYS.ACTIVE_LAYERS, JSON.stringify(state));
   }
 
   /**
-   * Loads layer controls from localStorage.
+   * Converts runtime LayerControls to its persisted shape. Only ECMWF needs
+   * translation; other categories serialize as-is.
    */
-  private loadControls(): LayerControls[] | undefined {
+  private toPersistedControls(controls: LayerControls): PersistedLayerControls {
+    if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.ECMWF_TP) {
+      return controls;
+    }
+    const ecmwf = controls as EcmwfTpLayerControls;
+    const config = this.layerConfigService.getConfig(ecmwf.id) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
+    // Defensive: if config isn't available (shouldn't happen for an active
+    // layer being persisted), drop the selection rather than write stale data.
+    const availableForecasts = config?.availableForecasts ?? [];
+    const selectedForecastIndices: number[] = [];
+    for (const ts of ecmwf.forecast.selectedForecastTimestamps) {
+      const idx = availableForecasts.indexOf(ts);
+      if (idx >= 0) selectedForecastIndices.push(idx);
+    }
+    const forecastOpacityByIndex: Record<number, number> = {};
+    for (const [ts, op] of Object.entries(ecmwf.forecast.forecastOpacity)) {
+      const idx = availableForecasts.indexOf(ts);
+      if (idx >= 0) forecastOpacityByIndex[idx] = op;
+    }
+    return {
+      ...ecmwf,
+      forecast: { selectedForecastIndices, forecastOpacityByIndex },
+    };
+  }
+
+  /**
+   * Converts persisted LayerControls back to its runtime shape. For ECMWF,
+   * stashes the persisted forecast indices into `pendingEcmwfIndices` and
+   * returns controls with empty runtime forecast state — the reconciliation
+   * effect translates indices to timestamps once the config arrives.
+   */
+  private fromPersistedControls(persisted: PersistedLayerControls): LayerControls {
+    if (persisted.type !== LayerType.TILE || persisted.category !== LayerCategory.ECMWF_TP) {
+      return persisted as LayerControls;
+    }
+    const ecmwfPersisted = persisted as PersistedEcmwfTpLayerControls;
+    this.pendingEcmwfIndices.set(ecmwfPersisted.id, {
+      indices: [...(ecmwfPersisted.forecast.selectedForecastIndices ?? [])],
+      opacityByIndex: { ...(ecmwfPersisted.forecast.forecastOpacityByIndex ?? {}) },
+    });
+    return {
+      ...ecmwfPersisted,
+      forecast: {
+        selectedForecastTimestamps: [],
+        forecastOpacity: {},
+      },
+    } as EcmwfTpLayerControls;
+  }
+
+  /**
+   * Loads layer controls from localStorage. The persisted shape for ECMWF
+   * layers carries forecast selection as indices rather than timestamps —
+   * `initializeControls` is responsible for buffering those into
+   * `pendingEcmwfIndices` and producing a valid runtime `LayerControls`.
+   */
+  private loadControls(): PersistedLayerControls[] | undefined {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_LAYERS);
-      return saved ? JSON.parse(saved) : undefined;
+      return saved ? (JSON.parse(saved) as PersistedLayerControls[]) : undefined;
     } catch {
       return undefined;
     }
