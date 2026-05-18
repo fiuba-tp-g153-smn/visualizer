@@ -29,3 +29,7 @@ export { GLM_SUBGROUP } from './goes/glm/config';
 
 // ECMWF configuration
 export { ECMWF_SUBGROUP } from './ecmwf/config';
+
+// SMN station configuration
+export { SMN_STATIONS_SUBGROUP } from './smn-stations/config';
+export { SMN_STATION_RENDER_CONFIG } from './smn-stations/render.config';

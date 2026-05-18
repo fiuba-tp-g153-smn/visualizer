@@ -17,6 +17,7 @@ import {
   EcmwfTpTileLayer,
   EcmwfTpTileLayerConfig,
   WmsLayerControls,
+  VectorLayerControls,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -28,6 +29,25 @@ import { STORAGE_KEYS } from '../../constants';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
+import {
+  DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
+  isSmnStationsTemporalMode,
+  SmnStationsTemporalMode,
+} from '../../config/layers/smn-stations/controls.constants';
+
+interface PersistedSmnStationsSharedControlsState {
+  opacity: number;
+  zIndex: number | null;
+  scaleVisible: boolean;
+  temporalMode: SmnStationsTemporalMode;
+  maxPastHours: number;
+  lastImagesCount: number;
+  selectedTilesetId: string | null;
+  // When false, the renderer filters out stations whose `hasData` is false
+  // (i.e. their last observation falls outside the requested tolerance window).
+  // Default true preserves "show everything" until the user opts to declutter.
+  showStationsWithoutData: boolean;
+}
 
 /**
  * Shape of ECMWF forecast state when persisted to localStorage. Indices
@@ -49,6 +69,7 @@ type PersistedLayerControls =
   | GoesLayerControls
   | RadarLayerControls
   | WmsLayerControls
+  | VectorLayerControls
   | PersistedEcmwfTpLayerControls;
 
 /**
@@ -73,6 +94,16 @@ export class LayerControlService {
   private readonly engineService = inject(PlaybackEngineService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
+  private readonly smnStationsSharedState = signal<PersistedSmnStationsSharedControlsState>({
+    opacity: 1,
+    zIndex: null,
+    scaleVisible: false,
+    temporalMode: SmnStationsTemporalMode.LATEST,
+    maxPastHours: DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
+    lastImagesCount: 6,
+    selectedTilesetId: null,
+    showStationsWithoutData: true,
+  });
 
   /**
    * Transient buffer for ECMWF forecast indices loaded from localStorage. The
@@ -87,6 +118,7 @@ export class LayerControlService {
   >();
 
   constructor() {
+    this.loadSmnStationsSharedState();
     this.initializeControls();
 
     // Auto-save controls when they change
@@ -265,6 +297,122 @@ export class LayerControlService {
     });
   }
 
+  isSmnStationsLayer(layerId: string): boolean {
+    const layer = this.layersService.getLayerById(layerId);
+    return layer?.category === LayerCategory.SMN_STATIONS;
+  }
+
+  getSmnStationsSharedOpacity(): number {
+    return this.smnStationsSharedState().opacity;
+  }
+
+  getSmnStationsSharedZIndex(): number | null {
+    return this.smnStationsSharedState().zIndex;
+  }
+
+  isSmnStationsScaleVisible(): boolean {
+    return this.smnStationsSharedState().scaleVisible;
+  }
+
+  getSmnStationsTemporalMode(): SmnStationsTemporalMode {
+    return this.smnStationsSharedState().temporalMode;
+  }
+
+  getSmnStationsMaxPastHours(): number {
+    return this.smnStationsSharedState().maxPastHours;
+  }
+
+  getSmnStationsSelectedTilesetId(): string | null {
+    return this.smnStationsSharedState().selectedTilesetId;
+  }
+
+  getSmnStationsLastImagesCount(): number {
+    return this.smnStationsSharedState().lastImagesCount;
+  }
+
+  captureSmnStationsSharedFromControls(controls: LayerControls): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      opacity: this.clampSmnStationsOpacity(controls.opacity),
+      zIndex: Number.isFinite(controls.zIndex) ? Math.max(0, controls.zIndex) : null,
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsSharedOpacity(opacity: number): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      opacity: this.clampSmnStationsOpacity(opacity),
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsSharedZIndex(zIndex: number | null): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      zIndex: zIndex === null ? null : Math.max(0, Math.round(zIndex)),
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsScaleVisible(scaleVisible: boolean): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      scaleVisible,
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsTemporalMode(temporalMode: SmnStationsTemporalMode): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      temporalMode,
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsMaxPastHours(maxPastHours: number): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      maxPastHours: Math.max(0, Math.min(24, Math.round(maxPastHours))),
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsLastImagesCount(lastImagesCount: number): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      lastImagesCount: Math.max(1, Math.round(lastImagesCount)),
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  setSmnStationsSelectedTilesetId(selectedTilesetId: string | null): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      selectedTilesetId,
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  getSmnStationsShowStationsWithoutData(): boolean {
+    return this.smnStationsSharedState().showStationsWithoutData;
+  }
+
+  setSmnStationsShowStationsWithoutData(showStationsWithoutData: boolean): void {
+    this.smnStationsSharedState.update((state) => ({
+      ...state,
+      showStationsWithoutData,
+    }));
+    this.saveSmnStationsSharedState();
+  }
+
+  // Public readonly signal so component templates can react via computed/effect
+  // without having to call the getter inside a tracking context.
+  readonly smnStationsShowStationsWithoutData = computed(
+    () => this.smnStationsSharedState().showStationsWithoutData,
+  );
+
   // ============================================================================
   // Public Computed Signals
   // ============================================================================
@@ -432,6 +580,9 @@ export class LayerControlService {
             }
           }
           break;
+        case LayerType.VECTOR:
+          // No special initialization needed for vector layers
+          break;
         case LayerType.WMS:
           // No special initialization needed for WMS layers
           break;
@@ -479,6 +630,25 @@ export class LayerControlService {
     this.updateControls(layerId, (controls) => {
       controls.opacity = clampedOpacity;
     });
+
+    if (this.isSmnStationsLayer(layerId)) {
+      this.setSmnStationsSharedOpacity(clampedOpacity);
+    }
+  }
+
+  /**
+   * Sets the z-index for a layer.
+   */
+  setZIndex(layerId: string, zIndex: number): void {
+    const normalizedZIndex = Math.max(0, Math.round(zIndex));
+
+    this.updateControls(layerId, (controls) => {
+      controls.zIndex = normalizedZIndex;
+    });
+
+    if (this.isSmnStationsLayer(layerId)) {
+      this.setSmnStationsSharedZIndex(normalizedZIndex);
+    }
   }
 
   /**
@@ -709,6 +879,15 @@ export class LayerControlService {
         }
       });
     });
+
+    const activeSmnLayerId = filteredIds.find((layerId) => this.isSmnStationsLayer(layerId));
+
+    if (activeSmnLayerId) {
+      const controls = this.getControls(activeSmnLayerId);
+      if (controls.visible) {
+        this.setSmnStationsSharedZIndex(controls.zIndex ?? 0);
+      }
+    }
   }
 
   // ============================================================================
@@ -967,6 +1146,11 @@ export class LayerControlService {
           ...baseControls,
           type: LayerType.WMS,
         };
+      case LayerType.VECTOR:
+        return {
+          ...baseControls,
+          type: LayerType.VECTOR,
+        };
       case LayerType.TILE:
         const baseTileControls: TileLayerControls = {
           ...baseControls,
@@ -1095,6 +1279,74 @@ export class LayerControlService {
       return saved ? (JSON.parse(saved) as PersistedLayerControls[]) : undefined;
     } catch {
       return undefined;
+    }
+  }
+
+  private clampSmnStationsOpacity(opacity: number): number {
+    return Math.max(0, Math.min(1, opacity));
+  }
+
+  private loadSmnStationsSharedState(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS);
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Partial<PersistedSmnStationsSharedControlsState>;
+
+      this.smnStationsSharedState.set({
+        opacity:
+          typeof parsed.opacity === 'number'
+            ? this.clampSmnStationsOpacity(parsed.opacity)
+            : this.smnStationsSharedState().opacity,
+        zIndex:
+          typeof parsed.zIndex === 'number' && Number.isFinite(parsed.zIndex)
+            ? Math.max(0, Math.round(parsed.zIndex))
+            : null,
+        scaleVisible:
+          typeof parsed.scaleVisible === 'boolean'
+            ? parsed.scaleVisible
+            : this.smnStationsSharedState().scaleVisible,
+        temporalMode: isSmnStationsTemporalMode(parsed.temporalMode)
+          ? parsed.temporalMode
+          : this.smnStationsSharedState().temporalMode,
+        maxPastHours:
+          typeof parsed.maxPastHours === 'number' && Number.isFinite(parsed.maxPastHours)
+            ? Math.max(0, Math.min(24, Math.round(parsed.maxPastHours)))
+            : this.smnStationsSharedState().maxPastHours,
+        lastImagesCount:
+          typeof parsed.lastImagesCount === 'number' && Number.isFinite(parsed.lastImagesCount)
+            ? Math.max(1, Math.round(parsed.lastImagesCount))
+            : this.smnStationsSharedState().lastImagesCount,
+        selectedTilesetId:
+          typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
+        showStationsWithoutData:
+          typeof parsed.showStationsWithoutData === 'boolean'
+            ? parsed.showStationsWithoutData
+            : this.smnStationsSharedState().showStationsWithoutData,
+      });
+    } catch {
+      // Ignore malformed persisted state.
+    }
+  }
+
+  private saveSmnStationsSharedState(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS,
+        JSON.stringify(this.smnStationsSharedState()),
+      );
+    } catch {
+      // Ignore storage failures.
     }
   }
 }

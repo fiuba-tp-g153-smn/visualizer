@@ -6,13 +6,13 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MapInfoService } from '../../../../../services/layers/map-info.service';
 
 @Component({
-  selector: 'app-general-tools-tab',
+  selector: 'app-general-tab',
   standalone: true,
   imports: [CommonModule, MatCheckboxModule, MatTooltipModule],
-  templateUrl: './general-tools-tab.html',
-  styleUrl: './general-tools-tab.scss',
+  templateUrl: './general-tab.html',
+  styleUrl: './general-tab.scss',
 })
-export class GeneralToolsTabComponent {
+export class GeneralTabComponent {
   readonly mapInfo = inject(MapInfoService);
 
   onCoordinatesChange(enabled: boolean): void {

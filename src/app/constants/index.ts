@@ -16,11 +16,15 @@ export { PHENOMENON_CODES, type PhenomenonCode } from './phenomenon-codes.consta
 // Constantes de unidades y conversiones
 export {
   TEMPERATURE_UNITS,
+  WIND_SPEED_UNITS,
+  WIND_SPEED_UNIT_ALIASES,
   RADAR_UNITS,
   GLM_UNITS,
   ABI_UNITS,
   DISTANCE_UNITS,
+  SMN_UNITS,
   KELVIN_TO_CELSIUS_OFFSET,
+  KNOT_TO_KILOMETERS_PER_HOUR_FACTOR,
 } from './units.constants';
 
 export { STORAGE_KEYS } from './storage-keys.constants';

@@ -3,16 +3,16 @@ import { CommonModule } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { PointQueryViewerService } from '../../../../../services/layers/point-query-tools.service';
+import { PointQueryViewerService } from '../../../../../services/tools/point-query-viewer.service';
 
 @Component({
-  selector: 'app-point-query-tools-tab',
+  selector: 'app-point-query-viewer-tab',
   standalone: true,
   imports: [CommonModule, MatCheckboxModule, MatTooltipModule],
-  templateUrl: './point-query-tools-tab.html',
-  styleUrl: './point-query-tools-tab.scss',
+  templateUrl: './point-query-viewer-tab.html',
+  styleUrl: './point-query-viewer-tab.scss',
 })
-export class PointQueryToolsTabComponent {
+export class PointQueryViewerTabComponent {
   readonly viewer = inject(PointQueryViewerService);
 
   onToolEnabledChange(enabled: boolean): void {
