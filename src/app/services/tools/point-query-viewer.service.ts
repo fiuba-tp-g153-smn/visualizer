@@ -482,6 +482,7 @@ export class PointQueryViewerService {
     lat: number,
     lon: number,
     elevationId?: string,
+    forecastTs?: string,
   ): Observable<PointQueryDisplayData> {
     const layerId = layer.id;
     const layerName = layer.name;
@@ -498,7 +499,7 @@ export class PointQueryViewerService {
     }
 
     if (layer.category === LayerCategory.ECMWF_TP) {
-      return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon);
+      return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon, forecastTs);
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
@@ -529,6 +530,7 @@ export class PointQueryViewerService {
     controls: TileLayerControls,
     lat: number,
     lon: number,
+    forecastTs?: string,
   ): Observable<PointQueryDisplayData> | null {
     if (layer.type !== LayerType.TILE) return null;
     if (layer.category !== LayerCategory.ECMWF_TP) return null;
@@ -560,14 +562,21 @@ export class PointQueryViewerService {
     );
     const timestampTs = config.availableTilesets[idx].id;
 
+    // If the caller pinned a specific forecast (per-run point query), validate
+    // it covers this period; otherwise fall back to the first selected
+    // forecast that does.
     const forecastsForPeriod = config.forecastsByPeriod[timestampTs];
     const selectedForecasts = ecmwfControls.forecast.selectedForecastTimestamps;
-    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
-    if (!forecastTs) {
+    const resolvedForecastTs = forecastTs
+      ? forecastsForPeriod?.includes(forecastTs)
+        ? forecastTs
+        : undefined
+      : selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!resolvedForecastTs) {
       return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
     }
 
-    const url = secondary.buildPointQueryUrl(forecastTs, timestampTs, lat, lon);
+    const url = secondary.buildPointQueryUrl(resolvedForecastTs, timestampTs, lat, lon);
     const secondaryLayerId = buildSecondaryLayerId(layer.id);
     const secondaryLayerName = 'Presion a nivel del mar';
     const mslpScaleRange: ScaleRangeInfo = { min: 950, max: 1050, totalSteps: 100 };
@@ -682,6 +691,7 @@ export class PointQueryViewerService {
     controls: EcmwfTpLayerControls,
     lat: number,
     lon: number,
+    forecastTs?: string,
   ): Observable<PointQueryDisplayData> {
     const config = this.layerConfigService.getConfig(layer.id) as
       | EcmwfTpTileLayerConfig
@@ -701,14 +711,20 @@ export class PointQueryViewerService {
     );
     const periodTs = config.availableTilesets[idx].id;
 
+    // If a specific forecast was requested (per-run point query), validate it
+    // covers this period; otherwise pick the first selected forecast that does.
     const forecastsForPeriod = config.forecastsByPeriod[periodTs];
     const selectedForecasts = controls.forecast.selectedForecastTimestamps;
-    const forecastTs = selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
-    if (!forecastTs) {
+    const resolvedForecastTs = forecastTs
+      ? forecastsForPeriod?.includes(forecastTs)
+        ? forecastTs
+        : undefined
+      : selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
+    if (!resolvedForecastTs) {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
-    const url = buildEcmwfTpPointQueryUrl(forecastTs, periodTs, lat, lon);
+    const url = buildEcmwfTpPointQueryUrl(resolvedForecastTs, periodTs, lat, lon);
 
     const scaleRange = this.extractScaleRange(layer as EcmwfTpTileLayer);
     if (!scaleRange) {
