@@ -33,7 +33,7 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
       variable: 'total-precipitation',
       name: 'Precipitación Total',
       description:
-        'Precipitación total acumulada en una ventana centrada de 6 horas — modelo ECMWF',
+        'Precipitación total acumulada en las 6 horas previas — modelo ECMWF',
       scale: ECMWF_TP_SCALE,
       // MSLP isobars are rendered as a secondary vector overlay over TP raster.
       // Always tied to TP visually: same toggle, same timeline, same forecast run.
