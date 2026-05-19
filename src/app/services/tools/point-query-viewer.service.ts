@@ -55,6 +55,14 @@ interface MouseCoordinates {
   lon: number;
 }
 
+export const POINT_QUERY_PANEL_MODES = {
+  FIXED: 'fixed',
+  NEAR_MARKER: 'near-marker',
+} as const;
+
+export type PointQueryPanelMode =
+  (typeof POINT_QUERY_PANEL_MODES)[keyof typeof POINT_QUERY_PANEL_MODES];
+
 type DisplaySourceKind = 'primary' | 'secondary';
 
 type DisplaySourceItem = {
@@ -78,6 +86,7 @@ interface PersistedPointQueryViewerState {
   enabled: boolean;
   selectedLayerIdsOrdered: string[];
   showMarker: boolean;
+  panelMode?: PointQueryPanelMode;
 }
 
 interface SourceQueryResult {
@@ -116,6 +125,7 @@ export class PointQueryViewerService {
   readonly manuallyDeselectedLayerIds = signal<Set<string>>(new Set());
   readonly lastClickCoordinates = signal<MouseCoordinates | null>(null);
   readonly showMarker = signal<boolean>(true);
+  readonly panelMode = signal<PointQueryPanelMode>(POINT_QUERY_PANEL_MODES.FIXED);
   readonly isPaused = signal<boolean>(false);
 
   // Current marker position (for rendering on map)
@@ -446,6 +456,19 @@ export class PointQueryViewerService {
 
   toggleMarker(enabled: boolean): void {
     this.showMarker.set(enabled);
+
+    if (!enabled && this.panelMode() === POINT_QUERY_PANEL_MODES.NEAR_MARKER) {
+      this.panelMode.set(POINT_QUERY_PANEL_MODES.FIXED);
+    }
+  }
+
+  setPanelMode(mode: PointQueryPanelMode): void {
+    this.panelMode.set(mode);
+
+    // Near-marker mode depends on marker context; keep marker visible.
+    if (mode === POINT_QUERY_PANEL_MODES.NEAR_MARKER && !this.showMarker()) {
+      this.showMarker.set(true);
+    }
   }
 
   toggleSourceSelection(layerId: string, checked: boolean): void {
@@ -940,9 +963,13 @@ export class PointQueryViewerService {
 
       const parsed = JSON.parse(raw) as PersistedPointQueryViewerState;
 
+      const showMarker = parsed.showMarker ?? false;
+      const panelMode = parsed.panelMode ?? POINT_QUERY_PANEL_MODES.FIXED;
+
       this.enabled.set(parsed.enabled ?? false);
       this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
-      this.showMarker.set(parsed.showMarker ?? false);
+      this.showMarker.set(showMarker);
+      this.panelMode.set(showMarker ? panelMode : POINT_QUERY_PANEL_MODES.FIXED);
     } catch (error) {
       console.warn('Failed to load point query viewer state from localStorage:', error);
     }
@@ -957,6 +984,7 @@ export class PointQueryViewerService {
       enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
       showMarker: this.showMarker(),
+      panelMode: this.panelMode(),
     };
 
     try {

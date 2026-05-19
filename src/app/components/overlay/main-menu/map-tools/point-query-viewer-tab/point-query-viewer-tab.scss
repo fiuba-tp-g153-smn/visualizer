@@ -26,6 +26,12 @@
   gap: 12px;
 }
 
+.display-mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .sources-section {
   display: flex;
   flex-direction: column;
