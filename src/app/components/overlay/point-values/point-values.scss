@@ -11,6 +11,11 @@
   gap: 8px;
   pointer-events: auto;
   overflow: visible;
+
+  &.near-marker {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
 }
 
 .point-value-column {
@@ -19,6 +24,10 @@
   gap: 8px;
   pointer-events: auto;
   overflow: visible;
+}
+
+.point-value-container.near-marker .point-value-column {
+  flex-direction: column;
 }
 
 app-point-value-panel {

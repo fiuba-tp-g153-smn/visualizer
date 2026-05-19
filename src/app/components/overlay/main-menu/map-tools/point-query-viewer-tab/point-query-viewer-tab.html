@@ -19,6 +19,20 @@
       >
         Mostrar marcador
       </mat-checkbox>
+
+      @if (viewer.showMarker()) {
+        <div class="display-mode-section">
+          <span class="section-label">Ubicacion del visor</span>
+          <mat-radio-group
+            class="interaction-radio-group"
+            [value]="viewer.panelMode()"
+            (change)="onPanelModeChange($event.value)"
+          >
+            <mat-radio-button [value]="panelModes.FIXED">Panel fijo</mat-radio-button>
+            <mat-radio-button [value]="panelModes.NEAR_MARKER">Junto al marcador</mat-radio-button>
+          </mat-radio-group>
+        </div>
+      }
     }
   </div>
 
