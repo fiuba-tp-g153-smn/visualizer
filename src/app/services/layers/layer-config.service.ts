@@ -66,11 +66,15 @@ export class LayerConfigService {
     const configUrl = buildConfigUrl(layer.id);
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
-        const availableTilesets: TilesetEntry[] = (response.tilesets as any[])
+        const parsedTilesets: TilesetEntry[] = (response.tilesets as any[])
           .map((t: any) => t.id as string)
           .sort()
           .map((id: string) => ({ id, time: parseGoesTimestamp(id) }))
           .filter((e): e is TilesetEntry => e.time !== null);
+        const availableTilesets = this.keepLatestTilesetsForLayer(
+          layer.availablePeriods,
+          parsedTilesets,
+        );
 
         const layerConfig: GoesTileLayerConfig = {
           layerId: layer.id,
@@ -112,10 +116,14 @@ export class LayerConfigService {
 
     return this.http.get<any>(configUrl).pipe(
       map((response) => {
-        const availableTilesets: TilesetEntry[] = ((response.tilesets || []) as string[])
+        const parsedTilesets: TilesetEntry[] = ((response.tilesets || []) as string[])
           .sort()
           .map((id) => ({ id, time: parseRadarTimestamp(id) }))
           .filter((e): e is TilesetEntry => e.time !== null);
+        const availableTilesets = this.keepLatestTilesetsForLayer(
+          layer.availablePeriods,
+          parsedTilesets,
+        );
 
         const config: RadarTileLayerConfig = {
           layerId: layer.id,
@@ -139,69 +147,77 @@ export class LayerConfigService {
    */
   fetchEcmwfTpLayerConfig(layer: EcmwfTpTileLayer): Observable<EcmwfTpTileLayerConfig> {
     const forecastsUrl = buildConfigUrl(layer.id);
-    return this.http
-      .get<{ forecasts: Array<{ forecast_ts: string }> }>(forecastsUrl)
-      .pipe(
-        switchMap((resp) => {
-          if (!resp.forecasts?.length) {
-            throw new Error(`No forecasts available for ${layer.id}`);
-          }
-          const forecasts = resp.forecasts.map((f) => f.forecast_ts);
+    return this.http.get<{ forecasts: Array<{ forecast_ts: string }> }>(forecastsUrl).pipe(
+      switchMap((resp) => {
+        if (!resp.forecasts?.length) {
+          throw new Error(`No forecasts available for ${layer.id}`);
+        }
+        const forecasts = resp.forecasts.map((f) => f.forecast_ts);
 
-          const periodRequests = forecasts.map((ts) =>
-            this.http
-              .get<{ periods: Array<{ period_ts: string }> }>(
-                buildConfigUrl(`${layer.id}/${ts}`),
-              )
-              .pipe(map((r) => ({ ts, periods: r.periods.map((p) => p.period_ts).sort() }))),
-          );
+        const periodRequests = forecasts.map((ts) =>
+          this.http
+            .get<{ periods: Array<{ period_ts: string }> }>(buildConfigUrl(`${layer.id}/${ts}`))
+            .pipe(
+              map((r) => {
+                const sortedPeriodIds = r.periods.map((p) => p.period_ts).sort();
+                return {
+                  ts,
+                  periods: this.keepLatestPeriodIdsForLayer(
+                    layer.availablePeriods,
+                    sortedPeriodIds,
+                  ),
+                };
+              }),
+            ),
+        );
 
-          return forkJoin(periodRequests).pipe(
-            map((results) => {
-              const periodsByForecast: Record<string, string[]> = {};
-              results.forEach((r) => {
-                periodsByForecast[r.ts] = r.periods;
-              });
+        return forkJoin(periodRequests).pipe(
+          map((results) => {
+            const periodsByForecast: Record<string, string[]> = {};
+            results.forEach((r) => {
+              periodsByForecast[r.ts] = r.periods;
+            });
 
-              const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
+            const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
 
-              // Preserve the existing availableTilesets when a config already
-              // exists — it's a selection-derived view maintained by
-              // updateEcmwfTpSelectedForecasts and the reconciliation effect in
-              // LayerControlService. Re-seeding it from forecasts[0] on every
-              // 10s auto-refresh would clobber the user's selection-aware union
-              // and cause downstream tile churn. On the initial fetch (no prior
-              // config), seed from forecasts[0]'s periods as a sensible default
-              // until the selection-aware reconciliation runs.
-              const existing = this.configMap().get(layer.id) as
-                | EcmwfTpTileLayerConfig
-                | undefined;
-              const availableTilesets: TilesetEntry[] = existing
-                ? [...existing.availableTilesets]
-                : (periodsByForecast[forecasts[0]] ?? []).map((id) => ({
+            // Preserve the existing availableTilesets when a config already
+            // exists — it's a selection-derived view maintained by
+            // updateEcmwfTpSelectedForecasts and the reconciliation effect in
+            // LayerControlService. Re-seeding it from forecasts[0] on every
+            // 10s auto-refresh would clobber the user's selection-aware union
+            // and cause downstream tile churn. On the initial fetch (no prior
+            // config), seed from forecasts[0]'s periods as a sensible default
+            // until the selection-aware reconciliation runs.
+            const existing = this.configMap().get(layer.id) as EcmwfTpTileLayerConfig | undefined;
+            const availableTilesets: TilesetEntry[] = existing
+              ? this.keepLatestTilesetsForLayer(layer.availablePeriods, existing.availableTilesets)
+              : this.keepLatestTilesetsForLayer(
+                  layer.availablePeriods,
+                  (periodsByForecast[forecasts[0]] ?? []).map((id) => ({
                     id,
                     time: parseEcmwfTimestamp(id) ?? new Date(0),
-                  }));
+                  })),
+                );
 
-              const config: EcmwfTpTileLayerConfig = {
-                layerId: layer.id,
-                type: LayerType.TILE,
-                category: LayerCategory.ECMWF_TP,
-                availableTilesets,
-                availableForecasts: forecasts,
-                periodsByForecast,
-                forecastsByPeriod,
-              };
-              this.updateConfigMap(layer.id, config);
-              return config;
-            }),
-          );
-        }),
-        catchError((error) => {
-          console.error(`Failed to fetch ECMWF config for ${layer.id}:`, error);
-          throw error;
-        }),
-      );
+            const config: EcmwfTpTileLayerConfig = {
+              layerId: layer.id,
+              type: LayerType.TILE,
+              category: LayerCategory.ECMWF_TP,
+              availableTilesets,
+              availableForecasts: forecasts,
+              periodsByForecast,
+              forecastsByPeriod,
+            };
+            this.updateConfigMap(layer.id, config);
+            return config;
+          }),
+        );
+      }),
+      catchError((error) => {
+        console.error(`Failed to fetch ECMWF config for ${layer.id}:`, error);
+        throw error;
+      }),
+    );
   }
 
   /**
@@ -229,7 +245,16 @@ export class LayerConfigService {
       selectedPeriodsByForecast[forecastTs] = config.periodsByForecast[forecastTs] ?? [];
     }
 
-    const sortedPeriods = [...periodSet].sort();
+    const maxLoopPeriods = this.getMaxLoopPeriodsForLayer(layerId);
+    const sortedPeriods = this.keepLatestPeriodIds(maxLoopPeriods, [...periodSet].sort());
+    const availablePeriodIds = new Set(sortedPeriods);
+    const prunedSelectedPeriodsByForecast: Record<string, string[]> = {};
+    for (const [forecastTs, periods] of Object.entries(selectedPeriodsByForecast)) {
+      prunedSelectedPeriodsByForecast[forecastTs] = periods.filter((id) =>
+        availablePeriodIds.has(id),
+      );
+    }
+
     const availableTilesets: TilesetEntry[] = sortedPeriods.map((id) => ({
       id,
       time: parseEcmwfTimestamp(id) ?? new Date(0),
@@ -238,7 +263,7 @@ export class LayerConfigService {
     this.updateConfigMap(layerId, {
       ...config,
       availableTilesets,
-      forecastsByPeriod: this.buildForecastsByPeriod(selectedPeriodsByForecast),
+      forecastsByPeriod: this.buildForecastsByPeriod(prunedSelectedPeriodsByForecast),
     });
   }
 
@@ -338,9 +363,7 @@ export class LayerConfigService {
 
     switch (a.type) {
       case LayerType.TILE:
-        if (
-          !this.arraysAreEqual(a.availableTilesets, (b as TileLayerConfig).availableTilesets)
-        ) {
+        if (!this.arraysAreEqual(a.availableTilesets, (b as TileLayerConfig).availableTilesets)) {
           return false;
         }
         if (a.category === LayerCategory.ECMWF_TP) {
@@ -406,6 +429,60 @@ export class LayerConfigService {
       if (a[i].id !== b[i].id) return false;
     }
     return true;
+  }
+
+  private keepLatestPeriodIdsForLayer(
+    availablePeriods: readonly number[] | undefined,
+    periodIds: readonly string[],
+  ): string[] {
+    return this.keepLatestPeriodIds(this.getMaxLoopPeriods(availablePeriods), periodIds);
+  }
+
+  private keepLatestTilesetsForLayer(
+    availablePeriods: readonly number[] | undefined,
+    tilesets: readonly TilesetEntry[],
+  ): TilesetEntry[] {
+    return this.keepLatestTilesets(this.getMaxLoopPeriods(availablePeriods), tilesets);
+  }
+
+  private getMaxLoopPeriodsForLayer(layerId: string): number | undefined {
+    const layer = this.layersService.getLayerById(layerId);
+    if (!layer || layer.type !== LayerType.TILE) {
+      return undefined;
+    }
+
+    return this.getMaxLoopPeriods(layer.availablePeriods);
+  }
+
+  private getMaxLoopPeriods(availablePeriods: readonly number[] | undefined): number | undefined {
+    if (!availablePeriods || availablePeriods.length === 0) {
+      return undefined;
+    }
+
+    const max = Math.max(...availablePeriods);
+    return Number.isFinite(max) && max > 0 ? Math.floor(max) : undefined;
+  }
+
+  private keepLatestPeriodIds(
+    maxPeriods: number | undefined,
+    periodIds: readonly string[],
+  ): string[] {
+    if (!maxPeriods || periodIds.length <= maxPeriods) {
+      return [...periodIds];
+    }
+
+    return periodIds.slice(-maxPeriods);
+  }
+
+  private keepLatestTilesets(
+    maxPeriods: number | undefined,
+    tilesets: readonly TilesetEntry[],
+  ): TilesetEntry[] {
+    if (!maxPeriods || tilesets.length <= maxPeriods) {
+      return [...tilesets];
+    }
+
+    return tilesets.slice(-maxPeriods);
   }
 
   // ============================================================================
