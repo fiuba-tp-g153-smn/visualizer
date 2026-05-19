@@ -415,11 +415,11 @@ export class LayerConfigService {
   /**
    * Calculates the optimal timeIndex for a given range of images.
    * @param layerId - The layer ID
-   * @param lastImagesCount - Number of most recent images to include
+   * @param imageCount - Number of most recent images to include
    * @returns The calculated timeIndex, or undefined if config not available
    * @throws Error if called on non-TILE layer or no tilesets available
    */
-  calculateTimeIndexForRange(layerId: string, lastImagesCount: number): number | undefined {
+  calculateTimeIndexForRange(layerId: string, imageCount: number): number | undefined {
     const config = this.getConfig(layerId);
     if (!config) return undefined;
 
@@ -434,14 +434,14 @@ export class LayerConfigService {
         const layer = this.layersService.getLayerById(layerId);
         const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
 
-        if (lastImagesCount === 1) {
+        if (imageCount === 1) {
           // Single-frame mode: jump to the layer's default cursor
           // (first frame for forecasts, last for historical).
           return getDefaultCursorIndex(totalTilesets, isForecast);
         }
 
         // Multi-frame mode: position cursor at the start of the active window.
-        return computeWindowStart(totalTilesets, lastImagesCount, isForecast);
+        return computeWindowStart(totalTilesets, imageCount, isForecast);
       }
       default:
         throw new Error(

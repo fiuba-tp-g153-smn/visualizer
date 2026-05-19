@@ -544,7 +544,7 @@ export class LayerRenderService {
       result,
       currentTimeIndex,
       totalFrames,
-      controls.playback.lastImagesCount,
+      controls.playback.imageCount,
       absoluteZIndex,
       goesIsForecast,
       (adjIndex) => {
@@ -618,7 +618,7 @@ export class LayerRenderService {
         result,
         currentTimeIndex,
         totalFrames,
-        controls.playback.lastImagesCount,
+        controls.playback.imageCount,
         elevationZIndex,
         false,
         (adjIndex) => {
@@ -737,7 +737,7 @@ export class LayerRenderService {
         result,
         currentTimeIndex,
         totalFrames,
-        controls.playback.lastImagesCount,
+        controls.playback.imageCount,
         forecastZIndex,
         true,
         (adjIndex) => {
@@ -1098,13 +1098,13 @@ export class LayerRenderService {
     result: Map<string, L.TileLayer>,
     currentTimeIndex: number,
     totalFrames: number,
-    lastImagesCount: number,
+    imageCount: number,
     absoluteZIndex: number,
     isForecast: boolean,
     createLayer: (timeIndex: number) => { layer: L.TileLayer; key: string } | null,
   ): void {
-    const minTimeIndex = computeWindowStart(totalFrames, lastImagesCount, isForecast);
-    const windowSize = Math.min(lastImagesCount, totalFrames - minTimeIndex);
+    const minTimeIndex = computeWindowStart(totalFrames, imageCount, isForecast);
+    const windowSize = Math.min(imageCount, totalFrames - minTimeIndex);
 
     if (windowSize > 1) {
       for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {

@@ -31,7 +31,7 @@ import { PlaybackEngineService } from './playback-engine.service';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 import {
   DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
-  SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS,
+  SMN_STATIONS_IMAGE_COUNT_OPTIONS,
   isSmnStationsTemporalMode,
   SmnStationsTemporalMode,
 } from '../../config/layers/smn-stations/controls.constants';
@@ -42,7 +42,7 @@ interface PersistedSmnStationsSharedControlsState {
   scaleVisible: boolean;
   temporalMode: SmnStationsTemporalMode;
   maxPastHours: number;
-  lastImagesCount: number;
+  imageCount: number;
   selectedTilesetId: string | null;
   // When false, the renderer filters out stations whose `hasData` is false
   // (i.e. their last observation falls outside the requested tolerance window).
@@ -101,7 +101,7 @@ export class LayerControlService {
     scaleVisible: false,
     temporalMode: SmnStationsTemporalMode.LATEST,
     maxPastHours: DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
-    lastImagesCount: 6,
+    imageCount: 6,
     selectedTilesetId: null,
     showStationsWithoutData: true,
   });
@@ -327,8 +327,8 @@ export class LayerControlService {
     return this.smnStationsSharedState().selectedTilesetId;
   }
 
-  getSmnStationsLastImagesCount(): number {
-    return this.smnStationsSharedState().lastImagesCount;
+  getSmnStationsImageCount(): number {
+    return this.smnStationsSharedState().imageCount;
   }
 
   captureSmnStationsSharedFromControls(controls: LayerControls): void {
@@ -380,10 +380,10 @@ export class LayerControlService {
     this.saveSmnStationsSharedState();
   }
 
-  setSmnStationsLastImagesCount(lastImagesCount: number): void {
+  setSmnStationsImageCount(imageCount: number): void {
     this.smnStationsSharedState.update((state) => ({
       ...state,
-      lastImagesCount: this.normalizeSmnStationsLastImagesCount(lastImagesCount),
+      imageCount: this.normalizeSmnStationsImageCount(imageCount),
     }));
     this.saveSmnStationsSharedState();
   }
@@ -749,7 +749,7 @@ export class LayerControlService {
    * Sets the number of most recent images to display in playback mode.
    * Automatically adjusts timeIndex to the start of the selected range.
    */
-  setLastImagesCount(layerId: string, count: number): void {
+  setImageCount(layerId: string, count: number): void {
     const wasPlaying = this.isPlaying(layerId);
     const controls = this.getControls(layerId);
 
@@ -760,10 +760,10 @@ export class LayerControlService {
             isPlaying: false,
             speed: 1.0,
             timeIndex: 0,
-            lastImagesCount: count,
+            imageCount: count,
           };
         } else {
-          controls.playback.lastImagesCount = count;
+          controls.playback.imageCount = count;
         }
       }
     });
@@ -935,11 +935,11 @@ export class LayerControlService {
     const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
     if (!availablePeriods || availablePeriods.length === 0) return;
 
-    const lastImagesCount = controls.playback.lastImagesCount;
+    const imageCount = controls.playback.imageCount;
     const layer = this.layersService.getLayerById(layerId);
     const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
-    const minTimeIndex = computeWindowStart(availablePeriods.length, lastImagesCount, isForecast);
-    const maxTimeIndex = Math.min(minTimeIndex + lastImagesCount - 1, availablePeriods.length - 1);
+    const minTimeIndex = computeWindowStart(availablePeriods.length, imageCount, isForecast);
+    const maxTimeIndex = Math.min(minTimeIndex + imageCount - 1, availablePeriods.length - 1);
     const frameCount = maxTimeIndex - minTimeIndex + 1;
 
     if (frameCount < 2) return;
@@ -1163,7 +1163,7 @@ export class LayerControlService {
             isPlaying: false,
             timeIndex: undefined, // Will be set to latest when config loads
             speed: DEFAULT_LAYER_CONTROLS.playbackSpeed,
-            lastImagesCount: DEFAULT_LAYER_CONTROLS.lastImagesCount,
+            imageCount: DEFAULT_LAYER_CONTROLS.imageCount,
           },
         };
         switch (layer.category) {
@@ -1323,10 +1323,10 @@ export class LayerControlService {
           typeof parsed.maxPastHours === 'number' && Number.isFinite(parsed.maxPastHours)
             ? Math.max(0, Math.min(24, Math.round(parsed.maxPastHours)))
             : this.smnStationsSharedState().maxPastHours,
-        lastImagesCount:
-          typeof parsed.lastImagesCount === 'number' && Number.isFinite(parsed.lastImagesCount)
-            ? this.normalizeSmnStationsLastImagesCount(parsed.lastImagesCount)
-            : this.smnStationsSharedState().lastImagesCount,
+        imageCount:
+          typeof parsed.imageCount === 'number' && Number.isFinite(parsed.imageCount)
+            ? this.normalizeSmnStationsImageCount(parsed.imageCount)
+            : this.smnStationsSharedState().imageCount,
         selectedTilesetId:
           typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
         showStationsWithoutData:
@@ -1354,9 +1354,9 @@ export class LayerControlService {
     }
   }
 
-  private normalizeSmnStationsLastImagesCount(lastImagesCount: number): number {
-    const rounded = Math.max(1, Math.round(lastImagesCount));
-    const nextAllowed = SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS.find((option) => option >= rounded);
-    return nextAllowed ?? SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS.at(-1)!;
+  private normalizeSmnStationsImageCount(imageCount: number): number {
+    const rounded = Math.max(1, Math.round(imageCount));
+    const nextAllowed = SMN_STATIONS_IMAGE_COUNT_OPTIONS.find((option) => option >= rounded);
+    return nextAllowed ?? SMN_STATIONS_IMAGE_COUNT_OPTIONS.at(-1)!;
   }
 }

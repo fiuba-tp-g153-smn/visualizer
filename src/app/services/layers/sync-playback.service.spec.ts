@@ -82,7 +82,7 @@ function createMockGoesControls(
       isPlaying: false,
       timeIndex: 0,
       speed: 1,
-      lastImagesCount: 6,
+      imageCount: 6,
     },
     ...overrides,
   };
@@ -129,7 +129,7 @@ function createMockRadarControls(
       isPlaying: false,
       timeIndex: 0,
       speed: 1,
-      lastImagesCount: 6,
+      imageCount: 6,
     },
     elevation: {
       selectedElevationIds: ['elev0'],
@@ -149,7 +149,7 @@ describe('SyncPlaybackService', () => {
     activeLayers: WritableSignal<ActiveLayerEntry[]>;
     getControls: ReturnType<typeof vi.fn>;
     setTimeIndex: ReturnType<typeof vi.fn>;
-    setLastImagesCount: ReturnType<typeof vi.fn>;
+    setImageCount: ReturnType<typeof vi.fn>;
     stopPlayback: ReturnType<typeof vi.fn>;
   };
   let layerConfigServiceMock: {
@@ -173,7 +173,7 @@ describe('SyncPlaybackService', () => {
       activeLayers: signal<ActiveLayerEntry[]>([]),
       getControls: vi.fn(),
       setTimeIndex: vi.fn(),
-      setLastImagesCount: vi.fn(),
+      setImageCount: vi.fn(),
       stopPlayback: vi.fn(),
     };
 
@@ -320,17 +320,17 @@ describe('SyncPlaybackService', () => {
       expect(service.isLayerSelected('layer-a')).toBe(false);
     });
 
-    it('should restore original lastImagesCount on deselect', () => {
+    it('should restore original imageCount on deselect', () => {
       const originalCount = 6;
       const controls = createMockGoesControls('layer-a', {
-        playback: { isPlaying: false, timeIndex: 0, speed: 1, lastImagesCount: originalCount },
+        playback: { isPlaying: false, timeIndex: 0, speed: 1, imageCount: originalCount },
       });
       layerControlServiceMock.getControls.mockReturnValue(controls);
 
       service.selectLayer('layer-a');
       service.deselectLayer('layer-a');
 
-      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenLastCalledWith(
+      expect(layerControlServiceMock.setImageCount).toHaveBeenLastCalledWith(
         'layer-a',
         originalCount,
       );
@@ -901,7 +901,7 @@ describe('SyncPlaybackService', () => {
   // ============================================================================
 
   describe('Detach layer', () => {
-    it('should remove layer without restoring lastImagesCount', () => {
+    it('should remove layer without restoring imageCount', () => {
       const layer = createMockGoesLayer('layer-a');
       const controls = createMockGoesControls('layer-a');
       const tilesets = createTilesets(8, baseTime, 10);
@@ -914,12 +914,12 @@ describe('SyncPlaybackService', () => {
       service.selectLayer('layer-a');
 
       // Clear mock calls from selection
-      layerControlServiceMock.setLastImagesCount.mockClear();
+      layerControlServiceMock.setImageCount.mockClear();
 
       service.detachLayer('layer-a');
 
-      // Should NOT call setLastImagesCount when detaching
-      expect(layerControlServiceMock.setLastImagesCount).not.toHaveBeenCalled();
+      // Should NOT call setImageCount when detaching
+      expect(layerControlServiceMock.setImageCount).not.toHaveBeenCalled();
       expect(service.syncState().selectedLayerIds).toEqual([]);
     });
   });
@@ -1240,14 +1240,14 @@ describe('SyncPlaybackService', () => {
   });
 
   // ============================================================================
-  // Original LastImagesCount Protection
+  // Original ImageCount Protection
   // ============================================================================
 
-  describe('Original lastImagesCount protection', () => {
-    it('should not overwrite original lastImagesCount on duplicate selection', () => {
+  describe('Original imageCount protection', () => {
+    it('should not overwrite original imageCount on duplicate selection', () => {
       const layer = createMockGoesLayer('layer-a');
       const controls = createMockGoesControls('layer-a', {
-        playback: { isPlaying: false, timeIndex: 0, speed: 1, lastImagesCount: 8 },
+        playback: { isPlaying: false, timeIndex: 0, speed: 1, imageCount: 8 },
       });
       const tilesets = createTilesets(10, baseTime, 10);
 
@@ -1260,7 +1260,7 @@ describe('SyncPlaybackService', () => {
 
       // Change the controls to simulate external update
       const newControls = createMockGoesControls('layer-a', {
-        playback: { isPlaying: false, timeIndex: 0, speed: 1, lastImagesCount: 20 },
+        playback: { isPlaying: false, timeIndex: 0, speed: 1, imageCount: 20 },
       });
       layerControlServiceMock.getControls.mockReturnValue(newControls);
 
@@ -1269,7 +1269,7 @@ describe('SyncPlaybackService', () => {
 
       // Deselect should restore original value (8), not the new one (20)
       service.deselectLayer('layer-a');
-      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenLastCalledWith('layer-a', 8);
+      expect(layerControlServiceMock.setImageCount).toHaveBeenLastCalledWith('layer-a', 8);
     });
   });
 
@@ -1493,12 +1493,12 @@ describe('SyncPlaybackService', () => {
       TestBed.tick();
 
       service.selectLayer('layer-a');
-      layerControlServiceMock.setLastImagesCount.mockClear();
+      layerControlServiceMock.setImageCount.mockClear();
 
       service.setFrameCount(6);
 
       // Should request 6 + 4 = 10 tilesets
-      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenCalledWith('layer-a', 10);
+      expect(layerControlServiceMock.setImageCount).toHaveBeenCalledWith('layer-a', 10);
     });
 
     it('should apply SYNC_EXTRA_FRAMES to all selected layers', () => {
@@ -1520,13 +1520,13 @@ describe('SyncPlaybackService', () => {
 
       service.selectLayer('layer-a');
       service.selectLayer('layer-b');
-      layerControlServiceMock.setLastImagesCount.mockClear();
+      layerControlServiceMock.setImageCount.mockClear();
 
       service.setFrameCount(12);
 
       // Both should get 12 + 4 = 16
-      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenCalledWith('layer-a', 16);
-      expect(layerControlServiceMock.setLastImagesCount).toHaveBeenCalledWith('layer-b', 16);
+      expect(layerControlServiceMock.setImageCount).toHaveBeenCalledWith('layer-a', 16);
+      expect(layerControlServiceMock.setImageCount).toHaveBeenCalledWith('layer-b', 16);
     });
   });
 
