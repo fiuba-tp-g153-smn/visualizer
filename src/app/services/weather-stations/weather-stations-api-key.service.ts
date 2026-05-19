@@ -134,8 +134,7 @@ export class WeatherStationsApiKeyService {
       return this.dialogInFlight;
     }
     this.dialogInFlight = this.promptForKey(
-      'La API Key configurada fue rechazada por el servidor (401). ' +
-        'Probablemente haya sido revocada. Pegá una nueva API Key para continuar.',
+      'Tu clave ya no funciona. Pedile una nueva al administrador del sistema y pegala acá.',
     );
     try {
       return await this.dialogInFlight;

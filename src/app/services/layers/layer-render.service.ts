@@ -352,7 +352,7 @@ export class LayerRenderService {
           L.DomEvent.preventDefault(evt.originalEvent);
         }
 
-        const popupData = this.buildSmnStationsPopupData(stationLayer, observation, value);
+        const popupData = this.buildSmnStationsPopupData(observation);
         const { element, destroy } = this.createSmnStationsPopupElement(popupData);
         const popup = L.popup({ pane: 'popupPane', className: 'smn-station-popup' })
           .setLatLng(evt.latlng)
@@ -910,15 +910,8 @@ export class LayerRenderService {
   }
 
   private buildSmnStationsPopupData(
-    layer: SmnStationLayer,
     observation: SmnStationObservationLike,
-    rawValue: number,
   ): SmnStationPopupData {
-    const sourceUnit = layer.scale?.unit ?? '';
-    const { displayValue, displayUnit } = this.resolveSmnStationsDisplayValueAndUnit(
-      rawValue,
-      sourceUnit,
-    );
     const formatValue = (
       input: number | null | undefined,
       precision: number,
@@ -961,10 +954,6 @@ export class LayerRenderService {
       stationName,
       province,
       values: [
-        {
-          label: layer.name,
-          value: `${displayValue.toFixed(this.getSmnStationsPrecision(layer.variable))} ${displayUnit}`,
-        },
         {
           label: 'Tiempo',
           value: formatText(observation.weather.weather?.description),
