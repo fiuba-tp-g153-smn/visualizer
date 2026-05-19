@@ -941,17 +941,22 @@ export class LayerControlService {
     const minTimeIndex = computeWindowStart(availablePeriods.length, imageCount, isForecast);
     const maxTimeIndex = Math.min(minTimeIndex + imageCount - 1, availablePeriods.length - 1);
     const frameCount = maxTimeIndex - minTimeIndex + 1;
+    const fallbackTimeIndex = getDefaultCursorIndex(availablePeriods.length, isForecast);
+    const currentTimeIndex = controls.playback.timeIndex ?? fallbackTimeIndex;
+    const startTimeIndex = Math.max(minTimeIndex, Math.min(currentTimeIndex, maxTimeIndex));
+    const startFrameIndex = startTimeIndex - minTimeIndex;
 
     if (frameCount < 2) return;
 
     const speed = controls.playback.speed;
 
     this.engineService.register(layerId, frameCount, speed);
+    this.engineService.setFrameIndex(layerId, startFrameIndex);
 
     this.updateControls(layerId, (c) => {
       if (c.type === LayerType.TILE && c.playback) {
         c.playback.isPlaying = true;
-        c.playback.timeIndex = minTimeIndex;
+        c.playback.timeIndex = startTimeIndex;
       }
     });
 

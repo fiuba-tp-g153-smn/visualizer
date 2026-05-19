@@ -12,7 +12,10 @@ import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
 import { NotificationService } from '../notifications/notification.service';
-import { SmnStationsTemporalMode } from '../../config/layers/smn-stations/controls.constants';
+import {
+  SMN_STATIONS_IMAGE_COUNT_OPTIONS,
+  SmnStationsTemporalMode,
+} from '../../config/layers/smn-stations/controls.constants';
 import {
   LayerConfig,
   LayerType,
@@ -344,8 +347,13 @@ export class LayerRefreshService {
       const resp = await firstValueFrom(
         this.http.get<BackendTilesetsResponse>(buildWeatherStationsTilesetsUrl()),
       );
+      const maxLoopPeriods = Math.max(...SMN_STATIONS_IMAGE_COUNT_OPTIONS);
+      const sortedTilesetIds = resp.tilesets.map((t) => t.tileset_id).sort();
       return {
-        tilesetIds: resp.tilesets.map((t) => t.tileset_id),
+        tilesetIds:
+          sortedTilesetIds.length > maxLoopPeriods
+            ? sortedTilesetIds.slice(-maxLoopPeriods)
+            : sortedTilesetIds,
       };
     } catch (error) {
       // The interceptor already re-prompted on 401; a 401 reaching here means
@@ -597,10 +605,7 @@ export class LayerRefreshService {
 
     // Otherwise, recalculate based on imageCount
     const imageCount = controls.playback.imageCount;
-    const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
-      layerId,
-      imageCount,
-    );
+    const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(layerId, imageCount);
 
     if (newTimeIndex !== undefined) {
       this.layerControlService.setTimeIndex(layerId, newTimeIndex);
