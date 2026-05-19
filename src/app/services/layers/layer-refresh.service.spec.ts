@@ -148,12 +148,13 @@ describe('LayerRefreshService — SMN backend integration', () => {
     harness.httpMock.verify();
   });
 
-  it('LATEST mode: hits /latest with X-API-Key header and marks every observation hasData=true', async () => {
+  it('LATEST mode: hits /latest and marks every observation hasData=true', async () => {
     const { service, httpMock } = harness;
     const promise = service.loadSmnStationsSnapshot(true);
 
+    // X-API-Key header injection is owned by `weatherStationsHttpInterceptor`
+    // and covered in its own spec; these tests don't wire it in.
     const tilesetsReq = httpMock.expectOne(buildWeatherStationsTilesetsUrl());
-    expect(tilesetsReq.request.headers.get('X-API-Key')).toBe('test-api-key');
     tilesetsReq.flush({
       tilesets: [
         { tileset_id: '20260517T1400Z', scraped_at: '2026-05-17T14:00:00Z', station_count: 2 },
@@ -161,7 +162,6 @@ describe('LayerRefreshService — SMN backend integration', () => {
     });
 
     const registryReq = httpMock.expectOne(buildWeatherStationsRegistryUrl());
-    expect(registryReq.request.headers.get('X-API-Key')).toBe('test-api-key');
     registryReq.flush(REGISTRY_RESPONSE);
 
     // Yield so Promise.all([tilesets, registry]) resolves and /latest fires.
@@ -169,7 +169,6 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
     const latestReq = httpMock.expectOne(buildWeatherStationsLatestUrl());
     expect(latestReq.request.method).toBe('GET');
-    expect(latestReq.request.headers.get('X-API-Key')).toBe('test-api-key');
     latestReq.flush(
       makeSnapshot('2026-05-17T14:05:00Z', [
         { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
@@ -203,7 +202,6 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
     // Target T = 2026-05-17T14:00Z, window = [11:00, 14:00].
     const tilesetReq = httpMock.expectOne(buildWeatherStationsTilesetUrl('20260517T1400Z', 3));
-    expect(tilesetReq.request.headers.get('X-API-Key')).toBe('test-api-key');
     tilesetReq.flush(
       makeSnapshot('2026-05-17T13:30:00Z', [
         { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' }, // within window
@@ -243,25 +241,6 @@ describe('LayerRefreshService — SMN backend integration', () => {
         { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
       ]));
     await second;
-  });
-
-  it('omits X-API-Key when the env var is empty', async () => {
-    const { service, httpMock } = setupHarness({ apiKey: '' });
-    harness = { ...harness, httpMock };
-
-    const promise = service.loadSmnStationsSnapshot(true);
-
-    const tilesetsReq = httpMock.expectOne(buildWeatherStationsTilesetsUrl());
-    expect(tilesetsReq.request.headers.has('X-API-Key')).toBe(false);
-    tilesetsReq.flush({ tilesets: [] });
-    httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
-    await new Promise(r => setTimeout(r, 0));
-    httpMock
-      .expectOne(buildWeatherStationsLatestUrl())
-      .flush(makeSnapshot('2026-05-17T14:00:00Z', [
-        { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
-      ]));
-    await promise;
   });
 
   it('returns an empty snapshot when the backend errors out', async () => {

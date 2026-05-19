@@ -557,8 +557,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     if (this.isSmnStationsLayer()) {
       this.applySharedStateToSmnLayer();
-      await this.refreshService.ensureSmnStationsEndpointConfigLoaded();
-      await this.refreshService.loadSmnStationsSnapshot(true);
+      // Belt-and-suspenders: the weather-stations HTTP interceptor handles
+      // 401 re-prompt + notification, and both refresh-service methods are
+      // already fail-soft on other errors. The try/catch here just prevents
+      // a future regression from surfacing as `Uncaught (in promise)`.
+      try {
+        await this.refreshService.ensureSmnStationsEndpointConfigLoaded();
+        await this.refreshService.loadSmnStationsSnapshot(true);
+      } catch (err) {
+        console.warn('[LayerItem] SMN stations activation failed:', err);
+      }
     }
   }
 

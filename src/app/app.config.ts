@@ -5,20 +5,21 @@ import {
   inject,
 } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { routes } from './app.routes';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { LayerRefreshService } from './services/layers/layer-refresh.service';
 import { BaseMapService } from './services/base-maps/base-map.service';
 import { BasemapPerfService } from './services/base-maps/basemap-perf.service';
+import { weatherStationsHttpInterceptor } from './services/weather-stations/weather-stations-http.interceptor';
 import { TOOLTIP_DELAYS } from './config/timing.config';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideAnimationsAsync(),
-    provideHttpClient(withFetch()),
+    provideHttpClient(withFetch(), withInterceptors([weatherStationsHttpInterceptor])),
     provideRouter(
       routes,
       withInMemoryScrolling({
