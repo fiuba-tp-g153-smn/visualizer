@@ -258,20 +258,20 @@ const RADARES_SMN = [
       [-38.38, -69.69],
       [-34.04, -64.18],
     ] as const,
-  }
+  },
 ];
 
 export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   id: radar.id,
-  name: `Radar ${radar.number} - ${radar.ubi}`,
-  description: `Capas del radar meteorológico ${radar.number} de ${radar.ubi}`,
+  name: `RMA ${radar.number} - ${radar.ubi}`,
+  description: `Capas del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
   expanded: false,
   layers: products.map((product) => ({
     ...RADAR_DEFAULTS,
     id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
     name: product,
     scale: RADAR_SCALES[product],
-    description: `Producto ${product} del radar meteorológico ${radar.number} de ${radar.ubi}`,
+    description: `Producto ${product} del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
     minNativeZoom: radar.minNativeZoom,
     maxNativeZoom: radar.maxNativeZoom,
     boundingBox: radar.boundingBox,
