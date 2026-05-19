@@ -409,8 +409,8 @@
                   <div class="images-count-control">
                     <mat-form-field appearance="fill" class="images-count-select">
                       <mat-select
-                        [value]="lastImagesCount()"
-                        (selectionChange)="onLastImagesCountChange($event.value)"
+                        [value]="imageCount()"
+                        (selectionChange)="onImageCountChange($event.value)"
                         panelClass="layer-select-panel"
                         [disabled]="isSynced()"
                       >

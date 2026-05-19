@@ -495,7 +495,7 @@ export class LayerRefreshService {
 
   /**
    * Compares before and after configurations and shows appropriate notification.
-   * If there are changes, adjusts the timeIndex based on lastImagesCount.
+   * If there are changes, adjusts the timeIndex based on imageCount.
    */
   private compareAndNotify(
     layerId: string,
@@ -520,7 +520,7 @@ export class LayerRefreshService {
         break;
     }
 
-    // If there were changes, adjust timeIndex based on lastImagesCount
+    // If there were changes, adjust timeIndex based on imageCount
     if (hasChanges) {
       this.adjustTimeIndexAfterConfigRefresh(layerId);
     }
@@ -570,7 +570,7 @@ export class LayerRefreshService {
   }
 
   /**
-   * Adjusts the timeIndex after a config refresh based on lastImagesCount.
+   * Adjusts the timeIndex after a config refresh based on imageCount.
    * Also handles clamping if the timeIndex is out of bounds.
    * Delegates calculation to LayerConfigService.
    */
@@ -595,11 +595,11 @@ export class LayerRefreshService {
       return;
     }
 
-    // Otherwise, recalculate based on lastImagesCount
-    const lastImagesCount = controls.playback.lastImagesCount;
+    // Otherwise, recalculate based on imageCount
+    const imageCount = controls.playback.imageCount;
     const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
       layerId,
-      lastImagesCount,
+      imageCount,
     );
 
     if (newTimeIndex !== undefined) {
