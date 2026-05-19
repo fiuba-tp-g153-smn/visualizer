@@ -20,8 +20,10 @@ export const SMN_STATION_RENDER_CONFIG = {
   },
   paneZIndex: {
     minInput: 1,
-    maxInput: 1000,
-    minOutput: 200,
-    maxOutput: 690,
+    maxInput: 2000,
+    // Keep stations above tilePane (200) while preserving a dynamic range.
+    minOutput: 210,
+    // Keep below tooltip/popup panes to avoid UI overlap issues.
+    maxOutput: 640,
   },
 } as const;

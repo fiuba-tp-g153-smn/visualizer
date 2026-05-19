@@ -12,6 +12,7 @@ export enum LayerSelectionMode {
 export enum ActiveLayerGroupId {
   BASE = 'base',
   OVERLAY = 'overlay',
+  POINTS = 'points',
 }
 
 export interface ActiveLayerGroup {
