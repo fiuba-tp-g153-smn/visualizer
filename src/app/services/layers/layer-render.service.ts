@@ -336,6 +336,21 @@ export class LayerRenderService {
         if (button !== 0) {
           return;
         }
+        // Re-fire on the map so PointQueryViewerService.handleMapClick (wired
+        // via map.on('click', ...) in map-container.ts) still triggers for
+        // points that land on a station marker.
+        map.fire('click', {
+          latlng: evt.latlng,
+          layerPoint: evt.layerPoint,
+          containerPoint: evt.containerPoint,
+          originalEvent: evt.originalEvent,
+        } as L.LeafletMouseEvent);
+      });
+
+      marker.on?.('contextmenu', (evt: L.LeafletMouseEvent) => {
+        if (evt.originalEvent) {
+          L.DomEvent.preventDefault(evt.originalEvent);
+        }
 
         const popupData = this.buildSmnStationsPopupData(stationLayer, observation, value);
         const { element, destroy } = this.createSmnStationsPopupElement(popupData);
