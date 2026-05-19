@@ -41,7 +41,10 @@ import {
 } from '../../../../../utils/tileset-timestamp';
 import { computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
-import { SmnStationsTemporalMode } from '../../../../../config/layers/smn-stations/controls.constants';
+import {
+  SmnStationsTemporalMode,
+  SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS,
+} from '../../../../../config/layers/smn-stations/controls.constants';
 
 /**
  * Modo de visualización del componente
@@ -120,6 +123,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
   isForecastsExpanded = signal(false);
+  isSmnSettingsExpanded = signal(false);
   private smnPlaybackTimerId: number | null = null;
   private readonly smnPlaybackIsPlaying = signal(false);
   private readonly smnPlaybackSpeed = signal(1);
@@ -181,7 +185,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   canPlayback = computed(() => {
     if (this.isSmnStationsLayer()) {
-      return this.maxTimeIndex() - this.minTimeIndex() >= 1;
+      return this.lastImagesCount() > 1 && this.maxTimeIndex() - this.minTimeIndex() >= 1;
     }
 
     return this.maxTimeIndex() > 0 && this.lastImagesCount() > 1;
@@ -539,6 +543,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   toggleForecastsExpansion(): void {
     this.isForecastsExpanded.set(!this.isForecastsExpanded());
+  }
+
+  /**
+   * Alterna la expansión de la configuración específica de estaciones SMN
+   */
+  toggleSmnSettingsExpansion(): void {
+    this.isSmnSettingsExpanded.set(!this.isSmnSettingsExpanded());
   }
 
   /**
@@ -949,7 +960,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // outside the requested tolerance window).
   readonly smnShowStationsWithoutData = this.controlService.smnStationsShowStationsWithoutData;
 
-  readonly smnLastImagesCountOptions = computed(() => [1, 3, 6, 12, 24]);
+  readonly smnLastImagesCountOptions = computed(() => [...SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS]);
 
   readonly smnTilesetIds = computed(() => this.refreshService.getSmnStationsAvailableTilesetIds());
 
@@ -1011,9 +1022,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
+    if (this.lastImagesCount() <= 1) {
+      this.stopSmnPlayback();
+      return;
+    }
+
     const min = this.minTimeIndex();
     const max = this.maxTimeIndex();
     if (max - min < 1) {
+      this.stopSmnPlayback();
       return;
     }
 

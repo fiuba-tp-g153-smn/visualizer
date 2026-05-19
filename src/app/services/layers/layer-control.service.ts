@@ -31,6 +31,7 @@ import { PlaybackEngineService } from './playback-engine.service';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 import {
   DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
+  SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS,
   isSmnStationsTemporalMode,
   SmnStationsTemporalMode,
 } from '../../config/layers/smn-stations/controls.constants';
@@ -382,7 +383,7 @@ export class LayerControlService {
   setSmnStationsLastImagesCount(lastImagesCount: number): void {
     this.smnStationsSharedState.update((state) => ({
       ...state,
-      lastImagesCount: Math.max(1, Math.round(lastImagesCount)),
+      lastImagesCount: this.normalizeSmnStationsLastImagesCount(lastImagesCount),
     }));
     this.saveSmnStationsSharedState();
   }
@@ -1078,7 +1079,10 @@ export class LayerControlService {
         // Restore saved state, but ensure isPlaying is false and zIndex is defined.
         // For ECMWF, also buffer the persisted forecast indices for later
         // hydration in the reconciliation effect (config not yet available).
-        controls = { ...this.fromPersistedControls(savedControls), zIndex: savedControls.zIndex ?? 0 };
+        controls = {
+          ...this.fromPersistedControls(savedControls),
+          zIndex: savedControls.zIndex ?? 0,
+        };
         if (controls.type === LayerType.TILE) {
           controls.playback = {
             ...controls.playback,
@@ -1321,7 +1325,7 @@ export class LayerControlService {
             : this.smnStationsSharedState().maxPastHours,
         lastImagesCount:
           typeof parsed.lastImagesCount === 'number' && Number.isFinite(parsed.lastImagesCount)
-            ? Math.max(1, Math.round(parsed.lastImagesCount))
+            ? this.normalizeSmnStationsLastImagesCount(parsed.lastImagesCount)
             : this.smnStationsSharedState().lastImagesCount,
         selectedTilesetId:
           typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
@@ -1348,5 +1352,11 @@ export class LayerControlService {
     } catch {
       // Ignore storage failures.
     }
+  }
+
+  private normalizeSmnStationsLastImagesCount(lastImagesCount: number): number {
+    const rounded = Math.max(1, Math.round(lastImagesCount));
+    const nextAllowed = SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS.find((option) => option >= rounded);
+    return nextAllowed ?? SMN_STATIONS_LAST_IMAGES_COUNT_OPTIONS.at(-1)!;
   }
 }

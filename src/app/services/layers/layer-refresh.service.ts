@@ -12,10 +12,7 @@ import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
 import { NotificationService } from '../notifications/notification.service';
-import {
-  SMN_STATIONS_MAX_PAST_HOURS_OPTIONS,
-  SmnStationsTemporalMode,
-} from '../../config/layers/smn-stations/controls.constants';
+import { SmnStationsTemporalMode } from '../../config/layers/smn-stations/controls.constants';
 import {
   LayerConfig,
   LayerType,
@@ -31,7 +28,6 @@ import {
 
 interface SmnStationsEndpointConfig {
   tilesetIds: readonly string[];
-  maxPastHoursOptions: readonly number[];
 }
 
 // Shape of `/weather-stations/{latest,tilesetId}` from the data-service.
@@ -188,10 +184,6 @@ export class LayerRefreshService {
     return this.smnStationsEndpointConfigSignal()?.tilesetIds ?? [];
   }
 
-  getSmnStationsMaxPastHoursOptions(): readonly number[] {
-    return this.smnStationsEndpointConfigSignal()?.maxPastHoursOptions ?? [];
-  }
-
   async ensureSmnStationsEndpointConfigLoaded(): Promise<void> {
     if (this.smnStationsEndpointConfigSignal()) {
       return;
@@ -320,9 +312,7 @@ export class LayerRefreshService {
         throw new Error('No tilesets available for SMN stations specific mode');
       }
       backendSnapshot = await firstValueFrom(
-        this.http.get<BackendSnapshot>(
-          buildWeatherStationsTilesetUrl(tilesetId, maxPastHours),
-        ),
+        this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, maxPastHours)),
       );
       referenceTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
     } else {
@@ -356,13 +346,12 @@ export class LayerRefreshService {
       );
       return {
         tilesetIds: resp.tilesets.map((t) => t.tileset_id),
-        maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
       };
     } catch (error) {
       // The interceptor already re-prompted on 401; a 401 reaching here means
       // the user cancelled. Treat it like any other failure (fail-soft).
       console.warn('[LayerRefreshService] failed to load SMN tilesets', { error });
-      return { tilesetIds: [], maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS] };
+      return { tilesetIds: [] };
     }
   }
 
@@ -415,9 +404,7 @@ export class LayerRefreshService {
     for (const o of snapshot.stations) {
       observationsById.set(o.station_id, o);
     }
-    const windowStart = new Date(
-      referenceTimestamp.getTime() - maxPastHours * 60 * 60 * 1000,
-    );
+    const windowStart = new Date(referenceTimestamp.getTime() - maxPastHours * 60 * 60 * 1000);
 
     const result: SmnStationObservation[] = [];
     for (const station of registry) {
