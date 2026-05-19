@@ -7,6 +7,7 @@ import {
 } from '@angular/common/http/testing';
 import { firstValueFrom } from 'rxjs';
 
+import { NotificationType } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { WeatherStationsApiKeyService } from './weather-stations-api-key.service';
 import { weatherStationsHttpInterceptor } from './weather-stations-http.interceptor';
@@ -24,7 +25,7 @@ function configure(
     ...apiKeyOverrides,
   };
   const notificationMock: Partial<NotificationService> = {
-    error: vi.fn().mockReturnValue('id'),
+    show: vi.fn().mockReturnValue('id'),
     ...notificationOverrides,
   };
   TestBed.configureTestingModule({
@@ -104,11 +105,11 @@ describe('weatherStationsHttpInterceptor', () => {
 
     await inflight;
     expect(apiKey.handleUnauthorized).toHaveBeenCalledTimes(1);
-    expect(notification.error).not.toHaveBeenCalled();
+    expect(notification.show).not.toHaveBeenCalled();
     httpMock.verify();
   });
 
-  it('on 401 + user cancel shows a notification and re-throws', async () => {
+  it('on 401 + user cancel shows an auto-dismissing notification and re-throws', async () => {
     const { http, httpMock, apiKey, notification } = configure({
       handleUnauthorized: vi.fn().mockResolvedValue(null),
     });
@@ -127,9 +128,11 @@ describe('weatherStationsHttpInterceptor', () => {
     const result = await inflight;
     expect(result).not.toBe('resolved');
     expect(apiKey.handleUnauthorized).toHaveBeenCalledTimes(1);
-    expect(notification.error).toHaveBeenCalledTimes(1);
-    expect(notification.error).toHaveBeenCalledWith(
+    expect(notification.show).toHaveBeenCalledTimes(1);
+    expect(notification.show).toHaveBeenCalledWith(
+      NotificationType.ERROR,
       expect.stringContaining('estaciones meteorológicas'),
+      expect.objectContaining({ autoClose: true }),
     );
     httpMock.verify();
   });
@@ -148,7 +151,7 @@ describe('weatherStationsHttpInterceptor', () => {
     const result = await inflight;
     expect(result).not.toBe('resolved');
     expect(apiKey.handleUnauthorized).not.toHaveBeenCalled();
-    expect(notification.error).not.toHaveBeenCalled();
+    expect(notification.show).not.toHaveBeenCalled();
     httpMock.verify();
   });
 });
