@@ -48,6 +48,7 @@ import {
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
+import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
 import {
   SmnStationPopupComponent,
   SmnStationPopupData,
@@ -161,8 +162,10 @@ export class LayerRenderService {
 
     const showStationsWithoutData =
       this.layerControlService.getSmnStationsShowStationsWithoutData();
+    const displayTemperatureUnit = this.unitsSettings.temperatureUnit();
+    const displayWindSpeedUnit = this.unitsSettings.windSpeedUnit();
     const paneZIndex = map.getPane(SMN_STATION_PANE)?.style.zIndex ?? '560';
-    const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}-show=${showStationsWithoutData}`;
+    const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}-show=${showStationsWithoutData}-temp=${displayTemperatureUnit}-wind=${displayWindSpeedUnit}`;
     const cachedLayer = this.smnStationsLayerPool.get(poolKey);
     if (cachedLayer) {
       return cachedLayer;
@@ -909,9 +912,7 @@ export class LayerRenderService {
       .join('')}`;
   }
 
-  private buildSmnStationsPopupData(
-    observation: SmnStationObservationLike,
-  ): SmnStationPopupData {
+  private buildSmnStationsPopupData(observation: SmnStationObservationLike): SmnStationPopupData {
     const formatValue = (
       input: number | null | undefined,
       precision: number,
@@ -983,7 +984,7 @@ export class LayerRenderService {
           value: `${windText} (${windDirectionWithDegrees})`,
         },
       ],
-      updatedAt: new Date(observation.weather.date).toLocaleString('es-AR', { hour12: false }),
+      updatedAt: formatDateTimeLocalized(new Date(observation.weather.date)),
     };
   }
 

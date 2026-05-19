@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   POINT_QUERY_RESULTS: buildStorageKey('point-query-results'),
   SCALE_TOOLS: buildStorageKey('scale-tools'),
   UNITS_SETTINGS: buildStorageKey('units-settings'),
+  TIMEZONE_SETTINGS: buildStorageKey('timezone-settings'),
   POLYGONS: buildStorageKey('polygons'),
   POLYGON_SIMPLIFICATION_LEVEL: buildStorageKey('polygon-simplification-level'),
   SMN_STATIONS_SHARED_CONTROLS: buildStorageKey('smn-stations-shared-controls'),
