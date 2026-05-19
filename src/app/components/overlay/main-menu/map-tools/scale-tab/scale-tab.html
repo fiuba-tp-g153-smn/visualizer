@@ -1,26 +1,27 @@
 <div class="tool-section">
-  @if (scaleTools.displayItems().length === 0) {
-    <p class="status-hint">No hay capas activas con escala configurada</p>
-  } @else {
-    <div class="mode-section">
-      <mat-checkbox
-        [checked]="scaleTools.enabled()"
-        (change)="onToolEnabledChange($event.checked)"
-        color="primary"
-        matTooltip="Activar o desactivar la herramienta de escalas"
-      >
-        Activar herramienta
-      </mat-checkbox>
-    </div>
+  <div class="mode-section">
+    <mat-checkbox
+      [checked]="scaleTools.enabled()"
+      (change)="onToolEnabledChange($event.checked)"
+      color="primary"
+      matTooltip="Activar o desactivar la herramienta de escalas"
+    >
+      Activar herramienta
+    </mat-checkbox>
+  </div>
 
-    @if (scaleTools.enabled()) {
-      <div class="sources-section">
-        <span class="section-label">
-          Capas activas
-          @if (scaleTools.selectedLayerIdsOrdered().length > 0) {
-            <span class="selected-count">({{ scaleTools.selectedLayerIdsOrdered().length }})</span>
-          }
-        </span>
+  @if (scaleTools.enabled()) {
+    <div class="sources-section">
+      <span class="section-label">
+        Capas activas
+        @if (scaleTools.selectedLayerIdsOrdered().length > 0) {
+          <span class="selected-count">({{ scaleTools.selectedLayerIdsOrdered().length }})</span>
+        }
+      </span>
+
+      @if (scaleTools.displayItems().length === 0) {
+        <p class="status-hint">No hay capas activas con escala configurada</p>
+      } @else {
         <div class="source-list">
           @for (item of scaleTools.displayItems(); track item.layerId) {
             <div class="source-row">
@@ -34,7 +35,7 @@
             </div>
           }
         </div>
-      </div>
-    }
+      }
+    </div>
   }
 </div>
