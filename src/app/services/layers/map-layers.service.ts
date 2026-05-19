@@ -27,6 +27,7 @@ import {
 const VECTOR_OVERLAY_PANE = 'data-vector-overlay';
 /** zIndex del pane vectorial: arriba de tilePane (200) y overlayPane (400), debajo de markers. */
 const VECTOR_OVERLAY_PANE_Z_INDEX = '650';
+const LEAFLET_TILE_PANE = 'tilePane';
 
 @Injectable({
   providedIn: 'root',
@@ -53,7 +54,10 @@ export class MapLayersService {
       pane.style.pointerEvents = 'none';
     }
     if (!map.getPane(SMN_STATION_PANE)) {
-      const pane = map.createPane(SMN_STATION_PANE);
+      const tilePane = map.getPane(LEAFLET_TILE_PANE);
+      const pane = tilePane
+        ? map.createPane(SMN_STATION_PANE, tilePane)
+        : map.createPane(SMN_STATION_PANE);
       pane.style.zIndex = SMN_STATION_PANE_Z_INDEX;
       pane.style.pointerEvents = 'auto';
     }

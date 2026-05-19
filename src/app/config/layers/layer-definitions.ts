@@ -95,4 +95,13 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
     icon: 'terrain',
     zIndexRange: { min: 1001, max: 2000 },
   },
+  [ActiveLayerGroupId.POINTS]: {
+    id: ActiveLayerGroupId.POINTS,
+    name: 'Capas Puntuales',
+    subtitle: '(Estaciones, puntos de observación)',
+    description:
+      'Capas puntuales interactivas. Se muestran por encima de las capas de referencia para mantener legibilidad.',
+    icon: 'place',
+    zIndexRange: { min: 2001, max: 3000 },
+  },
 };
