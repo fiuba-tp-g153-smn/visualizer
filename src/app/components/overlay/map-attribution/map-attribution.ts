@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, output } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
 
 @Component({
   selector: 'app-map-attribution',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule],
+  imports: [PanelCloseButtonComponent],
   templateUrl: './map-attribution.html',
   styleUrl: './map-attribution.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
