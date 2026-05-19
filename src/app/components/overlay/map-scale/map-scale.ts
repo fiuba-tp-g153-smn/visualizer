@@ -1,11 +1,10 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
 
 @Component({
   selector: 'app-map-scale',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule],
+  imports: [PanelCloseButtonComponent],
   templateUrl: './map-scale.html',
   styleUrl: './map-scale.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

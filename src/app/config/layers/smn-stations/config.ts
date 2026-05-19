@@ -13,7 +13,7 @@ import { SmnStationLayer } from '../../../models/layers/models';
 
 export const SMN_STATION_PANE = 'smn-station-pane';
 // Fallback z-index; MapLayersService sets this dynamically per active-layer order.
-export const SMN_STATION_PANE_Z_INDEX = '560';
+export const SMN_STATION_PANE_Z_INDEX = '2500';
 
 function createStationLayer(
   id: string,
@@ -28,7 +28,7 @@ function createStationLayer(
     description,
     type: LayerType.VECTOR,
     category: LayerCategory.SMN_STATIONS,
-    zIndexGroup: ActiveLayerGroupId.BASE,
+    zIndexGroup: ActiveLayerGroupId.POINTS,
     variable,
     scale,
   };

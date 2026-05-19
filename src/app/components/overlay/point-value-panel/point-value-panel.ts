@@ -1,9 +1,8 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
 
 import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '../../../models';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
@@ -16,13 +15,7 @@ import {
 @Component({
   selector: 'app-point-value-panel',
   standalone: true,
-  imports: [
-    CommonModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatTooltipModule,
-  ],
+  imports: [CommonModule, MatProgressSpinnerModule, MatTooltipModule, PanelCloseButtonComponent],
   templateUrl: './point-value-panel.html',
   styleUrl: './point-value-panel.scss',
 })

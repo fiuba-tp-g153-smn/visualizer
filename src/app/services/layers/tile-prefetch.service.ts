@@ -25,7 +25,7 @@ const MAX_TILES_PER_LAYER = 3000;
  *
  * This service:
  * - Reacts to changes in active layers, layer configurations, and zoom level
- * - Builds tile URLs for the last N frames (per layer's lastImagesCount) at the current zoom
+ * - Builds tile URLs for the last N frames (per layer's imageCount) at the current zoom
  * - Loads tiles via the browser's Image API to populate the HTTP cache before they are needed
  * - Limits concurrency to avoid overwhelming the network
  * - Deduplicates requests so that periodic config refreshes do not re-fetch already-cached tiles
@@ -106,7 +106,7 @@ export class TilePrefetchService {
       if (!tileConfig.availableTilesets || tileConfig.availableTilesets.length === 0) continue;
 
       const tileControls = controls as TileLayerControls;
-      const lastImagesCount = tileControls.playback.lastImagesCount;
+      const imageCount = tileControls.playback.imageCount;
 
       // Sort frames by proximity to current playback position, forward-biased (ahead first)
       const currentTimeIndex =
@@ -114,13 +114,13 @@ export class TilePrefetchService {
         getDefaultCursorIndex(tileConfig.availableTilesets.length, layer.isForecast);
       const windowStart = computeWindowStart(
         tileConfig.availableTilesets.length,
-        lastImagesCount,
+        imageCount,
         layer.isForecast,
       );
       const posInWindow = Math.max(0, currentTimeIndex - windowStart);
       const frameWindow = [...tileConfig.availableTilesets].slice(
         windowStart,
-        windowStart + lastImagesCount,
+        windowStart + imageCount,
       );
       const ordered = Array.from({ length: frameWindow.length }, (_, i) => i)
         .sort((a, b) => {

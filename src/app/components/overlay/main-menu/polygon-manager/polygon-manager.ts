@@ -23,6 +23,7 @@ import {
   ConfirmDialogData,
 } from '../../../floating/confirm-dialog/confirm-dialog';
 import { PhenomenonSelectionDialogComponent } from '../../../floating/phenomenon-selection-dialog/phenomenon-selection-dialog';
+import { formatDateTimeLocalized } from '../../../../utils/tileset-timestamp';
 
 /**
  * Panel para gestionar polígonos en el mapa
@@ -147,13 +148,7 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   }
 
   formatDate(date: Date): string {
-    return new Date(date).toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatDateTimeLocalized(new Date(date));
   }
 
   /**

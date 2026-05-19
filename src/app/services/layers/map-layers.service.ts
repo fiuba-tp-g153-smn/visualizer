@@ -27,6 +27,7 @@ import {
 const VECTOR_OVERLAY_PANE = 'data-vector-overlay';
 /** zIndex del pane vectorial: arriba de tilePane (200) y overlayPane (400), debajo de markers. */
 const VECTOR_OVERLAY_PANE_Z_INDEX = '650';
+const LEAFLET_TILE_PANE = 'tilePane';
 
 @Injectable({
   providedIn: 'root',
@@ -53,7 +54,10 @@ export class MapLayersService {
       pane.style.pointerEvents = 'none';
     }
     if (!map.getPane(SMN_STATION_PANE)) {
-      const pane = map.createPane(SMN_STATION_PANE);
+      const tilePane = map.getPane(LEAFLET_TILE_PANE);
+      const pane = tilePane
+        ? map.createPane(SMN_STATION_PANE, tilePane)
+        : map.createPane(SMN_STATION_PANE);
       pane.style.zIndex = SMN_STATION_PANE_Z_INDEX;
       pane.style.pointerEvents = 'auto';
     }
@@ -66,9 +70,7 @@ export class MapLayersService {
     if (!this.map) return;
 
     const desiredLayersOnMap = new Map<string, L.Layer>();
-    const previousSmnLayerIds = new Set(
-      [...this.onMapLayers.keys()].filter((layerId) => this.isSmnLayerId(layerId)),
-    );
+    const previousSmnLayers = this.getSmnLayerEntries(this.onMapLayers);
 
     // Sort layers by z-index (low to high) so we process bottom layers first
     const sortedLayerIds = [...layerIds].sort((a, b) => {
@@ -212,11 +214,9 @@ export class MapLayersService {
     // Update local state
     this.onMapLayers = desiredLayersOnMap;
 
-    const nextSmnLayerIds = new Set(
-      [...this.onMapLayers.keys()].filter((layerId) => this.isSmnLayerId(layerId)),
-    );
+    const nextSmnLayers = this.getSmnLayerEntries(this.onMapLayers);
 
-    if (!this.areIdSetsEqual(previousSmnLayerIds, nextSmnLayerIds)) {
+    if (this.shouldCloseSmnPopup(previousSmnLayers, nextSmnLayers)) {
       this.map.closePopup();
     }
 
@@ -229,18 +229,34 @@ export class MapLayersService {
     return layer?.category === LayerCategory.SMN_STATIONS;
   }
 
-  private areIdSetsEqual(left: Set<string>, right: Set<string>): boolean {
-    if (left.size !== right.size) {
-      return false;
-    }
+  private getSmnLayerEntries(layers: ReadonlyMap<string, L.Layer>): Map<string, L.Layer> {
+    const entries = new Map<string, L.Layer>();
 
-    for (const value of left) {
-      if (!right.has(value)) {
-        return false;
+    for (const [layerId, layerRef] of layers) {
+      if (this.isSmnLayerId(layerId)) {
+        entries.set(layerId, layerRef);
       }
     }
 
-    return true;
+    return entries;
+  }
+
+  private shouldCloseSmnPopup(
+    previousLayers: ReadonlyMap<string, L.Layer>,
+    nextLayers: ReadonlyMap<string, L.Layer>,
+  ): boolean {
+    if (previousLayers.size !== nextLayers.size) {
+      return true;
+    }
+
+    for (const [layerId, previousLayerRef] of previousLayers) {
+      const nextLayerRef = nextLayers.get(layerId);
+      if (!nextLayerRef || nextLayerRef !== previousLayerRef) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -290,8 +306,7 @@ export class MapLayersService {
         // Match the tile renderer's opacity resolution so the isobars fade
         // in sync with their associated TP raster (per-forecast override,
         // falling back to the layer-wide opacity).
-        const forecastOpacity =
-          controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
+        const forecastOpacity = controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
 
         const url = secondary.buildUrl(forecastTs, currentTimestampTs);
         const overlayKey = `${layerId}#${secondary.id}#${forecastTs}#${currentTimestampTs}`;

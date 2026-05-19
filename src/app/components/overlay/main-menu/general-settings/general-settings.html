@@ -59,6 +59,30 @@
           </div>
 
           <div class="setting-row">
+            <h3 class="setting-title">Zona horaria</h3>
+            <mat-radio-group
+              [value]="timezoneSettings.mode()"
+              (change)="onTimezoneModeChange($event.value)"
+              class="units-selector-group"
+            >
+              <mat-radio-button
+                [value]="TIMEZONE_MODES.LOCAL"
+                color="primary"
+                [matTooltip]="localTimezoneTooltip"
+              >
+                UTC local (UTC{{ localUtcOffsetShort }})
+              </mat-radio-button>
+              <mat-radio-button
+                [value]="TIMEZONE_MODES.UTC"
+                color="primary"
+                matTooltip="Mostrar fechas y horas en UTC+0"
+              >
+                UTC 0
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <div class="setting-row">
             <h3 class="setting-title">Precisión decimal</h3>
             <div class="precision-control">
               <input

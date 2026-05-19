@@ -41,7 +41,10 @@ import {
 } from '../../../../../utils/tileset-timestamp';
 import { computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
-import { SmnStationsTemporalMode } from '../../../../../config/layers/smn-stations/controls.constants';
+import {
+  SmnStationsTemporalMode,
+  SMN_STATIONS_IMAGE_COUNT_OPTIONS,
+} from '../../../../../config/layers/smn-stations/controls.constants';
 
 /**
  * Modo de visualización del componente
@@ -120,6 +123,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
   isForecastsExpanded = signal(false);
+  isSmnSettingsExpanded = signal(false);
   private smnPlaybackTimerId: number | null = null;
   private readonly smnPlaybackIsPlaying = signal(false);
   private readonly smnPlaybackSpeed = signal(1);
@@ -141,15 +145,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   });
 
-  lastImagesCount = computed(() => {
+  imageCount = computed(() => {
     if (this.isSmnStationsLayer()) {
-      return this.controlService.getSmnStationsLastImagesCount();
+      return this.controlService.getSmnStationsImageCount();
     }
 
     const controls = this.controlService.getControls(this.layer.id);
     switch (controls?.type) {
       case LayerType.TILE:
-        return controls.playback.lastImagesCount;
+        return controls.playback.imageCount;
       default:
         return 1;
     }
@@ -160,7 +164,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   lastImagesOptions = computed(() => {
     if (this.isSmnStationsLayer()) {
-      return this.smnLastImagesCountOptions();
+      return this.smnImageCountOptions();
     }
 
     switch (this.layer.type) {
@@ -181,10 +185,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   canPlayback = computed(() => {
     if (this.isSmnStationsLayer()) {
-      return this.maxTimeIndex() - this.minTimeIndex() >= 1;
+      return this.imageCount() > 1 && this.maxTimeIndex() - this.minTimeIndex() >= 1;
     }
 
-    return this.maxTimeIndex() > 0 && this.lastImagesCount() > 1;
+    return this.maxTimeIndex() > 0 && this.imageCount() > 1;
   });
 
   getActiveLayer = computed(() => {
@@ -365,14 +369,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || tilesets.length === 0) return 0;
 
-    const lastImagesCount = this.lastImagesCount();
-    if (lastImagesCount === 1) {
+    const imageCount = this.imageCount();
+    if (imageCount === 1) {
       return tilesets.length - 1;
     }
 
     const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
-    const min = computeWindowStart(tilesets.length, lastImagesCount, isForecast);
-    return Math.min(min + lastImagesCount - 1, tilesets.length - 1);
+    const min = computeWindowStart(tilesets.length, imageCount, isForecast);
+    return Math.min(min + imageCount - 1, tilesets.length - 1);
   });
 
   layerShortName = computed(() => this.layersService.getLayerShortName(this.layer));
@@ -385,13 +389,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || tilesets.length === 0) return 0;
 
-    const lastImagesCount = this.lastImagesCount();
-    if (lastImagesCount === 1) {
+    const imageCount = this.imageCount();
+    if (imageCount === 1) {
       return 0;
     }
 
     const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
-    return computeWindowStart(tilesets.length, lastImagesCount, isForecast);
+    return computeWindowStart(tilesets.length, imageCount, isForecast);
   });
 
   /**
@@ -539,6 +543,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    */
   toggleForecastsExpansion(): void {
     this.isForecastsExpanded.set(!this.isForecastsExpanded());
+  }
+
+  /**
+   * Alterna la expansión de la configuración específica de estaciones SMN
+   */
+  toggleSmnSettingsExpansion(): void {
+    this.isSmnSettingsExpanded.set(!this.isSmnSettingsExpanded());
   }
 
   /**
@@ -886,9 +897,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.controlService.setPlaySpeed(this.layer.id, speed);
   }
 
-  onLastImagesCountChange(count: number): void {
+  onImageCountChange(count: number): void {
     if (this.isSmnStationsLayer()) {
-      this.controlService.setSmnStationsLastImagesCount(count);
+      this.controlService.setSmnStationsImageCount(count);
       if (this.isPlaying()) {
         this.startSmnPlayback();
       }
@@ -896,7 +907,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     this.detachIfSynced();
-    this.controlService.setLastImagesCount(this.layer.id, count);
+    this.controlService.setImageCount(this.layer.id, count);
   }
 
   private detachIfSynced(): void {
@@ -949,7 +960,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // outside the requested tolerance window).
   readonly smnShowStationsWithoutData = this.controlService.smnStationsShowStationsWithoutData;
 
-  readonly smnLastImagesCountOptions = computed(() => [1, 3, 6, 12, 24]);
+  readonly smnImageCountOptions = computed(() => [...SMN_STATIONS_IMAGE_COUNT_OPTIONS]);
 
   readonly smnTilesetIds = computed(() => this.refreshService.getSmnStationsAvailableTilesetIds());
 
@@ -1011,9 +1022,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
+    if (this.imageCount() <= 1) {
+      this.stopSmnPlayback();
+      return;
+    }
+
     const min = this.minTimeIndex();
     const max = this.maxTimeIndex();
     if (max - min < 1) {
+      this.stopSmnPlayback();
       return;
     }
 

@@ -377,6 +377,31 @@
           padding-left: 0;
         }
 
+        .smn-mode-inline-actions {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex: 1;
+          min-width: 0;
+          gap: 4px;
+          flex-wrap: nowrap;
+
+          .expand-btn {
+            color: var(--mat-sys-on-surface-variant);
+            flex-shrink: 0;
+
+            &:hover {
+              color: var(--mat-sys-primary);
+            }
+          }
+        }
+
+        .smn-settings-control {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
         .smn-tolerance-control {
           display: flex;
           align-items: center;

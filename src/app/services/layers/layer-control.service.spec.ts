@@ -38,7 +38,7 @@ describe('LayerControlService — SMN stations no-data toggle', () => {
       scaleVisible: false,
       temporalMode: 'latest',
       maxPastHours: 24,
-      lastImagesCount: 6,
+      imageCount: 6,
       selectedTilesetId: null,
     });
     localStorage.setItem(STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS, legacyBlob);

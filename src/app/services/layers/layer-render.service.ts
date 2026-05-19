@@ -48,6 +48,7 @@ import {
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
+import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
 import {
   SmnStationPopupComponent,
   SmnStationPopupData,
@@ -161,8 +162,10 @@ export class LayerRenderService {
 
     const showStationsWithoutData =
       this.layerControlService.getSmnStationsShowStationsWithoutData();
+    const displayTemperatureUnit = this.unitsSettings.temperatureUnit();
+    const displayWindSpeedUnit = this.unitsSettings.windSpeedUnit();
     const paneZIndex = map.getPane(SMN_STATION_PANE)?.style.zIndex ?? '560';
-    const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}-show=${showStationsWithoutData}`;
+    const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}-show=${showStationsWithoutData}-temp=${displayTemperatureUnit}-wind=${displayWindSpeedUnit}`;
     const cachedLayer = this.smnStationsLayerPool.get(poolKey);
     if (cachedLayer) {
       return cachedLayer;
@@ -289,32 +292,29 @@ export class LayerRenderService {
             ? SmnStationRenderLevel.CIRCLE
             : SmnStationRenderLevel.BADGE;
 
-      let marker: L.Layer;
+      // Cancel Leaflet's latitude-based marker stacking so all station sizes
+      // share the same effective z-index inside the pane.
+      const sharedZIndexOffset = -Math.round(point.px.y);
+
+      let marker: L.Marker;
       if (level === SmnStationRenderLevel.DOT) {
-        marker = L.circleMarker(point.latLng, {
-          pane: SMN_STATION_PANE,
-          radius: dotRadiusPx,
-          fillColor: color,
-          color: color,
-          weight: 0,
-          opacity,
-          fillOpacity: Math.max(SMN_STATION_RENDER_CONFIG.marker.dotMinFillOpacity, opacity),
-          interactive: true,
-        });
+        const icon = this.buildSmnStationsDotIcon(
+          dotRadiusPx * 2,
+          color,
+          Math.max(SMN_STATION_RENDER_CONFIG.marker.dotMinFillOpacity, opacity),
+        );
+        marker = this.createSmnStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else if (level === SmnStationRenderLevel.CIRCLE) {
-        marker = L.circleMarker(point.latLng, {
-          pane: SMN_STATION_PANE,
-          radius: circleRadiusPx,
-          fillColor: color,
-          color: '#000',
-          weight: SMN_STATION_RENDER_CONFIG.marker.circleStrokeWeight,
-          opacity,
-          fillOpacity: Math.max(
+        const icon = this.buildSmnStationsCircleIcon(
+          circleRadiusPx * 2,
+          color,
+          Math.max(
             SMN_STATION_RENDER_CONFIG.marker.minimumFillOpacity,
             SMN_STATION_RENDER_CONFIG.marker.crowdedValueFillOpacityBase * opacity,
           ),
-          interactive: true,
-        });
+          Math.max(opacity, SMN_STATION_RENDER_CONFIG.marker.minimumFillOpacity),
+        );
+        marker = this.createSmnStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else {
         const textColor = this.resolveSmnStationsContrastingTextColor(color);
         const { displayValue } = this.resolveSmnStationsDisplayValueAndUnit(
@@ -324,7 +324,7 @@ export class LayerRenderService {
         const labelValue = Math.round(displayValue);
         const iconDiameter = badgeDiameterPx;
         const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
-        marker = L.marker(point.latLng, { pane: SMN_STATION_PANE, icon, interactive: true });
+        marker = this.createSmnStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       }
 
       if (point.isStale && typeof marker.bindTooltip === 'function') {
@@ -410,6 +410,57 @@ export class LayerRenderService {
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
     });
+  }
+
+  private buildSmnStationsDotIcon(
+    diameterPx: number,
+    color: string,
+    fillOpacity: number,
+  ): L.DivIcon {
+    const normalizedOpacity = Math.max(0, Math.min(1, fillOpacity));
+    return L.divIcon({
+      className: 'smn-station-divicon',
+      html: `<div style="width:${diameterPx}px;height:${diameterPx}px;border-radius:50%;background:${this.smnStationsHexToRgba(color, normalizedOpacity)};"></div>`,
+      iconSize: [diameterPx, diameterPx],
+      iconAnchor: [diameterPx / 2, diameterPx / 2],
+    });
+  }
+
+  private buildSmnStationsCircleIcon(
+    diameterPx: number,
+    color: string,
+    fillOpacity: number,
+    strokeOpacity: number,
+  ): L.DivIcon {
+    const strokeWidth = SMN_STATION_RENDER_CONFIG.marker.circleStrokeWeight;
+    const normalizedFillOpacity = Math.max(0, Math.min(1, fillOpacity));
+    const normalizedStrokeOpacity = Math.max(0, Math.min(1, strokeOpacity));
+
+    return L.divIcon({
+      className: 'smn-station-divicon',
+      html: `<div style="width:${diameterPx}px;height:${diameterPx}px;border-radius:50%;box-sizing:border-box;border:${strokeWidth}px solid rgba(0,0,0,${normalizedStrokeOpacity});background:${this.smnStationsHexToRgba(color, normalizedFillOpacity)};"></div>`,
+      iconSize: [diameterPx, diameterPx],
+      iconAnchor: [diameterPx / 2, diameterPx / 2],
+    });
+  }
+
+  private createSmnStationsIconMarker(
+    latLng: L.LatLng,
+    icon: L.DivIcon,
+    zIndexOffset: number,
+  ): L.Marker {
+    return L.marker(latLng, {
+      pane: SMN_STATION_PANE,
+      icon,
+      interactive: true,
+      zIndexOffset,
+    });
+  }
+
+  private smnStationsHexToRgba(color: string, alpha: number): string {
+    const { red, green, blue } = this.hexToSmnStationsRgb(color);
+    const normalizedAlpha = Math.max(0, Math.min(1, alpha));
+    return `rgba(${red}, ${green}, ${blue}, ${normalizedAlpha})`;
   }
 
   /**
@@ -544,7 +595,7 @@ export class LayerRenderService {
       result,
       currentTimeIndex,
       totalFrames,
-      controls.playback.lastImagesCount,
+      controls.playback.imageCount,
       absoluteZIndex,
       goesIsForecast,
       (adjIndex) => {
@@ -618,7 +669,7 @@ export class LayerRenderService {
         result,
         currentTimeIndex,
         totalFrames,
-        controls.playback.lastImagesCount,
+        controls.playback.imageCount,
         elevationZIndex,
         false,
         (adjIndex) => {
@@ -737,7 +788,7 @@ export class LayerRenderService {
         result,
         currentTimeIndex,
         totalFrames,
-        controls.playback.lastImagesCount,
+        controls.playback.imageCount,
         forecastZIndex,
         true,
         (adjIndex) => {
@@ -909,9 +960,7 @@ export class LayerRenderService {
       .join('')}`;
   }
 
-  private buildSmnStationsPopupData(
-    observation: SmnStationObservationLike,
-  ): SmnStationPopupData {
+  private buildSmnStationsPopupData(observation: SmnStationObservationLike): SmnStationPopupData {
     const formatValue = (
       input: number | null | undefined,
       precision: number,
@@ -983,7 +1032,7 @@ export class LayerRenderService {
           value: `${windText} (${windDirectionWithDegrees})`,
         },
       ],
-      updatedAt: new Date(observation.weather.date).toLocaleString('es-AR', { hour12: false }),
+      updatedAt: formatDateTimeLocalized(new Date(observation.weather.date)),
     };
   }
 
@@ -1060,11 +1109,7 @@ export class LayerRenderService {
       return;
     }
 
-    const { minInput, maxInput, minOutput, maxOutput } = SMN_STATION_RENDER_CONFIG.paneZIndex;
-    const clamped = Math.max(minInput, Math.min(maxInput, actualZIndex));
-    const normalized = (clamped - minInput) / (maxInput - minInput || 1);
-    const mappedPaneZ = Math.round(minOutput + normalized * (maxOutput - minOutput));
-    pane.style.zIndex = String(mappedPaneZ);
+    pane.style.zIndex = String(actualZIndex);
   }
 
   private getSmnStationsPrecision(variable: SmnStationLayer['variable']): number {
@@ -1098,13 +1143,13 @@ export class LayerRenderService {
     result: Map<string, L.TileLayer>,
     currentTimeIndex: number,
     totalFrames: number,
-    lastImagesCount: number,
+    imageCount: number,
     absoluteZIndex: number,
     isForecast: boolean,
     createLayer: (timeIndex: number) => { layer: L.TileLayer; key: string } | null,
   ): void {
-    const minTimeIndex = computeWindowStart(totalFrames, lastImagesCount, isForecast);
-    const windowSize = Math.min(lastImagesCount, totalFrames - minTimeIndex);
+    const minTimeIndex = computeWindowStart(totalFrames, imageCount, isForecast);
+    const windowSize = Math.min(imageCount, totalFrames - minTimeIndex);
 
     if (windowSize > 1) {
       for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {

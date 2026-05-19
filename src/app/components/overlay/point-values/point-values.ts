@@ -2,6 +2,8 @@ import { Component, computed, input, output } from '@angular/core';
 import { PointQueryDisplayData } from '../../../models';
 import { PointValuePanelComponent } from '../point-value-panel/point-value-panel';
 
+export type PointValuesLayoutMode = 'fixed' | 'near-marker';
+
 export interface MapPointValueEntry {
   layerId: string;
   layerName: string;
@@ -19,6 +21,7 @@ export interface MapPointValueEntry {
 export class MapPointValuesComponent {
   readonly visible = input<boolean>(false);
   readonly entries = input<ReadonlyArray<MapPointValueEntry>>([]);
+  readonly layoutMode = input<PointValuesLayoutMode>('fixed');
   readonly close = output<string>();
 
   readonly entryColumns = computed(

@@ -41,7 +41,7 @@
     </div>
   </div>
 
-  @if (isScaleToolsEnabled() || isViewerEnabled()) {
+  @if (isScaleToolsEnabled() || isFixedViewerVisible()) {
     <div class="col-side">
       @if (isScaleToolsEnabled()) {
         <app-map-scale-tools
@@ -50,16 +50,32 @@
           (close)="closeScaleTool($event)"
         />
       }
-      @if (isViewerEnabled()) {
+      @if (isFixedViewerVisible()) {
         <app-map-point-values
           [visible]="true"
           [entries]="floatingViewerEntries()"
+          [layoutMode]="'fixed'"
           (close)="closeFloatingViewer($event)"
         />
       }
     </div>
   }
 </div>
+
+@if (nearMarkerPanelPosition(); as markerPosition) {
+  <div
+    class="near-marker-point-values"
+    [style.left.px]="markerPosition.x"
+    [style.top.px]="markerPosition.y"
+  >
+    <app-map-point-values
+      [visible]="true"
+      [entries]="floatingViewerEntries()"
+      [layoutMode]="'near-marker'"
+      (close)="closeFloatingViewer($event)"
+    />
+  </div>
+}
 
 @if (isEditingPolygon()) {
   <app-polygon-edit-dock (action)="handleEditAction($event)" />

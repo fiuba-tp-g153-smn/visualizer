@@ -1,5 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
-import { PointQueryViewerService } from '../../services/tools/point-query-viewer.service';
+import {
+  POINT_QUERY_PANEL_MODES,
+  PointQueryViewerService,
+} from '../../services/tools/point-query-viewer.service';
 import { ScaleToolsService } from '../../services/tools/scale-tools.service';
 import { MapInfoService } from '../../services/layers/map-info.service';
 import {
@@ -51,8 +54,38 @@ export class MapOverlayComponent {
 
   readonly floatingViewerEntries = this.pointQueryViewerService.floatingViewerEntries;
   readonly isViewerEnabled = this.pointQueryViewerService.enabled;
+  readonly isViewerMarkerEnabled = this.pointQueryViewerService.showMarker;
+  readonly viewerPanelMode = this.pointQueryViewerService.panelMode;
   readonly scaleToolEntries = this.scaleToolsService.scaleEntries;
   readonly isScaleToolsEnabled = this.scaleToolsService.shouldShowScales;
+  readonly queryMarkerScreenPosition = this.mapInfoService.queryMarkerScreenPosition;
+  readonly isMapZooming = this.mapInfoService.isZooming;
+
+  readonly isFixedViewerVisible = computed(
+    () => this.isViewerEnabled() && this.viewerPanelMode() === POINT_QUERY_PANEL_MODES.FIXED,
+  );
+
+  readonly nearMarkerPanelPosition = computed(() => {
+    if (
+      !this.isViewerEnabled() ||
+      !this.isViewerMarkerEnabled() ||
+      this.isMapZooming() ||
+      this.viewerPanelMode() !== POINT_QUERY_PANEL_MODES.NEAR_MARKER ||
+      this.floatingViewerEntries().length === 0
+    ) {
+      return null;
+    }
+
+    const markerPosition = this.queryMarkerScreenPosition();
+    if (!markerPosition) {
+      return null;
+    }
+
+    return {
+      x: markerPosition.x + 16,
+      y: markerPosition.y - 12,
+    };
+  });
 
   // Map info signals
   readonly showZoom = this.mapInfoService.showZoom;

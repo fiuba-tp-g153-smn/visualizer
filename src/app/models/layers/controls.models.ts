@@ -43,7 +43,7 @@ export interface PlaybackControls {
   isPlaying: boolean;
   timeIndex?: number; // Puede ser null si no se ha seleccionado ningún período o si la capa no tiene períodos disponibles
   speed: number;
-  lastImagesCount: number; // Número de últimas imágenes a mostrar (1, 6, 12, 24, etc.)
+  imageCount: number; // Número de últimas imágenes a mostrar (1, 6, 12, 24, etc.)
 }
 
 export interface ElevationControls {

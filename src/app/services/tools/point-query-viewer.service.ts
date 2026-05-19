@@ -55,8 +55,19 @@ interface MouseCoordinates {
   lon: number;
 }
 
+export const POINT_QUERY_PANEL_MODES = {
+  FIXED: 'fixed',
+  NEAR_MARKER: 'near-marker',
+} as const;
+
+export type PointQueryPanelMode =
+  (typeof POINT_QUERY_PANEL_MODES)[keyof typeof POINT_QUERY_PANEL_MODES];
+
+type DisplaySourceKind = 'primary' | 'secondary';
+
 type DisplaySourceItem = {
   layerId: string;
+  sourceKind: DisplaySourceKind;
   elevationId?: string;
   forecastTs?: string;
   layerName: string;
@@ -75,6 +86,7 @@ interface PersistedPointQueryViewerState {
   enabled: boolean;
   selectedLayerIdsOrdered: string[];
   showMarker: boolean;
+  panelMode?: PointQueryPanelMode;
 }
 
 interface SourceQueryResult {
@@ -110,8 +122,10 @@ export class PointQueryViewerService {
 
   readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
+  readonly manuallyDeselectedLayerIds = signal<Set<string>>(new Set());
   readonly lastClickCoordinates = signal<MouseCoordinates | null>(null);
   readonly showMarker = signal<boolean>(true);
+  readonly panelMode = signal<PointQueryPanelMode>(POINT_QUERY_PANEL_MODES.FIXED);
   readonly isPaused = signal<boolean>(false);
 
   // Current marker position (for rendering on map)
@@ -134,6 +148,7 @@ export class PointQueryViewerService {
       )
       .map(({ layer, controls }) => ({
         layerId: layer.id,
+        sourceKind: 'primary' as const,
         layerName: this.layersService.getLayerFullName(layer),
         layer: layer as ABIGoesTileLayer | GLMGoesTileLayer,
         controls: controls as GoesLayerControls,
@@ -150,6 +165,7 @@ export class PointQueryViewerService {
 
         return selectedElevations.map((elevationId) => ({
           layerId: createCompositeId(layer.id, elevationId),
+          sourceKind: 'primary' as const,
           layerName: this.layersService.getLayerFullName(radarLayer, elevationId),
           elevationId,
           layer: radarLayer,
@@ -166,14 +182,37 @@ export class PointQueryViewerService {
         const ecmwfControls = controls as EcmwfTpLayerControls;
         const selectedForecasts = ecmwfControls.forecast.selectedForecastTimestamps;
         const baseName = this.layersService.getLayerFullName(ecmwfLayer);
+        const modelName = baseName.split(' - ')[0] || 'ECMWF';
+        const secondaryRender = this.getSecondaryRender(ecmwfLayer);
 
-        return selectedForecasts.map((forecastTs) => ({
-          layerId: createCompositeId(layer.id, forecastTs),
-          layerName: `${baseName} — ${formatEcmwfForecastTs(forecastTs)}`,
-          forecastTs,
-          layer: ecmwfLayer,
-          controls: ecmwfControls,
-        }));
+        return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
+          const primaryLayerId = createCompositeId(layer.id, forecastTs);
+          const forecastLabel = formatEcmwfForecastTs(forecastTs);
+
+          const entries: DisplaySourceItem[] = [
+            {
+              layerId: primaryLayerId,
+              sourceKind: 'primary',
+              layerName: `${baseName} - corrida ${forecastLabel}`,
+              forecastTs,
+              layer: ecmwfLayer,
+              controls: ecmwfControls,
+            },
+          ];
+
+          if (secondaryRender?.buildPointQueryUrl) {
+            entries.push({
+              layerId: buildSecondaryLayerId(primaryLayerId),
+              sourceKind: 'secondary',
+              layerName: `${modelName} - Presion a nivel del mar - corrida ${forecastLabel}`,
+              forecastTs,
+              layer: ecmwfLayer,
+              controls: ecmwfControls,
+            });
+          }
+
+          return entries;
+        });
       });
 
     return [...satelliteItems, ...radarItems, ...ecmwfItems];
@@ -184,33 +223,15 @@ export class PointQueryViewerService {
     const results = this.resultsBySource();
     const loadingIds = this.loadingLayerIds();
 
-    return selectedEntries.flatMap((entry): PointQueryViewerEntry[] => {
+    return selectedEntries.map((entry): PointQueryViewerEntry => {
       const showMovingState = entry.controls.playback.isPlaying;
 
-      const primary: PointQueryViewerEntry = {
+      return {
         layerId: entry.layerId,
         layerName: entry.layerName,
         data: results.get(entry.layerId) ?? null,
         isLoading: loadingIds.has(entry.layerId) || showMovingState,
       };
-
-      // Layers with a secondary vector overlay (e.g. ECMWF TP + MSLP isobars)
-      // emit a paired card with the secondary value (presión).
-      const secondary = this.getSecondaryRender(entry.layer);
-      if (!secondary?.buildPointQueryUrl) {
-        return [primary];
-      }
-      const secondaryLayerId = buildSecondaryLayerId(entry.layerId);
-      const secondaryLayerName = entry.forecastTs
-        ? `Presión a nivel del mar — ${formatEcmwfForecastTs(entry.forecastTs)}`
-        : 'Presión a nivel del mar';
-      const secondaryEntry: PointQueryViewerEntry = {
-        layerId: secondaryLayerId,
-        layerName: secondaryLayerName,
-        data: results.get(secondaryLayerId) ?? null,
-        isLoading: loadingIds.has(secondaryLayerId) || showMovingState,
-      };
-      return [primary, secondaryEntry];
     });
   });
 
@@ -240,11 +261,23 @@ export class PointQueryViewerService {
       const allItems = this.displayItems();
       const allLayerIds = new Set(allItems.map((item) => item.layerId));
 
+      // Keep manual deselections only for currently available sources.
+      const currentManuallyDeselected = this.manuallyDeselectedLayerIds();
+      const filteredManuallyDeselected = new Set(
+        [...currentManuallyDeselected].filter((layerId) => allLayerIds.has(layerId)),
+      );
+      if (filteredManuallyDeselected.size !== currentManuallyDeselected.size) {
+        this.manuallyDeselectedLayerIds.set(filteredManuallyDeselected);
+      }
+
       const currentSelection = this.selectedLayerIdsOrdered();
       const filteredSelection = currentSelection.filter((layerId) => allLayerIds.has(layerId));
       const newLayerIds = allItems
         .map((item) => item.layerId)
-        .filter((layerId) => !currentSelection.includes(layerId));
+        .filter(
+          (layerId) =>
+            !currentSelection.includes(layerId) && !filteredManuallyDeselected.has(layerId),
+        );
 
       const updatedSelection = [...filteredSelection, ...newLayerIds];
 
@@ -293,14 +326,6 @@ export class PointQueryViewerService {
       }
 
       this.loadingLayerIds.set(new Set());
-    });
-
-    // If there are no selected sources, ensure the viewer is disabled and state cleaned.
-    effect(() => {
-      const selected = this.selectedLayerIdsOrdered();
-      if (selected.length === 0 && this.enabled()) {
-        this.disableViewerAndClearSources();
-      }
     });
 
     effect(() => {
@@ -352,40 +377,45 @@ export class PointQueryViewerService {
             const loadingIds = new Set<string>();
             for (const entry of selectedEntries) {
               loadingIds.add(entry.layerId);
-              const secondary = this.getSecondaryRender(entry.layer);
-              if (secondary?.buildPointQueryUrl) {
-                loadingIds.add(buildSecondaryLayerId(entry.layerId));
-              }
             }
             this.loadingLayerIds.set(loadingIds);
 
             const requests: Array<Observable<SourceQueryResult>> = [];
-            for (const { layerId, layer, controls, elevationId, forecastTs } of selectedEntries) {
-              const primary$ = this.queryLayerPoint(
-                layer,
-                controls,
-                coordinates.lat,
-                coordinates.lon,
-                elevationId,
-                forecastTs,
-              ).pipe(map((result): SourceQueryResult => ({ layerId, result })));
-              requests.push(primary$);
+            for (const entry of selectedEntries) {
+              const { layerId, layerName, sourceKind, layer, controls, elevationId, forecastTs } =
+                entry;
+              const request$ =
+                sourceKind === 'secondary'
+                  ? this.queryLayerSecondaryPoint(
+                      layer,
+                      controls,
+                      coordinates.lat,
+                      coordinates.lon,
+                      forecastTs,
+                    )
+                  : this.queryLayerPoint(
+                      layer,
+                      controls,
+                      coordinates.lat,
+                      coordinates.lon,
+                      elevationId,
+                      forecastTs,
+                    );
 
-              const secondary$ = this.queryLayerSecondaryPoint(
-                layer,
-                controls,
-                coordinates.lat,
-                coordinates.lon,
-                forecastTs,
-              );
-              if (secondary$) {
-                const secondaryLayerId = buildSecondaryLayerId(layerId);
-                requests.push(
-                  secondary$.pipe(
-                    map((result): SourceQueryResult => ({ layerId: secondaryLayerId, result })),
-                  ),
-                );
+              if (!request$) {
+                continue;
               }
+
+              requests.push(
+                request$.pipe(
+                  map(
+                    (result): SourceQueryResult => ({
+                      layerId,
+                      result: { ...result, layerId, layerName },
+                    }),
+                  ),
+                ),
+              );
             }
 
             return forkJoin(requests).pipe(finalize(() => this.loadingLayerIds.set(new Set())));
@@ -426,6 +456,19 @@ export class PointQueryViewerService {
 
   toggleMarker(enabled: boolean): void {
     this.showMarker.set(enabled);
+
+    if (!enabled && this.panelMode() === POINT_QUERY_PANEL_MODES.NEAR_MARKER) {
+      this.panelMode.set(POINT_QUERY_PANEL_MODES.FIXED);
+    }
+  }
+
+  setPanelMode(mode: PointQueryPanelMode): void {
+    this.panelMode.set(mode);
+
+    // Near-marker mode depends on marker context; keep marker visible.
+    if (mode === POINT_QUERY_PANEL_MODES.NEAR_MARKER && !this.showMarker()) {
+      this.showMarker.set(true);
+    }
   }
 
   toggleSourceSelection(layerId: string, checked: boolean): void {
@@ -435,6 +478,8 @@ export class PointQueryViewerService {
       if (currentSelection.includes(layerId)) {
         return;
       }
+
+      this.removeManualDeselection(layerId);
 
       this.selectedLayerIdsOrdered.set([...currentSelection, layerId]);
 
@@ -449,6 +494,8 @@ export class PointQueryViewerService {
   }
 
   removeSourceSelection(layerId: string): void {
+    this.addManualDeselection(layerId);
+
     const currentSelection = this.selectedLayerIdsOrdered();
 
     // Remove from selection if present
@@ -464,6 +511,30 @@ export class PointQueryViewerService {
     const nextLoading = new Set(this.loadingLayerIds());
     nextLoading.delete(layerId);
     this.loadingLayerIds.set(nextLoading);
+  }
+
+  private addManualDeselection(layerId: string): void {
+    this.manuallyDeselectedLayerIds.update((current) => {
+      if (current.has(layerId)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.add(layerId);
+      return next;
+    });
+  }
+
+  private removeManualDeselection(layerId: string): void {
+    this.manuallyDeselectedLayerIds.update((current) => {
+      if (!current.has(layerId)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.delete(layerId);
+      return next;
+    });
   }
 
   clearSelectedSources(): void {
@@ -879,15 +950,6 @@ export class PointQueryViewerService {
     );
   }
 
-  private disableViewerAndClearSources(): void {
-    if (!this.enabled() && this.selectedLayerIdsOrdered().length === 0) {
-      return;
-    }
-
-    this.enabled.set(false);
-    this.clearSelectedSources();
-  }
-
   private loadStateFromStorage(): void {
     if (typeof localStorage === 'undefined') {
       return;
@@ -901,9 +963,13 @@ export class PointQueryViewerService {
 
       const parsed = JSON.parse(raw) as PersistedPointQueryViewerState;
 
+      const showMarker = parsed.showMarker ?? false;
+      const panelMode = parsed.panelMode ?? POINT_QUERY_PANEL_MODES.FIXED;
+
       this.enabled.set(parsed.enabled ?? false);
       this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
-      this.showMarker.set(parsed.showMarker ?? false);
+      this.showMarker.set(showMarker);
+      this.panelMode.set(showMarker ? panelMode : POINT_QUERY_PANEL_MODES.FIXED);
     } catch (error) {
       console.warn('Failed to load point query viewer state from localStorage:', error);
     }
@@ -918,6 +984,7 @@ export class PointQueryViewerService {
       enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
       showMarker: this.showMarker(),
+      panelMode: this.panelMode(),
     };
 
     try {
