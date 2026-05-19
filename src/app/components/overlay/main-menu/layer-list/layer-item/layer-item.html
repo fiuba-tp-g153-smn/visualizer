@@ -270,48 +270,72 @@
               <div class="smn-temporal-control">
                 <div class="smn-mode-control">
                   <span class="control-label">Consulta</span>
-                  <mat-radio-group
-                    [value]="smnTemporalMode()"
-                    (change)="onSmnTemporalModeChange($event.value)"
-                    class="smn-mode-group"
-                  >
-                    <mat-radio-button [value]="SmnStationsTemporalMode.LATEST" color="primary"
-                      >Más reciente</mat-radio-button
+                  <div class="smn-mode-inline-actions">
+                    <mat-radio-group
+                      [value]="smnTemporalMode()"
+                      (change)="onSmnTemporalModeChange($event.value)"
+                      class="smn-mode-group"
                     >
-                    <mat-radio-button [value]="SmnStationsTemporalMode.SPECIFIC" color="primary"
-                      >Específico</mat-radio-button
-                    >
-                  </mat-radio-group>
+                      <mat-radio-button [value]="SmnStationsTemporalMode.LATEST" color="primary"
+                        >Más reciente</mat-radio-button
+                      >
+                      <mat-radio-button [value]="SmnStationsTemporalMode.SPECIFIC" color="primary"
+                        >Específico</mat-radio-button
+                      >
+                    </mat-radio-group>
+
+                    @if (isSmnSpecificTemporalMode()) {
+                      <button
+                        mat-icon-button
+                        (click)="toggleSmnSettingsExpansion()"
+                        [matTooltip]="
+                          isSmnSettingsExpanded()
+                            ? 'Ocultar configuración específica'
+                            : 'Mostrar configuración específica'
+                        "
+                        class="expand-btn"
+                      >
+                        <mat-icon>{{
+                          isSmnSettingsExpanded() ? 'expand_less' : 'expand_more'
+                        }}</mat-icon>
+                      </button>
+                    }
+                  </div>
                 </div>
 
                 @if (isSmnSpecificTemporalMode()) {
-                  <div class="smn-tolerance-control">
-                    <span class="control-label">Tolerancia</span>
-                    <div class="tolerance-control">
-                      <input
-                        type="number"
-                        [value]="smnMaxPastHours()"
-                        (change)="onSmnMaxPastHoursChange(+$any($event.target).value)"
-                        min="0"
-                        max="24"
-                        step="1"
-                        class="tolerance-input"
-                        placeholder="0"
-                        [disabled]="isSynced()"
-                      />
-                      <span class="tolerance-label">h</span>
-                    </div>
-                  </div>
+                  <div class="smn-settings-control">
+                    @if (isSmnSettingsExpanded()) {
+                      <div class="smn-tolerance-control">
+                        <span class="control-label">Tolerancia</span>
+                        <div class="tolerance-control">
+                          <input
+                            type="number"
+                            [value]="smnMaxPastHours()"
+                            (change)="onSmnMaxPastHoursChange(+$any($event.target).value)"
+                            min="0"
+                            max="24"
+                            step="1"
+                            class="tolerance-input"
+                            placeholder="0"
+                            [disabled]="isSynced()"
+                          />
+                          <span class="tolerance-label">h</span>
+                        </div>
+                      </div>
 
-                  <mat-checkbox
-                    color="primary"
-                    [checked]="smnShowStationsWithoutData()"
-                    (change)="onSmnShowStationsWithoutDataChange($event.checked)"
-                    class="smn-no-data-toggle"
-                    matTooltip="Cuando se desactiva, las estaciones sin observación dentro del período solicitado se ocultan del mapa."
-                  >
-                    Mostrar estaciones sin datos
-                  </mat-checkbox>
+                      <mat-checkbox
+                        color="primary"
+                        [checked]="smnShowStationsWithoutData()"
+                        (change)="onSmnShowStationsWithoutDataChange($event.checked)"
+                        class="smn-no-data-toggle"
+                        matTooltip="Cuando se desactiva, las estaciones sin observación dentro del período solicitado se ocultan del mapa."
+                        [disabled]="isSynced()"
+                      >
+                        Mostrar estaciones sin observación
+                      </mat-checkbox>
+                    }
+                  </div>
                 }
               </div>
             }
@@ -385,8 +409,8 @@
                   <div class="images-count-control">
                     <mat-form-field appearance="fill" class="images-count-select">
                       <mat-select
-                        [value]="lastImagesCount()"
-                        (selectionChange)="onLastImagesCountChange($event.value)"
+                        [value]="imageCount()"
+                        (selectionChange)="onImageCountChange($event.value)"
                         panelClass="layer-select-panel"
                         [disabled]="isSynced()"
                       >

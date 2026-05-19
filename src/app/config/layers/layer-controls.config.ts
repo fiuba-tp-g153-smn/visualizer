@@ -19,5 +19,5 @@ export const DEFAULT_LAYER_CONTROLS = {
    * Default number of recent images to display.
    * Used when initializing tile layer playback.
    */
-  lastImagesCount: 1,
+  imageCount: 1,
 } as const;

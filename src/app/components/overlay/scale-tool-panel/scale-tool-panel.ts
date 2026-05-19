@@ -7,9 +7,8 @@ import {
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
 
 import { ContinuousScale, DiscreteScale, ScaleType, PaletteConfigScale } from '../../../models';
 import { ScaleToolEntry } from '../../../services/tools/scale-tools.service';
@@ -23,7 +22,7 @@ import {
 @Component({
   selector: 'app-scale-tool-panel',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, MatTooltipModule, PanelCloseButtonComponent],
   templateUrl: './scale-tool-panel.html',
   styleUrl: './scale-tool-panel.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,12 +1,11 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
 
 @Component({
   selector: 'app-map-coordinates',
   standalone: true,
-  imports: [DecimalPipe, MatIconModule, MatButtonModule],
+  imports: [DecimalPipe, PanelCloseButtonComponent],
   templateUrl: './map-coordinates.html',
   styleUrl: './map-coordinates.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

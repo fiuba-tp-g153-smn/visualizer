@@ -18,6 +18,7 @@ import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
 import { VectorOverlayService } from '../../services/layers/vector-overlay.service';
 import { LayerRefreshService } from '../../services/layers/layer-refresh.service';
+import { UnitsSettingsService } from '../../services/settings/units-settings.service';
 
 /**
  * Main map container component that orchestrates the map, layers, polygons and point-query UI.
@@ -45,6 +46,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private polygonsService = inject(MapPolygonsService);
   private vectorOverlayService = inject(VectorOverlayService);
   private layerRefreshService = inject(LayerRefreshService);
+  private unitsSettings = inject(UnitsSettingsService);
 
   private currentTileLayer: L.TileLayer | null = null;
 
@@ -77,6 +79,9 @@ export class MapContainer implements OnInit, OnDestroy {
         this.layerRefreshService.smnStationsLoadTick();
         // Re-render point layers when the zoom changes so marker sizes can adapt.
         this.mapInfoService.currentZoom();
+        // Re-render layers that depend on display units (e.g. SMN station badges/popups).
+        this.unitsSettings.temperatureUnit();
+        this.unitsSettings.windSpeedUnit();
 
         if (this.map) {
           this.layersService.syncLayers(layerIds);

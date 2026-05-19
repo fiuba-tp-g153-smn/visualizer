@@ -1,14 +1,10 @@
 @if (visible) {
   <div class="point-panel">
-    <button
-      mat-icon-button
-      type="button"
+    <app-panel-close-button
       class="close-button"
-      (click)="onClose()"
-      aria-label="Cerrar panel de valor del punto"
-    >
-      <mat-icon>close</mat-icon>
-    </button>
+      ariaLabel="Cerrar panel de valor del punto"
+      (pressed)="onClose()"
+    />
 
     <span class="layer-name" [matTooltip]="layerName">{{ layerName }}</span>
 

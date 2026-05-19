@@ -13,7 +13,7 @@ import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
 import { NotificationService } from '../notifications/notification.service';
 import {
-  SMN_STATIONS_MAX_PAST_HOURS_OPTIONS,
+  SMN_STATIONS_IMAGE_COUNT_OPTIONS,
   SmnStationsTemporalMode,
 } from '../../config/layers/smn-stations/controls.constants';
 import {
@@ -31,7 +31,6 @@ import {
 
 interface SmnStationsEndpointConfig {
   tilesetIds: readonly string[];
-  maxPastHoursOptions: readonly number[];
 }
 
 // Shape of `/weather-stations/{latest,tilesetId}` from the data-service.
@@ -188,10 +187,6 @@ export class LayerRefreshService {
     return this.smnStationsEndpointConfigSignal()?.tilesetIds ?? [];
   }
 
-  getSmnStationsMaxPastHoursOptions(): readonly number[] {
-    return this.smnStationsEndpointConfigSignal()?.maxPastHoursOptions ?? [];
-  }
-
   async ensureSmnStationsEndpointConfigLoaded(): Promise<void> {
     if (this.smnStationsEndpointConfigSignal()) {
       return;
@@ -320,9 +315,7 @@ export class LayerRefreshService {
         throw new Error('No tilesets available for SMN stations specific mode');
       }
       backendSnapshot = await firstValueFrom(
-        this.http.get<BackendSnapshot>(
-          buildWeatherStationsTilesetUrl(tilesetId, maxPastHours),
-        ),
+        this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, maxPastHours)),
       );
       referenceTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
     } else {
@@ -354,15 +347,19 @@ export class LayerRefreshService {
       const resp = await firstValueFrom(
         this.http.get<BackendTilesetsResponse>(buildWeatherStationsTilesetsUrl()),
       );
+      const maxLoopPeriods = Math.max(...SMN_STATIONS_IMAGE_COUNT_OPTIONS);
+      const sortedTilesetIds = resp.tilesets.map((t) => t.tileset_id).sort();
       return {
-        tilesetIds: resp.tilesets.map((t) => t.tileset_id),
-        maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS],
+        tilesetIds:
+          sortedTilesetIds.length > maxLoopPeriods
+            ? sortedTilesetIds.slice(-maxLoopPeriods)
+            : sortedTilesetIds,
       };
     } catch (error) {
       // The interceptor already re-prompted on 401; a 401 reaching here means
       // the user cancelled. Treat it like any other failure (fail-soft).
       console.warn('[LayerRefreshService] failed to load SMN tilesets', { error });
-      return { tilesetIds: [], maxPastHoursOptions: [...SMN_STATIONS_MAX_PAST_HOURS_OPTIONS] };
+      return { tilesetIds: [] };
     }
   }
 
@@ -415,9 +412,7 @@ export class LayerRefreshService {
     for (const o of snapshot.stations) {
       observationsById.set(o.station_id, o);
     }
-    const windowStart = new Date(
-      referenceTimestamp.getTime() - maxPastHours * 60 * 60 * 1000,
-    );
+    const windowStart = new Date(referenceTimestamp.getTime() - maxPastHours * 60 * 60 * 1000);
 
     const result: SmnStationObservation[] = [];
     for (const station of registry) {
@@ -508,7 +503,7 @@ export class LayerRefreshService {
 
   /**
    * Compares before and after configurations and shows appropriate notification.
-   * If there are changes, adjusts the timeIndex based on lastImagesCount.
+   * If there are changes, adjusts the timeIndex based on imageCount.
    */
   private compareAndNotify(
     layerId: string,
@@ -533,7 +528,7 @@ export class LayerRefreshService {
         break;
     }
 
-    // If there were changes, adjust timeIndex based on lastImagesCount
+    // If there were changes, adjust timeIndex based on imageCount
     if (hasChanges) {
       this.adjustTimeIndexAfterConfigRefresh(layerId);
     }
@@ -583,7 +578,7 @@ export class LayerRefreshService {
   }
 
   /**
-   * Adjusts the timeIndex after a config refresh based on lastImagesCount.
+   * Adjusts the timeIndex after a config refresh based on imageCount.
    * Also handles clamping if the timeIndex is out of bounds.
    * Delegates calculation to LayerConfigService.
    */
@@ -608,12 +603,9 @@ export class LayerRefreshService {
       return;
     }
 
-    // Otherwise, recalculate based on lastImagesCount
-    const lastImagesCount = controls.playback.lastImagesCount;
-    const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(
-      layerId,
-      lastImagesCount,
-    );
+    // Otherwise, recalculate based on imageCount
+    const imageCount = controls.playback.imageCount;
+    const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(layerId, imageCount);
 
     if (newTimeIndex !== undefined) {
       this.layerControlService.setTimeIndex(layerId, newTimeIndex);

@@ -33,7 +33,7 @@ export class SyncPlaybackService {
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly engineService = inject(PlaybackEngineService);
 
-  private readonly originalLastImagesCount = new Map<string, number>();
+  private readonly originalImageCount = new Map<string, number>();
 
   private readonly state = signal<SyncState>({
     selectedLayerIds: [],
@@ -52,7 +52,7 @@ export class SyncPlaybackService {
       const invalidIds = selectedIds.filter((id) => !eligibleIds.has(id));
 
       if (invalidIds.length > 0) {
-        invalidIds.forEach((id) => this.restoreOriginalLastImagesCount(id));
+        invalidIds.forEach((id) => this.restoreOriginalImageCount(id));
         this.state.update((s) => ({
           ...s,
           selectedLayerIds: s.selectedLayerIds.filter((id) => eligibleIds.has(id)),
@@ -368,9 +368,9 @@ export class SyncPlaybackService {
 
   selectLayer(layerId: string): void {
     if (this.isLayerSelected(layerId)) return;
-    this.saveOriginalLastImagesCount(layerId);
+    this.saveOriginalImageCount(layerId);
     this.state.update((s) => ({ ...s, selectedLayerIds: [...s.selectedLayerIds, layerId] }));
-    this.applyLastImagesCountToLayer(layerId);
+    this.applyImageCountToLayer(layerId);
 
     // Auto-select a playable frameCount when the default (1) is not usable
     if (this.state().frameCount < 2) {
@@ -381,12 +381,12 @@ export class SyncPlaybackService {
   }
 
   /**
-   * Removes a layer from sync and restores its original lastImagesCount.
+   * Removes a layer from sync and restores its original imageCount.
    * Also called by LayerItemComponent when the user "detaches" via individual controls.
    */
   deselectLayer(layerId: string): void {
     if (!this.isLayerSelected(layerId)) return;
-    this.restoreOriginalLastImagesCount(layerId);
+    this.restoreOriginalImageCount(layerId);
     this.state.update((s) => ({
       ...s,
       selectedLayerIds: s.selectedLayerIds.filter((id) => id !== layerId),
@@ -397,13 +397,13 @@ export class SyncPlaybackService {
   }
 
   /**
-   * Detaches a layer from sync without restoring the original lastImagesCount.
+   * Detaches a layer from sync without restoring the original imageCount.
    * Used when the user interacts manually (e.g. moves the slider, press play) so
    * the current sync values are preserved for individual playback.
    */
   detachLayer(layerId: string): void {
     if (!this.isLayerSelected(layerId)) return;
-    this.originalLastImagesCount.delete(layerId); // discard — keep current state
+    this.originalImageCount.delete(layerId); // discard — keep current state
     this.state.update((s) => ({
       ...s,
       selectedLayerIds: s.selectedLayerIds.filter((id) => id !== layerId),
@@ -423,7 +423,7 @@ export class SyncPlaybackService {
       frameCount,
       frameIndex: Math.min(s.frameIndex, Math.max(0, frameCount - 1)),
     }));
-    this.state().selectedLayerIds.forEach((id) => this.applyLastImagesCountToLayer(id));
+    this.state().selectedLayerIds.forEach((id) => this.applyImageCountToLayer(id));
     if (this.state().isPlaying) {
       const newEfc = this.syncAlignment().effectiveFrameCount;
       this.engineService.setFrameCount(SYNC_ENGINE_ID, newEfc);
@@ -478,7 +478,7 @@ export class SyncPlaybackService {
 
   reset(): void {
     this.pause();
-    this.state().selectedLayerIds.forEach((id) => this.restoreOriginalLastImagesCount(id));
+    this.state().selectedLayerIds.forEach((id) => this.restoreOriginalImageCount(id));
     this.state.set({
       selectedLayerIds: [],
       frameCount: 1,
@@ -511,26 +511,26 @@ export class SyncPlaybackService {
     }
   }
 
-  private applyLastImagesCountToLayer(layerId: string): void {
-    this.layerControlService.setLastImagesCount(
+  private applyImageCountToLayer(layerId: string): void {
+    this.layerControlService.setImageCount(
       layerId,
       this.state().frameCount + this.SYNC_EXTRA_FRAMES,
     );
   }
 
-  private saveOriginalLastImagesCount(layerId: string): void {
-    if (this.originalLastImagesCount.has(layerId)) return;
+  private saveOriginalImageCount(layerId: string): void {
+    if (this.originalImageCount.has(layerId)) return;
     const controls = this.layerControlService.getControls(layerId);
     if (controls.type === LayerType.TILE) {
-      this.originalLastImagesCount.set(layerId, controls.playback.lastImagesCount);
+      this.originalImageCount.set(layerId, controls.playback.imageCount);
     }
   }
 
-  private restoreOriginalLastImagesCount(layerId: string): void {
-    const original = this.originalLastImagesCount.get(layerId);
+  private restoreOriginalImageCount(layerId: string): void {
+    const original = this.originalImageCount.get(layerId);
     if (original !== undefined) {
-      this.layerControlService.setLastImagesCount(layerId, original);
-      this.originalLastImagesCount.delete(layerId);
+      this.layerControlService.setImageCount(layerId, original);
+      this.originalImageCount.delete(layerId);
     }
   }
 

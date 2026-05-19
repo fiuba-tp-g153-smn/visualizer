@@ -121,6 +121,8 @@ export class MapInfoService {
 
   // Query marker position (set by PointQueryViewerService)
   readonly queryMarkerPosition = signal<{ lat: number; lon: number } | null>(null);
+  readonly queryMarkerScreenPosition = signal<{ x: number; y: number } | null>(null);
+  readonly isZooming = signal<boolean>(false);
 
   // Overlay layers (managed internally)
   private latitudeLine: L.Polyline | null = null;
@@ -131,8 +133,9 @@ export class MapInfoService {
   // Event handlers
   private mouseMoveHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
   private mouseOutHandler: (() => void) | null = null;
+  private zoomStartHandler: (() => void) | null = null;
   private zoomEndHandler: (() => void) | null = null;
-  private moveEndHandler: (() => void) | null = null;
+  private moveHandler: (() => void) | null = null;
 
   constructor() {
     this.loadPersistedState();
@@ -158,6 +161,7 @@ export class MapInfoService {
     effect(() => {
       const position = this.queryMarkerPosition();
       this.updateQueryMarker(position);
+      this.updateQueryMarkerScreenPosition(position);
     });
   }
 
@@ -204,6 +208,11 @@ export class MapInfoService {
 
     // Apply persisted overlay states now that map is available
     this.applyPersistedOverlays();
+
+    // Re-apply marker and its screen projection if the query state existed before map init.
+    const queryPosition = this.queryMarkerPosition();
+    this.updateQueryMarker(queryPosition);
+    this.updateQueryMarkerScreenPosition(queryPosition);
   }
 
   /** Apply overlays that were loaded from storage before map was initialized */
@@ -230,24 +239,34 @@ export class MapInfoService {
       this.mouseLongitude.set(null);
     };
 
-    // Zoom/move for scale calculation
+    // Hide near-marker overlays while zooming and restore at the end.
+    this.zoomStartHandler = () => {
+      this.isZooming.set(true);
+    };
+
+    // Zoom final state update
     this.zoomEndHandler = () => {
+      this.isZooming.set(false);
+
       if (this.map) {
         this.currentZoom.set(Math.round(this.map.getZoom()));
         this.mapCenterLat.set(this.map.getCenter().lat);
+        this.updateQueryMarkerScreenPosition(this.queryMarkerPosition());
       }
     };
 
-    this.moveEndHandler = () => {
+    this.moveHandler = () => {
       if (this.map) {
         this.mapCenterLat.set(this.map.getCenter().lat);
+        this.updateQueryMarkerScreenPosition(this.queryMarkerPosition());
       }
     };
 
     this.map.on('mousemove', this.mouseMoveHandler);
     this.map.on('mouseout', this.mouseOutHandler);
+    this.map.on('zoomstart', this.zoomStartHandler);
     this.map.on('zoomend', this.zoomEndHandler);
-    this.map.on('moveend', this.moveEndHandler);
+    this.map.on('move', this.moveHandler);
   }
 
   private removeEventListeners(): void {
@@ -261,14 +280,20 @@ export class MapInfoService {
       this.map.off('mouseout', this.mouseOutHandler);
       this.mouseOutHandler = null;
     }
+    if (this.zoomStartHandler) {
+      this.map.off('zoomstart', this.zoomStartHandler);
+      this.zoomStartHandler = null;
+    }
     if (this.zoomEndHandler) {
       this.map.off('zoomend', this.zoomEndHandler);
       this.zoomEndHandler = null;
     }
-    if (this.moveEndHandler) {
-      this.map.off('moveend', this.moveEndHandler);
-      this.moveEndHandler = null;
+    if (this.moveHandler) {
+      this.map.off('move', this.moveHandler);
+      this.moveHandler = null;
     }
+
+    this.isZooming.set(false);
   }
 
   /**
@@ -500,10 +525,22 @@ export class MapInfoService {
     }
   }
 
+  private updateQueryMarkerScreenPosition(position: { lat: number; lon: number } | null): void {
+    if (!this.map || !position) {
+      this.queryMarkerScreenPosition.set(null);
+      return;
+    }
+
+    const point = this.map.latLngToContainerPoint([position.lat, position.lon]);
+    this.queryMarkerScreenPosition.set({ x: Math.round(point.x), y: Math.round(point.y) });
+  }
+
   private removeQueryMarker(): void {
     if (this.queryMarker) {
       this.queryMarker.remove();
       this.queryMarker = null;
     }
+
+    this.queryMarkerScreenPosition.set(null);
   }
 }

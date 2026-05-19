@@ -1,13 +1,5 @@
 <div class="scale-tool">
-  <button
-    mat-icon-button
-    type="button"
-    class="close-button"
-    (click)="onClose()"
-    aria-label="Cerrar escala"
-  >
-    <mat-icon>close</mat-icon>
-  </button>
+  <app-panel-close-button class="close-button" ariaLabel="Cerrar escala" (pressed)="onClose()" />
   <div class="scale-label" [matTooltip]="scaleTooltip" matTooltipPosition="below">
     {{ verticalLabel }}
   </div>
