@@ -1,5 +1,5 @@
 const STORAGE_PREFIX = 'mapasmn';
-const STORAGE_VERSION = '2026-05-16T23:00:00Z';
+const STORAGE_VERSION = '2026-05-19T10:00:00Z';
 
 function buildStorageKey(name: string): string {
   return `${STORAGE_PREFIX}.${name}@${STORAGE_VERSION}`;
