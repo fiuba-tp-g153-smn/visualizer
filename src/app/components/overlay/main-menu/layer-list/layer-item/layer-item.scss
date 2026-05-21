@@ -510,6 +510,10 @@
           &:hover {
             color: var(--mat-sys-primary);
           }
+          mat-progress-spinner {
+            display: inline-block;
+            margin: 0 auto;
+          }
         }
       }
       .time-slider-container {
@@ -607,20 +611,6 @@
     }
   }
 
-  .loading-config {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    color: var(--mat-sys-on-surface-variant);
-    font-size: 0.875rem;
-    .loading-icon {
-      animation: pulse 1.5s ease-in-out infinite;
-      user-select: none;
-      pointer-events: none;
-    }
-  }
-
   .no-periods-message {
     display: flex;
     align-items: center;
@@ -631,16 +621,6 @@
     .info-icon {
       color: var(--mat-sys-on-surface-variant);
     }
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
   }
 }
 
