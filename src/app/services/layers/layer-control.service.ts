@@ -28,7 +28,11 @@ import {
 import { STORAGE_KEYS } from '../../constants';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
-import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
+import {
+  buildEcmwfTpFrameOptions,
+  computeWindowStart,
+  getDefaultCursorIndex,
+} from '../../utils/playback-window';
 import {
   DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
   SMN_STATIONS_IMAGE_COUNT_OPTIONS,
@@ -811,9 +815,12 @@ export class LayerControlService {
       }
     });
 
-    // Update config availableTilesets based on new selection
+    // Update config availableTilesets based on new selection. The returned
+    // config reflects the new union synchronously; calling getConfig() right
+    // after would still see the previous availableTilesets because the signal
+    // write is deferred via queueMicrotask.
     const updatedControls = this.getControls(layerId) as EcmwfTpLayerControls;
-    this.layerConfigService.updateEcmwfTpSelectedForecasts(
+    const newConfig = this.layerConfigService.updateEcmwfTpSelectedForecasts(
       layerId,
       updatedControls.forecast.selectedForecastTimestamps,
     );
@@ -824,21 +831,32 @@ export class LayerControlService {
       return;
     }
 
+    if (!newConfig) return;
+    const newUnionCount = newConfig.availableTilesets.length;
+    const layer = this.layersService.getLayerById(layerId);
+
     // Clamp timeIndex if the union shrank — reset to the layer's default cursor.
-    const newConfig = this.layerConfigService.getConfig(layerId) as
-      | EcmwfTpTileLayerConfig
-      | undefined;
     if (
-      newConfig &&
       updatedControls.playback.timeIndex !== undefined &&
-      updatedControls.playback.timeIndex >= newConfig.availableTilesets.length
+      updatedControls.playback.timeIndex >= newUnionCount
     ) {
-      const layer = this.layersService.getLayerById(layerId);
       const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
-      this.setTimeIndex(
-        layerId,
-        getDefaultCursorIndex(newConfig.availableTilesets.length, isForecast),
-      );
+      this.setTimeIndex(layerId, getDefaultCursorIndex(newUnionCount, isForecast));
+    }
+
+    // Reconcile imageCount with the new union size: if the current value is
+    // no longer in the dropdown's options (e.g. it was the per-forecast cap of
+    // 47 and the union just grew to 51, or vice versa), snap it to the new
+    // max so the selector stays valid without a manual user re-pick.
+    if (
+      newUnionCount > 0 &&
+      layer?.type === LayerType.TILE &&
+      layer.category === LayerCategory.ECMWF_TP
+    ) {
+      const options = buildEcmwfTpFrameOptions(layer.availablePeriods ?? [1], newUnionCount);
+      if (!options.includes(updatedControls.playback.imageCount)) {
+        this.setImageCount(layerId, newUnionCount);
+      }
     }
   }
 
