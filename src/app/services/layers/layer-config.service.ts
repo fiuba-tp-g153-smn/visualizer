@@ -180,17 +180,23 @@ export class LayerConfigService {
 
             const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
 
-            // Preserve the existing availableTilesets when a config already
-            // exists — it's a selection-derived view maintained by
+            // Preserve the existing availableTilesets verbatim when a config
+            // already exists — it's a selection-derived view maintained by
             // updateEcmwfTpSelectedForecasts and the reconciliation effect in
             // LayerControlService. Re-seeding it from forecasts[0] on every
             // 10s auto-refresh would clobber the user's selection-aware union
-            // and cause downstream tile churn. On the initial fetch (no prior
-            // config), seed from forecasts[0]'s periods as a sensible default
-            // until the selection-aware reconciliation runs.
+            // and cause downstream tile churn. The trim is per-forecast (cap
+            // of maxLoopPeriods) and is already applied to each forecast's
+            // periods above; re-trimming the union here would drop periods
+            // contributed exclusively by older forecast runs whenever the
+            // union exceeds the per-forecast cap, triggering a ping-pong with
+            // the reconciliation effect that re-derives the un-trimmed union.
+            // On the initial fetch (no prior config), seed from forecasts[0]'s
+            // periods as a sensible default until the selection-aware
+            // reconciliation runs.
             const existing = this.configMap().get(layer.id) as EcmwfTpTileLayerConfig | undefined;
             const availableTilesets: TilesetEntry[] = existing
-              ? this.keepLatestTilesetsForLayer(layer.availablePeriods, existing.availableTilesets)
+              ? [...existing.availableTilesets]
               : this.keepLatestTilesetsForLayer(
                   layer.availablePeriods,
                   (periodsByForecast[forecasts[0]] ?? []).map((id) => ({
@@ -222,49 +228,46 @@ export class LayerConfigService {
 
   /**
    * Updates the availableTilesets for an ECMWF layer based on the selected forecasts.
-   * Uses the first selected forecast's periods for the time slider.
+   * Exposes the full sorted union of periods across the selection.
+   *
+   * Each forecast's periods are already trimmed to maxLoopPeriods at fetch
+   * time; the union must not be re-trimmed here, otherwise the earliest
+   * periods contributed exclusively by older forecast runs would be dropped.
    */
-  updateEcmwfTpSelectedForecasts(layerId: string, selectedForecastTimestamps: string[]): void {
+  updateEcmwfTpSelectedForecasts(
+    layerId: string,
+    selectedForecastTimestamps: string[],
+  ): EcmwfTpTileLayerConfig | undefined {
     const config = this.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
-    if (!config || config.category !== LayerCategory.ECMWF_TP) return;
+    if (!config || config.category !== LayerCategory.ECMWF_TP) return undefined;
 
-    // Compute sorted union of all periods across selected forecasts
     const periodSet = new Set<string>();
+    const selectedPeriodsByForecast: Record<string, string[]> = {};
     for (const forecastTs of selectedForecastTimestamps) {
-      const periods = config.periodsByForecast[forecastTs];
-      if (periods) {
-        for (const p of periods) {
-          periodSet.add(p);
-        }
+      const periods = config.periodsByForecast[forecastTs] ?? [];
+      selectedPeriodsByForecast[forecastTs] = periods;
+      for (const p of periods) {
+        periodSet.add(p);
       }
     }
 
-    // Build reverse lookup scoped to selected forecasts
-    const selectedPeriodsByForecast: Record<string, string[]> = {};
-    for (const forecastTs of selectedForecastTimestamps) {
-      selectedPeriodsByForecast[forecastTs] = config.periodsByForecast[forecastTs] ?? [];
-    }
-
-    const maxLoopPeriods = this.getMaxLoopPeriodsForLayer(layerId);
-    const sortedPeriods = this.keepLatestPeriodIds(maxLoopPeriods, [...periodSet].sort());
-    const availablePeriodIds = new Set(sortedPeriods);
-    const prunedSelectedPeriodsByForecast: Record<string, string[]> = {};
-    for (const [forecastTs, periods] of Object.entries(selectedPeriodsByForecast)) {
-      prunedSelectedPeriodsByForecast[forecastTs] = periods.filter((id) =>
-        availablePeriodIds.has(id),
-      );
-    }
-
+    const sortedPeriods = [...periodSet].sort();
     const availableTilesets: TilesetEntry[] = sortedPeriods.map((id) => ({
       id,
       time: parseEcmwfTimestamp(id) ?? new Date(0),
     }));
 
-    this.updateConfigMap(layerId, {
+    // Returned synchronously so the caller can read the new union size
+    // immediately — the underlying signal write in updateConfigMap is deferred
+    // via queueMicrotask, so getConfig() right after the call would still
+    // return the previous availableTilesets.
+    const newConfig: EcmwfTpTileLayerConfig = {
       ...config,
       availableTilesets,
-      forecastsByPeriod: this.buildForecastsByPeriod(prunedSelectedPeriodsByForecast),
-    });
+      forecastsByPeriod: this.buildForecastsByPeriod(selectedPeriodsByForecast),
+    };
+    this.updateConfigMap(layerId, newConfig);
+    return newConfig;
   }
 
   /**
@@ -443,15 +446,6 @@ export class LayerConfigService {
     tilesets: readonly TilesetEntry[],
   ): TilesetEntry[] {
     return this.keepLatestTilesets(this.getMaxLoopPeriods(availablePeriods), tilesets);
-  }
-
-  private getMaxLoopPeriodsForLayer(layerId: string): number | undefined {
-    const layer = this.layersService.getLayerById(layerId);
-    if (!layer || layer.type !== LayerType.TILE) {
-      return undefined;
-    }
-
-    return this.getMaxLoopPeriods(layer.availablePeriods);
   }
 
   private getMaxLoopPeriods(availablePeriods: readonly number[] | undefined): number | undefined {
