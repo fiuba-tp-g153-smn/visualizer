@@ -71,11 +71,15 @@ export class WeatherStationsApiKeyService {
    * Returns the existing key, prompting the user if there isn't one. Multiple
    * concurrent calls share a single in-flight prompt so a stampede (e.g. the
    * panel `(opened)` event firing twice on rapid clicks) doesn't stack dialogs.
+   * Skipped entirely when `SMN_API_PROMPT_FOR_TOKEN` is disabled.
    */
   async ensureKey(): Promise<string | null> {
     const existing = this.getKey();
     if (existing) {
       return existing;
+    }
+    if (!environment.smnApi.promptForToken) {
+      return null;
     }
     if (this.dialogInFlight) {
       return this.dialogInFlight;

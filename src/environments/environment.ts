@@ -8,6 +8,7 @@ const envFallback = {
   DATA_SERVICE_BASE_URL: 'https://data.mapasmn.com',
   ALERTS_SERVICE_BASE_URL: 'http://localhost:8080',
   WEATHER_STATIONS_API_KEY: '',
+  SMN_API_PROMPT_FOR_TOKEN: 'true',
   TILE_FORMAT: 'webp',
   DOCS_URL: '',
 };
@@ -37,6 +38,11 @@ export const environment = {
   },
   ui: {
     disabledLayers: [] as string[],
+  },
+  smnApi: {
+    promptForToken: envDefined
+      ? $ENV.SMN_API_PROMPT_FOR_TOKEN !== 'false'
+      : envFallback.SMN_API_PROMPT_FOR_TOKEN !== 'false',
   },
   docsUrl: envDefined ? $ENV.DOCS_URL : envFallback.DOCS_URL,
 };
