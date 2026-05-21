@@ -18,5 +18,8 @@ export const environment = {
   ui: {
     disabledLayers: [] as string[],
   },
+  smnApi: {
+    promptForToken: $ENV.SMN_API_PROMPT_FOR_TOKEN !== 'false',
+  },
   docsUrl: $ENV.DOCS_URL,
 };
