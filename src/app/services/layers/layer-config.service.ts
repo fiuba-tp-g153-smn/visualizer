@@ -180,17 +180,23 @@ export class LayerConfigService {
 
             const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
 
-            // Preserve the existing availableTilesets when a config already
-            // exists — it's a selection-derived view maintained by
+            // Preserve the existing availableTilesets verbatim when a config
+            // already exists — it's a selection-derived view maintained by
             // updateEcmwfTpSelectedForecasts and the reconciliation effect in
             // LayerControlService. Re-seeding it from forecasts[0] on every
             // 10s auto-refresh would clobber the user's selection-aware union
-            // and cause downstream tile churn. On the initial fetch (no prior
-            // config), seed from forecasts[0]'s periods as a sensible default
-            // until the selection-aware reconciliation runs.
+            // and cause downstream tile churn. The trim is per-forecast (cap
+            // of maxLoopPeriods) and is already applied to each forecast's
+            // periods above; re-trimming the union here would drop periods
+            // contributed exclusively by older forecast runs whenever the
+            // union exceeds the per-forecast cap, triggering a ping-pong with
+            // the reconciliation effect that re-derives the un-trimmed union.
+            // On the initial fetch (no prior config), seed from forecasts[0]'s
+            // periods as a sensible default until the selection-aware
+            // reconciliation runs.
             const existing = this.configMap().get(layer.id) as EcmwfTpTileLayerConfig | undefined;
             const availableTilesets: TilesetEntry[] = existing
-              ? this.keepLatestTilesetsForLayer(layer.availablePeriods, existing.availableTilesets)
+              ? [...existing.availableTilesets]
               : this.keepLatestTilesetsForLayer(
                   layer.availablePeriods,
                   (periodsByForecast[forecasts[0]] ?? []).map((id) => ({
