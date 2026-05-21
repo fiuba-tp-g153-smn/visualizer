@@ -354,10 +354,19 @@
                 <button
                   mat-icon-button
                   (click)="reloadChannelConfig()"
-                  matTooltip="Actualizar períodos disponibles (se actualiza automáticamente cada 10 segundos)"
+                  [disabled]="isLoadingConfig()"
+                  [matTooltip]="
+                    isLoadingConfig()
+                      ? 'Cargando períodos disponibles...'
+                      : 'Actualizar períodos disponibles (se actualiza automáticamente cada 10 segundos)'
+                  "
                   class="reload-btn"
                 >
-                  <mat-icon>refresh</mat-icon>
+                  @if (isLoadingConfig()) {
+                    <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+                  } @else {
+                    <mat-icon>refresh</mat-icon>
+                  }
                 </button>
               </div>
 
@@ -436,11 +445,6 @@
                     />
                     <span class="speed-label">s</span>
                   </div>
-                </div>
-              } @else if (isLoadingConfig()) {
-                <div class="loading-config">
-                  <mat-icon class="loading-icon">hourglass_empty</mat-icon>
-                  <span>Cargando períodos disponibles...</span>
                 </div>
               } @else if (hasNoPeriodsAvailable()) {
                 <div class="no-periods-message">

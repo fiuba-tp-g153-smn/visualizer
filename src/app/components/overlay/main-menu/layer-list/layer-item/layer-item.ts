@@ -19,6 +19,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import {
   EcmwfTpLayerControls,
@@ -76,6 +77,7 @@ export type LayerItemMode = 'available' | 'active';
     MatRadioModule,
     MatSelectModule,
     MatFormFieldModule,
+    MatProgressSpinnerModule,
     CdkDragHandle,
   ],
   templateUrl: './layer-item.html',
@@ -119,7 +121,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly showDragHandle = true;
 
   // Estado local
-  isLoadingConfig = signal(false);
+  readonly isLoadingConfig = computed(() =>
+    this.refreshService.loadingLayerIds().has(this.layer.id),
+  );
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
   isForecastsExpanded = signal(false);
