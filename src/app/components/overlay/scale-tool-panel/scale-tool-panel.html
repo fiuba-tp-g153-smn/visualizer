@@ -5,28 +5,62 @@
   </div>
 
   @if (isContinuous) {
-    <div class="scale-bar scale-bar-continuous" [style.background]="gradientBackground"></div>
-    <div class="scale-values scale-values-continuous">
-      @for (label of continuousScaleLabels; track $index) {
-        <div class="scale-value">{{ label }}</div>
-      }
+    <div class="scale-bar-wrapper">
+      <div class="scale-bar scale-bar-continuous" [style.background]="gradientBackground"></div>
+      <div class="scale-ticks">
+        @for (tick of continuousTickEntries; track $index) {
+          <div
+            class="scale-tick"
+            [class.scale-tick--major]="tick.major"
+            [style.top.%]="tick.top"
+          ></div>
+        }
+      </div>
     </div>
-  } @else {
-    <div class="scale-bar scale-bar-discrete">
-      @for (block of discreteColorBlocks; track $index) {
-        <div class="discrete-step-row">
-          <div class="discrete-step" [style.backgroundColor]="block.color"></div>
+    @if (isLogContinuous) {
+      <div class="scale-values scale-values-discrete">
+        <div class="scale-value-row scale-value-sizer" aria-hidden="true">
+          <div class="scale-value">{{ continuousLabelSizerText }}</div>
         </div>
-      }
+        @for (label of continuousLabelEntries; track $index) {
+          <div class="scale-value-row" [style.top.%]="label.top">
+            <div class="scale-value">{{ label.text }}</div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="scale-values scale-values-continuous">
+        @for (label of continuousScaleLabels; track $index) {
+          <div class="scale-value">{{ label }}</div>
+        }
+      </div>
+    }
+  } @else {
+    <div class="scale-bar-wrapper">
+      <div class="scale-bar scale-bar-discrete">
+        @for (block of discreteColorBlocks; track $index) {
+          <div class="discrete-step-row">
+            <div class="discrete-step" [style.backgroundColor]="block.color"></div>
+          </div>
+        }
+      </div>
+      <div class="scale-ticks">
+        @for (tick of discreteOrPaletteTickEntries; track $index) {
+          <div
+            class="scale-tick"
+            [class.scale-tick--major]="tick.major"
+            [style.top.%]="tick.top"
+          ></div>
+        }
+      </div>
     </div>
     <div class="scale-values scale-values-discrete">
-      @for (
-        step of discreteStepsDesc;
-        track trackByStepValue($index, step);
-        let stepIndex = $index
-      ) {
-        <div class="scale-value-row">
-          <div class="scale-value">{{ discreteStepLabels[stepIndex] }}</div>
+      <div class="scale-value-row scale-value-sizer" aria-hidden="true">
+        <div class="scale-value">{{ discreteLabelSizerText }}</div>
+      </div>
+      @for (label of discreteLabelEntries; track $index) {
+        <div class="scale-value-row" [style.top.%]="label.top">
+          <div class="scale-value">{{ label.text }}</div>
         </div>
       }
     </div>
