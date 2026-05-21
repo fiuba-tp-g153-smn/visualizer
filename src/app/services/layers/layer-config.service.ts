@@ -228,9 +228,12 @@ export class LayerConfigService {
    * time; the union must not be re-trimmed here, otherwise the earliest
    * periods contributed exclusively by older forecast runs would be dropped.
    */
-  updateEcmwfTpSelectedForecasts(layerId: string, selectedForecastTimestamps: string[]): void {
+  updateEcmwfTpSelectedForecasts(
+    layerId: string,
+    selectedForecastTimestamps: string[],
+  ): EcmwfTpTileLayerConfig | undefined {
     const config = this.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
-    if (!config || config.category !== LayerCategory.ECMWF_TP) return;
+    if (!config || config.category !== LayerCategory.ECMWF_TP) return undefined;
 
     const periodSet = new Set<string>();
     const selectedPeriodsByForecast: Record<string, string[]> = {};
@@ -248,11 +251,17 @@ export class LayerConfigService {
       time: parseEcmwfTimestamp(id) ?? new Date(0),
     }));
 
-    this.updateConfigMap(layerId, {
+    // Returned synchronously so the caller can read the new union size
+    // immediately — the underlying signal write in updateConfigMap is deferred
+    // via queueMicrotask, so getConfig() right after the call would still
+    // return the previous availableTilesets.
+    const newConfig: EcmwfTpTileLayerConfig = {
       ...config,
       availableTilesets,
       forecastsByPeriod: this.buildForecastsByPeriod(selectedPeriodsByForecast),
-    });
+    };
+    this.updateConfigMap(layerId, newConfig);
+    return newConfig;
   }
 
   /**

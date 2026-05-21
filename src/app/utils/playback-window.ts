@@ -27,3 +27,19 @@ export function getDefaultCursorIndex(totalTilesets: number, isForecast: boolean
   if (totalTilesets <= 0) return 0;
   return isForecast ? 0 : totalTilesets - 1;
 }
+
+/**
+ * Frame-count dropdown options for ECMWF Total Precipitation: the largest
+ * preset (per-forecast cap) is replaced with the union size so multi-forecast
+ * selections can be animated as a whole. Lower presets are kept if they still
+ * fit under the union size.
+ */
+export function buildEcmwfTpFrameOptions(
+  staticOptions: readonly number[],
+  unionCount: number,
+): number[] {
+  if (unionCount <= 0) return [...staticOptions];
+  const staticMax = Math.max(...staticOptions);
+  const lower = staticOptions.filter((opt) => opt < staticMax && opt < unionCount);
+  return [...lower, unionCount];
+}

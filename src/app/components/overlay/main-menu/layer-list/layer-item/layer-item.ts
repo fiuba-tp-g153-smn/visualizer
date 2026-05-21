@@ -39,7 +39,7 @@ import {
   formatDateTimeOnly,
   formatEcmwfForecastTs,
 } from '../../../../../utils/tileset-timestamp';
-import { computeWindowStart } from '../../../../../utils/playback-window';
+import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
 import {
   SmnStationsTemporalMode,
@@ -160,7 +160,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * Obtiene las opciones de períodos disponibles desde la configuración de la capa
+   * Returns the available period-count options from the layer configuration.
+   *
+   * For ECMWF, the cap follows the actual union of periods across the selected
+   * forecast runs — selecting multiple runs can produce a union larger than the
+   * per-run maximum (e.g. 47), and the dropdown must offer that total.
    */
   lastImagesOptions = computed(() => {
     if (this.isSmnStationsLayer()) {
@@ -168,8 +172,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     switch (this.layer.type) {
-      case LayerType.TILE:
-        return this.layer.availablePeriods ?? [1];
+      case LayerType.TILE: {
+        const staticOptions = this.layer.availablePeriods ?? [1];
+        if (this.layer.category === LayerCategory.ECMWF_TP) {
+          const tilesets = this.getAvailableTilesetsForLayer();
+          if (tilesets && tilesets.length > 0) {
+            return buildEcmwfTpFrameOptions(staticOptions, tilesets.length);
+          }
+        }
+        return staticOptions;
+      }
       default:
         return [1];
     }
