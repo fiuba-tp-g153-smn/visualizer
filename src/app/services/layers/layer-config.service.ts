@@ -222,39 +222,27 @@ export class LayerConfigService {
 
   /**
    * Updates the availableTilesets for an ECMWF layer based on the selected forecasts.
-   * Uses the first selected forecast's periods for the time slider.
+   * Exposes the full sorted union of periods across the selection.
+   *
+   * Each forecast's periods are already trimmed to maxLoopPeriods at fetch
+   * time; the union must not be re-trimmed here, otherwise the earliest
+   * periods contributed exclusively by older forecast runs would be dropped.
    */
   updateEcmwfTpSelectedForecasts(layerId: string, selectedForecastTimestamps: string[]): void {
     const config = this.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
     if (!config || config.category !== LayerCategory.ECMWF_TP) return;
 
-    // Compute sorted union of all periods across selected forecasts
     const periodSet = new Set<string>();
+    const selectedPeriodsByForecast: Record<string, string[]> = {};
     for (const forecastTs of selectedForecastTimestamps) {
-      const periods = config.periodsByForecast[forecastTs];
-      if (periods) {
-        for (const p of periods) {
-          periodSet.add(p);
-        }
+      const periods = config.periodsByForecast[forecastTs] ?? [];
+      selectedPeriodsByForecast[forecastTs] = periods;
+      for (const p of periods) {
+        periodSet.add(p);
       }
     }
 
-    // Build reverse lookup scoped to selected forecasts
-    const selectedPeriodsByForecast: Record<string, string[]> = {};
-    for (const forecastTs of selectedForecastTimestamps) {
-      selectedPeriodsByForecast[forecastTs] = config.periodsByForecast[forecastTs] ?? [];
-    }
-
-    const maxLoopPeriods = this.getMaxLoopPeriodsForLayer(layerId);
-    const sortedPeriods = this.keepLatestPeriodIds(maxLoopPeriods, [...periodSet].sort());
-    const availablePeriodIds = new Set(sortedPeriods);
-    const prunedSelectedPeriodsByForecast: Record<string, string[]> = {};
-    for (const [forecastTs, periods] of Object.entries(selectedPeriodsByForecast)) {
-      prunedSelectedPeriodsByForecast[forecastTs] = periods.filter((id) =>
-        availablePeriodIds.has(id),
-      );
-    }
-
+    const sortedPeriods = [...periodSet].sort();
     const availableTilesets: TilesetEntry[] = sortedPeriods.map((id) => ({
       id,
       time: parseEcmwfTimestamp(id) ?? new Date(0),
@@ -263,7 +251,7 @@ export class LayerConfigService {
     this.updateConfigMap(layerId, {
       ...config,
       availableTilesets,
-      forecastsByPeriod: this.buildForecastsByPeriod(prunedSelectedPeriodsByForecast),
+      forecastsByPeriod: this.buildForecastsByPeriod(selectedPeriodsByForecast),
     });
   }
 
@@ -443,15 +431,6 @@ export class LayerConfigService {
     tilesets: readonly TilesetEntry[],
   ): TilesetEntry[] {
     return this.keepLatestTilesets(this.getMaxLoopPeriods(availablePeriods), tilesets);
-  }
-
-  private getMaxLoopPeriodsForLayer(layerId: string): number | undefined {
-    const layer = this.layersService.getLayerById(layerId);
-    if (!layer || layer.type !== LayerType.TILE) {
-      return undefined;
-    }
-
-    return this.getMaxLoopPeriods(layer.availablePeriods);
   }
 
   private getMaxLoopPeriods(availablePeriods: readonly number[] | undefined): number | undefined {
