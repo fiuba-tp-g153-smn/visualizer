@@ -578,6 +578,9 @@ export class LayerControlService {
                   const firstForecast = ecmwfConfig.availableForecasts[0];
                   if (firstForecast) {
                     ecmwfControls.forecast.selectedForecastTimestamps = [firstForecast];
+                    this.layerConfigService.updateEcmwfTpSelectedForecasts(layerId, [
+                      firstForecast,
+                    ]);
                   }
                 }
               }
