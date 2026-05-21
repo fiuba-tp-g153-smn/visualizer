@@ -1443,7 +1443,7 @@ export class LayerRenderService {
     const tileLayer = L.tileLayer(tileUrl, {
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
-      noWrap: true,
+      noWrap: false,
       opacity: controls.opacity,
       attribution: IGN_WMS_BASE_CONFIG.attribution,
     });
