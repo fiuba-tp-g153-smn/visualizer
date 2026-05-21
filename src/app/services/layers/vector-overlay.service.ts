@@ -97,17 +97,25 @@ export class VectorOverlayService {
    * y se inyecta como `fill-opacity` en los atributos del textpath, para que
    * tanto la línea como su etiqueta se atenúen juntas siguiendo la opacidad
    * de la capa primaria asociada (raster TP). Default 1 = sin atenuación.
+   *
+   * `pane` (opcional) selecciona el pane Leaflet donde se renderiza el SVG.
+   * Cuando se omite, Leaflet usa `overlayPane`.
    */
   buildLayer(
     fc: FeatureCollection,
     config: SecondaryVectorRender,
     opacity: number = 1,
+    pane?: string,
   ): L.GeoJSON {
     // `leaflet-textpath` manipula el DOM SVG (<textPath>) — si el mapa global usa
     // canvas, hay que forzar el renderer SVG por feature en el style callback.
-    const renderer = L.svg();
+    // El renderer también define el pane donde se inserta el <svg>, así que su
+    // pane debe coincidir con el del L.GeoJSON para que toda la capa quede en
+    // el mismo nivel de stacking.
+    const renderer = pane ? L.svg({ pane }) : L.svg();
     const textpathOptions = withFillOpacity(config.textpathOptions, opacity);
     return L.geoJSON(fc, {
+      pane,
       style: (feature?: Feature) => {
         const value = this.readValue(feature, config.valueProperty);
         if (value === null) return { renderer };
