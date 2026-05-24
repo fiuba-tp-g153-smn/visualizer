@@ -8,12 +8,14 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  pointer-events: none;
   overflow: visible;
 }
 
 .scale-tool {
   @include overlaySurface.floating-surface();
 
+  pointer-events: auto;
   display: flex;
   flex: 1;
   flex-direction: row;
