@@ -129,7 +129,8 @@ export class VectorOverlayService {
         // guard the map fills with duplicated labels on tiny fragments
         // (e.g. Rafagas "35" repeating across the Andes). Skip the label
         // on short polylines so only meaningful contours are annotated.
-        if (polylineLengthDegrees(layer) < MIN_LABEL_LENGTH_DEG) return;
+        const minLength = config.minLabelLengthDeg ?? MIN_LABEL_LENGTH_DEG;
+        if (polylineLengthDegrees(layer) < minLength) return;
         // SVG `<textPath>` sigue la dirección del path. Si el tramo va de
         // derecha a izquierda el texto sale invertido. Reorientarlo evita
         // tener que recurrir a `orientation: 'flip'` (que en este plugin
