@@ -1,8 +1,10 @@
 import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../../constants';
 import { buildLinearScale } from '../scale-builders';
 
-// Paleta compartida temperatura/sensación: mismos colores anclados a los mismos °C.
-// El mismo color siempre representa la misma temperatura en ambas escalas.
+// Paleta base de temperatura: mismos colores anclados a los mismos °C en ambas escalas.
+// Temperatura usa esta paleta completa (-30 a 40 °C).
+// Sensación térmica la extiende en ambos extremos (-40 a 50 °C) para cubrir
+// wind chill y heat index, manteniendo los 8 colores centrales idénticos.
 //   índice 0 → -30 °C   índice 4 → 10 °C
 //   índice 1 → -20 °C   índice 5 → 20 °C
 //   índice 2 → -10 °C   índice 6 → 30 °C
@@ -18,6 +20,15 @@ const TEMPERATURE_COLORS = [
   '#a50026', //  40 °C
 ] as const;
 
+// Extensión de la paleta para sensación térmica (-40 a 50 °C, 10 stops cada 10 °C).
+// Los 8 colores centrales son exactamente TEMPERATURE_COLORS, así el mismo color
+// representa la misma temperatura al comparar ambas capas.
+const FEELS_LIKE_COLORS = [
+  '#041a3a', // -40 °C  (extensión fría)
+  ...TEMPERATURE_COLORS, // -30 °C … 40 °C  (idénticos a TEMPERATURE_COLORS)
+  '#67000d', //  50 °C  (extensión caliente)
+] as const;
+
 // Temperatura: -30 °C a 40 °C (8 stops cada 10 °C → en Kelvin: 243.15–313.15)
 export const TEMPERATURE_SCALE = buildLinearScale({
   min: 243.15,
@@ -28,14 +39,14 @@ export const TEMPERATURE_SCALE = buildLinearScale({
   subTickCount: 4,
 });
 
-// Sensación térmica: mismo rango y paleta que TEMPERATURE_SCALE (-30 a 40 °C)
-// para que sean directamente comparables capa a capa.
+// Sensación térmica: -40 °C a 50 °C (10 stops cada 10 °C → en Kelvin: 233.15–323.15)
+// Rango extendido para capturar wind chill y heat index extremos.
 export const FEELS_LIKE_SCALE = buildLinearScale({
-  min: 243.15,
-  max: 313.15,
+  min: 233.15,
+  max: 323.15,
   unit: TEMPERATURE_UNITS.KELVIN,
-  colors: TEMPERATURE_COLORS,
-  labelCount: 8,
+  colors: FEELS_LIKE_COLORS,
+  labelCount: 10,
   subTickCount: 4,
 });
 
