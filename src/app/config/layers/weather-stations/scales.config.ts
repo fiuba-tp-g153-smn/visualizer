@@ -1,22 +1,41 @@
 import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../../constants';
 import { buildLinearScale } from '../scale-builders';
 
+// Paleta compartida temperatura/sensación: mismos colores anclados a los mismos °C.
+// El mismo color siempre representa la misma temperatura en ambas escalas.
+//   índice 0 → -30 °C   índice 4 → 10 °C
+//   índice 1 → -20 °C   índice 5 → 20 °C
+//   índice 2 → -10 °C   índice 6 → 30 °C
+//   índice 3 →   0 °C   índice 7 → 40 °C
+const TEMPERATURE_COLORS = [
+  '#08306b', // -30 °C
+  '#2171b5', // -20 °C
+  '#6baed6', // -10 °C
+  '#c6dbef', //   0 °C
+  '#fee08b', //  10 °C
+  '#f46d43', //  20 °C
+  '#d73027', //  30 °C
+  '#a50026', //  40 °C
+] as const;
+
 // Temperatura: -30 °C a 40 °C (8 stops cada 10 °C → en Kelvin: 243.15–313.15)
 export const TEMPERATURE_SCALE = buildLinearScale({
   min: 243.15,
   max: 313.15,
   unit: TEMPERATURE_UNITS.KELVIN,
-  colors: ['#08306b', '#2171b5', '#6baed6', '#c6dbef', '#fee08b', '#f46d43', '#d73027', '#a50026'],
+  colors: TEMPERATURE_COLORS,
   labelCount: 8,
   subTickCount: 4,
 });
 
 // Sensación térmica: -30 °C a 20 °C (6 stops cada 10 °C → en Kelvin: 243.15–293.15)
+// Reutiliza los primeros 6 colores de TEMPERATURE_COLORS para que el mismo color
+// represente siempre la misma temperatura al comparar ambas capas.
 export const FEELS_LIKE_SCALE = buildLinearScale({
   min: 243.15,
   max: 293.15,
   unit: TEMPERATURE_UNITS.KELVIN,
-  colors: ['#2c7bb6', '#74add1', '#abd9e9', '#ffffbf', '#fdae61', '#d7191c'],
+  colors: TEMPERATURE_COLORS.slice(0, 6),
   labelCount: 6,
   subTickCount: 4,
 });
