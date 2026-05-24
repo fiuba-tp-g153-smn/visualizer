@@ -171,6 +171,11 @@ export interface SecondaryVectorRender {
   textpathOptions?: VectorTextpathOptions;
   prefetchWindow?: number;
   /**
+   * Longitud mínima (en grados) que debe tener una polyline para llevar
+   * etiqueta. Si se omite, se usa el default global del service.
+   */
+  minLabelLengthDeg?: number;
+  /**
    * Constructor opcional para Point features (barbas, símbolos puntuales).
    * Cuando está presente, `VectorOverlayService.buildLayer` lo usa como
    * `pointToLayer` de Leaflet. Para overlays Line/Polyline (isobaras,

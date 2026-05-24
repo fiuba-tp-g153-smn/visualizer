@@ -83,6 +83,7 @@ interface ContourRenderOptions {
   styleFor: SecondaryVectorRender['styleFor'];
   textpathOptions: SecondaryVectorRender['textpathOptions'];
   labelFor?: SecondaryVectorRender['labelFor'];
+  minLabelLengthDeg?: SecondaryVectorRender['minLabelLengthDeg'];
 }
 
 const contourRender = (
@@ -97,6 +98,7 @@ const contourRender = (
   labelFor: opts.labelFor ?? numericLabelFor,
   textpathOptions: opts.textpathOptions,
   prefetchWindow: 4,
+  minLabelLengthDeg: opts.minLabelLengthDeg,
 });
 
 export const WRF_SUBGROUP: LayerSubgroup = {
@@ -125,6 +127,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
         contourRender('Rafagas', 'gust_threshold', {
           styleFor: gustThresholdStyleFor,
           textpathOptions: GUST_TEXTPATH_OPTIONS,
+          minLabelLengthDeg: 5.0,
         }),
       ],
     },

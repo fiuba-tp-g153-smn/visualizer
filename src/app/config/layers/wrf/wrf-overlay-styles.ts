@@ -92,7 +92,7 @@ export const SLP_TEXTPATH_OPTIONS: VectorTextpathOptions = makeTextpath(COLOR_BL
 // Manual: `colors="blue"`, `linewidths=0.7`.
 // ============================================================================
 
-export const gustThresholdStyleFor = makeUniformStyle(COLOR_BLUE_PURE, 0.7);
+export const gustThresholdStyleFor = makeUniformStyle(COLOR_BLUE_PURE, 1.5);
 export const GUST_TEXTPATH_OPTIONS: VectorTextpathOptions = makeTextpath(COLOR_BLUE_PURE);
 
 // ============================================================================
