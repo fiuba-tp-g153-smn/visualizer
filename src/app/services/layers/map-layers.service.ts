@@ -23,11 +23,9 @@ import {
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
  */
-/** Pane Leaflet sobre el cual se rendrizan los overlays vectoriales (isobaras, etc.). */
-const VECTOR_OVERLAY_PANE = 'data-vector-overlay';
-/** zIndex del pane vectorial: arriba de tilePane (200) y overlayPane (400), debajo de markers. */
-const VECTOR_OVERLAY_PANE_Z_INDEX = '650';
 const LEAFLET_TILE_PANE = 'tilePane';
+/** Leaflet pane prefix for vector overlays (isobars). */
+const VECTOR_OVERLAY_PANE_PREFIX = 'data-vector-overlay-';
 
 @Injectable({
   providedIn: 'root',
@@ -48,11 +46,6 @@ export class MapLayersService {
    */
   initialize(map: L.Map): void {
     this.map = map;
-    if (!map.getPane(VECTOR_OVERLAY_PANE)) {
-      const pane = map.createPane(VECTOR_OVERLAY_PANE);
-      pane.style.zIndex = VECTOR_OVERLAY_PANE_Z_INDEX;
-      pane.style.pointerEvents = 'none';
-    }
     if (!map.getPane(WEATHER_STATION_PANE)) {
       const tilePane = map.getPane(LEAFLET_TILE_PANE);
       const pane = tilePane
@@ -82,6 +75,7 @@ export class MapLayersService {
     });
 
     let zIndexOffset = 0;
+    const layerActualZIndexes = new Map<string, number>();
 
     for (const layerId of sortedLayerIds) {
       const layer = this.layersService.getLayerById(layerId);
@@ -110,6 +104,7 @@ export class MapLayersService {
 
       const baseZIndex = this.controlService.getAbsoluteZIndex(layerId, controls);
       const actualZIndex = baseZIndex + zIndexOffset;
+      layerActualZIndexes.set(layerId, actualZIndex);
 
       // Render layer based on type
       switch (layer.type) {
@@ -156,9 +151,11 @@ export class MapLayersService {
               );
               layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
 
-              // Add offset for multiple forecasts
-              if (forecastCount > 1) {
-                zIndexOffset += forecastCount - 1;
+              const ecmwfLayer = layer as EcmwfTpTileLayer;
+              const slotsPerForecast = ecmwfLayer.secondaryRender ? 2 : 1;
+              const slotsUsed = forecastCount * slotsPerForecast;
+              if (slotsUsed > 1) {
+                zIndexOffset += slotsUsed - 1;
               }
               break;
             }
@@ -221,7 +218,7 @@ export class MapLayersService {
     }
 
     // Sync vector overlays (e.g. MSLP isobars over TP raster).
-    this.syncVectorOverlays(sortedLayerIds);
+    this.syncVectorOverlays(sortedLayerIds, layerActualZIndexes);
   }
 
   private isWeatherStationLayerId(layerId: string): boolean {
@@ -268,7 +265,10 @@ export class MapLayersService {
    * active on the primary TP raster, each gets its own isobar net so that the
    * vector overlay stays in lockstep with the rasters above it.
    */
-  private syncVectorOverlays(sortedLayerIds: string[]): void {
+  private syncVectorOverlays(
+    sortedLayerIds: string[],
+    layerActualZIndexes: ReadonlyMap<string, number>,
+  ): void {
     if (!this.map) return;
 
     const desired = new Map<string, L.Layer>();
@@ -298,10 +298,13 @@ export class MapLayersService {
       const forecastsForCurrent = config.forecastsByPeriod[currentTimestampTs];
       if (!forecastsForCurrent) continue;
 
-      for (const forecastTs of controls.forecast.selectedForecastTimestamps) {
+      const layerActualZIndex = layerActualZIndexes.get(layerId);
+      if (layerActualZIndex === undefined) continue;
+
+      controls.forecast.selectedForecastTimestamps.forEach((forecastTs, forecastIndex) => {
         // Only render isobars if the forecast actually has data for the
         // current timestamp (mirrors the TP raster's check).
-        if (!forecastsForCurrent.includes(forecastTs)) continue;
+        if (!forecastsForCurrent.includes(forecastTs)) return;
 
         // Match the tile renderer's opacity resolution so the isobars fade
         // in sync with their associated TP raster (per-forecast override,
@@ -312,11 +315,22 @@ export class MapLayersService {
         const overlayKey = `${layerId}#${secondary.id}#${forecastTs}#${currentTimestampTs}`;
         const cached = this.vectorOverlay.peek(url);
 
+        // Each forecast reserves 2 z-slots (TP raster + isobars). The raster
+        // sits at `layerActualZIndex + forecastIndex * 2`, so the isobars
+        // for that forecast slot in just above it. This places the SVG
+        // above the matching TP tile but below the next layer/forecast.
+        const forecastRasterZIndex = layerActualZIndex + forecastIndex * 2;
+        const isobarZIndex = forecastRasterZIndex + 1;
+        const paneName = `${VECTOR_OVERLAY_PANE_PREFIX}${layerId}#${secondary.id}#${forecastTs}`;
+        this.ensureVectorOverlayPane(paneName, isobarZIndex);
+
         if (cached) {
-          const overlay = this.vectorOverlay.buildLayer(cached, secondary, forecastOpacity);
-          // Force the overlay onto our dedicated pane so it always sits above
-          // raster tiles regardless of insertion order.
-          overlay.options.pane = VECTOR_OVERLAY_PANE;
+          const overlay = this.vectorOverlay.buildLayer(
+            cached,
+            secondary,
+            forecastOpacity,
+            paneName,
+          );
           desired.set(overlayKey, overlay);
         } else {
           // Cache miss: trigger an async load. The service bumps `loadTick` on
@@ -326,7 +340,7 @@ export class MapLayersService {
 
         // Prefetch upcoming frames for smooth animation.
         this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs);
-      }
+      });
     }
 
     // Diff against the previously-rendered overlays.
@@ -343,6 +357,24 @@ export class MapLayersService {
       }
     }
     this.onMapOverlays = desired;
+  }
+
+  /**
+   * Ensures a per-overlay pane exists as a child of `tilePane` and sets its
+   * CSS z-index. Living inside `tilePane`'s stacking context lets the SVG
+   * isobars compete with tile layers' internal z-indices: the pane sits just
+   * above its associated TP raster but below any data layer the user pushes
+   * higher in the layer order.
+   */
+  private ensureVectorOverlayPane(name: string, zIndex: number): void {
+    if (!this.map) return;
+    let pane = this.map.getPane(name);
+    if (!pane) {
+      const tilePane = this.map.getPane(LEAFLET_TILE_PANE);
+      pane = tilePane ? this.map.createPane(name, tilePane) : this.map.createPane(name);
+      pane.style.pointerEvents = 'none';
+    }
+    pane.style.zIndex = String(zIndex);
   }
 
   /** Pre-fetches the GeoJSON for the next N frames (modular wrap inside the active window). */

@@ -19,6 +19,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import {
   EcmwfTpLayerControls,
@@ -39,7 +40,7 @@ import {
   formatDateTimeOnly,
   formatEcmwfForecastTs,
 } from '../../../../../utils/tileset-timestamp';
-import { computeWindowStart } from '../../../../../utils/playback-window';
+import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
 import {
   WeatherStationsTemporalMode,
@@ -76,6 +77,7 @@ export type LayerItemMode = 'available' | 'active';
     MatRadioModule,
     MatSelectModule,
     MatFormFieldModule,
+    MatProgressSpinnerModule,
     CdkDragHandle,
   ],
   templateUrl: './layer-item.html',
@@ -119,7 +121,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly showDragHandle = true;
 
   // Estado local
-  isLoadingConfig = signal(false);
+  readonly isLoadingConfig = computed(() =>
+    this.refreshService.loadingLayerIds().has(this.layer.id),
+  );
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
   isForecastsExpanded = signal(false);
@@ -160,7 +164,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * Obtiene las opciones de períodos disponibles desde la configuración de la capa
+   * Returns the available period-count options from the layer configuration.
+   *
+   * For ECMWF, the cap follows the actual union of periods across the selected
+   * forecast runs — selecting multiple runs can produce a union larger than the
+   * per-run maximum (e.g. 47), and the dropdown must offer that total.
    */
   lastImagesOptions = computed(() => {
     if (this.isWeatherStationsLayer()) {
@@ -168,8 +176,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     switch (this.layer.type) {
-      case LayerType.TILE:
-        return this.layer.availablePeriods ?? [1];
+      case LayerType.TILE: {
+        const staticOptions = this.layer.availablePeriods ?? [1];
+        if (this.layer.category === LayerCategory.ECMWF_TP) {
+          const tilesets = this.getAvailableTilesetsForLayer();
+          if (tilesets && tilesets.length > 0) {
+            return buildEcmwfTpFrameOptions(staticOptions, tilesets.length);
+          }
+        }
+        return staticOptions;
+      }
       default:
         return [1];
     }

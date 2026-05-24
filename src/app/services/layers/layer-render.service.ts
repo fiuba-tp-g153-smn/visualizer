@@ -766,8 +766,17 @@ export class LayerRenderService {
     if (!currentPeriodEntry) return result;
     const currentPeriodTs = currentPeriodEntry.id;
 
+    const ecmwfLayer = this.layersService.getLayerById(layerId);
+    // When the layer renders secondary isobars, each forecast reserves an
+    // extra z-slot above its raster so the isobars can slot in just above the
+    // TP tile without colliding with the next forecast (or the next layer up).
+    const slotsPerForecast =
+      ecmwfLayer && ecmwfLayer.type === LayerType.TILE && (ecmwfLayer as EcmwfTpTileLayer).secondaryRender
+        ? 2
+        : 1;
+
     selectedForecasts.forEach((forecastTs, index) => {
-      const forecastZIndex = absoluteZIndex + index;
+      const forecastZIndex = absoluteZIndex + index * slotsPerForecast;
       const forecastOpacity = controls.forecast.forecastOpacity[forecastTs];
       const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
 

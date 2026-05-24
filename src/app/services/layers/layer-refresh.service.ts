@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, effect, signal } from '@angular/core';
+import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
 import { Observable, throwError, firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { finalize, map } from 'rxjs/operators';
 import {
   buildWeatherStationsLatestUrl,
   buildWeatherStationsRegistryUrl,
@@ -102,6 +102,7 @@ export class LayerRefreshService {
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
+  private readonly loadingLayerIdsSignal = signal<ReadonlySet<string>>(new Set());
   private readonly weatherStationsSnapshotSignal = signal<WeatherStationSnapshot | null>(null);
   private readonly weatherStationsEndpointConfigSignal = signal<WeatherStationsEndpointConfig | null>(null);
   private readonly weatherStationsLoadTickSignal = signal(0);
@@ -110,6 +111,27 @@ export class LayerRefreshService {
   private weatherStationsRegistryInflight: Promise<readonly WeatherStationDto[]> | null = null;
 
   readonly weatherStationsLoadTick = this.weatherStationsLoadTickSignal.asReadonly();
+  readonly loadingLayerIds = this.loadingLayerIdsSignal.asReadonly();
+
+  isLoadingConfig(layerId: string): Signal<boolean> {
+    return computed(() => this.loadingLayerIdsSignal().has(layerId));
+  }
+
+  private markLoading(layerId: string): void {
+    const current = this.loadingLayerIdsSignal();
+    if (current.has(layerId)) return;
+    const next = new Set(current);
+    next.add(layerId);
+    this.loadingLayerIdsSignal.set(next);
+  }
+
+  private clearLoading(layerId: string): void {
+    const current = this.loadingLayerIdsSignal();
+    if (!current.has(layerId)) return;
+    const next = new Set(current);
+    next.delete(layerId);
+    this.loadingLayerIdsSignal.set(next);
+  }
 
   constructor() {
     effect(() => {
@@ -131,14 +153,18 @@ export class LayerRefreshService {
 
         // If layer doesn't have config yet, fetch it first
         if (!this.layerConfigService.hasConfig(layer.id)) {
-          this.layerConfigService.fetchLayerConfig(layer).subscribe({
-            next: () => {
-              this.startAutoRefresh(layer.id);
-            },
-            error: (err) => {
-              console.error(`Failed to fetch config for ${layer.id}:`, err);
-            },
-          });
+          this.markLoading(layer.id);
+          this.layerConfigService
+            .fetchLayerConfig(layer)
+            .pipe(finalize(() => this.clearLoading(layer.id)))
+            .subscribe({
+              next: () => {
+                this.startAutoRefresh(layer.id);
+              },
+              error: (err) => {
+                console.error(`Failed to fetch config for ${layer.id}:`, err);
+              },
+            });
         }
         // If layer already has config and auto-refresh is not running, start it
         else if (!this.refreshTimers.has(layer.id)) {
@@ -150,6 +176,12 @@ export class LayerRefreshService {
       for (const layerId of this.refreshTimers.keys()) {
         if (!activeLayerIds.has(layerId)) {
           this.stopAutoRefresh(layerId);
+        }
+      }
+
+      for (const layerId of this.loadingLayerIdsSignal()) {
+        if (!activeLayerIds.has(layerId)) {
+          this.clearLoading(layerId);
         }
       }
     });
@@ -171,11 +203,13 @@ export class LayerRefreshService {
 
     const beforeConfig = this.layerConfigService.getConfig(layerId);
 
+    this.markLoading(layerId);
     return this.layerConfigService.fetchLayerConfig(layer).pipe(
       map(() => {
         const afterConfig = this.layerConfigService.getConfig(layerId);
         this.compareAndNotify(layerId, beforeConfig, afterConfig, true);
       }),
+      finalize(() => this.clearLoading(layerId)),
     );
   }
 
