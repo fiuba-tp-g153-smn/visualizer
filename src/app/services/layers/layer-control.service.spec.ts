@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { LayerControlService } from './layer-control.service';
 import { STORAGE_KEYS } from '../../constants';
 
-describe('LayerControlService — SMN stations no-data toggle', () => {
+describe('LayerControlService — weather stations no-data toggle', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({ providers: [] });
@@ -11,22 +11,22 @@ describe('LayerControlService — SMN stations no-data toggle', () => {
 
   it('defaults showStationsWithoutData to true on a fresh load', () => {
     const service = TestBed.inject(LayerControlService);
-    expect(service.getSmnStationsShowStationsWithoutData()).toBe(true);
-    expect(service.smnStationsShowStationsWithoutData()).toBe(true);
+    expect(service.getWeatherStationsShowStationsWithoutData()).toBe(true);
+    expect(service.weatherStationsShowStationsWithoutData()).toBe(true);
   });
 
   it('persists the toggle through localStorage so the next session reads it back', () => {
     const service = TestBed.inject(LayerControlService);
-    service.setSmnStationsShowStationsWithoutData(false);
+    service.setWeatherStationsShowStationsWithoutData(false);
 
-    expect(service.getSmnStationsShowStationsWithoutData()).toBe(false);
+    expect(service.getWeatherStationsShowStationsWithoutData()).toBe(false);
 
     // Simulate a page reload: drop the TestBed, instantiate again, and confirm
     // the persisted state survives.
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [] });
     const reloaded = TestBed.inject(LayerControlService);
-    expect(reloaded.getSmnStationsShowStationsWithoutData()).toBe(false);
+    expect(reloaded.getWeatherStationsShowStationsWithoutData()).toBe(false);
   });
 
   it('keeps the default when localStorage holds a payload missing the field', () => {
@@ -41,21 +41,21 @@ describe('LayerControlService — SMN stations no-data toggle', () => {
       imageCount: 6,
       selectedTilesetId: null,
     });
-    localStorage.setItem(STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS, legacyBlob);
+    localStorage.setItem(STORAGE_KEYS.WEATHER_STATIONS_SHARED_CONTROLS, legacyBlob);
 
     const service = TestBed.inject(LayerControlService);
-    expect(service.getSmnStationsShowStationsWithoutData()).toBe(true);
+    expect(service.getWeatherStationsShowStationsWithoutData()).toBe(true);
   });
 
   it('exposes a computed signal that updates when the setter is called', () => {
     const service = TestBed.inject(LayerControlService);
-    const initial = service.smnStationsShowStationsWithoutData();
+    const initial = service.weatherStationsShowStationsWithoutData();
     expect(initial).toBe(true);
 
-    service.setSmnStationsShowStationsWithoutData(false);
-    expect(service.smnStationsShowStationsWithoutData()).toBe(false);
+    service.setWeatherStationsShowStationsWithoutData(false);
+    expect(service.weatherStationsShowStationsWithoutData()).toBe(false);
 
-    service.setSmnStationsShowStationsWithoutData(true);
-    expect(service.smnStationsShowStationsWithoutData()).toBe(true);
+    service.setWeatherStationsShowStationsWithoutData(true);
+    expect(service.weatherStationsShowStationsWithoutData()).toBe(true);
   });
 });

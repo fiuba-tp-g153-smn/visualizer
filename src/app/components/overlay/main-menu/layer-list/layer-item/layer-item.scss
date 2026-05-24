@@ -353,13 +353,13 @@
       display: flex;
       flex-direction: column;
 
-      .smn-temporal-control {
+      .weather-stations-temporal-control {
         display: flex;
         flex-direction: column;
         gap: 8px;
         padding-top: 8px;
 
-        .smn-mode-control {
+        .weather-stations-mode-control {
           display: flex;
           align-items: center;
           gap: 10px;
@@ -370,14 +370,14 @@
           }
         }
 
-        .smn-mode-group {
+        .weather-stations-mode-group {
           display: flex;
           align-items: center;
           gap: 12px;
           padding-left: 0;
         }
 
-        .smn-mode-inline-actions {
+        .weather-stations-mode-inline-actions {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -396,13 +396,13 @@
           }
         }
 
-        .smn-settings-control {
+        .weather-stations-settings-control {
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
 
-        .smn-tolerance-control {
+        .weather-stations-tolerance-control {
           display: flex;
           align-items: center;
           gap: 10px;
@@ -439,19 +439,19 @@
           }
         }
 
-        .smn-hours-control {
+        .weather-stations-hours-control {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 8px;
 
-          .smn-hours-select {
+          .weather-stations-hours-select {
             width: 92px;
             flex-shrink: 0;
           }
         }
 
-        .smn-tileset-slider {
+        .weather-stations-tileset-slider {
           display: flex;
           align-items: center;
           gap: 6px;
@@ -460,8 +460,8 @@
             opacity: 0.6;
           }
 
-          .smn-tileset-min,
-          .smn-tileset-max {
+          .weather-stations-tileset-min,
+          .weather-stations-tileset-max {
             font-size: 0.75rem;
             color: var(--mat-sys-on-surface-variant);
             min-width: 42px;
@@ -470,7 +470,7 @@
           }
         }
 
-        .smn-selected-tileset {
+        .weather-stations-selected-tileset {
           font-size: 0.75rem;
           color: var(--mat-sys-on-surface-variant);
           font-family: monospace;
@@ -726,7 +726,7 @@
     }
   }
 
-  .smn-hours-select .mat-mdc-text-field-wrapper {
+  .weather-stations-hours-select .mat-mdc-text-field-wrapper {
     height: 28px;
     padding: 0;
     background: var(--mat-sys-surface);
@@ -734,13 +734,13 @@
     border-radius: 4px;
   }
 
-  .smn-hours-select .mat-mdc-form-field-flex {
+  .weather-stations-hours-select .mat-mdc-form-field-flex {
     height: 100%;
     align-items: center;
     padding: 0 4px;
   }
 
-  .smn-hours-select {
+  .weather-stations-hours-select {
     .mat-mdc-form-field-infix {
       padding: 0;
       min-height: auto;

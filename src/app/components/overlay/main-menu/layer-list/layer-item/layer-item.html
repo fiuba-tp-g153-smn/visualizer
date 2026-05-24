@@ -266,53 +266,53 @@
         <div class="layer-controls" [class.synced-mode]="isSynced()">
           <div class="time-control">
             <!-- Contenido condicional según estado -->
-            @if (layer.category === LayerCategory.SMN_STATIONS) {
-              <div class="smn-temporal-control">
-                <div class="smn-mode-control">
+            @if (layer.category === LayerCategory.WEATHER_STATIONS) {
+              <div class="weather-stations-temporal-control">
+                <div class="weather-stations-mode-control">
                   <span class="control-label">Consulta</span>
-                  <div class="smn-mode-inline-actions">
+                  <div class="weather-stations-mode-inline-actions">
                     <mat-radio-group
-                      [value]="smnTemporalMode()"
-                      (change)="onSmnTemporalModeChange($event.value)"
-                      class="smn-mode-group"
+                      [value]="weatherStationsTemporalMode()"
+                      (change)="onWeatherStationsTemporalModeChange($event.value)"
+                      class="weather-stations-mode-group"
                     >
-                      <mat-radio-button [value]="SmnStationsTemporalMode.LATEST" color="primary"
+                      <mat-radio-button [value]="WeatherStationsTemporalMode.LATEST" color="primary"
                         >Más reciente</mat-radio-button
                       >
-                      <mat-radio-button [value]="SmnStationsTemporalMode.SPECIFIC" color="primary"
+                      <mat-radio-button [value]="WeatherStationsTemporalMode.SPECIFIC" color="primary"
                         >Específico</mat-radio-button
                       >
                     </mat-radio-group>
 
-                    @if (isSmnSpecificTemporalMode()) {
+                    @if (isWeatherStationsSpecificTemporalMode()) {
                       <button
                         mat-icon-button
-                        (click)="toggleSmnSettingsExpansion()"
+                        (click)="toggleWeatherStationsSettingsExpansion()"
                         [matTooltip]="
-                          isSmnSettingsExpanded()
+                          isWeatherStationsSettingsExpanded()
                             ? 'Ocultar configuración específica'
                             : 'Mostrar configuración específica'
                         "
                         class="expand-btn"
                       >
                         <mat-icon>{{
-                          isSmnSettingsExpanded() ? 'expand_less' : 'expand_more'
+                          isWeatherStationsSettingsExpanded() ? 'expand_less' : 'expand_more'
                         }}</mat-icon>
                       </button>
                     }
                   </div>
                 </div>
 
-                @if (isSmnSpecificTemporalMode()) {
-                  <div class="smn-settings-control">
-                    @if (isSmnSettingsExpanded()) {
-                      <div class="smn-tolerance-control">
+                @if (isWeatherStationsSpecificTemporalMode()) {
+                  <div class="weather-stations-settings-control">
+                    @if (isWeatherStationsSettingsExpanded()) {
+                      <div class="weather-stations-tolerance-control">
                         <span class="control-label">Tolerancia</span>
                         <div class="tolerance-control">
                           <input
                             type="number"
-                            [value]="smnMaxPastHours()"
-                            (change)="onSmnMaxPastHoursChange(+$any($event.target).value)"
+                            [value]="weatherStationsMaxPastHours()"
+                            (change)="onWeatherStationsMaxPastHoursChange(+$any($event.target).value)"
                             min="0"
                             max="24"
                             step="1"
@@ -326,9 +326,9 @@
 
                       <mat-checkbox
                         color="primary"
-                        [checked]="smnShowStationsWithoutData()"
-                        (change)="onSmnShowStationsWithoutDataChange($event.checked)"
-                        class="smn-no-data-toggle"
+                        [checked]="weatherStationsShowStationsWithoutData()"
+                        (change)="onWeatherStationsShowWithoutDataChange($event.checked)"
+                        class="weather-stations-no-data-toggle"
                         matTooltip="Cuando se desactiva, las estaciones sin observación dentro del período solicitado se ocultan del mapa."
                         [disabled]="isSynced()"
                       >
@@ -340,7 +340,7 @@
               </div>
             }
 
-            @if (layer.category !== LayerCategory.SMN_STATIONS || isSmnSpecificTemporalMode()) {
+            @if (layer.category !== LayerCategory.WEATHER_STATIONS || isWeatherStationsSpecificTemporalMode()) {
               <div class="time-control-header">
                 <span class="control-label">
                   Período

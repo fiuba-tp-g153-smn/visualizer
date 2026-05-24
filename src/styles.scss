@@ -73,37 +73,37 @@ body {
   }
 }
 
-.smn-station-popup .leaflet-popup-content-wrapper {
+.weather-station-popup .leaflet-popup-content-wrapper {
   border-radius: 10px;
 }
 
-.smn-station-popup .leaflet-popup-content {
+.weather-station-popup .leaflet-popup-content {
   margin: 9px 10px;
   min-width: 235px;
 }
 
-.smn-popup {
+.weather-station-popup-card {
   font-size: 12px;
   color: #111827;
 }
 
-.smn-popup__station {
+.weather-station-popup__station {
   margin-bottom: 6px;
 }
 
-.smn-popup__title {
+.weather-station-popup__title {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
 }
 
-.smn-popup__meta {
+.weather-station-popup__meta {
   font-size: 11px;
   color: #4b5563;
   margin-top: 1px;
 }
 
-.smn-popup__values {
+.weather-station-popup__values {
   margin: 0;
   padding-left: 16px;
   display: grid;
@@ -125,7 +125,7 @@ body {
   }
 }
 
-.smn-popup__updated {
+.weather-station-popup__updated {
   margin-top: 7px;
   padding-top: 5px;
   border-top: 1px solid #e5e7eb;
@@ -133,17 +133,17 @@ body {
   color: #6b7280;
 }
 
-.smn-station-badge {
+.weather-station-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--smn-badge-size, 24px);
-  height: var(--smn-badge-size, 24px);
+  width: var(--weather-badge-size, 24px);
+  height: var(--weather-badge-size, 24px);
   border-radius: 50%;
-  background: var(--smn-badge-bg, #6b7280);
-  color: var(--smn-badge-fg, #111827);
+  background: var(--weather-badge-bg, #6b7280);
+  color: var(--weather-badge-fg, #111827);
   font-weight: 700;
-  font-size: var(--smn-badge-font-size, 12px);
+  font-size: var(--weather-badge-font-size, 12px);
   border: 2px solid #000;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
