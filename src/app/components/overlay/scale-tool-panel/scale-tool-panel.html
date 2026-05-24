@@ -12,7 +12,7 @@
           <div
             class="scale-tick"
             [class.scale-tick--major]="tick.major"
-            [style.top.%]="tick.top"
+            [style.top]="tickTopStyle(tick.top)"
           ></div>
         }
       </div>
@@ -23,7 +23,7 @@
           <div class="scale-value">{{ continuousLabelSizerText }}</div>
         </div>
         @for (label of continuousLabelEntries; track $index) {
-          <div class="scale-value-row" [style.top.%]="label.top">
+          <div class="scale-value-row" [style.top]="labelTopStyle(label.top)">
             <div class="scale-value">{{ label.text }}</div>
           </div>
         }
@@ -45,11 +45,11 @@
         }
       </div>
       <div class="scale-ticks">
-        @for (tick of discreteOrPaletteTickEntries; track $index) {
+        @for (tick of discreteTickEntries; track $index) {
           <div
             class="scale-tick"
             [class.scale-tick--major]="tick.major"
-            [style.top.%]="tick.top"
+            [style.top]="tickTopStyle(tick.top)"
           ></div>
         }
       </div>
@@ -59,7 +59,7 @@
         <div class="scale-value">{{ discreteLabelSizerText }}</div>
       </div>
       @for (label of discreteLabelEntries; track $index) {
-        <div class="scale-value-row" [style.top.%]="label.top">
+        <div class="scale-value-row" [style.top]="labelTopStyle(label.top)">
           <div class="scale-value">{{ label.text }}</div>
         </div>
       }

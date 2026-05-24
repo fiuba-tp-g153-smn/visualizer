@@ -1,44 +1,16 @@
-<div class="main-menu-wrapper">
-  <!-- Barra de botones flotante -->
-  <mat-card class="menu-button-bar">
-    <!-- Logo SMN -->
-    <img src="icono.png" alt="Logo SMN" class="smn-logo" width="40" height="40" />
-
-    <mat-divider />
-
-    <!-- Botones de secciones -->
-    @for (section of sections; track section.id) {
-      <button
-        mat-icon-button
-        [class.active]="activePanel() === section.id"
-        (click)="togglePanel(section.id)"
-        [matTooltip]="section.tooltip"
-        matTooltipPosition="right"
-      >
-        <mat-icon>{{ section.icon }}</mat-icon>
+@if (activeSection(); as section) {
+  <mat-card class="menu-panel">
+    <mat-toolbar class="menu-header">
+      <span>{{ section.title }}</span>
+      <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú">
+        <mat-icon>close</mat-icon>
       </button>
-    }
+    </mat-toolbar>
 
-    <a mat-icon-button routerLink="/docs" matTooltip="Documentación" matTooltipPosition="right">
-      <mat-icon>help</mat-icon>
-    </a>
+    <mat-card-content class="panel-content">
+      @if (activeComponent(); as panelComponent) {
+        <ng-container *ngComponentOutlet="panelComponent" />
+      }
+    </mat-card-content>
   </mat-card>
-
-  <!-- Panel lateral -->
-  @if (getActiveSection(); as activeSection) {
-    <mat-card class="menu-panel">
-      <mat-toolbar class="menu-header">
-        <span>{{ activeSection.title }}</span>
-        <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú">
-          <mat-icon>close</mat-icon>
-        </button>
-      </mat-toolbar>
-
-      <mat-card-content class="panel-content">
-        @if (activeComponent(); as panelComponent) {
-          <ng-container *ngComponentOutlet="panelComponent" />
-        }
-      </mat-card-content>
-    </mat-card>
-  }
-</div>
+}

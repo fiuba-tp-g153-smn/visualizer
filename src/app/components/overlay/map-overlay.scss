@@ -29,6 +29,7 @@ $gap: 12px;
   min-height: 0;
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
   align-items: stretch;
   padding: $edge;
   gap: $gap;
@@ -36,28 +37,32 @@ $gap: 12px;
   box-sizing: border-box;
 }
 
-// ── Left/main column ───────────────────────────────────────────────────────
+// ── Left group (buttons + panel) ───────────────────────────────────────────
 
-.col-main {
-  flex: 1;
-  min-width: 0;
+.col-left {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: $gap;
+}
+
+// ── Col 1: Sidebar buttons + Zoom ─────────────────────────────────────────
+
+.col-buttons {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: $gap;
 }
 
-.row-top {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: $gap;
+app-sidebar-buttons {
+  flex-shrink: 0;
 }
 
-app-main-menu {
-  align-self: flex-start;
-  min-height: 0;
-  max-height: 100%;
+app-map-zoom-controls {
+  flex-shrink: 0;
+  pointer-events: auto;
 }
 
 app-polygon-edit-dock {
@@ -69,15 +74,23 @@ app-polygon-edit-dock {
   z-index: layerOrder.$z-main-menu;
 }
 
-// Bottom row: zoom + info controls side by side
-.row-bottom {
+// ── Col 2: Side panel + Info controls ─────────────────────────────────────
+
+.col-panel {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  min-height: 0;
   gap: $gap;
 }
 
+app-main-menu {
+  flex: 1;
+  min-height: 0;
+}
+
 .info-controls {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -86,7 +99,7 @@ app-polygon-edit-dock {
   overflow: visible;
 }
 
-// ── Right column (scale tools + point values) ──────────────────────────────
+// ── Col 3: Scale tools + Fixed point values ────────────────────────────────
 
 .col-side {
   flex-shrink: 0;
