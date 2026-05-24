@@ -15,21 +15,19 @@ import {
 
 import {
   ABIGoesTileLayer,
-  ContinuousScale,
   EcmwfTpLayerControls,
   EcmwfTpTileLayerConfig,
   EcmwfTpTileLayer,
-  DiscreteScale,
   GLMGoesTileLayer,
   GoesTileLayer,
   GoesLayerControls,
+  LayerScale,
   Layer,
   LayerCategory,
   LayerType,
   PointQueryDisplayData,
   PointQueryStatus,
   PointQueryValueDto,
-  PaletteConfigScale,
   RadarLayerControls,
   RadarTileLayer,
   ScaleRangeInfo,
@@ -896,32 +894,26 @@ export class PointQueryViewerService {
     try {
       switch (scale.type) {
         case ScaleType.CONTINUOUS:
-          const continuousScale = scale as ContinuousScale;
-          if (continuousScale.stops.length < 2) return undefined;
-          return {
-            min: continuousScale.stops[0].value,
-            max: continuousScale.stops[continuousScale.stops.length - 1].value,
-            totalSteps: continuousScale.stops.length,
-          };
+        case ScaleType.DISCRETE: {
+          const typedScale = scale as LayerScale;
+          if (typedScale.entries.length < 1) return undefined;
 
-        case ScaleType.DISCRETE:
-          const discreteScale = scale as DiscreteScale;
-          if (discreteScale.steps.length < 1) return undefined;
-          return {
-            min: discreteScale.steps[0].value,
-            max: discreteScale.steps[discreteScale.steps.length - 1].value,
-            totalSteps: discreteScale.steps.length,
-          };
+          const clipRange = typedScale.clipRange;
+          const [min, max] = clipRange
+            ? clipRange[0] <= clipRange[1]
+              ? [clipRange[0], clipRange[1]]
+              : [clipRange[1], clipRange[0]]
+            : [
+                typedScale.entries[0].value,
+                typedScale.entries[typedScale.entries.length - 1].value,
+              ];
 
-        case ScaleType.PALETTE_CONFIG:
-          const paletteScale = scale as PaletteConfigScale;
-          if (!paletteScale.bounds || paletteScale.bounds.length < 2) return undefined;
-          const bounds = [...paletteScale.bounds].sort((a, b) => a - b);
           return {
-            min: bounds[0],
-            max: bounds[bounds.length - 1],
-            totalSteps: paletteScale.hexColors.length,
+            min,
+            max,
+            totalSteps: typedScale.entries.length,
           };
+        }
 
         default:
           return undefined;
