@@ -14,6 +14,7 @@ import { PolygonContextMenuAction } from '../../models';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
 import { PolygonEditDockComponent } from '../floating/polygon-edit-dock/polygon-edit-dock';
 import { MainMenuComponent } from './main-menu/main-menu';
+import { SidebarButtonsComponent } from './sidebar-buttons/sidebar-buttons';
 import { MapPolygonContextMenuComponent } from '../floating/polygon-context-menu/polygon-context-menu';
 import { MapPointValuesComponent } from './point-values/point-values';
 import { MapScaleToolsComponent } from './scale-tools/scale-tools';
@@ -27,6 +28,7 @@ import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
   standalone: true,
   imports: [
     MainMenuComponent,
+    SidebarButtonsComponent,
     PolygonEditDockComponent,
     MapPolygonContextMenuComponent,
     MapPointValuesComponent,

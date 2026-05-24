@@ -1,0 +1,195 @@
+import { LayerScale, ScaleLabelScale, ScaleType } from '../../models';
+
+type ScaleEntry = Readonly<{
+  value: number;
+  color: string;
+  label?: string;
+  hardStop?: boolean;
+}>;
+type SupportedScaleType = ScaleType.CONTINUOUS | ScaleType.DISCRETE;
+
+function roundScaleValue(value: number): number {
+  return Number(value.toFixed(8));
+}
+
+function entriesDomain(entries: readonly ScaleEntry[]): readonly [number, number] | undefined {
+  if (entries.length === 0) return undefined;
+
+  let min = entries[0].value;
+  let max = entries[0].value;
+  for (const entry of entries) {
+    if (entry.value < min) min = entry.value;
+    if (entry.value > max) max = entry.value;
+  }
+
+  return [min, max] as const;
+}
+
+function createLayerScale(params: {
+  type: SupportedScaleType;
+  unit: string;
+  entries: readonly ScaleEntry[];
+  labelCount?: number;
+  subTickCount?: number;
+  clipRange?: readonly [number, number];
+  defaultDiscreteClipRange?: readonly [number, number];
+  labelScale?: ScaleLabelScale;
+  labelValues?: readonly number[];
+  labelDomain?: readonly [number, number];
+}): LayerScale {
+  const {
+    type,
+    unit,
+    entries,
+    labelCount,
+    subTickCount,
+    clipRange,
+    defaultDiscreteClipRange,
+    labelScale,
+    labelValues,
+    labelDomain,
+  } = params;
+
+  const resolvedClipRange =
+    type === ScaleType.DISCRETE ? (clipRange ?? defaultDiscreteClipRange) : clipRange;
+
+  return {
+    type,
+    unit,
+    entries,
+    labelCount,
+    subTickCount,
+    clipRange: resolvedClipRange,
+    labelScale,
+    labelValues,
+    labelDomain,
+  } as const satisfies LayerScale;
+}
+
+interface BaseScaleConfig {
+  readonly unit: string;
+  readonly type?: SupportedScaleType;
+  readonly labelCount?: number;
+  readonly subTickCount?: number;
+  readonly clipRange?: readonly [number, number];
+}
+
+export interface IndexedScaleConfig extends BaseScaleConfig {
+  readonly min: number;
+  readonly max: number;
+  readonly count: number;
+  readonly nodes: readonly {
+    readonly index: number;
+    readonly color: string;
+    readonly hardStop?: boolean;
+  }[];
+}
+
+export interface LinearScaleConfig extends BaseScaleConfig {
+  readonly min: number;
+  readonly max: number;
+  readonly colors: readonly string[];
+}
+
+export interface BoundedScaleConfig extends BaseScaleConfig {
+  readonly bounds: readonly number[];
+  readonly hexColors: readonly string[];
+}
+
+export interface LogScaleConfig extends Omit<BaseScaleConfig, 'labelCount'> {
+  readonly min: number;
+  readonly max: number;
+  readonly colors: readonly string[];
+  readonly labelValues: readonly number[];
+}
+
+function buildIndexedEntries(config: IndexedScaleConfig): readonly ScaleEntry[] {
+  const { min, max, count, nodes } = config;
+  return nodes.map(({ index, color, hardStop }) => ({
+    value: roundScaleValue(min + (index * (max - min)) / (count - 1)),
+    color,
+    ...(hardStop ? { hardStop: true as const } : {}),
+  }));
+}
+
+function buildLinearEntries(
+  config: Pick<LinearScaleConfig, 'min' | 'max' | 'colors'>,
+): ScaleEntry[] {
+  const { min, max, colors } = config;
+  const lastIndex = colors.length - 1;
+  return colors.map((color, index) => {
+    const ratio = lastIndex > 0 ? index / lastIndex : 0;
+    return { value: roundScaleValue(min + ratio * (max - min)), color };
+  });
+}
+
+export function buildIndexedScale(config: IndexedScaleConfig): LayerScale {
+  const { min, max, unit, labelCount, subTickCount, clipRange } = config;
+  const entries = buildIndexedEntries(config);
+
+  return createLayerScale({
+    type: config.type ?? ScaleType.CONTINUOUS,
+    unit,
+    entries,
+    labelCount,
+    subTickCount,
+    clipRange,
+    defaultDiscreteClipRange: [min, max],
+  });
+}
+
+export function buildLinearScale(config: LinearScaleConfig): LayerScale {
+  const { min, max, unit, labelCount, subTickCount, clipRange } = config;
+  const entries = buildLinearEntries(config);
+
+  return createLayerScale({
+    type: config.type ?? ScaleType.CONTINUOUS,
+    unit,
+    entries,
+    labelCount,
+    subTickCount,
+    clipRange,
+    defaultDiscreteClipRange: [min, max],
+  });
+}
+
+export function buildBoundedScale(config: BoundedScaleConfig): LayerScale {
+  const { bounds, hexColors, unit, labelCount, subTickCount } = config;
+  const entries = bounds.map((value, i) => ({
+    value,
+    color: hexColors[i] ?? hexColors[hexColors.length - 1],
+  }));
+  const domain = entriesDomain(entries);
+
+  return createLayerScale({
+    type: config.type ?? ScaleType.CONTINUOUS,
+    unit,
+    entries,
+    labelCount,
+    subTickCount,
+    clipRange: config.clipRange,
+    defaultDiscreteClipRange: domain,
+  });
+}
+
+export function buildLogScale(config: LogScaleConfig): LayerScale {
+  const { min, max, unit, colors, labelValues, subTickCount, clipRange } = config;
+  const lastIndex = colors.length - 1;
+  const logMin = Math.log10(min);
+  const logMax = Math.log10(max);
+  const entries = colors.map((color, index) => {
+    const ratio = lastIndex > 0 ? index / lastIndex : 0;
+    return { value: roundScaleValue(Math.pow(10, logMin + ratio * (logMax - logMin))), color };
+  });
+
+  return createLayerScale({
+    type: ScaleType.CONTINUOUS,
+    unit,
+    entries,
+    labelScale: ScaleLabelScale.LOG,
+    labelValues,
+    labelDomain: [min, max],
+    subTickCount,
+    clipRange,
+  });
+}

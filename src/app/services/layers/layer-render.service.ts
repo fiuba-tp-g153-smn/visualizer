@@ -10,7 +10,7 @@ import {
   LayerType,
   LayerCategory,
   WmsLayer,
-  SmnStationLayer,
+  WeatherStationLayer,
   LayerScale,
   ScaleType,
   GoesTileLayerConfig,
@@ -25,6 +25,7 @@ import {
   EcmwfTpLayerControls,
   EcmwfTpTileLayerConfig,
   EcmwfTpTileLayer,
+  WeatherStationVariable,
 } from '../../models';
 import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { NotificationService } from '../notifications/notification.service';
@@ -33,15 +34,15 @@ import { LayerControlService } from './layer-control.service';
 import { LayerRefreshService } from './layer-refresh.service';
 import { LayersService } from './layers.service';
 import { buildBasemapTileUrl, buildTileUrl, MAP_CONFIG } from '../../config';
-import { SMN_STATION_PANE } from '../../config/layers/smn-stations/config';
-import { SMN_STATION_RENDER_CONFIG } from '../../config/layers/smn-stations/render.config';
+import { WEATHER_STATION_PANE } from '../../config/layers/weather-stations/config';
+import { WEATHER_STATION_RENDER_CONFIG } from '../../config/layers/weather-stations/render.config';
 import {
   IGN_WMS_BACKED_UP_LAYER_IDS,
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
 } from '../../config/layers';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
-import { SMN_UNITS, TEMPERATURE_UNITS } from '../../constants';
+import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../constants';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import {
   convertCelsiusToKelvin,
@@ -50,9 +51,9 @@ import {
 } from '../../utils/unit-conversion.utils';
 import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
 import {
-  SmnStationPopupComponent,
-  SmnStationPopupData,
-} from '../../components/floating/smn-station-popup/smn-station-popup.component';
+  WeatherStationPopupComponent,
+  WeatherStationPopupData,
+} from '../../components/floating/weather-station-popup/weather-station-popup.component';
 
 /**
  * Service responsible for creating and managing Leaflet tile layers.
@@ -87,7 +88,7 @@ export class LayerRenderService {
 
   // Tile Layer Pool: cache of L.TileLayer instances for reuse
   private readonly layerPool = new Map<string, L.TileLayer>();
-  private readonly smnStationsLayerPool = new Map<string, L.Layer>();
+  private readonly weatherStationsLayerPool = new Map<string, L.Layer>();
 
   // ============================================================================
   // Public Methods - Layer Creation
@@ -136,7 +137,7 @@ export class LayerRenderService {
     return tileLayer;
   }
 
-  createSmnStationsLayer(
+  createWeatherStationsLayer(
     layerId: string,
     opacity: number,
     zoom: number,
@@ -147,36 +148,36 @@ export class LayerRenderService {
     if (
       !layer ||
       layer.type !== LayerType.VECTOR ||
-      layer.category !== LayerCategory.SMN_STATIONS
+      layer.category !== LayerCategory.WEATHER_STATIONS
     ) {
-      throw new Error(`Layer '${layerId}' is not a SMN station layer`);
+      throw new Error(`Layer '${layerId}' is not a weather station layer`);
     }
 
-    const snapshot = this.layerRefreshService.peekSmnStationsSnapshot();
+    const snapshot = this.layerRefreshService.peekWeatherStationsSnapshot();
     if (!snapshot) {
-      void this.layerRefreshService.loadSmnStationsSnapshot();
+      void this.layerRefreshService.loadWeatherStationsSnapshot();
       return L.layerGroup();
     }
 
-    this.applySmnStationsPaneZIndex(map, actualZIndex);
+    this.applyWeatherStationsPaneZIndex(map, actualZIndex);
 
     const showStationsWithoutData =
-      this.layerControlService.getSmnStationsShowStationsWithoutData();
+      this.layerControlService.getWeatherStationsShowStationsWithoutData();
     const displayTemperatureUnit = this.unitsSettings.temperatureUnit();
     const displayWindSpeedUnit = this.unitsSettings.windSpeedUnit();
-    const paneZIndex = map.getPane(SMN_STATION_PANE)?.style.zIndex ?? '560';
+    const paneZIndex = map.getPane(WEATHER_STATION_PANE)?.style.zIndex ?? '560';
     const poolKey = `${layerId}-${zoom}-${opacity}-${snapshot.fetchedAt}-${paneZIndex}-show=${showStationsWithoutData}-temp=${displayTemperatureUnit}-wind=${displayWindSpeedUnit}`;
-    const cachedLayer = this.smnStationsLayerPool.get(poolKey);
+    const cachedLayer = this.weatherStationsLayerPool.get(poolKey);
     if (cachedLayer) {
       return cachedLayer;
     }
 
-    const stationLayer = layer as SmnStationLayer;
+    const stationLayer = layer as WeatherStationLayer;
     const markerGroup = L.layerGroup();
-    const markerRadius = this.resolveSmnStationsRadius(zoom);
+    const markerRadius = this.resolveWeatherStationsRadius(zoom);
 
     type VisiblePoint = {
-      observation: SmnStationObservationLike;
+      observation: WeatherStationObservationLike;
       latLng: L.LatLng;
       px: L.Point;
       value: number;
@@ -196,7 +197,7 @@ export class LayerRenderService {
       }
 
       const latLng = L.latLng(observation.station.coord.lat, observation.station.coord.lon);
-      const value = this.resolveSmnStationsValue(stationLayer.variable, observation);
+      const value = this.resolveWeatherStationsValue(stationLayer.variable, observation);
       if (value === null) {
         continue;
       }
@@ -207,27 +208,27 @@ export class LayerRenderService {
         latLng,
         px,
         value,
-        metersPerPixel: this.resolveSmnStationsMetersPerPixel(map, latLng, zoom),
+        metersPerPixel: this.resolveWeatherStationsMetersPerPixel(map, latLng, zoom),
         nearestDistMeters: Number.POSITIVE_INFINITY,
         isStale,
       });
     }
 
     const dotRadiusPx = Math.max(
-      SMN_STATION_RENDER_CONFIG.marker.dotMinRadiusPx,
-      markerRadius * SMN_STATION_RENDER_CONFIG.marker.dotRadiusFactor,
+      WEATHER_STATION_RENDER_CONFIG.marker.dotMinRadiusPx,
+      markerRadius * WEATHER_STATION_RENDER_CONFIG.marker.dotRadiusFactor,
     );
     const circleRadiusPx = Math.max(
-      SMN_STATION_RENDER_CONFIG.marker.circleMinRadiusPx,
-      markerRadius * SMN_STATION_RENDER_CONFIG.marker.circleRadiusFactor,
+      WEATHER_STATION_RENDER_CONFIG.marker.circleMinRadiusPx,
+      markerRadius * WEATHER_STATION_RENDER_CONFIG.marker.circleRadiusFactor,
     );
     const badgeDiameterPx = Math.max(
-      SMN_STATION_RENDER_CONFIG.marker.badgeMinDiameterPx,
-      Math.round(markerRadius * SMN_STATION_RENDER_CONFIG.marker.badgeDiameterFactor),
+      WEATHER_STATION_RENDER_CONFIG.marker.badgeMinDiameterPx,
+      Math.round(markerRadius * WEATHER_STATION_RENDER_CONFIG.marker.badgeDiameterFactor),
     );
     const circleDiameterPx = circleRadiusPx * 2;
 
-    const cellSize = Math.max(SMN_STATION_RENDER_CONFIG.minDistancePx, circleDiameterPx);
+    const cellSize = Math.max(WEATHER_STATION_RENDER_CONFIG.minDistancePx, circleDiameterPx);
     const grid = new Map<string, VisiblePoint[]>();
     for (const point of visiblePoints) {
       const gx = Math.floor(point.px.x / cellSize);
@@ -274,57 +275,57 @@ export class LayerRenderService {
       const value = point.value;
       const color = point.isStale
         ? STALE_COLOR
-        : this.resolveSmnStationsColor(stationLayer.scale, value);
+        : this.resolveWeatherStationsColor(stationLayer.scale, value);
 
       const denseThresholdMeters =
         circleDiameterPx *
         point.metersPerPixel *
-        SMN_STATION_RENDER_CONFIG.density.denseDistanceMultiplier;
+        WEATHER_STATION_RENDER_CONFIG.density.denseDistanceMultiplier;
       const mediumThresholdMeters =
         badgeDiameterPx *
         point.metersPerPixel *
-        SMN_STATION_RENDER_CONFIG.density.mediumDistanceMultiplier;
+        WEATHER_STATION_RENDER_CONFIG.density.mediumDistanceMultiplier;
 
-      const level: SmnStationRenderLevel =
+      const level: WeatherStationRenderLevel =
         point.nearestDistMeters <= denseThresholdMeters
-          ? SmnStationRenderLevel.DOT
+          ? WeatherStationRenderLevel.DOT
           : point.nearestDistMeters <= mediumThresholdMeters
-            ? SmnStationRenderLevel.CIRCLE
-            : SmnStationRenderLevel.BADGE;
+            ? WeatherStationRenderLevel.CIRCLE
+            : WeatherStationRenderLevel.BADGE;
 
       // Cancel Leaflet's latitude-based marker stacking so all station sizes
       // share the same effective z-index inside the pane.
       const sharedZIndexOffset = -Math.round(point.px.y);
 
       let marker: L.Marker;
-      if (level === SmnStationRenderLevel.DOT) {
-        const icon = this.buildSmnStationsDotIcon(
+      if (level === WeatherStationRenderLevel.DOT) {
+        const icon = this.buildWeatherStationsDotIcon(
           dotRadiusPx * 2,
           color,
-          Math.max(SMN_STATION_RENDER_CONFIG.marker.dotMinFillOpacity, opacity),
+          Math.max(WEATHER_STATION_RENDER_CONFIG.marker.dotMinFillOpacity, opacity),
         );
-        marker = this.createSmnStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
-      } else if (level === SmnStationRenderLevel.CIRCLE) {
-        const icon = this.buildSmnStationsCircleIcon(
+        marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
+      } else if (level === WeatherStationRenderLevel.CIRCLE) {
+        const icon = this.buildWeatherStationsCircleIcon(
           circleRadiusPx * 2,
           color,
           Math.max(
-            SMN_STATION_RENDER_CONFIG.marker.minimumFillOpacity,
-            SMN_STATION_RENDER_CONFIG.marker.crowdedValueFillOpacityBase * opacity,
+            WEATHER_STATION_RENDER_CONFIG.marker.minimumFillOpacity,
+            WEATHER_STATION_RENDER_CONFIG.marker.crowdedValueFillOpacityBase * opacity,
           ),
-          Math.max(opacity, SMN_STATION_RENDER_CONFIG.marker.minimumFillOpacity),
+          Math.max(opacity, WEATHER_STATION_RENDER_CONFIG.marker.minimumFillOpacity),
         );
-        marker = this.createSmnStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
+        marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else {
-        const textColor = this.resolveSmnStationsContrastingTextColor(color);
-        const { displayValue } = this.resolveSmnStationsDisplayValueAndUnit(
+        const textColor = this.resolveWeatherStationsContrastingTextColor(color);
+        const { displayValue } = this.resolveWeatherStationsDisplayValueAndUnit(
           value,
           stationLayer.scale?.unit ?? '',
         );
         const labelValue = Math.round(displayValue);
         const iconDiameter = badgeDiameterPx;
-        const icon = this.buildSmnStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
-        marker = this.createSmnStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
+        const icon = this.buildWeatherStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
+        marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       }
 
       if (point.isStale && typeof marker.bindTooltip === 'function') {
@@ -352,9 +353,9 @@ export class LayerRenderService {
           L.DomEvent.preventDefault(evt.originalEvent);
         }
 
-        const popupData = this.buildSmnStationsPopupData(observation);
-        const { element, destroy } = this.createSmnStationsPopupElement(popupData);
-        const popup = L.popup({ pane: 'popupPane', className: 'smn-station-popup' })
+        const popupData = this.buildWeatherStationsPopupData(observation);
+        const { element, destroy } = this.createWeatherStationsPopupElement(popupData);
+        const popup = L.popup({ pane: 'popupPane', className: 'weather-station-popup' })
           .setLatLng(evt.latlng)
           .setContent(element)
           .openOn(map);
@@ -367,16 +368,16 @@ export class LayerRenderService {
       markerGroup.addLayer(marker);
     }
 
-    this.smnStationsLayerPool.set(poolKey, markerGroup);
+    this.weatherStationsLayerPool.set(poolKey, markerGroup);
     return markerGroup;
   }
 
-  private resolveSmnStationsRadius(zoom: number): number {
+  private resolveWeatherStationsRadius(zoom: number): number {
     const baseRadius = 2.5 + Math.max(0, zoom - 4) * 0.45;
     return Math.min(11, Math.max(3, baseRadius));
   }
 
-  private resolveSmnStationsMetersPerPixel(map: L.Map, latLng: L.LatLng, zoom: number): number {
+  private resolveWeatherStationsMetersPerPixel(map: L.Map, latLng: L.LatLng, zoom: number): number {
     const projected = map.project(latLng, zoom);
     const onePixelEast = L.point(projected.x + 1, projected.y);
     const shiftedLatLng = map.unproject(onePixelEast, zoom);
@@ -384,7 +385,7 @@ export class LayerRenderService {
     return meters > 0 ? meters : 1;
   }
 
-  private resolveSmnStationsContrastingTextColor(color: string): string {
+  private resolveWeatherStationsContrastingTextColor(color: string): string {
     const normalized = color.replace('#', '');
     if (normalized.length !== 6) {
       return '#111827';
@@ -397,68 +398,68 @@ export class LayerRenderService {
     return luminance > 0.58 ? '#111827' : '#f9fafb';
   }
 
-  private buildSmnStationsBadgeIcon(
+  private buildWeatherStationsBadgeIcon(
     value: number,
     diameterPx: number,
     backgroundColor: string,
     textColor: string,
   ): L.DivIcon {
-    const fontSizePx = SMN_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
+    const fontSizePx = WEATHER_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
     return L.divIcon({
-      className: 'smn-station-divicon',
-      html: `<div class="smn-station-badge" style="--smn-badge-size:${diameterPx}px;--smn-badge-bg:${backgroundColor};--smn-badge-fg:${textColor};--smn-badge-font-size:${fontSizePx}px;">${value}</div>`,
+      className: 'weather-station-divicon',
+      html: `<div class="weather-station-badge" style="--weather-badge-size:${diameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;">${value}</div>`,
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
     });
   }
 
-  private buildSmnStationsDotIcon(
+  private buildWeatherStationsDotIcon(
     diameterPx: number,
     color: string,
     fillOpacity: number,
   ): L.DivIcon {
     const normalizedOpacity = Math.max(0, Math.min(1, fillOpacity));
     return L.divIcon({
-      className: 'smn-station-divicon',
-      html: `<div style="width:${diameterPx}px;height:${diameterPx}px;border-radius:50%;background:${this.smnStationsHexToRgba(color, normalizedOpacity)};"></div>`,
+      className: 'weather-station-divicon',
+      html: `<div style="width:${diameterPx}px;height:${diameterPx}px;border-radius:50%;background:${this.weatherStationsHexToRgba(color, normalizedOpacity)};"></div>`,
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
     });
   }
 
-  private buildSmnStationsCircleIcon(
+  private buildWeatherStationsCircleIcon(
     diameterPx: number,
     color: string,
     fillOpacity: number,
     strokeOpacity: number,
   ): L.DivIcon {
-    const strokeWidth = SMN_STATION_RENDER_CONFIG.marker.circleStrokeWeight;
+    const strokeWidth = WEATHER_STATION_RENDER_CONFIG.marker.circleStrokeWeight;
     const normalizedFillOpacity = Math.max(0, Math.min(1, fillOpacity));
     const normalizedStrokeOpacity = Math.max(0, Math.min(1, strokeOpacity));
 
     return L.divIcon({
-      className: 'smn-station-divicon',
-      html: `<div style="width:${diameterPx}px;height:${diameterPx}px;border-radius:50%;box-sizing:border-box;border:${strokeWidth}px solid rgba(0,0,0,${normalizedStrokeOpacity});background:${this.smnStationsHexToRgba(color, normalizedFillOpacity)};"></div>`,
+      className: 'weather-station-divicon',
+      html: `<div style="width:${diameterPx}px;height:${diameterPx}px;border-radius:50%;box-sizing:border-box;border:${strokeWidth}px solid rgba(0,0,0,${normalizedStrokeOpacity});background:${this.weatherStationsHexToRgba(color, normalizedFillOpacity)};"></div>`,
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
     });
   }
 
-  private createSmnStationsIconMarker(
+  private createWeatherStationsIconMarker(
     latLng: L.LatLng,
     icon: L.DivIcon,
     zIndexOffset: number,
   ): L.Marker {
     return L.marker(latLng, {
-      pane: SMN_STATION_PANE,
+      pane: WEATHER_STATION_PANE,
       icon,
       interactive: true,
       zIndexOffset,
     });
   }
 
-  private smnStationsHexToRgba(color: string, alpha: number): string {
-    const { red, green, blue } = this.hexToSmnStationsRgb(color);
+  private weatherStationsHexToRgba(color: string, alpha: number): string {
+    const { red, green, blue } = this.hexToWeatherStationsRgb(color);
     const normalizedAlpha = Math.max(0, Math.min(1, alpha));
     return `rgba(${red}, ${green}, ${blue}, ${normalizedAlpha})`;
   }
@@ -816,146 +817,108 @@ export class LayerRenderService {
     return result;
   }
 
-  private resolveSmnStationsValue(
-    variable: SmnStationLayer['variable'],
-    observation: SmnStationObservationLike,
+  private resolveWeatherStationsValue(
+    variable: WeatherStationLayer['variable'],
+    observation: WeatherStationObservationLike,
   ): number | null {
     switch (variable) {
-      case 'temperature':
+      case WeatherStationVariable.TEMPERATURE:
         return observation.weather.temperature === null
           ? null
           : convertCelsiusToKelvin(observation.weather.temperature);
-      case 'feels_like':
+      case WeatherStationVariable.FEELS_LIKE:
         return observation.weather.feels_like === null
           ? null
           : convertCelsiusToKelvin(observation.weather.feels_like);
-      case 'humidity':
+      case WeatherStationVariable.HUMIDITY:
         return observation.weather.humidity;
-      case 'pressure':
+      case WeatherStationVariable.PRESSURE:
         return observation.weather.pressure;
-      case 'visibility':
+      case WeatherStationVariable.VISIBILITY:
         return observation.weather.visibility;
-      case 'wind_speed':
+      case WeatherStationVariable.WIND_SPEED:
         return observation.weather.wind.speed ?? 0;
       default:
         return null;
     }
   }
 
-  private resolveSmnStationsColor(scale: LayerScale, value: number): string {
+  private resolveWeatherStationsColor(scale: LayerScale, value: number): string {
     switch (scale.type) {
       case ScaleType.CONTINUOUS:
-        return this.interpolateContinuousSmnStationsColor(scale.stops, value);
+        return this.interpolateContinuousWeatherStationsColor(scale.entries, value);
       case ScaleType.DISCRETE:
-        return this.resolveDiscreteSmnStationsColor(scale.steps, value);
-      case ScaleType.PALETTE_CONFIG:
-        return this.resolvePaletteSmnStationsColor(
-          scale.hexColors,
-          scale.bounds,
-          value,
-          scale.useBoundaryNorm ?? false,
-        );
+        return this.resolveDiscreteWeatherStationsColor(scale.entries, value);
       default:
-        return '#0090d0';
+        throw new Error(
+          `Unsupported weather station scale type: '${String((scale as { type: unknown }).type)}'`,
+        );
     }
   }
 
-  private interpolateContinuousSmnStationsColor(
-    stops: readonly { value: number; color: string }[],
+  private interpolateContinuousWeatherStationsColor(
+    entries: readonly { value: number; color: string }[],
     value: number,
   ): string {
-    if (stops.length === 0) {
-      return '#0090d0';
+    if (entries.length === 0) {
+      throw new Error('Invalid continuous weather station scale: no entries configured');
     }
 
-    const sortedStops = [...stops].sort((a, b) => a.value - b.value);
-    if (value <= sortedStops[0].value) {
-      return sortedStops[0].color;
+    const sortedEntries = [...entries].sort((a, b) => a.value - b.value);
+    if (value <= sortedEntries[0].value) {
+      return sortedEntries[0].color;
     }
 
-    const lastStop = sortedStops[sortedStops.length - 1];
-    if (value >= lastStop.value) {
-      return lastStop.color;
+    const lastEntry = sortedEntries[sortedEntries.length - 1];
+    if (value >= lastEntry.value) {
+      return lastEntry.color;
     }
 
-    for (let index = 0; index < sortedStops.length - 1; index++) {
-      const left = sortedStops[index];
-      const right = sortedStops[index + 1];
+    for (let index = 0; index < sortedEntries.length - 1; index++) {
+      const left = sortedEntries[index];
+      const right = sortedEntries[index + 1];
       if (value < left.value || value > right.value) {
         continue;
       }
 
       const ratio = (value - left.value) / (right.value - left.value || 1);
-      return this.mixSmnStationsHexColors(left.color, right.color, ratio);
+      return this.mixWeatherStationsHexColors(left.color, right.color, ratio);
     }
 
-    return lastStop.color;
+    return lastEntry.color;
   }
 
-  private resolveDiscreteSmnStationsColor(
-    steps: readonly { value: number; color: string }[],
+  private resolveDiscreteWeatherStationsColor(
+    entries: readonly { value: number; color: string }[],
     value: number,
   ): string {
-    if (steps.length === 0) {
-      return '#0090d0';
+    if (entries.length === 0) {
+      throw new Error('Invalid discrete weather station scale: no entries configured');
     }
 
-    const sorted = [...steps].sort((a, b) => a.value - b.value);
+    const sorted = [...entries].sort((a, b) => a.value - b.value);
     let selected = sorted[0];
-    for (const step of sorted) {
-      if (value >= step.value) {
-        selected = step;
+    for (const entry of sorted) {
+      if (value >= entry.value) {
+        selected = entry;
       }
     }
     return selected.color;
   }
 
-  private resolvePaletteSmnStationsColor(
-    colors: readonly string[],
-    bounds: readonly number[],
-    value: number,
-    useBoundaryNorm: boolean,
-  ): string {
-    if (colors.length === 0) {
-      return '#0090d0';
-    }
-
-    if (bounds.length === 0) {
-      return colors[0];
-    }
-
-    if (useBoundaryNorm) {
-      let index = 0;
-      for (let i = 0; i < bounds.length; i++) {
-        if (value >= bounds[i]) {
-          index = i;
-        }
-      }
-      return colors[Math.min(index, colors.length - 1)] ?? colors[0];
-    }
-
-    for (let i = 0; i < bounds.length; i++) {
-      if (value < bounds[i]) {
-        return colors[Math.max(0, i - 1)] ?? colors[0];
-      }
-    }
-
-    return colors[colors.length - 1] ?? colors[0];
-  }
-
-  private mixSmnStationsHexColors(startColor: string, endColor: string, ratio: number): string {
-    const start = this.hexToSmnStationsRgb(startColor);
-    const end = this.hexToSmnStationsRgb(endColor);
+  private mixWeatherStationsHexColors(startColor: string, endColor: string, ratio: number): string {
+    const start = this.hexToWeatherStationsRgb(startColor);
+    const end = this.hexToWeatherStationsRgb(endColor);
     const clamped = Math.max(0, Math.min(1, ratio));
 
     const red = Math.round(start.red + (end.red - start.red) * clamped);
     const green = Math.round(start.green + (end.green - start.green) * clamped);
     const blue = Math.round(start.blue + (end.blue - start.blue) * clamped);
 
-    return this.smnStationsRgbToHex(red, green, blue);
+    return this.weatherStationsRgbToHex(red, green, blue);
   }
 
-  private hexToSmnStationsRgb(color: string): { red: number; green: number; blue: number } {
+  private hexToWeatherStationsRgb(color: string): { red: number; green: number; blue: number } {
     const normalized = color.replace('#', '');
     const red = Number.parseInt(normalized.slice(0, 2), 16);
     const green = Number.parseInt(normalized.slice(2, 4), 16);
@@ -963,13 +926,15 @@ export class LayerRenderService {
     return { red, green, blue };
   }
 
-  private smnStationsRgbToHex(red: number, green: number, blue: number): string {
+  private weatherStationsRgbToHex(red: number, green: number, blue: number): string {
     return `#${[red, green, blue]
       .map((component) => component.toString(16).padStart(2, '0'))
       .join('')}`;
   }
 
-  private buildSmnStationsPopupData(observation: SmnStationObservationLike): SmnStationPopupData {
+  private buildWeatherStationsPopupData(
+    observation: WeatherStationObservationLike,
+  ): WeatherStationPopupData {
     const formatValue = (
       input: number | null | undefined,
       precision: number,
@@ -989,9 +954,8 @@ export class LayerRenderService {
     };
     const calmWind =
       observation.weather.wind.direction === 'Calma' && observation.weather.wind.speed === null;
-    const { value: windSpeedValue, unit: windSpeedUnit } = this.resolveSmnStationsWindSpeedDisplay(
-      observation.weather.wind.speed,
-    );
+    const { value: windSpeedValue, unit: windSpeedUnit } =
+      this.resolveWeatherStationsWindSpeedDisplay(observation.weather.wind.speed);
     const windText = calmWind
       ? `0 ${windSpeedUnit}`
       : formatValue(windSpeedValue, 0, ` ${windSpeedUnit}`);
@@ -1004,9 +968,9 @@ export class LayerRenderService {
         ? windDirection
         : `${windDirection} ${Math.round(windDegrees)}°`;
     const { value: temperatureValue, unit: temperatureUnit } =
-      this.resolveSmnStationsTemperatureDisplay(observation.weather.temperature);
+      this.resolveWeatherStationsTemperatureDisplay(observation.weather.temperature);
     const { value: feelsLikeValue, unit: feelsLikeUnit } =
-      this.resolveSmnStationsTemperatureDisplay(observation.weather.feels_like);
+      this.resolveWeatherStationsTemperatureDisplay(observation.weather.feels_like);
 
     return {
       stationName,
@@ -1026,15 +990,19 @@ export class LayerRenderService {
         },
         {
           label: 'Humedad',
-          value: formatValue(observation.weather.humidity, 0, SMN_UNITS.HUMIDITY),
+          value: formatValue(observation.weather.humidity, 0, WEATHER_STATION_UNITS.HUMIDITY),
         },
         {
           label: 'Presión',
-          value: formatValue(observation.weather.pressure, 1, ` ${SMN_UNITS.PRESSURE}`),
+          value: formatValue(observation.weather.pressure, 1, ` ${WEATHER_STATION_UNITS.PRESSURE}`),
         },
         {
           label: 'Visibilidad',
-          value: formatValue(observation.weather.visibility, 1, ` ${SMN_UNITS.VISIBILITY}`),
+          value: formatValue(
+            observation.weather.visibility,
+            1,
+            ` ${WEATHER_STATION_UNITS.VISIBILITY}`,
+          ),
         },
         {
           label: 'Viento',
@@ -1045,11 +1013,11 @@ export class LayerRenderService {
     };
   }
 
-  private createSmnStationsPopupElement(data: SmnStationPopupData): {
+  private createWeatherStationsPopupElement(data: WeatherStationPopupData): {
     element: HTMLElement;
     destroy: () => void;
   } {
-    const componentRef = createComponent(SmnStationPopupComponent, {
+    const componentRef = createComponent(WeatherStationPopupComponent, {
       environmentInjector: this.environmentInjector,
     });
 
@@ -1066,7 +1034,7 @@ export class LayerRenderService {
     };
   }
 
-  private resolveSmnStationsDisplayValueAndUnit(
+  private resolveWeatherStationsDisplayValueAndUnit(
     value: number,
     sourceUnit: string,
   ): { displayValue: number; displayUnit: string } {
@@ -1075,7 +1043,7 @@ export class LayerRenderService {
     return { displayValue, displayUnit };
   }
 
-  private resolveSmnStationsTemperatureDisplay(value: number | null): {
+  private resolveWeatherStationsTemperatureDisplay(value: number | null): {
     value: number | null;
     unit: string;
   } {
@@ -1095,45 +1063,37 @@ export class LayerRenderService {
     return { value: displayValue, unit };
   }
 
-  private resolveSmnStationsWindSpeedDisplay(value: number | null): {
+  private resolveWeatherStationsWindSpeedDisplay(value: number | null): {
     value: number | null;
     unit: string;
   } {
     if (value === null || Number.isNaN(value)) {
-      return { value: null, unit: getDisplayUnit(SMN_UNITS.WIND_SPEED, this.unitsSettings) };
+      return {
+        value: null,
+        unit: getDisplayUnit(WEATHER_STATION_UNITS.WIND_SPEED, this.unitsSettings),
+      };
     }
 
-    const displayValue = convertValueForDisplay(value, SMN_UNITS.WIND_SPEED, this.unitsSettings);
-    const unit = getDisplayUnit(SMN_UNITS.WIND_SPEED, this.unitsSettings);
+    const displayValue = convertValueForDisplay(
+      value,
+      WEATHER_STATION_UNITS.WIND_SPEED,
+      this.unitsSettings,
+    );
+    const unit = getDisplayUnit(WEATHER_STATION_UNITS.WIND_SPEED, this.unitsSettings);
     return { value: displayValue, unit };
   }
 
-  private applySmnStationsPaneZIndex(map: L.Map, actualZIndex?: number): void {
+  private applyWeatherStationsPaneZIndex(map: L.Map, actualZIndex?: number): void {
     if (actualZIndex === undefined) {
       return;
     }
 
-    const pane = map.getPane(SMN_STATION_PANE);
+    const pane = map.getPane(WEATHER_STATION_PANE);
     if (!pane) {
       return;
     }
 
     pane.style.zIndex = String(actualZIndex);
-  }
-
-  private getSmnStationsPrecision(variable: SmnStationLayer['variable']): number {
-    switch (variable) {
-      case 'humidity':
-        return 0;
-      case 'pressure':
-      case 'visibility':
-      case 'wind_speed':
-      case 'temperature':
-      case 'feels_like':
-        return 1;
-      default:
-        return 1;
-    }
   }
 
   /**
@@ -1621,7 +1581,7 @@ export class LayerRenderService {
   }
 }
 
-type SmnStationObservationLike = {
+type WeatherStationObservationLike = {
   // Optional so the renderer's structural type stays compatible with snapshots
   // that pre-date the field. When absent the renderer treats the station as
   // having data (true).
@@ -1653,7 +1613,7 @@ type SmnStationObservationLike = {
   };
 };
 
-enum SmnStationRenderLevel {
+enum WeatherStationRenderLevel {
   DOT = 'dot',
   CIRCLE = 'circle',
   BADGE = 'badge',

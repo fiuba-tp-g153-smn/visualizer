@@ -16,28 +16,28 @@ import {
   buildWeatherStationsTilesetUrl,
   buildWeatherStationsTilesetsUrl,
 } from '../../config/backend.config';
-import { SmnStationsTemporalMode } from '../../config/layers/smn-stations/controls.constants';
+import { WeatherStationsTemporalMode } from '../../config/layers/weather-stations/controls.constants';
 
 // ----------------------------------------------------------------- test doubles
 
 function buildLayerControlStub(
   overrides: Partial<{
-    temporalMode: SmnStationsTemporalMode;
+    temporalMode: WeatherStationsTemporalMode;
     maxPastHours: number;
     selectedTilesetId: string | null;
   }> = {},
 ) {
   const state = {
-    temporalMode: overrides.temporalMode ?? SmnStationsTemporalMode.LATEST,
+    temporalMode: overrides.temporalMode ?? WeatherStationsTemporalMode.LATEST,
     maxPastHours: overrides.maxPastHours ?? 6,
     selectedTilesetId: overrides.selectedTilesetId ?? null,
   };
   return {
     activeLayers: signal<readonly { layer: unknown }[]>([]),
-    getSmnStationsTemporalMode: () => state.temporalMode,
-    getSmnStationsMaxPastHours: () => state.maxPastHours,
-    getSmnStationsSelectedTilesetId: () => state.selectedTilesetId,
-    setSmnStationsSelectedTilesetId: (id: string | null) => {
+    getWeatherStationsTemporalMode: () => state.temporalMode,
+    getWeatherStationsMaxPastHours: () => state.maxPastHours,
+    getWeatherStationsSelectedTilesetId: () => state.selectedTilesetId,
+    setWeatherStationsSelectedTilesetId: (id: string | null) => {
       state.selectedTilesetId = id;
     },
   };
@@ -97,7 +97,7 @@ interface Harness {
 
 function setupHarness(
   overrides: Partial<{
-    temporalMode: SmnStationsTemporalMode;
+    temporalMode: WeatherStationsTemporalMode;
     maxPastHours: number;
     selectedTilesetId: string | null;
     apiKey: string;
@@ -137,7 +137,7 @@ function setupHarness(
 
 // --------------------------------------------------------------------- specs
 
-describe('LayerRefreshService — SMN backend integration', () => {
+describe('LayerRefreshService — weather station backend integration', () => {
   let harness: Harness;
 
   beforeEach(() => {
@@ -150,7 +150,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('LATEST mode: hits /latest and marks every observation hasData=true', async () => {
     const { service, httpMock } = harness;
-    const promise = service.loadSmnStationsSnapshot(true);
+    const promise = service.loadWeatherStationsSnapshot(true);
 
     // X-API-Key header injection is owned by `weatherStationsHttpInterceptor`
     // and covered in its own spec; these tests don't wire it in.
@@ -184,13 +184,13 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('SPECIFIC mode: hits the tileset URL with N=hours and computes hasData from observed_at', async () => {
     const { service, httpMock } = setupHarness({
-      temporalMode: SmnStationsTemporalMode.SPECIFIC,
+      temporalMode: WeatherStationsTemporalMode.SPECIFIC,
       maxPastHours: 3,
       selectedTilesetId: '20260517T1400Z',
     });
     harness = { ...harness, httpMock };
 
-    const promise = service.loadSmnStationsSnapshot(true);
+    const promise = service.loadWeatherStationsSnapshot(true);
 
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({
       tilesets: [
@@ -220,7 +220,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('caches the registry across multiple snapshot loads (only one GET)', async () => {
     const { service, httpMock } = harness;
-    const first = service.loadSmnStationsSnapshot(true);
+    const first = service.loadWeatherStationsSnapshot(true);
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
     await new Promise(r => setTimeout(r, 0));
@@ -231,7 +231,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
       ]));
     await first;
 
-    const second = service.loadSmnStationsSnapshot(true);
+    const second = service.loadWeatherStationsSnapshot(true);
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectNone(buildWeatherStationsRegistryUrl());
     await new Promise(r => setTimeout(r, 0));
@@ -245,7 +245,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('returns an empty snapshot when the backend errors out', async () => {
     const { service, httpMock } = harness;
-    const promise = service.loadSmnStationsSnapshot(true);
+    const promise = service.loadWeatherStationsSnapshot(true);
 
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);

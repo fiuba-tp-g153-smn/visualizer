@@ -17,10 +17,6 @@ export class GeneralTabComponent {
 
   onCoordinatesChange(enabled: boolean): void {
     this.mapInfo.toggleCoordinates(enabled);
-    // When disabling coordinates, also disable cursor lines
-    if (!enabled) {
-      this.mapInfo.toggleCursorLines(false);
-    }
   }
 
   onScaleChange(enabled: boolean): void {
