@@ -513,30 +513,6 @@ export class LayerRefreshService {
   // ============================================================================
 
   /**
-   * Shows initial notification when a layer is activated with the count of available periods.
-   */
-  private showInitialNotification(layerId: string): void {
-    const config = this.layerConfigService.getConfig(layerId);
-    if (!config) {
-      return;
-    }
-
-    const layerName = this.layersService.getLayerDisplayName(layerId);
-    let count = 0;
-
-    switch (config.type) {
-      case LayerType.TILE:
-        count = config.availableTilesets.length;
-        break;
-    }
-
-    if (count > 0) {
-      const message = `${count} período${count !== 1 ? 's' : ''} disponible${count !== 1 ? 's' : ''} para ${layerName}`;
-      this.notificationService.show(NotificationType.SUCCESS, message);
-    }
-  }
-
-  /**
    * Compares before and after configurations and shows appropriate notification.
    * If there are changes, adjusts the timeIndex based on imageCount.
    */
