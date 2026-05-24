@@ -12,7 +12,7 @@ export enum LayerCategory {
   RADAR = 'radar',
   IGN_WMS = 'ign_wms',
   ECMWF_TP = 'ecmwf_tp',
-  SMN_STATIONS = 'smn_stations',
+  WEATHER_STATIONS = 'weather_stations',
 }
 
 // [[lat_sur, lon_oeste], [lat_norte, lon_este]] — compatible con L.LatLngBoundsExpression
@@ -22,12 +22,12 @@ export interface ScaleColorStop {
   value: number;
   color: string;
   label?: string;
+  hardStop?: boolean;
 }
 
 export enum ScaleType {
   CONTINUOUS = 'continuous',
   DISCRETE = 'discrete',
-  PALETTE_CONFIG = 'palette_config', // Para paletas con bounds y boundary_norm (radar)
 }
 
 export const ScaleLabelScale = {
@@ -37,46 +37,18 @@ export const ScaleLabelScale = {
 
 export type ScaleLabelScale = (typeof ScaleLabelScale)[keyof typeof ScaleLabelScale];
 
-export interface ContinuousScale {
-  type: ScaleType.CONTINUOUS;
+export interface LayerScale {
+  type: ScaleType;
   unit: string;
-  stops: readonly ScaleColorStop[];
+  entries: readonly ScaleColorStop[];
   labelCount?: number;
   subTickCount?: number;
   labelValues?: readonly number[];
   labelScale?: ScaleLabelScale;
   labelDomain?: readonly [number, number];
+  // Optional clipping window applied consistently to labels and colors.
+  clipRange?: readonly [number, number];
 }
-
-export interface DiscreteScaleStep {
-  value: number;
-  color: string;
-  label?: string;
-}
-
-export interface DiscreteScale {
-  type: ScaleType.DISCRETE;
-  unit: string;
-  steps: readonly DiscreteScaleStep[];
-  labelCount?: number;
-  subTickCount?: number;
-  labelRange?: readonly [number, number];
-  labelValues?: readonly number[];
-  labelScale?: ScaleLabelScale;
-  labelDomain?: readonly [number, number];
-}
-
-export interface PaletteConfigScale {
-  type: ScaleType.PALETTE_CONFIG;
-  unit: string;
-  hexColors: readonly string[];
-  bounds: readonly number[];
-  useBoundaryNorm?: boolean;
-  labelCount?: number;
-  subTickCount?: number;
-}
-
-export type LayerScale = ContinuousScale | DiscreteScale | PaletteConfigScale;
 
 interface BaseLayer {
   id: string;
@@ -95,7 +67,7 @@ export type Layer =
   | RadarTileLayer
   | WmsLayer
   | EcmwfTpTileLayer
-  | SmnStationLayer;
+  | WeatherStationLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
@@ -160,7 +132,12 @@ export interface VectorTextpathOptions {
 export interface SecondaryVectorRender {
   id: string;
   buildUrl: (forecastTs: string, timestampTs: string) => string;
-  buildPointQueryUrl?: (forecastTs: string, timestampTs: string, lat: number, lon: number) => string;
+  buildPointQueryUrl?: (
+    forecastTs: string,
+    timestampTs: string,
+    lat: number,
+    lon: number,
+  ) => string;
   valueProperty: string;
   styleFor: (value: number) => VectorLineStyle;
   labelFor: (value: number) => string | null;
@@ -168,9 +145,9 @@ export interface SecondaryVectorRender {
   prefetchWindow?: number;
 }
 
-export interface SmnStationLayer extends BaseLayer {
+export interface WeatherStationLayer extends BaseLayer {
   type: LayerType.VECTOR;
-  category: LayerCategory.SMN_STATIONS;
+  category: LayerCategory.WEATHER_STATIONS;
   variable: 'temperature' | 'feels_like' | 'humidity' | 'pressure' | 'visibility' | 'wind_speed';
   scale: NonNullable<LayerScale>;
 }
