@@ -1,8 +1,13 @@
 import { GLM_UNITS } from '../../../../constants';
 import { buildLogScale } from '../../scale-builders';
 
+const baseLogScaleConfig = {
+  subTickCount: 9,
+};
+
 // Colores de cmap generado con LinearSegmentedColormap; LogNorm(1, 128)
 export const GLM_FED_SCALE = buildLogScale({
+  ...baseLogScaleConfig,
   min: 1,
   max: 128,
   unit: GLM_UNITS.FLASH_DENSITY,
@@ -26,11 +31,11 @@ export const GLM_FED_SCALE = buildLogScale({
     '#f9e5e7',
   ],
   labelValues: [1, 2, 5, 10, 20, 50, 100, 128],
-  subTickCount: 9,
 });
 
 // Colores de cmap magma; LogNorm(0.01, 1500)
 export const GLM_TOE_SCALE = buildLogScale({
+  ...baseLogScaleConfig,
   min: 0.01,
   max: 1500,
   unit: GLM_UNITS.ENERGY,
@@ -54,11 +59,11 @@ export const GLM_TOE_SCALE = buildLogScale({
     '#fcfdbf',
   ],
   labelValues: [0.01, 10, 50, 100, 250, 500, 1500],
-  subTickCount: 9,
 });
 
 // Colores de cmap viridis_r; LogNorm(64, 2500)
 export const GLM_MFA_SCALE = buildLogScale({
+  ...baseLogScaleConfig,
   min: 64,
   max: 2500,
   unit: GLM_UNITS.AREA,
@@ -82,5 +87,4 @@ export const GLM_MFA_SCALE = buildLogScale({
     '#440154',
   ],
   labelValues: [64, 100, 250, 500, 1000, 2500],
-  subTickCount: 9,
 });

@@ -124,7 +124,7 @@ function buildLinearEntries(
 }
 
 export function buildIndexedScale(config: IndexedScaleConfig): LayerScale {
-  const { min, max, count, unit, nodes, labelCount, subTickCount, clipRange } = config;
+  const { min, max, unit, labelCount, subTickCount, clipRange } = config;
   const entries = buildIndexedEntries(config);
 
   return createLayerScale({
