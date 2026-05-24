@@ -76,10 +76,10 @@ export class MapContainer implements OnInit, OnDestroy {
         this.vectorOverlayService.loadTick();
         // Track station data loads so marker layers appear as soon as the data
         // cache is populated.
-        this.layerRefreshService.smnStationsLoadTick();
+        this.layerRefreshService.weatherStationsLoadTick();
         // Re-render point layers when the zoom changes so marker sizes can adapt.
         this.mapInfoService.currentZoom();
-        // Re-render layers that depend on display units (e.g. SMN station badges/popups).
+        // Re-render layers that depend on display units (e.g. weather station badges/popups).
         this.unitsSettings.temperatureUnit();
         this.unitsSettings.windSpeedUnit();
 
