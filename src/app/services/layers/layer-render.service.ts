@@ -1096,21 +1096,6 @@ export class LayerRenderService {
     pane.style.zIndex = String(actualZIndex);
   }
 
-  private getWeatherStationsPrecision(variable: WeatherStationLayer['variable']): number {
-    switch (variable) {
-      case WeatherStationVariable.HUMIDITY:
-        return 0;
-      case WeatherStationVariable.PRESSURE:
-      case WeatherStationVariable.VISIBILITY:
-      case WeatherStationVariable.WIND_SPEED:
-      case WeatherStationVariable.TEMPERATURE:
-      case WeatherStationVariable.FEELS_LIKE:
-        return 1;
-      default:
-        return 1;
-    }
-  }
-
   /**
    * Applies opacity and z-index styles to a tile layer.
    */
