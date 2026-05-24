@@ -1,17 +1,22 @@
-import { LayerScale } from '../../../models';
+import { LayerScale, ScaleType } from '../../../models';
 import { RADAR_UNITS } from '../../../constants';
 import { buildBoundedScale, buildLinearScale } from '../scale-builders';
+
+const baseScaleConfig = {
+  labelCount: 10,
+  subTickCount: 4,
+  type: ScaleType.CONTINUOUS,
+};
 
 /**
  * REFLECTIVITY (DBZH / ZH / TH) - paleta_vmsr
  * Rango: -18 a ~76 dBZ
  */
 export const RADAR_DBZH_SCALE: LayerScale = buildLinearScale({
+  ...baseScaleConfig,
   min: -18,
   max: 76.5,
   unit: RADAR_UNITS.REFLECTIVITY,
-  labelCount: 10,
-  subTickCount: 4,
   colors: [
     '#3C426D',
     '#3C426D',
@@ -85,11 +90,10 @@ export const RADAR_DBZH_SCALE: LayerScale = buildLinearScale({
  * Rango: -38.75 a 40 m/s
  */
 export const RADAR_VRAD_SCALE: LayerScale = buildLinearScale({
+  ...baseScaleConfig,
   min: -38.75,
   max: 40,
   unit: RADAR_UNITS.VELOCITY,
-  labelCount: 10,
-  subTickCount: 4,
   colors: [
     '#6C0498',
     '#550599',
@@ -163,9 +167,8 @@ export const RADAR_VRAD_SCALE: LayerScale = buildLinearScale({
  * Rango: 0.225 a 1.048
  */
 export const RADAR_RHOHV_SCALE: LayerScale = buildBoundedScale({
+  ...baseScaleConfig,
   unit: RADAR_UNITS.CORRELATION,
-  labelCount: 10,
-  subTickCount: 4,
   hexColors: [
     '#151391',
     '#141296',
@@ -311,9 +314,8 @@ export const RADAR_RHOHV_SCALE: LayerScale = buildBoundedScale({
  * Rango: -3.0 a 7.9 dB
  */
 export const RADAR_ZDR_SCALE: LayerScale = buildBoundedScale({
+  ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_REFLECTIVITY,
-  labelCount: 10,
-  subTickCount: 4,
   hexColors: [
     '#707070',
     '#767676',
@@ -436,9 +438,8 @@ export const RADAR_ZDR_SCALE: LayerScale = buildBoundedScale({
  * Rango: -1 a 6.1 °/km
  */
 export const RADAR_KDP_SCALE: LayerScale = buildBoundedScale({
+  ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_PHASE,
-  labelCount: 10,
-  subTickCount: 4,
   hexColors: [
     '#474747',
     '#444444',

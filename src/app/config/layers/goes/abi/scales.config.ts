@@ -1,6 +1,12 @@
 import { ABI_UNITS, TEMPERATURE_UNITS } from '../../../../constants';
 import { buildIndexedScale, buildLinearScale } from '../../scale-builders';
 
+const baseAbiThermalIndexedScaleConfig = {
+  count: 256,
+  unit: TEMPERATURE_UNITS.KELVIN,
+  labelCount: 15,
+};
+
 // Reflectance: pure greyscale 0–1
 export const ABI_CH2_SCALE = buildLinearScale({
   min: 0,
@@ -11,11 +17,10 @@ export const ABI_CH2_SCALE = buildLinearScale({
 });
 
 export const ABI_CH9_SCALE = buildIndexedScale({
+  ...baseAbiThermalIndexedScaleConfig,
   min: 161,
   max: 330,
   clipRange: [183.15, 323.15],
-  count: 256,
-  unit: TEMPERATURE_UNITS.KELVIN,
   nodes: [
     { index: 0, color: '#ffffff' },
     { index: 2, color: '#ffffff' },
@@ -56,14 +61,12 @@ export const ABI_CH9_SCALE = buildIndexedScale({
     { index: 233, color: '#313100', hardStop: true },
     { index: 255, color: '#000000' },
   ],
-  labelCount: 15,
 });
 // Thermal IR (BD / Clean IR): 183.15–323.15 K
 export const ABI_CH13_SCALE = buildIndexedScale({
+  ...baseAbiThermalIndexedScaleConfig,
   min: 183.15,
   max: 323.15,
-  count: 256,
-  unit: TEMPERATURE_UNITS.KELVIN,
   nodes: [
     { index: 0, color: '#ffffff' },
     { index: 17, color: '#1b1b1b' },
@@ -81,5 +84,4 @@ export const ABI_CH13_SCALE = buildIndexedScale({
     { index: 106, color: '#fafafa', hardStop: true },
     { index: 255, color: '#000000' },
   ],
-  labelCount: 15,
 });
