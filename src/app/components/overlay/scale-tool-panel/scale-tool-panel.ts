@@ -10,13 +10,7 @@ import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
 
-import {
-  ContinuousScale,
-  DiscreteScale,
-  PaletteConfigScale,
-  ScaleLabelScale,
-  ScaleType,
-} from '../../../models';
+import { LayerScale, ScaleColorStop, ScaleLabelScale, ScaleType } from '../../../models';
 import { ScaleToolEntry } from '../../../services/tools/scale-tools.service';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import {
@@ -37,7 +31,6 @@ import { impliedMinFractionDigits } from '../../../utils/number-format.utils';
 export class ScaleToolPanelComponent {
   private readonly DEFAULT_LABEL_COUNT = 10;
   private readonly DEFAULT_SUBTICK_COUNT = 4;
-  private readonly PALETTE_FALLBACK_COLOR = '#cccccc';
   private readonly unitsSettings = inject(UnitsSettingsService);
 
   @Input({ required: true }) entry!: ScaleToolEntry;
@@ -55,21 +48,12 @@ export class ScaleToolPanelComponent {
     return this.isContinuous && this.continuousScale.labelScale === ScaleLabelScale.LOG;
   }
 
-  get isDiscreteOrPaletteConfig(): boolean {
-    const type = this.entry.scale.type;
-    return type === ScaleType.DISCRETE || type === ScaleType.PALETTE_CONFIG;
+  get continuousScale(): LayerScale {
+    return this.entry.scale as LayerScale;
   }
 
-  get continuousScale(): ContinuousScale {
-    return this.entry.scale as ContinuousScale;
-  }
-
-  get discreteScale(): DiscreteScale {
-    return this.entry.scale as DiscreteScale;
-  }
-
-  get paletteConfigScale(): PaletteConfigScale {
-    return this.entry.scale as PaletteConfigScale;
+  get discreteScale(): LayerScale {
+    return this.entry.scale as LayerScale;
   }
 
   get verticalLabel(): string {
@@ -87,21 +71,15 @@ export class ScaleToolPanelComponent {
 
     switch (this.entry.scale.type) {
       case ScaleType.CONTINUOUS: {
-        const stops = this.sortedContinuousStopsAsc;
-        min = stops[0]?.value ?? 0;
-        max = stops[stops.length - 1]?.value ?? 0;
+        const entries = this.sortedContinuousDisplayEntriesAsc;
+        min = entries[0]?.value ?? 0;
+        max = entries[entries.length - 1]?.value ?? 0;
         break;
       }
       case ScaleType.DISCRETE: {
-        const steps = this.sortedDiscreteStepsDesc;
-        min = steps[steps.length - 1]?.value ?? 0;
-        max = steps[0]?.value ?? 0;
-        break;
-      }
-      case ScaleType.PALETTE_CONFIG: {
-        const bounds = this.paletteConfigScale.bounds;
-        min = bounds[0] ?? 0;
-        max = bounds[bounds.length - 1] ?? 0;
+        const entries = this.sortedDiscreteEntriesDesc;
+        min = entries[entries.length - 1]?.value ?? 0;
+        max = entries[0]?.value ?? 0;
         break;
       }
       default:
@@ -118,17 +96,18 @@ export class ScaleToolPanelComponent {
   }
 
   get continuousScaleLabels(): readonly string[] {
-    const stops = this.sortedContinuousStopsDesc;
-    if (stops.length === 0) {
+    const entries = this.sortedContinuousDisplayEntriesDesc;
+    if (entries.length === 0) {
       return [];
     }
 
     if (!this.continuousScale.labelCount) {
-      return stops.map((stop) => this.formatValue(stop.value));
+      return entries.map((entry) => this.formatValue(entry.value));
     }
 
-    const min = this.sortedContinuousStopsAsc[0]?.value ?? 0;
-    const max = this.sortedContinuousStopsAsc[this.sortedContinuousStopsAsc.length - 1]?.value ?? 0;
+    const displayEntriesAsc = this.sortedContinuousDisplayEntriesAsc;
+    const min = displayEntriesAsc[0]?.value ?? 0;
+    const max = displayEntriesAsc[displayEntriesAsc.length - 1]?.value ?? 0;
     return this.buildRangeBasedContinuousLabels(this.getConfiguredLabelCount(), min, max);
   }
 
@@ -136,7 +115,9 @@ export class ScaleToolPanelComponent {
     const values = this.continuousScale.labelValues;
     if (!values) return [];
     const [domainMin, domainMax] = this.getContinuousLabelDomain();
-    const positions = this.isLogContinuous ? this.logPositionsForDomain(values, domainMin, domainMax) : null;
+    const positions = this.isLogContinuous
+      ? this.logPositionsForDomain(values, domainMin, domainMax)
+      : null;
     return values.map((value, index) => ({
       text: this.formatValue(value),
       top: positions?.[index] ?? this.linearPosition(value, domainMin, domainMax),
@@ -144,8 +125,10 @@ export class ScaleToolPanelComponent {
   }
 
   get continuousLabelSizerText(): string {
-    return this.continuousLabelEntries.reduce((longest, entry) =>
-      entry.text.length > longest.length ? entry.text : longest, '');
+    return this.continuousLabelEntries.reduce(
+      (longest, entry) => (entry.text.length > longest.length ? entry.text : longest),
+      '',
+    );
   }
 
   get discreteLabels(): readonly string[] {
@@ -156,8 +139,8 @@ export class ScaleToolPanelComponent {
     text: string;
     top: number;
   }[] {
-    const steps = this.discreteStepsDesc;
-    const total = steps.length;
+    const entries = this.discreteEntriesDesc;
+    const total = entries.length;
     if (total === 0) {
       return [];
     }
@@ -168,12 +151,13 @@ export class ScaleToolPanelComponent {
       return this.buildExplicitDiscreteLabelEntries(this.discreteScale.labelValues);
     }
 
-    if (this.entry.scale.type === ScaleType.DISCRETE && this.discreteScale.labelRange) {
-      const [rangeMin, rangeMax] = this.discreteScale.labelRange;
+    const clipRange = this.getScaleClipRange();
+    if (this.entry.scale.type === ScaleType.DISCRETE && clipRange) {
+      const [rangeMin, rangeMax] = clipRange;
       return this.buildRangeBasedDiscreteLabelEntries(configuredLabelCount, rangeMin, rangeMax);
     }
 
-    return this.buildBucketBasedDiscreteLabels(steps, configuredLabelCount);
+    return this.buildBucketBasedDiscreteLabels(entries, configuredLabelCount);
   }
 
   get discreteLabelSizerText(): string {
@@ -183,33 +167,19 @@ export class ScaleToolPanelComponent {
   }
 
   get discreteColorBlocks(): readonly { color: string }[] {
-    const steps = this.discreteStepsDesc;
-    if (steps.length === 0) return [];
-    const blocks: { color: string }[] = [{ color: steps[0].color }];
-    for (let i = 1; i < steps.length; i++) {
-      if (steps[i].color.toLowerCase() !== steps[i - 1].color.toLowerCase()) {
-        blocks.push({ color: steps[i].color });
+    const entries = this.discreteEntriesDesc;
+    if (entries.length === 0) return [];
+    const blocks: { color: string }[] = [{ color: entries[0].color }];
+    for (let i = 1; i < entries.length; i++) {
+      if (entries[i].color.toLowerCase() !== entries[i - 1].color.toLowerCase()) {
+        blocks.push({ color: entries[i].color });
       }
     }
     return blocks;
   }
 
-  get discreteStepsDesc(): readonly { value: number; color: string; label?: string }[] {
-    switch (this.entry.scale.type) {
-      case ScaleType.PALETTE_CONFIG: {
-        const pcScale = this.paletteConfigScale;
-        const steps = pcScale.bounds.map((bound, index) => ({
-          value: bound,
-          color: pcScale.hexColors[index] ?? this.PALETTE_FALLBACK_COLOR,
-        }));
-        // Invertir orden para que valores positivos queden arriba
-        return steps.slice().reverse();
-      }
-      case ScaleType.DISCRETE:
-        return this.sortedDiscreteStepsDesc;
-      default:
-        return [];
-    }
+  get discreteEntriesDesc(): readonly { value: number; color: string; label?: string }[] {
+    return this.sortedDiscreteEntriesDesc;
   }
 
   get continuousTickEntries(): readonly { top: number; major: boolean }[] {
@@ -245,7 +215,7 @@ export class ScaleToolPanelComponent {
     return result;
   }
 
-  get discreteOrPaletteTickEntries(): readonly { top: number; major: boolean }[] {
+  get discreteTickEntries(): readonly { top: number; major: boolean }[] {
     const labels = this.discreteLabelEntries;
     const subTickCount = this.getConfiguredSubTickCount();
     if (labels.length === 0) return [];
@@ -275,55 +245,65 @@ export class ScaleToolPanelComponent {
   }
 
   get gradientBackground(): string {
-    const sortedStops = this.sortedContinuousStopsAsc;
+    const sortedEntries = this.sortedContinuousDisplayEntriesAsc;
 
-    if (sortedStops.length < 2) {
-      return sortedStops[0]?.color ?? 'transparent';
+    if (sortedEntries.length < 2) {
+      return sortedEntries[0]?.color ?? 'transparent';
     }
 
-    const min = sortedStops[0].value;
-    const max = sortedStops[sortedStops.length - 1].value;
+    const min = sortedEntries[0].value;
+    const max = sortedEntries[sortedEntries.length - 1].value;
 
-    const toPosition: (value: number) => number = this.isLogContinuous && min > 0
-      ? (v) => (Math.log10(v) - Math.log10(min)) / (Math.log10(max) - Math.log10(min))
-      : (v) => (max > min ? (v - min) / (max - min) : 0);
+    const toPosition: (value: number) => number =
+      this.isLogContinuous && min > 0
+        ? (v) => (Math.log10(v) - Math.log10(min)) / (Math.log10(max) - Math.log10(min))
+        : (v) => (max > min ? (v - min) / (max - min) : 0);
 
     if (!Number.isFinite(toPosition(max)) || toPosition(max) <= 0) {
-      return sortedStops[sortedStops.length - 1].color;
+      return sortedEntries[sortedEntries.length - 1].color;
     }
 
-    const segments = sortedStops
-      .map((stop) => {
-        const percentFromBottom = Math.max(0, Math.min(100, toPosition(stop.value) * 100));
-        return `${stop.color} ${percentFromBottom.toFixed(2)}%`;
-      })
-      .join(', ');
+    const segments: string[] = [];
+    for (let i = 0; i < sortedEntries.length; i++) {
+      const entry = sortedEntries[i];
+      const pct = Math.max(0, Math.min(100, toPosition(entry.value) * 100)).toFixed(2);
+      if (entry.hardStop && i > 0) {
+        segments.push(`${sortedEntries[i - 1].color} ${pct}%`);
+      }
+      segments.push(`${entry.color} ${pct}%`);
+    }
 
-    return `linear-gradient(to top, ${segments})`;
+    return `linear-gradient(to top, ${segments.join(', ')})`;
   }
 
-  private get sortedContinuousStopsAsc(): readonly {
+  private get sortedContinuousEntriesAsc(): readonly ScaleColorStop[] {
+    return [...this.continuousScale.entries].sort((a, b) => a.value - b.value);
+  }
+
+  private get sortedContinuousDisplayEntriesAsc(): readonly ScaleColorStop[] {
+    const clipRange = this.getScaleClipRange();
+    const entries = this.sortedContinuousEntriesAsc;
+    if (!clipRange) return entries;
+    return this.clipEntriesToRange(entries, clipRange[0], clipRange[1]);
+  }
+
+  private get sortedContinuousDisplayEntriesDesc(): readonly ScaleColorStop[] {
+    return [...this.sortedContinuousDisplayEntriesAsc].reverse();
+  }
+
+  private get sortedDiscreteEntriesDesc(): readonly {
     value: number;
     color: string;
     label?: string;
   }[] {
-    return [...this.continuousScale.stops].sort((a, b) => a.value - b.value);
-  }
+    const sorted = [...this.discreteScale.entries].sort((a, b) => b.value - a.value);
+    const clipRange = this.getScaleClipRange();
+    if (!clipRange) {
+      return sorted;
+    }
 
-  private get sortedContinuousStopsDesc(): readonly {
-    value: number;
-    color: string;
-    label?: string;
-  }[] {
-    return [...this.sortedContinuousStopsAsc].reverse();
-  }
-
-  private get sortedDiscreteStepsDesc(): readonly {
-    value: number;
-    color: string;
-    label?: string;
-  }[] {
-    return [...this.discreteScale.steps].sort((a, b) => b.value - a.value);
+    const [min, max] = clipRange;
+    return sorted.filter((entry) => entry.value >= min && entry.value <= max);
   }
 
   private formatValue(value: number): string {
@@ -390,17 +370,17 @@ export class ScaleToolPanelComponent {
   }
 
   private buildBucketBasedDiscreteLabels(
-    steps: readonly { value: number; color: string; label?: string }[],
+    entries: readonly { value: number; color: string; label?: string }[],
     labelCount: number,
   ): readonly { text: string; top: number }[] {
-    const total = steps.length;
+    const total = entries.length;
     const effectiveLabelCount = Math.max(2, Math.min(labelCount, total));
 
     return Array.from({ length: effectiveLabelCount }, (_, index) => {
       const ratio = effectiveLabelCount === 1 ? 0 : index / (effectiveLabelCount - 1);
       const stepIndex = Math.round(ratio * (total - 1));
       return {
-        text: this.formatValue(steps[stepIndex].value),
+        text: this.formatValue(entries[stepIndex].value),
         top: ratio * 100,
       };
     });
@@ -431,7 +411,10 @@ export class ScaleToolPanelComponent {
     const subTickCount = this.getConfiguredSubTickCount();
     const safeMin = domainMin > 0 ? domainMin : (values.find((v) => v > 0) ?? 1);
     const safeMax = domainMax > safeMin ? domainMax : safeMin * 10;
-    const result: { top: number; major: boolean }[] = labels.map((l) => ({ top: l.top, major: true }));
+    const result: { top: number; major: boolean }[] = labels.map((l) => ({
+      top: l.top,
+      major: true,
+    }));
 
     const decadeStep = Math.max(1, Math.round(8 / subTickCount));
     const startExp = Math.floor(Math.log10(safeMin));
@@ -442,7 +425,9 @@ export class ScaleToolPanelComponent {
       for (let k = 2; k <= 9; k += decadeStep) {
         const tickValue = k * base;
         if (tickValue <= safeMin || tickValue >= safeMax) continue;
-        const isLabel = values.some((v) => Math.abs(v - tickValue) / Math.max(v, tickValue) < 0.001);
+        const isLabel = values.some(
+          (v) => Math.abs(v - tickValue) / Math.max(v, tickValue) < 0.001,
+        );
         if (isLabel) continue;
         const pos = this.logPositionsForDomain([tickValue], safeMin, safeMax);
         if (pos) result.push({ top: pos[0], major: false });
@@ -452,17 +437,41 @@ export class ScaleToolPanelComponent {
   }
 
   private getDiscreteLabelDomain(): readonly [number, number] {
+    const clipRange = this.getScaleClipRange();
+    if (clipRange) return clipRange;
+
     const domain = this.discreteScale.labelDomain;
     if (domain) return domain;
-    const steps = this.sortedDiscreteStepsDesc;
-    return [steps[steps.length - 1]?.value ?? 0, steps[0]?.value ?? 0];
+    const entries = this.sortedDiscreteEntriesDesc;
+    return [entries[entries.length - 1]?.value ?? 0, entries[0]?.value ?? 0];
   }
 
   private getContinuousLabelDomain(): readonly [number, number] {
+    const clipRange = this.getScaleClipRange();
+    if (clipRange) return clipRange;
+
     const domain = this.continuousScale.labelDomain;
     if (domain) return domain;
-    const stops = this.sortedContinuousStopsAsc;
-    return [stops[0]?.value ?? 0, stops[stops.length - 1]?.value ?? 0];
+    const entries = this.sortedContinuousEntriesAsc;
+    return [entries[0]?.value ?? 0, entries[entries.length - 1]?.value ?? 0];
+  }
+
+  private getScaleClipRange(): readonly [number, number] | undefined {
+    const clipRange = this.entry.scale.clipRange;
+    if (!clipRange) {
+      return undefined;
+    }
+
+    const [start, end] = clipRange;
+    return start <= end ? [start, end] : [end, start];
+  }
+
+  tickTopStyle(percentTop: number): string {
+    return `calc(${percentTop}% - ${percentTop / 100}px)`;
+  }
+
+  labelTopStyle(percentTop: number): string {
+    return `calc(${percentTop}% - var(--scale-value-center-offset))`;
   }
 
   private linearPosition(value: number, min: number, max: number): number {
@@ -485,5 +494,55 @@ export class ScaleToolPanelComponent {
       const ratio = (Math.log10(Math.max(value, safeMin)) - logMin) / (logMax - logMin);
       return Math.max(0, Math.min(100, (1 - ratio) * 100));
     });
+  }
+
+  private clipEntriesToRange(
+    entries: readonly ScaleColorStop[],
+    minValue: number,
+    maxValue: number,
+  ): readonly ScaleColorStop[] {
+    const result: ScaleColorStop[] = [];
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      const next = entries[i + 1];
+      if (entry.value < minValue) {
+        if (next && next.value > minValue) {
+          const t = (minValue - entry.value) / (next.value - entry.value);
+          result.push({
+            value: minValue,
+            color: this.interpolateHexColor(entry.color, next.color, t),
+          });
+        }
+        continue;
+      }
+      if (entry.value > maxValue) break;
+      result.push(entry);
+      if (next && next.value > maxValue) {
+        const t = (maxValue - entry.value) / (next.value - entry.value);
+        result.push({
+          value: maxValue,
+          color: this.interpolateHexColor(entry.color, next.color, t),
+        });
+      }
+    }
+    return result;
+  }
+
+  private interpolateHexColor(colorA: string, colorB: string, t: number): string {
+    const parse = (hex: string) => {
+      const h = hex.replace('#', '');
+      return [
+        parseInt(h.slice(0, 2), 16),
+        parseInt(h.slice(2, 4), 16),
+        parseInt(h.slice(4, 6), 16),
+      ];
+    };
+    const [rA, gA, bA] = parse(colorA);
+    const [rB, gB, bB] = parse(colorB);
+    const ch = (a: number, b: number) =>
+      Math.round(a + t * (b - a))
+        .toString(16)
+        .padStart(2, '0');
+    return `#${ch(rA, rB)}${ch(gA, gB)}${ch(bA, bB)}`;
   }
 }
