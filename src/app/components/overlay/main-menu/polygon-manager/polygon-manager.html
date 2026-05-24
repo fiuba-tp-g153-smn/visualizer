@@ -6,9 +6,14 @@
         mat-flat-button
         color="primary"
         (click)="toggleDrawMode()"
-        matTooltip="Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último."
+        [matTooltip]="
+          isEditing()
+            ? 'No disponible mientras se edita un polígono'
+            : 'Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último.'
+        "
         class="control-button"
         [class.cancel]="isDrawing()"
+        [disabled]="isEditing()"
       >
         <mat-icon>{{ isDrawing() ? 'close' : 'draw' }}</mat-icon>
         {{ isDrawing() ? 'Cancelar' : 'Dibujar' }}
