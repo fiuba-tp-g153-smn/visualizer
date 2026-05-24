@@ -43,9 +43,9 @@ import {
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
 import {
-  SmnStationsTemporalMode,
-  SMN_STATIONS_IMAGE_COUNT_OPTIONS,
-} from '../../../../../config/layers/smn-stations/controls.constants';
+  WeatherStationsTemporalMode,
+  WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
+} from '../../../../../config/layers/weather-stations/controls.constants';
 
 /**
  * Modo de visualización del componente
@@ -85,7 +85,7 @@ export type LayerItemMode = 'available' | 'active';
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly LayerCategory = LayerCategory;
-  readonly SmnStationsTemporalMode = SmnStationsTemporalMode;
+  readonly WeatherStationsTemporalMode = WeatherStationsTemporalMode;
 
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
@@ -127,17 +127,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
   isForecastsExpanded = signal(false);
-  isSmnSettingsExpanded = signal(false);
-  private smnPlaybackTimerId: number | null = null;
-  private readonly smnPlaybackIsPlaying = signal(false);
-  private readonly smnPlaybackSpeed = signal(1);
+  isWeatherStationsSettingsExpanded = signal(false);
+  private weatherStationsPlaybackTimerId: number | null = null;
+  private readonly weatherStationsPlaybackIsPlaying = signal(false);
+  private readonly weatherStationsPlaybackSpeed = signal(1);
 
   /** True when this layer is currently controlled by the global sync playback. */
   isSynced = computed(() => this.syncService.isLayerSelected(this.layer.id));
 
   playSpeed = computed(() => {
-    if (this.isSmnStationsLayer()) {
-      return this.smnPlaybackSpeed();
+    if (this.isWeatherStationsLayer()) {
+      return this.weatherStationsPlaybackSpeed();
     }
 
     const controls = this.controlService.getControls(this.layer.id);
@@ -150,8 +150,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   imageCount = computed(() => {
-    if (this.isSmnStationsLayer()) {
-      return this.controlService.getSmnStationsImageCount();
+    if (this.isWeatherStationsLayer()) {
+      return this.controlService.getWeatherStationsImageCount();
     }
 
     const controls = this.controlService.getControls(this.layer.id);
@@ -171,8 +171,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * per-run maximum (e.g. 47), and the dropdown must offer that total.
    */
   lastImagesOptions = computed(() => {
-    if (this.isSmnStationsLayer()) {
-      return this.smnImageCountOptions();
+    if (this.isWeatherStationsLayer()) {
+      return this.weatherStationsImageCountOptions();
     }
 
     switch (this.layer.type) {
@@ -192,15 +192,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   isPlaying = computed(() => {
-    if (this.isSmnStationsLayer()) {
-      return this.smnPlaybackIsPlaying();
+    if (this.isWeatherStationsLayer()) {
+      return this.weatherStationsPlaybackIsPlaying();
     }
 
     return this.controlService.isPlaying(this.layer.id);
   });
 
   canPlayback = computed(() => {
-    if (this.isSmnStationsLayer()) {
+    if (this.isWeatherStationsLayer()) {
       return this.imageCount() > 1 && this.maxTimeIndex() - this.minTimeIndex() >= 1;
     }
 
@@ -259,8 +259,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   hasTimeControl = computed(() => {
-    if (this.layer.category === LayerCategory.SMN_STATIONS) {
-      return this.smnTilesetIds().length > 0;
+    if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
+      return this.weatherStationsTilesetIds().length > 0;
     }
 
     // Debe tener configuración Y tilesets disponibles
@@ -274,8 +274,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa requiere control de tiempo pero no hay períodos disponibles
    */
   hasNoPeriodsAvailable = computed(() => {
-    if (this.layer.category === LayerCategory.SMN_STATIONS) {
-      return this.smnTilesetIds().length === 0;
+    if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
+      return this.weatherStationsTilesetIds().length === 0;
     }
 
     // Solo aplica a capas TILE
@@ -296,7 +296,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Verifica si la capa necesita control de período (TILE layers)
    */
   needsTimeControl = computed(() => {
-    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+    if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       return true;
     }
 
@@ -418,8 +418,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Índice de tiempo actual - lee directamente del servicio
    */
   currentTimeIndex = computed(() => {
-    if (this.layer.category === LayerCategory.SMN_STATIONS) {
-      return this.smnSelectedTilesetIndex();
+    if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
+      return this.weatherStationsSelectedTilesetIndex();
     }
 
     const activeItem = this.getActiveLayer();
@@ -449,8 +449,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnDestroy(): void {
-    if (this.isSmnStationsLayer()) {
-      this.stopSmnPlayback();
+    if (this.isWeatherStationsLayer()) {
+      this.stopWeatherStationsPlayback();
     }
 
     // Don't stop playback on destroy - let it continue in the background
@@ -462,11 +462,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Para GOES_19 y RADAR: devuelve todos los tilesets.
    */
   private getAvailableTilesetsForLayer(): TilesetEntry[] | undefined {
-    if (this.layer.category === LayerCategory.SMN_STATIONS) {
+    if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       const entries: TilesetEntry[] = [];
 
-      for (const tilesetId of this.smnTilesetIds()) {
-        const tilesetTime = this.smnTilesetIdToDate(tilesetId);
+      for (const tilesetId of this.weatherStationsTilesetIds()) {
+        const tilesetTime = this.weatherStationsTilesetIdToDate(tilesetId);
         if (!tilesetTime) {
           continue;
         }
@@ -562,18 +562,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Alterna la expansión de la configuración específica de estaciones SMN
+   * Alterna la expansión de la configuración específica de estaciones meteorológicas
    */
-  toggleSmnSettingsExpansion(): void {
-    this.isSmnSettingsExpanded.set(!this.isSmnSettingsExpanded());
+  toggleWeatherStationsSettingsExpansion(): void {
+    this.isWeatherStationsSettingsExpanded.set(!this.isWeatherStationsSettingsExpanded());
   }
 
   /**
    * Activa la capa
    */
   private async activateLayer(): Promise<void> {
-    if (this.isSmnStationsLayer()) {
-      this.captureCurrentSmnSharedState();
+    if (this.isWeatherStationsLayer()) {
+      this.captureCurrentWeatherStationsSharedState();
     }
 
     if (this.selectionMode === LayerSelectionMode.SINGLE) {
@@ -582,17 +582,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     this.controlService.activateLayer(this.layer.id);
 
-    if (this.isSmnStationsLayer()) {
-      this.applySharedStateToSmnLayer();
+    if (this.isWeatherStationsLayer()) {
+      this.applySharedStateToWeatherStationsLayer();
       // Belt-and-suspenders: the weather-stations HTTP interceptor handles
       // 401 re-prompt + notification, and both refresh-service methods are
       // already fail-soft on other errors. The try/catch here just prevents
       // a future regression from surfacing as `Uncaught (in promise)`.
       try {
-        await this.refreshService.ensureSmnStationsEndpointConfigLoaded();
-        await this.refreshService.loadSmnStationsSnapshot(true);
+        await this.refreshService.ensureWeatherStationsEndpointConfigLoaded();
+        await this.refreshService.loadWeatherStationsSnapshot(true);
       } catch (err) {
-        console.warn('[LayerItem] SMN stations activation failed:', err);
+        console.warn('[LayerItem] weather stations activation failed:', err);
       }
     }
   }
@@ -646,8 +646,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     // Always update the layer's base opacity as well
     this.controlService.setOpacity(this.layer.id, opacity);
 
-    if (this.isSmnStationsLayer()) {
-      this.controlService.setSmnStationsSharedOpacity(opacity);
+    if (this.isWeatherStationsLayer()) {
+      this.controlService.setWeatherStationsSharedOpacity(opacity);
     }
   }
 
@@ -670,15 +670,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   onTimeIndexChange(timeIndex: number): void {
-    if (this.layer.category === LayerCategory.SMN_STATIONS) {
-      this.stopSmnPlayback();
-      const tilesetId = this.smnTilesetIds()[timeIndex];
+    if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
+      this.stopWeatherStationsPlayback();
+      const tilesetId = this.weatherStationsTilesetIds()[timeIndex];
       if (!tilesetId) {
         return;
       }
 
-      this.controlService.setSmnStationsSelectedTilesetId(tilesetId);
-      void this.refreshService.loadSmnStationsSnapshot(true);
+      this.controlService.setWeatherStationsSelectedTilesetId(tilesetId);
+      void this.refreshService.loadWeatherStationsSnapshot(true);
       return;
     }
 
@@ -887,11 +887,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   // ==========================================================================
 
   togglePlayback(): void {
-    if (this.isSmnStationsLayer()) {
+    if (this.isWeatherStationsLayer()) {
       if (this.isPlaying()) {
-        this.stopSmnPlayback();
+        this.stopWeatherStationsPlayback();
       } else {
-        this.startSmnPlayback();
+        this.startWeatherStationsPlayback();
       }
       return;
     }
@@ -901,10 +901,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onPlaySpeedChange(speed: number): void {
-    if (this.isSmnStationsLayer()) {
-      this.smnPlaybackSpeed.set(this.clampPlaybackSpeed(speed));
+    if (this.isWeatherStationsLayer()) {
+      this.weatherStationsPlaybackSpeed.set(this.clampPlaybackSpeed(speed));
       if (this.isPlaying()) {
-        this.startSmnPlayback();
+        this.startWeatherStationsPlayback();
       }
       return;
     }
@@ -914,10 +914,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onImageCountChange(count: number): void {
-    if (this.isSmnStationsLayer()) {
-      this.controlService.setSmnStationsImageCount(count);
+    if (this.isWeatherStationsLayer()) {
+      this.controlService.setWeatherStationsImageCount(count);
       if (this.isPlaying()) {
-        this.startSmnPlayback();
+        this.startWeatherStationsPlayback();
       }
       return;
     }
@@ -952,41 +952,41 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
     this.scaleTools.toggleLayerSelection(this.layer.id);
 
-    if (this.isSmnStationsLayer()) {
-      this.controlService.setSmnStationsScaleVisible(
+    if (this.isWeatherStationsLayer()) {
+      this.controlService.setWeatherStationsScaleVisible(
         this.scaleTools.enabled() && this.scaleTools.isLayerSelected(this.layer.id),
       );
     }
   }
 
-  private isSmnStationsLayer(): boolean {
-    return this.layer.category === LayerCategory.SMN_STATIONS;
+  private isWeatherStationsLayer(): boolean {
+    return this.layer.category === LayerCategory.WEATHER_STATIONS;
   }
 
-  readonly smnTemporalMode = computed(() => this.controlService.getSmnStationsTemporalMode());
+  readonly weatherStationsTemporalMode = computed(() => this.controlService.getWeatherStationsTemporalMode());
 
-  readonly isSmnSpecificTemporalMode = computed(
-    () => this.smnTemporalMode() === SmnStationsTemporalMode.SPECIFIC,
+  readonly isWeatherStationsSpecificTemporalMode = computed(
+    () => this.weatherStationsTemporalMode() === WeatherStationsTemporalMode.SPECIFIC,
   );
 
-  readonly smnMaxPastHours = computed(() => this.controlService.getSmnStationsMaxPastHours());
+  readonly weatherStationsMaxPastHours = computed(() => this.controlService.getWeatherStationsMaxPastHours());
 
   // Bound to the "Mostrar estaciones sin datos" checkbox. When false, the
   // renderer drops stations whose `hasData` is false (last observation falls
   // outside the requested tolerance window).
-  readonly smnShowStationsWithoutData = this.controlService.smnStationsShowStationsWithoutData;
+  readonly weatherStationsShowStationsWithoutData = this.controlService.weatherStationsShowStationsWithoutData;
 
-  readonly smnImageCountOptions = computed(() => [...SMN_STATIONS_IMAGE_COUNT_OPTIONS]);
+  readonly weatherStationsImageCountOptions = computed(() => [...WEATHER_STATIONS_IMAGE_COUNT_OPTIONS]);
 
-  readonly smnTilesetIds = computed(() => this.refreshService.getSmnStationsAvailableTilesetIds());
+  readonly weatherStationsTilesetIds = computed(() => this.refreshService.getWeatherStationsAvailableTilesetIds());
 
-  readonly smnSelectedTilesetIndex = computed(() => {
-    const tilesetIds = this.smnTilesetIds();
+  readonly weatherStationsSelectedTilesetIndex = computed(() => {
+    const tilesetIds = this.weatherStationsTilesetIds();
     if (tilesetIds.length === 0) {
       return 0;
     }
 
-    const selectedTilesetId = this.controlService.getSmnStationsSelectedTilesetId();
+    const selectedTilesetId = this.controlService.getWeatherStationsSelectedTilesetId();
     if (!selectedTilesetId) {
       return tilesetIds.length - 1;
     }
@@ -995,95 +995,95 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return selectedIndex >= 0 ? selectedIndex : tilesetIds.length - 1;
   });
 
-  onSmnTemporalModeChange(mode: SmnStationsTemporalMode): void {
-    this.controlService.setSmnStationsTemporalMode(mode);
-    if (mode === SmnStationsTemporalMode.LATEST) {
-      this.stopSmnPlayback();
-      const latestTilesetId = this.smnTilesetIds().at(-1) ?? null;
-      this.controlService.setSmnStationsSelectedTilesetId(latestTilesetId);
+  onWeatherStationsTemporalModeChange(mode: WeatherStationsTemporalMode): void {
+    this.controlService.setWeatherStationsTemporalMode(mode);
+    if (mode === WeatherStationsTemporalMode.LATEST) {
+      this.stopWeatherStationsPlayback();
+      const latestTilesetId = this.weatherStationsTilesetIds().at(-1) ?? null;
+      this.controlService.setWeatherStationsSelectedTilesetId(latestTilesetId);
     }
-    void this.refreshService.loadSmnStationsSnapshot(true);
+    void this.refreshService.loadWeatherStationsSnapshot(true);
   }
 
-  onSmnMaxPastHoursChange(maxPastHours: number): void {
-    this.controlService.setSmnStationsMaxPastHours(maxPastHours);
-    if (this.smnTemporalMode() === SmnStationsTemporalMode.SPECIFIC) {
+  onWeatherStationsMaxPastHoursChange(maxPastHours: number): void {
+    this.controlService.setWeatherStationsMaxPastHours(maxPastHours);
+    if (this.weatherStationsTemporalMode() === WeatherStationsTemporalMode.SPECIFIC) {
       if (this.isPlaying()) {
-        this.startSmnPlayback();
+        this.startWeatherStationsPlayback();
       }
-      void this.refreshService.loadSmnStationsSnapshot(true);
+      void this.refreshService.loadWeatherStationsSnapshot(true);
     }
   }
 
-  onSmnShowStationsWithoutDataChange(showStationsWithoutData: boolean): void {
+  onWeatherStationsShowWithoutDataChange(showStationsWithoutData: boolean): void {
     // Pure display-side toggle: no re-fetch needed, the renderer reads the
     // signal on its next render pass.
-    this.controlService.setSmnStationsShowStationsWithoutData(showStationsWithoutData);
+    this.controlService.setWeatherStationsShowStationsWithoutData(showStationsWithoutData);
   }
 
-  onSmnTilesetIndexChange(tilesetIndex: number): void {
-    const tilesetId = this.smnTilesetIds()[tilesetIndex];
+  onWeatherStationsTilesetIndexChange(tilesetIndex: number): void {
+    const tilesetId = this.weatherStationsTilesetIds()[tilesetIndex];
     if (!tilesetId) {
       return;
     }
 
-    this.controlService.setSmnStationsSelectedTilesetId(tilesetId);
-    if (this.smnTemporalMode() === SmnStationsTemporalMode.SPECIFIC) {
-      void this.refreshService.loadSmnStationsSnapshot(true);
+    this.controlService.setWeatherStationsSelectedTilesetId(tilesetId);
+    if (this.weatherStationsTemporalMode() === WeatherStationsTemporalMode.SPECIFIC) {
+      void this.refreshService.loadWeatherStationsSnapshot(true);
     }
   }
 
-  private startSmnPlayback(): void {
-    if (!this.isActive() || !this.isSmnSpecificTemporalMode()) {
+  private startWeatherStationsPlayback(): void {
+    if (!this.isActive() || !this.isWeatherStationsSpecificTemporalMode()) {
       return;
     }
 
     if (this.imageCount() <= 1) {
-      this.stopSmnPlayback();
+      this.stopWeatherStationsPlayback();
       return;
     }
 
     const min = this.minTimeIndex();
     const max = this.maxTimeIndex();
     if (max - min < 1) {
-      this.stopSmnPlayback();
+      this.stopWeatherStationsPlayback();
       return;
     }
 
-    this.stopSmnPlayback();
-    this.smnPlaybackIsPlaying.set(true);
+    this.stopWeatherStationsPlayback();
+    this.weatherStationsPlaybackIsPlaying.set(true);
     const intervalMs = this.clampPlaybackSpeed(this.playSpeed()) * 1000;
 
-    this.smnPlaybackTimerId = window.setInterval(() => {
+    this.weatherStationsPlaybackTimerId = window.setInterval(() => {
       const dynamicMin = this.minTimeIndex();
       const dynamicMax = this.maxTimeIndex();
 
       if (dynamicMax - dynamicMin < 1) {
-        this.stopSmnPlayback();
+        this.stopWeatherStationsPlayback();
         return;
       }
 
       const nextIndex =
         this.currentTimeIndex() >= dynamicMax ? dynamicMin : this.currentTimeIndex() + 1;
 
-      this.onSmnTilesetIndexChange(nextIndex);
+      this.onWeatherStationsTilesetIndexChange(nextIndex);
     }, intervalMs);
   }
 
-  private stopSmnPlayback(): void {
-    if (this.smnPlaybackTimerId !== null) {
-      window.clearInterval(this.smnPlaybackTimerId);
-      this.smnPlaybackTimerId = null;
+  private stopWeatherStationsPlayback(): void {
+    if (this.weatherStationsPlaybackTimerId !== null) {
+      window.clearInterval(this.weatherStationsPlaybackTimerId);
+      this.weatherStationsPlaybackTimerId = null;
     }
 
-    this.smnPlaybackIsPlaying.set(false);
+    this.weatherStationsPlaybackIsPlaying.set(false);
   }
 
   private clampPlaybackSpeed(speed: number): number {
     return Math.max(0.4, Math.min(10, speed));
   }
 
-  private smnTilesetIdToDate(tilesetId: string): Date | null {
+  private weatherStationsTilesetIdToDate(tilesetId: string): Date | null {
     const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
     if (!match) {
       return null;
@@ -1097,31 +1097,31 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  private captureCurrentSmnSharedState(): void {
-    const activeSmnLayer = this.controlService
+  private captureCurrentWeatherStationsSharedState(): void {
+    const activeWeatherStationLayer = this.controlService
       .activeLayers()
-      .find((item) => item.layer.category === LayerCategory.SMN_STATIONS);
+      .find((item) => item.layer.category === LayerCategory.WEATHER_STATIONS);
 
-    if (activeSmnLayer) {
-      this.controlService.captureSmnStationsSharedFromControls(activeSmnLayer.controls);
-      this.controlService.setSmnStationsScaleVisible(
-        this.scaleTools.enabled() && this.scaleTools.isLayerSelected(activeSmnLayer.layer.id),
+    if (activeWeatherStationLayer) {
+      this.controlService.captureWeatherStationsSharedFromControls(activeWeatherStationLayer.controls);
+      this.controlService.setWeatherStationsScaleVisible(
+        this.scaleTools.enabled() && this.scaleTools.isLayerSelected(activeWeatherStationLayer.layer.id),
       );
       return;
     }
 
-    this.controlService.captureSmnStationsSharedFromControls(
+    this.controlService.captureWeatherStationsSharedFromControls(
       this.controlService.getControls(this.layer.id),
     );
   }
 
-  private applySharedStateToSmnLayer(): void {
+  private applySharedStateToWeatherStationsLayer(): void {
     this.controlService.setOpacity(
       this.layer.id,
-      this.controlService.getSmnStationsSharedOpacity(),
+      this.controlService.getWeatherStationsSharedOpacity(),
     );
 
-    const sharedZIndex = this.controlService.getSmnStationsSharedZIndex();
+    const sharedZIndex = this.controlService.getWeatherStationsSharedZIndex();
     if (sharedZIndex !== null) {
       this.controlService.setZIndex(this.layer.id, sharedZIndex);
     }
@@ -1130,7 +1130,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
-    const shouldShowScale = this.controlService.isSmnStationsScaleVisible();
+    const shouldShowScale = this.controlService.isWeatherStationsScaleVisible();
     const isSelected = this.scaleTools.isLayerSelected(this.layer.id);
 
     if (shouldShowScale) {

@@ -1,29 +1,29 @@
-export interface SmnStationCoord {
+export interface WeatherStationCoord {
   lat: number;
   lon: number;
 }
 
-export interface SmnStationReference {
+export interface WeatherStationReference {
   location_id: number;
 }
 
-export interface SmnStationDto {
+export interface WeatherStationDto {
   airport_code: string;
-  coord: SmnStationCoord;
+  coord: WeatherStationCoord;
   height: number;
   id: number;
   name: string;
   province: string;
-  ref: SmnStationReference;
+  ref: WeatherStationReference;
   type: 'MANUAL' | 'AUTOMATICA';
 }
 
-export interface SmnWeatherPhenomenonDto {
+export interface WeatherPhenomenonDto {
   description: string;
   id: number;
 }
 
-export interface SmnWeatherWindDto {
+export interface WeatherWindDto {
   deg: number;
   direction:
     | 'Calma'
@@ -39,7 +39,7 @@ export interface SmnWeatherWindDto {
   speed: number | null;
 }
 
-export interface SmnCurrentWeatherStationDto {
+export interface CurrentWeatherStationDto {
   date: string;
   feels_like: number;
   humidity: number;
@@ -47,21 +47,21 @@ export interface SmnCurrentWeatherStationDto {
   station_id: number;
   temperature: number;
   visibility: number;
-  weather: SmnWeatherPhenomenonDto;
-  wind: SmnWeatherWindDto;
+  weather: WeatherPhenomenonDto;
+  wind: WeatherWindDto;
 }
 
-export interface SmnStationObservation {
-  station: SmnStationDto;
-  weather: SmnCurrentWeatherStationDto;
+export interface WeatherStationObservation {
+  station: WeatherStationDto;
+  weather: CurrentWeatherStationDto;
   // True when `weather.date` is within the requested tolerance window.
   // Always true in LATEST mode (no window). In SPECIFIC mode the renderer
   // uses this to apply the "no data for the requested period" styling.
   hasData: boolean;
 }
 
-export interface SmnStationSnapshot {
-  observations: readonly SmnStationObservation[];
+export interface WeatherStationSnapshot {
+  observations: readonly WeatherStationObservation[];
   fetchedAt: string;
   source: 'latest' | 'tileset';
 }

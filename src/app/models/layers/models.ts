@@ -148,8 +148,17 @@ export interface SecondaryVectorRender {
 export interface WeatherStationLayer extends BaseLayer {
   type: LayerType.VECTOR;
   category: LayerCategory.WEATHER_STATIONS;
-  variable: 'temperature' | 'feels_like' | 'humidity' | 'pressure' | 'visibility' | 'wind_speed';
+  variable: WeatherStationVariable;
   scale: NonNullable<LayerScale>;
+}
+
+export enum WeatherStationVariable {
+  TEMPERATURE = 'temperature',
+  FEELS_LIKE = 'feels_like',
+  HUMIDITY = 'humidity',
+  PRESSURE = 'pressure',
+  VISIBILITY = 'visibility',
+  WIND_SPEED = 'wind_speed',
 }
 
 export interface WmsLayer extends BaseLayer {
