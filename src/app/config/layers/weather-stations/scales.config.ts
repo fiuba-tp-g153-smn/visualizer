@@ -28,15 +28,14 @@ export const TEMPERATURE_SCALE = buildLinearScale({
   subTickCount: 4,
 });
 
-// Sensación térmica: -30 °C a 20 °C (6 stops cada 10 °C → en Kelvin: 243.15–293.15)
-// Reutiliza los primeros 6 colores de TEMPERATURE_COLORS para que el mismo color
-// represente siempre la misma temperatura al comparar ambas capas.
+// Sensación térmica: mismo rango y paleta que TEMPERATURE_SCALE (-30 a 40 °C)
+// para que sean directamente comparables capa a capa.
 export const FEELS_LIKE_SCALE = buildLinearScale({
   min: 243.15,
-  max: 293.15,
+  max: 313.15,
   unit: TEMPERATURE_UNITS.KELVIN,
-  colors: TEMPERATURE_COLORS.slice(0, 6),
-  labelCount: 6,
+  colors: TEMPERATURE_COLORS,
+  labelCount: 8,
   subTickCount: 4,
 });
 
