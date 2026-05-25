@@ -261,7 +261,20 @@ const RADARES_SMN = [
   },
 ];
 
-export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
+const RADARES_INTA = [
+  {
+    id: 'par',
+    ubi: 'Paraná',
+    minNativeZoom: MIN_ZOOM,
+    maxNativeZoom: MAX_ZOOM,
+    boundingBox: [
+      [-34.01, -63.08],
+      [-29.69, -58.0],
+    ] as const,
+  },
+];
+
+const rmaSubgroups: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   id: radar.id,
   name: `RMA ${radar.number} - ${radar.ubi}`,
   description: `Capas del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
@@ -277,3 +290,22 @@ export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
     boundingBox: radar.boundingBox,
   })) as RadarTileLayer[],
 }));
+
+const intaSubgroups: LayerSubgroup[] = RADARES_INTA.map((radar) => ({
+  id: radar.id,
+  name: `INTA ${radar.id.toUpperCase()} - ${radar.ubi}`,
+  description: `Capas del radar meteorológico INTA ${radar.id.toUpperCase()} de ${radar.ubi}`,
+  expanded: false,
+  layers: products.map((product) => ({
+    ...RADAR_DEFAULTS,
+    id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
+    name: product,
+    scale: RADAR_SCALES[product],
+    description: `Producto ${product} del radar INTA ${radar.id.toUpperCase()} de ${radar.ubi}`,
+    minNativeZoom: radar.minNativeZoom,
+    maxNativeZoom: radar.maxNativeZoom,
+    boundingBox: radar.boundingBox,
+  })) as RadarTileLayer[],
+}));
+
+export const RADAR_SUBGROUPS: LayerSubgroup[] = [...rmaSubgroups, ...intaSubgroups];
