@@ -37,18 +37,21 @@ jobs:
           trivy image --download-db-only
 
       # ── Visualizer: npm dependency scan ──
+      # --ignored-licenses WTFPL: leaflet-editable ships under WTFPL, which Trivy's
+      # default policy flags as forbidden. WTFPL is FSF-approved, GPL-compatible and
+      # public-domain-equivalent, so we allowlist it explicitly.
       - name: "Visualizer: scan dependencies (HIGH)"
-        run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update .
+        run: trivy fs --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --ignored-licenses WTFPL --skip-db-update .
 
       - name: "Visualizer: scan dependencies (CRITICAL)"
-        run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet .
+        run: trivy fs --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --ignored-licenses WTFPL --skip-db-update --quiet .
 
       # ── Visualizer: Docker image scan ──
       - name: "Visualizer: scan image (HIGH)"
-        run: trivy image --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --skip-db-update visualizer:scan
+        run: trivy image --format table --exit-code 0 --severity HIGH --scanners vuln,misconfig,license --ignored-licenses WTFPL --skip-db-update visualizer:scan
 
       - name: "Visualizer: scan image (CRITICAL)"
-        run: trivy image --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --skip-db-update --quiet visualizer:scan
+        run: trivy image --format table --exit-code 1 --severity CRITICAL --scanners vuln,misconfig,license --ignored-licenses WTFPL --skip-db-update --quiet visualizer:scan
 
       # ── Docs service: npm dependency scan ──
       - name: "Docs service: scan dependencies (HIGH)"
