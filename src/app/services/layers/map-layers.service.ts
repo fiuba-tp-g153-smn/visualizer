@@ -5,7 +5,9 @@ import { LayerRenderService } from './layer-render.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { VectorOverlayService } from './vector-overlay.service';
+import { WrfBarbGridLayer } from './wrf-barb-grid-layer';
 import {
+  BarbTileRender,
   EcmwfTpLayerControls,
   EcmwfTpTileLayer,
   EcmwfTpTileLayerConfig,
@@ -27,6 +29,19 @@ const VECTOR_OVERLAY_PANE = 'data-vector-overlay';
 /** zIndex del pane vectorial: arriba de tilePane (200) y overlayPane (400), debajo de markers. */
 const VECTOR_OVERLAY_PANE_Z_INDEX = '650';
 
+/** Bounds aproximados del dominio WRF (Argentina + alrededores). Evita pedir
+ *  tiles fuera del dominio Lambert cuando el viewport está en otra región. */
+const WRF_BARB_BOUNDS = L.latLngBounds(
+  L.latLng(-60.0, -110.0),
+  L.latLng(-15.0, -30.0),
+);
+
+function isBarbTileRender(
+  render: SecondaryVectorRender | BarbTileRender,
+): render is BarbTileRender {
+  return 'kind' in render && render.kind === 'barb-tile';
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -40,6 +55,8 @@ export class MapLayersService {
   private map: L.Map | null = null;
   private onMapLayers = new Map<string, L.TileLayer>();
   private onMapOverlays = new Map<string, L.Layer>();
+  /** Cache de GridLayers vectoriales de barbas, ruteada por `layerId#productId#fxxx`. */
+  private barbTileLayers = new Map<string, L.GridLayer>();
 
   /**
    * Initialize the service with a Leaflet map instance
@@ -240,6 +257,11 @@ export class MapLayersService {
       }
     }
     this.onMapOverlays = desired;
+
+    // Garbage-collect cached barb tile layers no longer present in `desired`.
+    for (const key of this.barbTileLayers.keys()) {
+      if (!desired.has(key)) this.barbTileLayers.delete(key);
+    }
   }
 
   private collectEcmwfOverlays(
@@ -306,9 +328,43 @@ export class MapLayersService {
     if (!forecastsForCurrent || !forecastsForCurrent.includes(primaryForecastTs)) return;
 
     for (const render of renders) {
+      if (isBarbTileRender(render)) {
+        this.requestBarbTile(
+          layerId,
+          wrfLayer.productId,
+          render,
+          primaryForecastTs,
+          currentTimestampTs,
+          desired,
+        );
+        continue;
+      }
       this.requestOverlay(layerId, render, primaryForecastTs, currentTimestampTs, desired);
       this.prefetchSecondary(render, config, currentTimeIndex, primaryForecastTs);
     }
+  }
+
+  private requestBarbTile(
+    layerId: string,
+    productId: string,
+    render: BarbTileRender,
+    initTag: string,
+    fxxx: string,
+    desired: Map<string, L.Layer>,
+  ): void {
+    const cacheKey = `${layerId}#${render.id}#${initTag}#${fxxx}`;
+    let tile = this.barbTileLayers.get(cacheKey);
+    if (!tile) {
+      tile = new WrfBarbGridLayer({
+        productId,
+        initTag,
+        fxxx,
+        bounds: WRF_BARB_BOUNDS,
+        pane: VECTOR_OVERLAY_PANE,
+      });
+      this.barbTileLayers.set(cacheKey, tile);
+    }
+    desired.set(cacheKey, tile);
   }
 
   private requestOverlay(
@@ -365,6 +421,7 @@ export class MapLayersService {
     this.onMapLayers.clear();
     this.onMapOverlays.forEach((layer) => layer.remove());
     this.onMapOverlays.clear();
+    this.barbTileLayers.clear();
     this.map = null;
   }
 }

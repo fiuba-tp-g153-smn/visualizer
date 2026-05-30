@@ -165,7 +165,7 @@ export interface WrfTileLayer extends TileLayer {
    * A diferencia de ECMWF (un único secondary), WRF puede traer N overlays
    * por producto (ej. JetCapasBajas: barbas + shear_850_700).
    */
-  secondaryRenders?: readonly SecondaryVectorRender[];
+  secondaryRenders?: readonly (SecondaryVectorRender | BarbTileRender)[];
 }
 
 /**
@@ -233,6 +233,16 @@ export interface SecondaryVectorRender {
    * contornos) se omite y la renderización cae al style + setText path.
    */
   pointToLayer?: (feature: Feature, latlng: L.LatLng) => L.Layer;
+}
+
+/**
+ * Render secundario que se sirve como tiles raster z/x/y (en lugar de GeoJSON
+ * vectorial). Hoy se usa para barbas WRF rasterizadas en el backend.
+ */
+export interface BarbTileRender {
+  readonly kind: 'barb-tile';
+  /** ID estable del overlay; usado para cache y nombrado de pane. */
+  readonly id: string;
 }
 
 /**
