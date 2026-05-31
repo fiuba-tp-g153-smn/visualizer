@@ -11,6 +11,15 @@ const DEFAULT_MAX_CACHE_ENTRIES = 50;
 const DEFAULT_FETCH_CONCURRENCY = 3;
 
 /**
+ * Minimum polyline length, in degrees of lat/lon path distance, required for
+ * the feature to receive a `<textPath>` label. Threshold is intentionally
+ * coarse (~110 km equator-equivalent) so tiny contour fragments stop piling
+ * up labels at the same level — leaflet-textpath has no native "min length"
+ * option, so the filter happens at render time.
+ */
+const MIN_LABEL_LENGTH_DEG = 1.0;
+
+/**
  * Cache + fetch + prefetch + Leaflet builder para overlays vectoriales (e.g.
  * isobaras MSLP). El servicio NO conoce nada del lifecycle de Layer/Map; solo
  * entrega `FeatureCollection` por URL y construye un `L.GeoJSON` configurado
@@ -134,6 +143,12 @@ export class VectorOverlayService {
         if (value === null) return;
         const label = config.labelFor(value);
         if (!(label && isTextPathLayer(layer))) return;
+        // contourpy emits every closed loop / segment as its own LineString,
+        // and `leaflet-textpath` paints one label per feature. Without this
+        // guard the map fills with duplicated labels on tiny fragments
+        // (e.g. Rafagas "35" repeating across the Andes). Skip the label
+        // on short polylines so only meaningful contours are annotated.
+        if (polylineLengthDegrees(layer) < MIN_LABEL_LENGTH_DEG) return;
         // SVG `<textPath>` sigue la dirección del path. Si el tramo va de
         // derecha a izquierda el texto sale invertido. Reorientarlo evita
         // tener que recurrir a `orientation: 'flip'` (que en este plugin
@@ -217,6 +232,31 @@ export class VectorOverlayService {
  * global del path para decidir si el texto saldría de cabeza, no la
  * monotonía local.
  */
+/**
+ * Sum of consecutive lat/lng segment lengths in degrees. Cheap and accurate
+ * enough for the label-density threshold — we only care about ordering, not
+ * great-circle distance.
+ */
+function polylineLengthDegrees(layer: L.Polyline): number {
+  const latlngs = layer.getLatLngs() as L.LatLng[] | L.LatLng[][];
+  if (latlngs.length === 0) return 0;
+
+  const segmentLength = (pts: L.LatLng[]): number => {
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const dLat = pts[i].lat - pts[i - 1].lat;
+      const dLng = pts[i].lng - pts[i - 1].lng;
+      total += Math.hypot(dLat, dLng);
+    }
+    return total;
+  };
+
+  if (latlngs[0] instanceof L.LatLng) {
+    return segmentLength(latlngs as L.LatLng[]);
+  }
+  return (latlngs as L.LatLng[][]).reduce((acc, ring) => acc + segmentLength(ring), 0);
+}
+
 function ensureLeftToRight(layer: L.Polyline): void {
   const latlngs = layer.getLatLngs() as L.LatLng[] | L.LatLng[][];
   if (latlngs.length === 0) return;
