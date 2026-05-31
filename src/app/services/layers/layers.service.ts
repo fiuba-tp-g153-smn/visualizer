@@ -133,7 +133,7 @@ export class LayersService {
               parts.push(layer.name);
               break;
 
-            case LayerCategory.SMN_STATIONS:
+            case LayerCategory.WEATHER_STATIONS:
               parts.push('SMN');
               parts.push(layer.name);
               break;

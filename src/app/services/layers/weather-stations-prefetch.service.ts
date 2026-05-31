@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 const DEFAULT_FETCH_CONCURRENCY = 4;
 
 /**
- * Warms the **browser HTTP cache** for SMN weather-station snapshot URLs
+ * Warms the **browser HTTP cache** for weather-station snapshot URLs
  * (`/weather-stations/{tilesetId}?N=`), so timeline playback replays those
  * frames straight from the browser cache — no network and no JS-heap retention.
  *
@@ -21,7 +21,7 @@ const DEFAULT_FETCH_CONCURRENCY = 4;
 @Injectable({
   providedIn: 'root',
 })
-export class SmnStationsPrefetchService {
+export class WeatherStationsPrefetchService {
   private readonly http = inject(HttpClient);
 
   private readonly inFlight = new Set<string>();

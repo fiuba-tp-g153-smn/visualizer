@@ -11,6 +11,7 @@ import {
   getDisplayUnit,
   isKelvinUnit,
 } from '../../../utils/unit-conversion.utils';
+import { impliedMinFractionDigits } from '../../../utils/number-format.utils';
 
 @Component({
   selector: 'app-point-value-panel',
@@ -43,7 +44,7 @@ export class PointValuePanelComponent {
       return '';
     }
     const value = convertValueForDisplay(this.data.value, this.data.unit, this.unitsSettings);
-    return this.unitsSettings.numberFormatter().format(value);
+    return this.formatNumber(value);
   }
 
   get displayUnit(): string {
@@ -61,7 +62,23 @@ export class PointValuePanelComponent {
     const displayMin = convertValueForDisplay(min, this.data.unit, this.unitsSettings);
     const displayMax = convertValueForDisplay(max, this.data.unit, this.unitsSettings);
     const displayUnit = getDisplayUnit(this.data.unit, this.unitsSettings);
-    const formatter = this.unitsSettings.numberFormatter();
-    return `Rango: ${formatter.format(displayMin)} - ${formatter.format(displayMax)} ${displayUnit}`;
+    return `Rango: ${this.formatNumber(displayMin)} - ${this.formatNumber(displayMax)} ${displayUnit}`;
+  }
+
+  private formatNumber(value: number): string {
+    const minFractionDigits = impliedMinFractionDigits(value);
+    if (minFractionDigits === 0) {
+      return this.unitsSettings.numberFormatter().format(value);
+    }
+
+    const effectiveFractionDigits = Math.max(
+      this.unitsSettings.decimalPrecision(),
+      minFractionDigits,
+    );
+
+    return new Intl.NumberFormat('es-AR', {
+      minimumFractionDigits: effectiveFractionDigits,
+      maximumFractionDigits: effectiveFractionDigits,
+    }).format(value);
   }
 }

@@ -9,7 +9,7 @@ import { LayersService } from '../../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../../services/layers/layer-control.service';
 import { WeatherStationsApiKeyService } from '../../../../../services/weather-stations/weather-stations-api-key.service';
 import { LayerGroup, LayerSelectionMode, LayerSubgroup } from '../../../../../models';
-import { SMN_STATIONS_SUBGROUP } from '../../../../../config/layers/smn-stations/config';
+import { WEATHER_STATIONS_SUBGROUP } from '../../../../../config/layers/weather-stations/config';
 import { LayerItemComponent } from '../layer-item/layer-item';
 
 /**
@@ -41,12 +41,12 @@ export class AvailableLayersComponent {
   searchText = signal('');
 
   /**
-   * Wired to the SMN subgroup's `(opened)` event. Triggers the API-key
+   * Wired to the weather stations subgroup's `(opened)` event. Triggers the API-key
    * prompt on first expand if neither localStorage nor the env-var fallback
    * has a key — without one every /weather-stations/* call would 401.
    */
   onSubgroupOpened(subgroup: LayerSubgroup): void {
-    if (subgroup.id !== SMN_STATIONS_SUBGROUP.id) {
+    if (subgroup.id !== WEATHER_STATIONS_SUBGROUP.id) {
       return;
     }
     if (this.apiKeyService.hasKey()) {

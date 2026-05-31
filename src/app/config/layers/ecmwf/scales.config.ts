@@ -7,7 +7,7 @@ import { LayerScale, ScaleType } from '../../../models';
 export const ECMWF_TP_SCALE: LayerScale = {
   type: ScaleType.DISCRETE,
   unit: 'mm',
-  steps: [
+  entries: [
     { value: 0.5, color: '#00FFFF' },
     { value: 2, color: '#007FFF' },
     { value: 4, color: '#0000FF' },
