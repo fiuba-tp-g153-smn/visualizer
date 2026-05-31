@@ -89,6 +89,18 @@ export class MainMenuComponent {
   // Es null mientras el chunk se descarga (o cuando no hay panel abierto).
   readonly activeComponent = signal<Type<MenuPanelComponent> | null>(null);
 
+  constructor() {
+    // Eagerly prefetch every panel chunk as soon as the menu is created, so the
+    // first open is always instant (no empty-panel flash) — rather than waiting
+    // for an idle window that may be delayed. Chunks stay separate, so the
+    // initial bundle (and TBT) is unaffected; they just download up front.
+    for (const section of this.sections) {
+      section.loadComponent().catch(() => {
+        /* a failed prefetch is harmless — togglePanel will retry on open */
+      });
+    }
+  }
+
   /**
    * Obtiene la sección activa
    */
