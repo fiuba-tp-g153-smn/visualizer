@@ -154,6 +154,27 @@ export class TilePrefetchService {
             this.enqueue(urls);
           }
         }
+      } else if (layer.category === LayerCategory.WRF) {
+        // WRF: una corrida por init_tag seleccionado × paso (fxxx) actual.
+        // Reutilizamos el mismo iteración window-aware del prefetch.
+        // controls es WrfLayerControls.
+        // Importamos perezosamente para evitar dep cíclica con models.
+        // (las URLs WRF tienen forma /products/wrf/{p}/{init}/{fxxx}/{z}/{x}/{y}.webp)
+        const wrfControls = controls as unknown as {
+          forecast: { selectedForecastTimestamps: string[] };
+        };
+        const productPath = layer.id; // 'wrf/<ProductId>'
+        for (const initTag of wrfControls.forecast.selectedForecastTimestamps) {
+          for (const entry of ordered) {
+            const urls = this.buildUrls(
+              `${productPath}/${initTag}/${entry.id}`,
+              clampedZoom,
+              tileRange,
+            );
+            if (urls.length > MAX_TILES_PER_LAYER) continue;
+            this.enqueue(urls);
+          }
+        }
       }
     }
 

@@ -135,6 +135,9 @@ export class LayersService {
 
             case LayerCategory.WEATHER_STATIONS:
               parts.push('SMN');
+
+            case LayerCategory.WRF:
+              parts.push('WRF');
               parts.push(layer.name);
               break;
 

@@ -100,6 +100,11 @@ export class VectorOverlayService {
    *
    * `pane` (opcional) selecciona el pane Leaflet donde se renderiza el SVG.
    * Cuando se omite, Leaflet usa `overlayPane`.
+   *
+   * Soporta tanto Lines/Polygons (style + setText) como Points (cuando el
+   * config trae `pointToLayer`, e.g. barbas WRF). Leaflet sólo invoca
+   * `pointToLayer` para features Point y `style` / `onEachFeature` para
+   * non-Point, así que ambos pueden coexistir sin checks adicionales.
    */
   buildLayer(
     fc: FeatureCollection,
@@ -116,6 +121,9 @@ export class VectorOverlayService {
     const textpathOptions = withFillOpacity(config.textpathOptions, opacity);
     return L.geoJSON(fc, {
       pane,
+      pointToLayer: config.pointToLayer
+        ? (feature, latlng) => config.pointToLayer!(feature, latlng)
+        : undefined,
       style: (feature?: Feature) => {
         const value = this.readValue(feature, config.valueProperty);
         if (value === null) return { renderer };
