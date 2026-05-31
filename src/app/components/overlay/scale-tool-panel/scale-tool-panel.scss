@@ -1,21 +1,27 @@
 @use '../../../styles/overlay-surface' as overlaySurface;
 
 :host {
+  --scale-value-font-size: 10px;
+  --scale-value-line-height: 10px;
+  --scale-value-center-offset: calc(var(--scale-value-line-height) / 2);
+
   display: flex;
   flex: 1;
   min-height: 0;
+  pointer-events: none;
   overflow: visible;
 }
 
 .scale-tool {
   @include overlaySurface.floating-surface();
 
+  pointer-events: auto;
   display: flex;
   flex: 1;
   flex-direction: row;
   align-items: stretch;
   gap: 6px;
-  padding: 8px 6px;
+  padding: 12px 6px;
   position: relative;
   overflow: visible;
 }
@@ -52,19 +58,43 @@
 }
 
 .scale-value {
-  font-size: 10px;
-  line-height: 1;
+  font-size: var(--scale-value-font-size);
+  line-height: var(--scale-value-line-height);
   color: var(--mat-sys-on-surface-variant);
   user-select: none;
   white-space: nowrap;
 }
 
+.scale-bar-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
 .scale-bar {
   width: 14px;
   align-self: stretch;
-  border-radius: 6px;
   overflow: hidden;
-  outline: 1px solid var(--mat-sys-outline-variant);
+  border: 1px solid var(--mat-sys-on-surface-variant);
+}
+
+.scale-ticks {
+  width: 8px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.scale-tick {
+  position: absolute;
+  left: 0;
+  height: 1px;
+  width: 4px;
+  background-color: var(--mat-sys-surface-variant);
+}
+
+.scale-tick--major {
+  width: 8px;
+  background-color: var(--mat-sys-on-surface-variant);
 }
 
 .scale-bar-discrete {
@@ -90,23 +120,31 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  padding-block: 1px;
+}
+
+// Extiende el contenedor medio alto de label hacia arriba y abajo para que
+// el centro del primer/ultimo label (space-between) coincida con los extremos de la barra.
+.scale-values-continuous {
+  height: calc(100% + var(--scale-value-line-height));
+  margin-block: calc(-1 * var(--scale-value-center-offset));
 }
 
 .scale-values-discrete {
-  justify-content: space-between;
-  padding-block: 0;
+  position: relative;
 }
 
 .scale-value-row {
-  flex: 1;
+  position: absolute;
+  left: 0;
   display: flex;
   align-items: center;
   min-height: 0;
 }
 
-.scale-values-discrete .scale-value-row {
-  flex: initial;
+.scale-value-sizer {
+  position: relative;
+  visibility: hidden;
   height: 0;
-  overflow: visible;
+  overflow: hidden;
+  white-space: nowrap;
 }

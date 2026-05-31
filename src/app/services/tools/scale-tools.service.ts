@@ -35,7 +35,6 @@ interface PersistedScaleToolsState {
 export class ScaleToolsService {
   private readonly MIN_CONTINUOUS_STOPS = 2;
   private readonly MIN_DISCRETE_STEPS = 1;
-  private readonly MIN_PALETTE_ENTRIES = 1;
 
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
@@ -201,14 +200,9 @@ export class ScaleToolsService {
 
     switch (layer.scale.type) {
       case ScaleType.CONTINUOUS:
-        return layer.scale.stops.length >= this.MIN_CONTINUOUS_STOPS;
+        return layer.scale.entries.length >= this.MIN_CONTINUOUS_STOPS;
       case ScaleType.DISCRETE:
-        return layer.scale.steps.length >= this.MIN_DISCRETE_STEPS;
-      case ScaleType.PALETTE_CONFIG:
-        return (
-          layer.scale.hexColors.length >= this.MIN_PALETTE_ENTRIES &&
-          layer.scale.bounds.length >= this.MIN_PALETTE_ENTRIES
-        );
+        return layer.scale.entries.length >= this.MIN_DISCRETE_STEPS;
       default:
         return false;
     }

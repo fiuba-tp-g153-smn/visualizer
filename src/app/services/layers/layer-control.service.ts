@@ -34,17 +34,17 @@ import {
   getDefaultCursorIndex,
 } from '../../utils/playback-window';
 import {
-  DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
-  SMN_STATIONS_IMAGE_COUNT_OPTIONS,
-  isSmnStationsTemporalMode,
-  SmnStationsTemporalMode,
-} from '../../config/layers/smn-stations/controls.constants';
+  DEFAULT_WEATHER_STATIONS_MAX_PAST_HOURS,
+  WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
+  isWeatherStationsTemporalMode,
+  WeatherStationsTemporalMode,
+} from '../../config/layers/weather-stations/controls.constants';
 
-interface PersistedSmnStationsSharedControlsState {
+interface PersistedWeatherStationsSharedControlsState {
   opacity: number;
   zIndex: number | null;
   scaleVisible: boolean;
-  temporalMode: SmnStationsTemporalMode;
+  temporalMode: WeatherStationsTemporalMode;
   maxPastHours: number;
   imageCount: number;
   selectedTilesetId: string | null;
@@ -99,12 +99,12 @@ export class LayerControlService {
   private readonly engineService = inject(PlaybackEngineService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
-  private readonly smnStationsSharedState = signal<PersistedSmnStationsSharedControlsState>({
+  private readonly weatherStationsSharedState = signal<PersistedWeatherStationsSharedControlsState>({
     opacity: 1,
     zIndex: null,
     scaleVisible: false,
-    temporalMode: SmnStationsTemporalMode.LATEST,
-    maxPastHours: DEFAULT_SMN_STATIONS_MAX_PAST_HOURS,
+    temporalMode: WeatherStationsTemporalMode.LATEST,
+    maxPastHours: DEFAULT_WEATHER_STATIONS_MAX_PAST_HOURS,
     imageCount: 6,
     selectedTilesetId: null,
     showStationsWithoutData: true,
@@ -123,7 +123,7 @@ export class LayerControlService {
   >();
 
   constructor() {
-    this.loadSmnStationsSharedState();
+    this.loadWeatherStationsSharedState();
     this.initializeControls();
 
     // Auto-save controls when they change
@@ -302,120 +302,120 @@ export class LayerControlService {
     });
   }
 
-  isSmnStationsLayer(layerId: string): boolean {
+  isWeatherStationsLayer(layerId: string): boolean {
     const layer = this.layersService.getLayerById(layerId);
-    return layer?.category === LayerCategory.SMN_STATIONS;
+    return layer?.category === LayerCategory.WEATHER_STATIONS;
   }
 
-  getSmnStationsSharedOpacity(): number {
-    return this.smnStationsSharedState().opacity;
+  getWeatherStationsSharedOpacity(): number {
+    return this.weatherStationsSharedState().opacity;
   }
 
-  getSmnStationsSharedZIndex(): number | null {
-    return this.smnStationsSharedState().zIndex;
+  getWeatherStationsSharedZIndex(): number | null {
+    return this.weatherStationsSharedState().zIndex;
   }
 
-  isSmnStationsScaleVisible(): boolean {
-    return this.smnStationsSharedState().scaleVisible;
+  isWeatherStationsScaleVisible(): boolean {
+    return this.weatherStationsSharedState().scaleVisible;
   }
 
-  getSmnStationsTemporalMode(): SmnStationsTemporalMode {
-    return this.smnStationsSharedState().temporalMode;
+  getWeatherStationsTemporalMode(): WeatherStationsTemporalMode {
+    return this.weatherStationsSharedState().temporalMode;
   }
 
-  getSmnStationsMaxPastHours(): number {
-    return this.smnStationsSharedState().maxPastHours;
+  getWeatherStationsMaxPastHours(): number {
+    return this.weatherStationsSharedState().maxPastHours;
   }
 
-  getSmnStationsSelectedTilesetId(): string | null {
-    return this.smnStationsSharedState().selectedTilesetId;
+  getWeatherStationsSelectedTilesetId(): string | null {
+    return this.weatherStationsSharedState().selectedTilesetId;
   }
 
-  getSmnStationsImageCount(): number {
-    return this.smnStationsSharedState().imageCount;
+  getWeatherStationsImageCount(): number {
+    return this.weatherStationsSharedState().imageCount;
   }
 
-  captureSmnStationsSharedFromControls(controls: LayerControls): void {
-    this.smnStationsSharedState.update((state) => ({
+  captureWeatherStationsSharedFromControls(controls: LayerControls): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
-      opacity: this.clampSmnStationsOpacity(controls.opacity),
+      opacity: this.clampWeatherStationsOpacity(controls.opacity),
       zIndex: Number.isFinite(controls.zIndex) ? Math.max(0, controls.zIndex) : null,
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  setSmnStationsSharedOpacity(opacity: number): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsSharedOpacity(opacity: number): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
-      opacity: this.clampSmnStationsOpacity(opacity),
+      opacity: this.clampWeatherStationsOpacity(opacity),
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  setSmnStationsSharedZIndex(zIndex: number | null): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsSharedZIndex(zIndex: number | null): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
       zIndex: zIndex === null ? null : Math.max(0, Math.round(zIndex)),
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  setSmnStationsScaleVisible(scaleVisible: boolean): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsScaleVisible(scaleVisible: boolean): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
       scaleVisible,
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  setSmnStationsTemporalMode(temporalMode: SmnStationsTemporalMode): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsTemporalMode(temporalMode: WeatherStationsTemporalMode): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
       temporalMode,
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  setSmnStationsMaxPastHours(maxPastHours: number): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsMaxPastHours(maxPastHours: number): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
       maxPastHours: Math.max(0, Math.min(24, Math.round(maxPastHours))),
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  setSmnStationsImageCount(imageCount: number): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsImageCount(imageCount: number): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
-      imageCount: this.normalizeSmnStationsImageCount(imageCount),
+      imageCount: this.normalizeWeatherStationsImageCount(imageCount),
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  setSmnStationsSelectedTilesetId(selectedTilesetId: string | null): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsSelectedTilesetId(selectedTilesetId: string | null): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
       selectedTilesetId,
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
-  getSmnStationsShowStationsWithoutData(): boolean {
-    return this.smnStationsSharedState().showStationsWithoutData;
+  getWeatherStationsShowStationsWithoutData(): boolean {
+    return this.weatherStationsSharedState().showStationsWithoutData;
   }
 
-  setSmnStationsShowStationsWithoutData(showStationsWithoutData: boolean): void {
-    this.smnStationsSharedState.update((state) => ({
+  setWeatherStationsShowStationsWithoutData(showStationsWithoutData: boolean): void {
+    this.weatherStationsSharedState.update((state) => ({
       ...state,
       showStationsWithoutData,
     }));
-    this.saveSmnStationsSharedState();
+    this.saveWeatherStationsSharedState();
   }
 
   // Public readonly signal so component templates can react via computed/effect
   // without having to call the getter inside a tracking context.
-  readonly smnStationsShowStationsWithoutData = computed(
-    () => this.smnStationsSharedState().showStationsWithoutData,
+  readonly weatherStationsShowStationsWithoutData = computed(
+    () => this.weatherStationsSharedState().showStationsWithoutData,
   );
 
   // ============================================================================
@@ -639,8 +639,8 @@ export class LayerControlService {
       controls.opacity = clampedOpacity;
     });
 
-    if (this.isSmnStationsLayer(layerId)) {
-      this.setSmnStationsSharedOpacity(clampedOpacity);
+    if (this.isWeatherStationsLayer(layerId)) {
+      this.setWeatherStationsSharedOpacity(clampedOpacity);
     }
   }
 
@@ -654,8 +654,8 @@ export class LayerControlService {
       controls.zIndex = normalizedZIndex;
     });
 
-    if (this.isSmnStationsLayer(layerId)) {
-      this.setSmnStationsSharedZIndex(normalizedZIndex);
+    if (this.isWeatherStationsLayer(layerId)) {
+      this.setWeatherStationsSharedZIndex(normalizedZIndex);
     }
   }
 
@@ -902,12 +902,12 @@ export class LayerControlService {
       });
     });
 
-    const activeSmnLayerId = filteredIds.find((layerId) => this.isSmnStationsLayer(layerId));
+    const activeWeatherStationLayerId = filteredIds.find((layerId) => this.isWeatherStationsLayer(layerId));
 
-    if (activeSmnLayerId) {
-      const controls = this.getControls(activeSmnLayerId);
+    if (activeWeatherStationLayerId) {
+      const controls = this.getControls(activeWeatherStationLayerId);
       if (controls.visible) {
-        this.setSmnStationsSharedZIndex(controls.zIndex ?? 0);
+        this.setWeatherStationsSharedZIndex(controls.zIndex ?? 0);
       }
     }
   }
@@ -1312,28 +1312,28 @@ export class LayerControlService {
     }
   }
 
-  private clampSmnStationsOpacity(opacity: number): number {
+  private clampWeatherStationsOpacity(opacity: number): number {
     return Math.max(0, Math.min(1, opacity));
   }
 
-  private loadSmnStationsSharedState(): void {
+  private loadWeatherStationsSharedState(): void {
     if (typeof localStorage === 'undefined') {
       return;
     }
 
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS);
+      const raw = localStorage.getItem(STORAGE_KEYS.WEATHER_STATIONS_SHARED_CONTROLS);
       if (!raw) {
         return;
       }
 
-      const parsed = JSON.parse(raw) as Partial<PersistedSmnStationsSharedControlsState>;
+      const parsed = JSON.parse(raw) as Partial<PersistedWeatherStationsSharedControlsState>;
 
-      this.smnStationsSharedState.set({
+      this.weatherStationsSharedState.set({
         opacity:
           typeof parsed.opacity === 'number'
-            ? this.clampSmnStationsOpacity(parsed.opacity)
-            : this.smnStationsSharedState().opacity,
+            ? this.clampWeatherStationsOpacity(parsed.opacity)
+            : this.weatherStationsSharedState().opacity,
         zIndex:
           typeof parsed.zIndex === 'number' && Number.isFinite(parsed.zIndex)
             ? Math.max(0, Math.round(parsed.zIndex))
@@ -1341,48 +1341,48 @@ export class LayerControlService {
         scaleVisible:
           typeof parsed.scaleVisible === 'boolean'
             ? parsed.scaleVisible
-            : this.smnStationsSharedState().scaleVisible,
-        temporalMode: isSmnStationsTemporalMode(parsed.temporalMode)
+            : this.weatherStationsSharedState().scaleVisible,
+        temporalMode: isWeatherStationsTemporalMode(parsed.temporalMode)
           ? parsed.temporalMode
-          : this.smnStationsSharedState().temporalMode,
+          : this.weatherStationsSharedState().temporalMode,
         maxPastHours:
           typeof parsed.maxPastHours === 'number' && Number.isFinite(parsed.maxPastHours)
             ? Math.max(0, Math.min(24, Math.round(parsed.maxPastHours)))
-            : this.smnStationsSharedState().maxPastHours,
+            : this.weatherStationsSharedState().maxPastHours,
         imageCount:
           typeof parsed.imageCount === 'number' && Number.isFinite(parsed.imageCount)
-            ? this.normalizeSmnStationsImageCount(parsed.imageCount)
-            : this.smnStationsSharedState().imageCount,
+            ? this.normalizeWeatherStationsImageCount(parsed.imageCount)
+            : this.weatherStationsSharedState().imageCount,
         selectedTilesetId:
           typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
         showStationsWithoutData:
           typeof parsed.showStationsWithoutData === 'boolean'
             ? parsed.showStationsWithoutData
-            : this.smnStationsSharedState().showStationsWithoutData,
+            : this.weatherStationsSharedState().showStationsWithoutData,
       });
     } catch {
       // Ignore malformed persisted state.
     }
   }
 
-  private saveSmnStationsSharedState(): void {
+  private saveWeatherStationsSharedState(): void {
     if (typeof localStorage === 'undefined') {
       return;
     }
 
     try {
       localStorage.setItem(
-        STORAGE_KEYS.SMN_STATIONS_SHARED_CONTROLS,
-        JSON.stringify(this.smnStationsSharedState()),
+        STORAGE_KEYS.WEATHER_STATIONS_SHARED_CONTROLS,
+        JSON.stringify(this.weatherStationsSharedState()),
       );
     } catch {
       // Ignore storage failures.
     }
   }
 
-  private normalizeSmnStationsImageCount(imageCount: number): number {
+  private normalizeWeatherStationsImageCount(imageCount: number): number {
     const rounded = Math.max(1, Math.round(imageCount));
-    const nextAllowed = SMN_STATIONS_IMAGE_COUNT_OPTIONS.find((option) => option >= rounded);
-    return nextAllowed ?? SMN_STATIONS_IMAGE_COUNT_OPTIONS.at(-1)!;
+    const nextAllowed = WEATHER_STATIONS_IMAGE_COUNT_OPTIONS.find((option) => option >= rounded);
+    return nextAllowed ?? WEATHER_STATIONS_IMAGE_COUNT_OPTIONS.at(-1)!;
   }
 }

@@ -1,18 +1,23 @@
-import { ScaleType, LayerScale } from '../../../models';
+import { LayerScale, ScaleType } from '../../../models';
 import { RADAR_UNITS } from '../../../constants';
+import { buildBoundedScale, buildLinearScale } from '../scale-builders';
 
-// ---------------------------------------------------------------------------
-// Paletas de color por producto (formato PaletteConfig de tiles-processor)
-// ---------------------------------------------------------------------------
+const baseScaleConfig = {
+  labelCount: 10,
+  subTickCount: 4,
+  type: ScaleType.CONTINUOUS,
+};
 
 /**
  * REFLECTIVITY (DBZH / ZH / TH) - paleta_vmsr
  * Rango: -18 a ~76 dBZ
  */
-export const RADAR_DBZH_SCALE = {
-  type: ScaleType.PALETTE_CONFIG,
+export const RADAR_DBZH_SCALE: LayerScale = buildLinearScale({
+  ...baseScaleConfig,
+  min: -18,
+  max: 76.5,
   unit: RADAR_UNITS.REFLECTIVITY,
-  hexColors: [
+  colors: [
     '#3C426D',
     '#3C426D',
     '#3C426D',
@@ -78,23 +83,18 @@ export const RADAR_DBZH_SCALE = {
     '#87DFBE',
     '#87DFBE',
   ] as const,
-  bounds: [
-    -18, -16.5, -15, -13.5, -12, -10.5, -9, -7.5, -6, -4.5, -3, -1.5, 0, 1.5, 3, 4.5, 6, 7.5, 9,
-    10.5, 12, 13.5, 15, 16.5, 18, 19.5, 21, 22.5, 24, 25.5, 27, 28.5, 30, 31.5, 33, 34.5, 36, 37.5,
-    39, 40.5, 42, 43.5, 45, 46.5, 48, 49.5, 51, 52.5, 54, 55.5, 57, 58.5, 60, 61.5, 63, 64.5, 66,
-    67.5, 69, 70.5, 72, 73.5, 75, 76.5,
-  ] as const,
-  useBoundaryNorm: true,
-} as const satisfies LayerScale;
+});
 
 /**
  * VELOCITY (VRAD) - paleta_vmsr_viento
  * Rango: -38.75 a 40 m/s
  */
-export const RADAR_VRAD_SCALE = {
-  type: ScaleType.PALETTE_CONFIG,
+export const RADAR_VRAD_SCALE: LayerScale = buildLinearScale({
+  ...baseScaleConfig,
+  min: -38.75,
+  max: 40,
   unit: RADAR_UNITS.VELOCITY,
-  hexColors: [
+  colors: [
     '#6C0498',
     '#550599',
     '#450499',
@@ -160,22 +160,14 @@ export const RADAR_VRAD_SCALE = {
     '#F17E48',
     '#E77543',
   ] as const,
-  bounds: [
-    -38.75, -37.5, -36.25, -35, -33.75, -32.5, -31.25, -30, -28.75, -27.5, -26.25, -25, -23.75,
-    -22.5, -21.25, -20, -18.75, -17.5, -16.25, -15, -13.75, -12.5, -11.25, -10, -8.75, -7.5, -6.25,
-    -5, -3.75, -2.5, -1.25, 0, 1.25, 2.5, 3.75, 5, 6.25, 7.5, 8.75, 10, 11.25, 12.5, 13.75, 15,
-    16.25, 17.5, 18.75, 20, 21.25, 22.5, 23.75, 25, 26.25, 27.5, 28.75, 30, 31.25, 32.5, 33.75, 35,
-    36.25, 37.5, 38.75, 40,
-  ] as const,
-  useBoundaryNorm: true,
-} as const satisfies LayerScale;
+});
 
 /**
  * CORRELATION COEFFICIENT (RHOHV) - paleta_rhohv
  * Rango: 0.225 a 1.048
  */
-export const RADAR_RHOHV_SCALE = {
-  type: ScaleType.PALETTE_CONFIG,
+export const RADAR_RHOHV_SCALE: LayerScale = buildBoundedScale({
+  ...baseScaleConfig,
   unit: RADAR_UNITS.CORRELATION,
   hexColors: [
     '#151391',
@@ -315,15 +307,14 @@ export const RADAR_RHOHV_SCALE = {
     1.0017, 1.005, 1.0083, 1.0117, 1.015, 1.0183, 1.0217, 1.025, 1.0283, 1.0317, 1.035, 1.0383,
     1.0417, 1.045, 1.0483,
   ] as const,
-  useBoundaryNorm: true,
-} as const satisfies LayerScale;
+});
 
 /**
  * DIFFERENTIAL REFLECTIVITY (ZDR) - paleta_zdr
  * Rango: -3.0 a 7.9 dB
  */
-export const RADAR_ZDR_SCALE = {
-  type: ScaleType.PALETTE_CONFIG,
+export const RADAR_ZDR_SCALE: LayerScale = buildBoundedScale({
+  ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_REFLECTIVITY,
   hexColors: [
     '#707070',
@@ -440,15 +431,14 @@ export const RADAR_ZDR_SCALE = {
     4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9,
     6.0, 6.1, 6.2, 6.4, 6.5, 6.7, 6.8, 6.9, 7.0, 7.1, 7.2, 7.4, 7.5, 7.6, 7.8, 7.9,
   ] as const,
-  useBoundaryNorm: true,
-} as const satisfies LayerScale;
+});
 
 /**
  * SPECIFIC DIFFERENTIAL PHASE (KDP) - paleta_kdp
  * Rango: -1 a 6.1 °/km
  */
-export const RADAR_KDP_SCALE = {
-  type: ScaleType.PALETTE_CONFIG,
+export const RADAR_KDP_SCALE: LayerScale = buildBoundedScale({
+  ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_PHASE,
   hexColors: [
     '#474747',
@@ -583,5 +573,4 @@ export const RADAR_KDP_SCALE = {
     4.25, 4.3, 4.35, 4.45, 4.5, 4.55, 4.6, 4.7, 4.75, 4.8, 4.85, 4.95, 5.0, 5.1, 5.2, 5.35, 5.45,
     5.6, 5.7, 5.85, 5.95, 6.1,
   ] as const,
-  useBoundaryNorm: true,
-} as const satisfies LayerScale;
+});

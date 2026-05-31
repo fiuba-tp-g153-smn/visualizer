@@ -26,18 +26,14 @@
     Coordenadas
   </mat-checkbox>
 
-  @if (mapInfo.showCoordinates()) {
-    <div class="sub-options">
-      <mat-checkbox
-        [checked]="mapInfo.showCursorLines()"
-        (change)="onCursorLinesChange($event.checked)"
-        color="primary"
-        matTooltip="Mostrar líneas de latitud y longitud que siguen al cursor"
-      >
-        Líneas de cursor
-      </mat-checkbox>
-    </div>
-  }
+  <mat-checkbox
+    [checked]="mapInfo.showCursorLines()"
+    (change)="onCursorLinesChange($event.checked)"
+    color="primary"
+    matTooltip="Mostrar líneas de latitud y longitud que siguen al cursor"
+  >
+    Líneas de cursor
+  </mat-checkbox>
 
   <mat-checkbox
     [checked]="mapInfo.showGraticule()"

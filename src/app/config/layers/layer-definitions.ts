@@ -2,7 +2,7 @@ import { ABI_SUBGROUP } from './goes/abi/config';
 import { GLM_SUBGROUP } from './goes/glm/config';
 import { RADAR_SUBGROUPS } from './radar/config';
 import { ECMWF_SUBGROUP } from './ecmwf/config';
-import { SMN_STATIONS_SUBGROUP } from './smn-stations/config';
+import { WEATHER_STATIONS_SUBGROUP } from './weather-stations/config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
   IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
@@ -52,7 +52,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     description: 'Observaciones actuales de estaciones meteorológicas del SMN',
     icon: 'thermostat',
     expanded: false,
-    subgroups: [SMN_STATIONS_SUBGROUP],
+    subgroups: [WEATHER_STATIONS_SUBGROUP],
   },
   {
     id: 'ign-wms',
