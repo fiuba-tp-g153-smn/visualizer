@@ -9,6 +9,8 @@
     <link rel="apple-touch-icon" href="icono.png" />
     <!-- Preload critical assets -->
     <link rel="preload" as="image" href="icono.png" />
+    <!-- Preconnect to the tile/data origin so the first basemap tile (LCP) connects sooner -->
+    <link rel="preconnect" href="https://data.mapasmn.com" crossorigin />
     <!-- Google Fonts: Roboto + Material Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -20,9 +22,47 @@
       href="https://fonts.googleapis.com/icon?family=Material+Icons&display=swap"
       rel="stylesheet"
     />
+    <!-- Static loading splash: painted straight from HTML/CSS before any JS runs
+         (no Angular). The App component removes #app-splash once the app is
+         stable. Replaces the former separate loader Angular app, which forced a
+         second bootstrap and a duplicate /basemap/providers fetch. -->
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #242c4f;
+        opacity: 1;
+        transition: opacity 0.3s ease-out;
+      }
+      #app-splash.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #app-splash img {
+        width: 120px;
+        height: 120px;
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+        animation: app-splash-pulse 1.5s ease-in-out infinite;
+      }
+      @keyframes app-splash-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+    </style>
   </head>
   <body>
-    <app-loader></app-loader>
+    <div id="app-splash">
+      <img src="icono.png" alt="Logo SMN" width="120" height="120" />
+    </div>
     <app-root></app-root>
   </body>
 </html>
