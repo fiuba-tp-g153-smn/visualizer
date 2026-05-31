@@ -16,6 +16,21 @@ import { BaseMap } from '../../models';
 export type BaseMapLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
 /**
+ * Best-effort metadata for the configured default base map, used to paint it
+ * optimistically before `/basemap/providers` resolves — this removes that
+ * round-trip from the LCP path (the first base-map tile is the LCP element).
+ *
+ * Mirrors the backend's `argenmap` entry. It is reconciled with the real
+ * provider list the moment it arrives, so correctness never depends on these
+ * values staying in sync — drift just causes an in-place metadata refresh.
+ */
+const DEFAULT_BASE_MAP_META = {
+  name: 'Argenmap',
+  attribution: 'Instituto Geográfico Nacional + OpenStreetMap contributors',
+  maxNativeZoom: 21,
+} as const;
+
+/**
  * Base Map Service
  *
  * Owns the list of base map providers (sourced from the backend at runtime),
@@ -44,7 +59,38 @@ export class BaseMapService {
       }
     });
 
+    // Paint a base map immediately so the first tile (the LCP element) starts
+    // loading without waiting for the /basemap/providers round-trip. Replaced
+    // by the authoritative entry once `loadProviders` resolves.
+    this._currentBaseMap.set(this.buildOptimisticBaseMap());
+
     this.loadProviders().subscribe();
+  }
+
+  /**
+   * Synchronously builds a base map to render before the provider list loads.
+   * Uses the previously-selected id (exact for returning visitors, and their
+   * tiles are already cached) or the configured default. Tile URL is fully
+   * deterministic; metadata is accurate for the default and a safe placeholder
+   * otherwise — reconciled in `loadProviders`.
+   */
+  private buildOptimisticBaseMap(): BaseMap {
+    const id = this.readStoredBaseMapId() ?? MAP_CONFIG.defaultBaseMapId;
+    const isDefault = id === MAP_CONFIG.defaultBaseMapId;
+    return {
+      id,
+      name: isDefault ? DEFAULT_BASE_MAP_META.name : id,
+      url: buildBasemapTileUrl(id),
+      attribution: isDefault ? formatAttribution(DEFAULT_BASE_MAP_META.attribution) : '',
+      minZoom: MAP_CONFIG.minZoom,
+      maxZoom: MAP_CONFIG.maxZoom,
+      // Display tops out at MAP_CONFIG.maxZoom, so native zoom never needs to
+      // exceed it; the known default gets its real ceiling, others a safe one.
+      maxNativeZoom: isDefault ? DEFAULT_BASE_MAP_META.maxNativeZoom : MAP_CONFIG.maxZoom,
+      previewZ: BASE_MAP_PREVIEW_CONFIG.z,
+      previewX: BASE_MAP_PREVIEW_CONFIG.x,
+      previewY: BASE_MAP_PREVIEW_CONFIG.y,
+    };
   }
 
   /**

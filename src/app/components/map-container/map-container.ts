@@ -48,6 +48,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private unitsSettings = inject(UnitsSettingsService);
 
   private currentTileLayer: L.TileLayer | null = null;
+  private currentBaseMapUrl: string | null = null;
 
   readonly showZoom = this.mapInfoService.showZoom;
 
@@ -224,10 +225,20 @@ export class MapContainer implements OnInit, OnDestroy {
   private changeBaseMap(baseMap: BaseMap): void {
     if (!this.map) return;
 
+    // Reconciliation of the optimistic base map (same provider, possibly refined
+    // metadata once /basemap/providers resolves): the tiles are identical, so
+    // refresh maxNativeZoom in place instead of tearing the layer down — avoids
+    // a flicker. A real base-map switch (different URL) falls through to rebuild.
+    if (this.currentTileLayer && baseMap.url === this.currentBaseMapUrl) {
+      this.currentTileLayer.options.maxNativeZoom = baseMap.maxNativeZoom;
+      return;
+    }
+
     if (this.currentTileLayer) {
       this.map.removeLayer(this.currentTileLayer);
     }
 
+    this.currentBaseMapUrl = baseMap.url;
     this.currentTileLayer = L.tileLayer(baseMap.url, {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
