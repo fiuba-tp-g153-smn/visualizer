@@ -1,7 +1,11 @@
+/// <reference types="leaflet-editable" />
+// ^ Type-only reference: keeps the @types/leaflet-editable augmentations
+//   (L.Map.editTools, L.Layer.enableEdit/disableEdit, L.Editable) available
+//   under tsconfig `"types": []`. The plugin's JS is loaded on demand in
+//   ensureEditTools() — see the eager import we removed from here.
 import { Injectable, inject, effect, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
-import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
 import { Polygon } from '../../models/geo';
@@ -9,7 +13,9 @@ import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
 } from '../../models/polygon-context-menu-action.model';
-import {
+// Type-only: the component value is dynamically imported at the open site so
+// the confirm-dialog code stays out of the initial bundle.
+import type {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../components/floating/confirm-dialog/confirm-dialog';
@@ -111,11 +117,39 @@ export class MapPolygonsService {
     });
   }
 
+  /** Guard so the plugin is imported and editTools wired up only once. */
+  private editToolsReady = false;
+
+  /**
+   * Lazily loads the `leaflet-editable` plugin (~68 KB raw) on first draw/edit,
+   * then wires up `map.editTools` by hand. The plugin's own map init-hook only
+   * fires for maps created *after* it loads; ours already exists (created
+   * without `editable: true`), so we construct the editor manually here.
+   */
+  private async ensureEditTools(): Promise<void> {
+    if (this.editToolsReady || !this.map) return;
+    await import('leaflet-editable');
+    if (!this.map.editTools) {
+      this.map.editTools = new L.Editable(this.map, {});
+    }
+    this.editToolsReady = true;
+  }
+
   /**
    * Handle drawing mode changes
    */
-  handleDrawingModeChange(mode: DrawingMode, editingPolygonId: string | null): void {
+  async handleDrawingModeChange(
+    mode: DrawingMode,
+    editingPolygonId: string | null,
+  ): Promise<void> {
     if (!this.map) return;
+
+    // Drawing and editing both need leaflet-editable; load it (and wire up
+    // editTools) on demand the first time either mode is entered.
+    if (mode === DrawingMode.DRAW || mode === DrawingMode.EDIT) {
+      await this.ensureEditTools();
+      if (!this.map) return;
+    }
 
     // Cancel any active drawing (removes the incomplete polygon)
     if (this.currentDrawingPolygon) {
@@ -618,7 +652,7 @@ export class MapPolygonsService {
           break;
 
         case PolygonContextMenuActionType.DELETE:
-          this.confirmAndDeletePolygon(action.polygonId);
+          void this.confirmAndDeletePolygon(action.polygonId);
           break;
 
         case PolygonContextMenuActionType.CUT:
@@ -643,9 +677,13 @@ export class MapPolygonsService {
   /**
    * Confirm and delete polygon
    */
-  private confirmAndDeletePolygon(polygonId: string): void {
+  private async confirmAndDeletePolygon(polygonId: string): Promise<void> {
     const polygon = this.polygonService.getPolygonById(polygonId);
     const polygonName = polygon?.name || 'Sin nombre';
+
+    const { ConfirmDialogComponent } = await import(
+      '../../components/floating/confirm-dialog/confirm-dialog'
+    );
 
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
       ConfirmDialogComponent,

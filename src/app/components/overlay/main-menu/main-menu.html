@@ -35,7 +35,9 @@
       </mat-toolbar>
 
       <mat-card-content class="panel-content">
-        <ng-container *ngComponentOutlet="activeSection.component" />
+        @if (activeComponent(); as panelComponent) {
+          <ng-container *ngComponentOutlet="panelComponent" />
+        }
       </mat-card-content>
     </mat-card>
   }

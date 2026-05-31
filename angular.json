@@ -44,7 +44,8 @@
               "src/styles.scss"
             ],
             "allowedCommonJsDependencies": [
-              "leaflet"
+              "leaflet",
+              "leaflet-editable"
             ]
           },
           "configurations": {

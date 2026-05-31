@@ -4,7 +4,10 @@ import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { STORAGE_KEYS } from '../../constants';
-import {
+// Type-only: the component value is dynamically imported at the open site so
+// the dialog code stays out of the initial bundle (this service is reachable
+// from main via the weather-stations HTTP interceptor).
+import type {
   WeatherStationsApiKeyDialogComponent,
   WeatherStationsApiKeyDialogResult,
 } from '../../components/floating/weather-stations-api-key-dialog/weather-stations-api-key-dialog';
@@ -98,6 +101,9 @@ export class WeatherStationsApiKeyService {
    * by the unauthorized-recovery flow.
    */
   async promptForKey(reason?: string): Promise<string | null> {
+    const { WeatherStationsApiKeyDialogComponent } = await import(
+      '../../components/floating/weather-stations-api-key-dialog/weather-stations-api-key-dialog'
+    );
     const result = await firstValueFrom(
       this.dialog
         .open<
