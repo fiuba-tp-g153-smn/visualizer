@@ -133,7 +133,7 @@ export interface WrfTileLayer extends TileLayer {
    * A diferencia de ECMWF (un único secondary), WRF puede traer N overlays
    * por producto (ej. JetCapasBajas: barbas + shear_850_700).
    */
-  secondaryRenders?: readonly SecondaryVectorRender[];
+  secondaryRenders?: readonly (SecondaryVectorRender | BarbTileRender)[];
 }
 
 /**
@@ -184,6 +184,16 @@ export interface SecondaryVectorRender {
   pointToLayer?: (feature: Feature, latlng: L.LatLng) => L.Layer;
 }
 
+/**
+ * Render secundario que se sirve como tiles raster z/x/y (en lugar de GeoJSON
+ * vectorial). Hoy se usa para barbas WRF rasterizadas en el backend.
+ */
+export interface BarbTileRender {
+  readonly kind: 'barb-tile';
+  /** ID estable del overlay; usado para cache y nombrado de pane. */
+  readonly id: string;
+}
+
 export interface WeatherStationLayer extends BaseLayer {
   type: LayerType.VECTOR;
   category: LayerCategory.WEATHER_STATIONS;
@@ -200,6 +210,10 @@ export enum WeatherStationVariable {
   WIND_SPEED = 'wind_speed',
 }
 
+/**
+ * Capa de tipo WMS (servicios Web Map Service)
+ * Usa L.TileLayer.WMS de Leaflet
+ */
 export interface WmsLayer extends BaseLayer {
   type: LayerType.WMS;
   wmsLayerName: string;

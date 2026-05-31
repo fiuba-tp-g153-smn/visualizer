@@ -1,5 +1,6 @@
 import {
   ActiveLayerGroupId,
+  BarbTileRender,
   LayerCategory,
   LayerType,
   SecondaryVectorRender,
@@ -27,7 +28,6 @@ import {
   SHEAR_850_700_TEXTPATH_OPTIONS,
   SLP_TEXTPATH_OPTIONS,
   brnStyleFor,
-  buildBarbMarker,
   gustThresholdStyleFor,
   haildiamLabelFor,
   haildiamStyleFor,
@@ -57,16 +57,9 @@ const WRF_DEFAULTS = {
 // `SecondaryVectorRender` configs. The `id` is used as a stable cache key.
 // ============================================================================
 
-const barbsRender = (productId: string): SecondaryVectorRender => ({
+const barbsRender = (productId: string): BarbTileRender => ({
+  kind: 'barb-tile',
   id: `wrf-${productId}-barbs`,
-  buildUrl: (initTag, fxxx) => buildWrfGeojsonUrl(productId, initTag, fxxx, 'barbs'),
-  // Barbs read `speed_kt` / `dir_deg` directly inside `pointToLayer`; the
-  // line-overlay machinery (style/label) is unused for Point features.
-  valueProperty: 'speed_kt',
-  styleFor: () => ({ color: '#000', weight: 1, opacity: 1 }),
-  labelFor: () => null,
-  pointToLayer: buildBarbMarker,
-  prefetchWindow: 4,
 });
 
 const slpRender = (productId: string): SecondaryVectorRender => ({

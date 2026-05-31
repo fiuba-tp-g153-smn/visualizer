@@ -1190,7 +1190,7 @@ export class LayerRenderService {
         result,
         currentTimeIndex,
         totalFrames,
-        controls.playback.lastImagesCount,
+        controls.playback.imageCount,
         forecastZIndex,
         true,
         (adjIndex) => {
