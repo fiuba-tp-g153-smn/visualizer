@@ -3,12 +3,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { SmnStationsPrefetchService } from './smn-stations-prefetch.service';
+import { WeatherStationsPrefetchService } from './weather-stations-prefetch.service';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-describe('SmnStationsPrefetchService', () => {
-  let service: SmnStationsPrefetchService;
+describe('WeatherStationsPrefetchService', () => {
+  let service: WeatherStationsPrefetchService;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
@@ -16,7 +16,7 @@ describe('SmnStationsPrefetchService', () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
-    service = TestBed.inject(SmnStationsPrefetchService);
+    service = TestBed.inject(WeatherStationsPrefetchService);
     httpMock = TestBed.inject(HttpTestingController);
   });
 

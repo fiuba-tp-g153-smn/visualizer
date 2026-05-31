@@ -16,34 +16,34 @@ import {
   buildWeatherStationsTilesetUrl,
   buildWeatherStationsTilesetsUrl,
 } from '../../config/backend.config';
-import { SmnStationsTemporalMode } from '../../config/layers/smn-stations/controls.constants';
+import { WeatherStationsTemporalMode } from '../../config/layers/weather-stations/controls.constants';
 import { LayerCategory, type Layer } from '../../models';
 
-const SMN_LAYER_ID = 'smn-stations';
+const WEATHER_STATIONS_LAYER_ID = 'weather-stations';
 
 // ----------------------------------------------------------------- test doubles
 
 function buildLayerControlStub(
   overrides: Partial<{
-    temporalMode: SmnStationsTemporalMode;
+    temporalMode: WeatherStationsTemporalMode;
     maxPastHours: number;
     selectedTilesetId: string | null;
     imageCount: number;
   }> = {},
 ) {
   const state = {
-    temporalMode: overrides.temporalMode ?? SmnStationsTemporalMode.LATEST,
+    temporalMode: overrides.temporalMode ?? WeatherStationsTemporalMode.LATEST,
     maxPastHours: overrides.maxPastHours ?? 6,
     selectedTilesetId: overrides.selectedTilesetId ?? null,
     imageCount: overrides.imageCount ?? 6,
   };
   return {
     activeLayers: signal<readonly { layer: unknown }[]>([]),
-    getSmnStationsTemporalMode: () => state.temporalMode,
-    getSmnStationsMaxPastHours: () => state.maxPastHours,
-    getSmnStationsSelectedTilesetId: () => state.selectedTilesetId,
-    getSmnStationsImageCount: () => state.imageCount,
-    setSmnStationsSelectedTilesetId: (id: string | null) => {
+    getWeatherStationsTemporalMode: () => state.temporalMode,
+    getWeatherStationsMaxPastHours: () => state.maxPastHours,
+    getWeatherStationsSelectedTilesetId: () => state.selectedTilesetId,
+    getWeatherStationsImageCount: () => state.imageCount,
+    setWeatherStationsSelectedTilesetId: (id: string | null) => {
       state.selectedTilesetId = id;
     },
   };
@@ -103,7 +103,7 @@ interface Harness {
 
 function setupHarness(
   overrides: Partial<{
-    temporalMode: SmnStationsTemporalMode;
+    temporalMode: WeatherStationsTemporalMode;
     maxPastHours: number;
     selectedTilesetId: string | null;
     imageCount: number;
@@ -132,8 +132,8 @@ function setupHarness(
         provide: LayersService,
         useValue: {
           getLayerById: (id: string) =>
-            id === SMN_LAYER_ID
-              ? ({ id, category: LayerCategory.SMN_STATIONS } as unknown as Layer)
+            id === WEATHER_STATIONS_LAYER_ID
+              ? ({ id, category: LayerCategory.WEATHER_STATIONS } as unknown as Layer)
               : undefined,
           getLayerDisplayName: () => 'EMA',
         },
@@ -150,7 +150,7 @@ function setupHarness(
 
 // --------------------------------------------------------------------- specs
 
-describe('LayerRefreshService — SMN backend integration', () => {
+describe('LayerRefreshService — weather station backend integration', () => {
   let harness: Harness;
 
   beforeEach(() => {
@@ -163,7 +163,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('LATEST mode: hits /latest and marks every observation hasData=true', async () => {
     const { service, httpMock } = harness;
-    const promise = service.loadSmnStationsSnapshot(true);
+    const promise = service.loadWeatherStationsSnapshot(true);
 
     // X-API-Key header injection is owned by `weatherStationsHttpInterceptor`
     // and covered in its own spec; these tests don't wire it in.
@@ -197,13 +197,13 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('SPECIFIC mode: hits the tileset URL with N=hours and computes hasData from observed_at', async () => {
     const { service, httpMock } = setupHarness({
-      temporalMode: SmnStationsTemporalMode.SPECIFIC,
+      temporalMode: WeatherStationsTemporalMode.SPECIFIC,
       maxPastHours: 3,
       selectedTilesetId: '20260517T1400Z',
     });
     harness = { ...harness, httpMock };
 
-    const promise = service.loadSmnStationsSnapshot(true);
+    const promise = service.loadWeatherStationsSnapshot(true);
 
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({
       tilesets: [
@@ -236,14 +236,14 @@ describe('LayerRefreshService — SMN backend integration', () => {
     // HttpTestingController does not simulate — that is verified manually/E2E.
     // Here we assert the warmer issues a GET for the other window frame.
     const { service, httpMock } = setupHarness({
-      temporalMode: SmnStationsTemporalMode.SPECIFIC,
+      temporalMode: WeatherStationsTemporalMode.SPECIFIC,
       maxPastHours: 3,
       selectedTilesetId: '20260517T1400Z',
       imageCount: 2,
     });
     harness = { ...harness, httpMock };
 
-    const first = service.loadSmnStationsSnapshot(true);
+    const first = service.loadWeatherStationsSnapshot(true);
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({
       tilesets: [
         { tileset_id: '20260517T1300Z', scraped_at: '2026-05-17T13:00:00Z', station_count: 1 },
@@ -271,7 +271,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('caches the registry across multiple snapshot loads (only one GET)', async () => {
     const { service, httpMock } = harness;
-    const first = service.loadSmnStationsSnapshot(true);
+    const first = service.loadWeatherStationsSnapshot(true);
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
     await new Promise((r) => setTimeout(r, 0));
@@ -284,7 +284,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
       );
     await first;
 
-    const second = service.loadSmnStationsSnapshot(true);
+    const second = service.loadWeatherStationsSnapshot(true);
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectNone(buildWeatherStationsRegistryUrl());
     await new Promise((r) => setTimeout(r, 0));
@@ -298,11 +298,11 @@ describe('LayerRefreshService — SMN backend integration', () => {
     await second;
   });
 
-  it('manualRefresh on the SMN layer refreshes periods instead of the tile config', async () => {
-    const { service, httpMock } = harness; // LATEST default; getLayerById returns the SMN layer
+  it('manualRefresh on the weather-stations layer refreshes periods instead of the tile config', async () => {
+    const { service, httpMock } = harness; // LATEST default; getLayerById returns the weather-stations layer
     let errored: unknown = null;
     let done = false;
-    service.manualRefresh(SMN_LAYER_ID).subscribe({
+    service.manualRefresh(WEATHER_STATIONS_LAYER_ID).subscribe({
       next: () => {
         done = true;
       },
@@ -311,7 +311,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
       },
     });
 
-    // Refreshes the SMN periods + snapshot — never calls fetchLayerConfig (which
+    // Refreshes the weather-stations periods + snapshot — never calls fetchLayerConfig (which
     // throws "does not require tileset configuration" for this category).
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({
       tilesets: [
@@ -335,7 +335,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
 
   it('returns an empty snapshot when the backend errors out', async () => {
     const { service, httpMock } = harness;
-    const promise = service.loadSmnStationsSnapshot(true);
+    const promise = service.loadWeatherStationsSnapshot(true);
 
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);

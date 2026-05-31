@@ -73,6 +73,10 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
     return this.drawingMode() === DrawingMode.DRAW;
   }
 
+  isEditing(): boolean {
+    return this.drawingMode() === DrawingMode.EDIT;
+  }
+
   editPolygon(id: string): void {
     this.drawingService.startEditMode(id);
   }

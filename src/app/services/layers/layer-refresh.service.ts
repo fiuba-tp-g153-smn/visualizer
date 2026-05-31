@@ -11,12 +11,12 @@ import {
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
-import { SmnStationsPrefetchService } from './smn-stations-prefetch.service';
+import { WeatherStationsPrefetchService } from './weather-stations-prefetch.service';
 import { NotificationService } from '../notifications/notification.service';
 import {
-  SMN_STATIONS_IMAGE_COUNT_OPTIONS,
-  SmnStationsTemporalMode,
-} from '../../config/layers/smn-stations/controls.constants';
+  WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
+  WeatherStationsTemporalMode,
+} from '../../config/layers/weather-stations/controls.constants';
 import {
   LayerConfig,
   LayerType,
@@ -24,13 +24,13 @@ import {
   TileLayerConfig,
   NotificationType,
   TilesetEntry,
-  SmnCurrentWeatherStationDto,
-  SmnStationDto,
-  SmnStationObservation,
-  SmnStationSnapshot,
+  CurrentWeatherStationDto,
+  WeatherStationDto,
+  WeatherStationObservation,
+  WeatherStationSnapshot,
 } from '../../models';
 
-interface SmnStationsEndpointConfig {
+interface WeatherStationsEndpointConfig {
   tilesetIds: readonly string[];
 }
 
@@ -44,7 +44,7 @@ interface BackendStationObservation {
   pressure: number | null;
   visibility: number | null;
   weather: { id: number; description: string } | null;
-  wind: SmnCurrentWeatherStationDto['wind'] | null;
+  wind: CurrentWeatherStationDto['wind'] | null;
 }
 
 interface BackendSnapshot {
@@ -100,24 +100,25 @@ export class LayerRefreshService {
   private readonly layersService = inject(LayersService);
   private readonly notificationService = inject(NotificationService);
   private readonly layerControlService = inject(LayerControlService);
-  private readonly smnStationsPrefetch = inject(SmnStationsPrefetchService);
+  private readonly weatherStationsPrefetch = inject(WeatherStationsPrefetchService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
   private readonly loadingLayerIdsSignal = signal<ReadonlySet<string>>(new Set());
-  private readonly smnStationsSnapshotSignal = signal<SmnStationSnapshot | null>(null);
-  private readonly smnStationsEndpointConfigSignal = signal<SmnStationsEndpointConfig | null>(null);
-  private readonly smnStationsLoadTickSignal = signal(0);
-  private readonly smnStationsRegistrySignal = signal<readonly SmnStationDto[] | null>(null);
-  private smnStationsInflight: Promise<SmnStationSnapshot> | null = null;
-  private smnStationsRegistryInflight: Promise<readonly SmnStationDto[]> | null = null;
+  private readonly weatherStationsSnapshotSignal = signal<WeatherStationSnapshot | null>(null);
+  private readonly weatherStationsEndpointConfigSignal =
+    signal<WeatherStationsEndpointConfig | null>(null);
+  private readonly weatherStationsLoadTickSignal = signal(0);
+  private readonly weatherStationsRegistrySignal = signal<readonly WeatherStationDto[] | null>(null);
+  private weatherStationsInflight: Promise<WeatherStationSnapshot> | null = null;
+  private weatherStationsRegistryInflight: Promise<readonly WeatherStationDto[]> | null = null;
   // `/tilesets` changes ~hourly (a new bucket appears); cache it for a short TTL
   // so animation frames don't each re-fetch it. Aligns with its Cache-Control.
-  private readonly SMN_TILESETS_TTL_MS = 60_000;
-  private smnStationsEndpointConfigFetchedAt = 0;
-  private smnStationsEndpointConfigInflight: Promise<SmnStationsEndpointConfig> | null = null;
+  private readonly WEATHER_STATIONS_TILESETS_TTL_MS = 60_000;
+  private weatherStationsEndpointConfigFetchedAt = 0;
+  private weatherStationsEndpointConfigInflight: Promise<WeatherStationsEndpointConfig> | null = null;
 
-  readonly smnStationsLoadTick = this.smnStationsLoadTickSignal.asReadonly();
+  readonly weatherStationsLoadTick = this.weatherStationsLoadTickSignal.asReadonly();
   readonly loadingLayerIds = this.loadingLayerIdsSignal.asReadonly();
 
   isLoadingConfig(layerId: string): Signal<boolean> {
@@ -208,11 +209,11 @@ export class LayerRefreshService {
       return throwError(() => new Error('Layer not found'));
     }
 
-    // SMN stations don't use the tile-config flow (`fetchLayerConfig` rejects the
-    // category). Refresh their available periods (`/weather-stations/tilesets`)
+    // Weather stations don't use the tile-config flow (`fetchLayerConfig` rejects
+    // the category). Refresh their available periods (`/weather-stations/tilesets`)
     // and the current snapshot instead.
-    if (layer.category === LayerCategory.SMN_STATIONS) {
-      return this.manualRefreshSmnStations(layerId);
+    if (layer.category === LayerCategory.WEATHER_STATIONS) {
+      return this.manualRefreshWeatherStations(layerId);
     }
 
     const beforeConfig = this.layerConfigService.getConfig(layerId);
@@ -227,14 +228,14 @@ export class LayerRefreshService {
     );
   }
 
-  /** Manual "Actualizar periodos disponibles" for the SMN-stations layer. */
-  private manualRefreshSmnStations(layerId: string): Observable<void> {
-    const before = this.getSmnStationsAvailableTilesetIds().length;
+  /** Manual "Actualizar periodos disponibles" for the weather-stations layer. */
+  private manualRefreshWeatherStations(layerId: string): Observable<void> {
+    const before = this.getWeatherStationsAvailableTilesetIds().length;
     this.markLoading(layerId);
-    return from(this.forceRefreshSmnStations()).pipe(
+    return from(this.forceRefreshWeatherStations()).pipe(
       map(() => {
-        const after = this.getSmnStationsAvailableTilesetIds().length;
-        this.notifySmnStationsRefresh(layerId, before, after);
+        const after = this.getWeatherStationsAvailableTilesetIds().length;
+        this.notifyWeatherStationsRefresh(layerId, before, after);
       }),
       finalize(() => this.clearLoading(layerId)),
     );
@@ -246,12 +247,12 @@ export class LayerRefreshService {
    * freshness is bounded by their `Cache-Control: max-age` (the button's job is
    * refreshing the available periods list).
    */
-  private async forceRefreshSmnStations(): Promise<void> {
-    this.smnStationsEndpointConfigFetchedAt = 0;
-    await this.loadSmnStationsSnapshot(true);
+  private async forceRefreshWeatherStations(): Promise<void> {
+    this.weatherStationsEndpointConfigFetchedAt = 0;
+    await this.loadWeatherStationsSnapshot(true);
   }
 
-  private notifySmnStationsRefresh(layerId: string, before: number, after: number): void {
+  private notifyWeatherStationsRefresh(layerId: string, before: number, after: number): void {
     const layerName = this.layersService.getLayerDisplayName(layerId);
     if (after !== before) {
       this.notificationService.show(
@@ -263,41 +264,41 @@ export class LayerRefreshService {
     }
   }
 
-  peekSmnStationsSnapshot(): SmnStationSnapshot | null {
-    return this.smnStationsSnapshotSignal();
+  peekWeatherStationsSnapshot(): WeatherStationSnapshot | null {
+    return this.weatherStationsSnapshotSignal();
   }
 
-  getSmnStationsAvailableTilesetIds(): readonly string[] {
-    return this.smnStationsEndpointConfigSignal()?.tilesetIds ?? [];
+  getWeatherStationsAvailableTilesetIds(): readonly string[] {
+    return this.weatherStationsEndpointConfigSignal()?.tilesetIds ?? [];
   }
 
-  async ensureSmnStationsEndpointConfigLoaded(): Promise<void> {
-    if (this.smnStationsEndpointConfigSignal()) {
+  async ensureWeatherStationsEndpointConfigLoaded(): Promise<void> {
+    if (this.weatherStationsEndpointConfigSignal()) {
       return;
     }
-    const config = await this.fetchSmnStationsEndpointConfig();
-    this.smnStationsEndpointConfigSignal.set(config);
-    this.syncSmnStationsTemporalControlsWithConfig(config);
+    const config = await this.fetchWeatherStationsEndpointConfig();
+    this.weatherStationsEndpointConfigSignal.set(config);
+    this.syncWeatherStationsTemporalControlsWithConfig(config);
   }
 
-  async loadSmnStationsSnapshot(force = false): Promise<SmnStationSnapshot> {
-    const currentSnapshot = this.smnStationsSnapshotSignal();
+  async loadWeatherStationsSnapshot(force = false): Promise<WeatherStationSnapshot> {
+    const currentSnapshot = this.weatherStationsSnapshotSignal();
     if (!force && currentSnapshot) {
       return currentSnapshot;
     }
 
-    if (this.smnStationsInflight) {
-      return this.smnStationsInflight;
+    if (this.weatherStationsInflight) {
+      return this.weatherStationsInflight;
     }
 
-    this.smnStationsInflight = this.fetchSmnStationsSnapshot();
+    this.weatherStationsInflight = this.fetchWeatherStationsSnapshot();
     try {
-      const snapshot = await this.smnStationsInflight;
-      this.smnStationsSnapshotSignal.set(snapshot);
-      this.smnStationsLoadTickSignal.update((value) => value + 1);
+      const snapshot = await this.weatherStationsInflight;
+      this.weatherStationsSnapshotSignal.set(snapshot);
+      this.weatherStationsLoadTickSignal.update((value) => value + 1);
       return snapshot;
     } finally {
-      this.smnStationsInflight = null;
+      this.weatherStationsInflight = null;
     }
   }
   // ============================================================================
@@ -354,18 +355,18 @@ export class LayerRefreshService {
     });
   }
 
-  private async fetchSmnStationsSnapshot(): Promise<SmnStationSnapshot> {
-    const temporalMode = this.layerControlService.getSmnStationsTemporalMode();
-    const source: SmnStationSnapshot['source'] =
-      temporalMode === SmnStationsTemporalMode.SPECIFIC ? 'tileset' : 'latest';
+  private async fetchWeatherStationsSnapshot(): Promise<WeatherStationSnapshot> {
+    const temporalMode = this.layerControlService.getWeatherStationsTemporalMode();
+    const source: WeatherStationSnapshot['source'] =
+      temporalMode === WeatherStationsTemporalMode.SPECIFIC ? 'tileset' : 'latest';
 
     // 401 re-prompt + retry is owned by the weather-stations HTTP interceptor.
     // We only fail-soft here so any error (including a 401 the user cancelled)
     // surfaces as an empty snapshot instead of bubbling uncaught.
     try {
-      return await this.runSmnStationsFetchAttempt(temporalMode, source);
+      return await this.runWeatherStationsFetchAttempt(temporalMode, source);
     } catch (error) {
-      console.warn('[LayerRefreshService] failed to load SMN stations snapshot', {
+      console.warn('[LayerRefreshService] failed to load weather stations snapshot', {
         error,
       });
       return {
@@ -376,36 +377,38 @@ export class LayerRefreshService {
     }
   }
 
-  private async runSmnStationsFetchAttempt(
-    temporalMode: SmnStationsTemporalMode,
-    source: SmnStationSnapshot['source'],
-  ): Promise<SmnStationSnapshot> {
+  private async runWeatherStationsFetchAttempt(
+    temporalMode: WeatherStationsTemporalMode,
+    source: WeatherStationSnapshot['source'],
+  ): Promise<WeatherStationSnapshot> {
     // Both calls hit the same backend; run them in parallel to cut latency.
     const [endpointConfig, registry] = await Promise.all([
-      this.fetchSmnStationsEndpointConfig(),
-      this.ensureSmnStationsRegistryLoaded(),
+      this.fetchWeatherStationsEndpointConfig(),
+      this.ensureWeatherStationsRegistryLoaded(),
     ]);
-    this.syncSmnStationsTemporalControlsWithConfig(endpointConfig);
+    // The signal is set inside fetchWeatherStationsEndpointConfig (with last-good
+    // preservation), so we only sync the temporal controls here.
+    this.syncWeatherStationsTemporalControlsWithConfig(endpointConfig);
 
     let backendSnapshot: BackendSnapshot;
     let referenceTimestamp: Date;
     let maxPastHours: number;
 
-    if (temporalMode === SmnStationsTemporalMode.SPECIFIC) {
-      const tilesetId = this.resolveRequestedSmnStationsTilesetId(endpointConfig.tilesetIds);
-      maxPastHours = this.layerControlService.getSmnStationsMaxPastHours();
+    if (temporalMode === WeatherStationsTemporalMode.SPECIFIC) {
+      const tilesetId = this.resolveRequestedWeatherStationsTilesetId(endpointConfig.tilesetIds);
+      maxPastHours = this.layerControlService.getWeatherStationsMaxPastHours();
       if (!tilesetId) {
-        throw new Error('No tilesets available for SMN stations specific mode');
+        throw new Error('No tilesets available for weather stations specific mode');
       }
       // Plain GET: the browser HTTP cache serves a replayed/scrubbed frame (no
       // network), and only this current frame's payload is retained (the signal).
       backendSnapshot = await firstValueFrom(
         this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, maxPastHours)),
       );
-      referenceTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
+      referenceTimestamp = this.fromWeatherStationsTilesetId(tilesetId) ?? new Date();
       // Warm the browser cache for the rest of the window so playback/scrub is
       // served off-heap from the browser cache rather than re-fetched.
-      this.prefetchSmnStationsWindow(endpointConfig.tilesetIds, maxPastHours);
+      this.prefetchWeatherStationsWindow(endpointConfig.tilesetIds, maxPastHours);
     } else {
       backendSnapshot = await firstValueFrom(
         this.http.get<BackendSnapshot>(buildWeatherStationsLatestUrl()),
@@ -420,7 +423,7 @@ export class LayerRefreshService {
       registry,
       referenceTimestamp,
       maxPastHours,
-      temporalMode === SmnStationsTemporalMode.LATEST,
+      temporalMode === WeatherStationsTemporalMode.LATEST,
     );
 
     return {
@@ -435,51 +438,56 @@ export class LayerRefreshService {
    * `imageCount` tilesets at the current Max-Past-Hours) so timeline playback is
    * served from the browser cache instead of the network. Non-blocking.
    */
-  prefetchSmnStationsWindow(tilesetIds?: readonly string[], maxPastHours?: number): void {
-    const ids = tilesetIds ?? this.smnStationsEndpointConfigSignal()?.tilesetIds ?? [];
+  prefetchWeatherStationsWindow(tilesetIds?: readonly string[], maxPastHours?: number): void {
+    const ids = tilesetIds ?? this.weatherStationsEndpointConfigSignal()?.tilesetIds ?? [];
     if (ids.length === 0) {
       return;
     }
-    const n = maxPastHours ?? this.layerControlService.getSmnStationsMaxPastHours();
-    const imageCount = this.layerControlService.getSmnStationsImageCount();
+    const n = maxPastHours ?? this.layerControlService.getWeatherStationsMaxPastHours();
+    const imageCount = this.layerControlService.getWeatherStationsImageCount();
     const windowIds = imageCount > 0 ? ids.slice(-imageCount) : ids;
     // Skip the currently-selected frame — the read path just fetched it directly.
-    const selected = this.layerControlService.getSmnStationsSelectedTilesetId();
-    this.smnStationsPrefetch.prefetch(
+    const selected = this.layerControlService.getWeatherStationsSelectedTilesetId();
+    this.weatherStationsPrefetch.prefetch(
       windowIds.filter((id) => id !== selected).map((id) => buildWeatherStationsTilesetUrl(id, n)),
     );
   }
 
-  private async fetchSmnStationsEndpointConfig(): Promise<SmnStationsEndpointConfig> {
-    const cached = this.smnStationsEndpointConfigSignal();
-    if (cached && Date.now() - this.smnStationsEndpointConfigFetchedAt < this.SMN_TILESETS_TTL_MS) {
+  private async fetchWeatherStationsEndpointConfig(): Promise<WeatherStationsEndpointConfig> {
+    const cached = this.weatherStationsEndpointConfigSignal();
+    if (
+      cached &&
+      Date.now() - this.weatherStationsEndpointConfigFetchedAt <
+        this.WEATHER_STATIONS_TILESETS_TTL_MS
+    ) {
       return cached;
     }
-    if (this.smnStationsEndpointConfigInflight) {
-      return this.smnStationsEndpointConfigInflight;
+    if (this.weatherStationsEndpointConfigInflight) {
+      return this.weatherStationsEndpointConfigInflight;
     }
-    this.smnStationsEndpointConfigInflight = this.fetchSmnStationsEndpointConfigFromBackend();
+    this.weatherStationsEndpointConfigInflight =
+      this.fetchWeatherStationsEndpointConfigFromBackend();
     try {
-      const config = await this.smnStationsEndpointConfigInflight;
+      const config = await this.weatherStationsEndpointConfigInflight;
       // Keep the last-good config when a refresh comes back empty/failed, rather
       // than blanking the timeline.
       if (config.tilesetIds.length > 0) {
-        this.smnStationsEndpointConfigSignal.set(config);
-        this.smnStationsEndpointConfigFetchedAt = Date.now();
+        this.weatherStationsEndpointConfigSignal.set(config);
+        this.weatherStationsEndpointConfigFetchedAt = Date.now();
         return config;
       }
       return cached ?? config;
     } finally {
-      this.smnStationsEndpointConfigInflight = null;
+      this.weatherStationsEndpointConfigInflight = null;
     }
   }
 
-  private async fetchSmnStationsEndpointConfigFromBackend(): Promise<SmnStationsEndpointConfig> {
+  private async fetchWeatherStationsEndpointConfigFromBackend(): Promise<WeatherStationsEndpointConfig> {
     try {
       const resp = await firstValueFrom(
         this.http.get<BackendTilesetsResponse>(buildWeatherStationsTilesetsUrl()),
       );
-      const maxLoopPeriods = Math.max(...SMN_STATIONS_IMAGE_COUNT_OPTIONS);
+      const maxLoopPeriods = Math.max(...WEATHER_STATIONS_IMAGE_COUNT_OPTIONS);
       const sortedTilesetIds = resp.tilesets.map((t) => t.tileset_id).sort();
       return {
         tilesetIds:
@@ -490,37 +498,37 @@ export class LayerRefreshService {
     } catch (error) {
       // The interceptor already re-prompted on 401; a 401 reaching here means
       // the user cancelled. Treat it like any other failure (fail-soft).
-      console.warn('[LayerRefreshService] failed to load SMN tilesets', { error });
+      console.warn('[LayerRefreshService] failed to load weather station tilesets', { error });
       return { tilesetIds: [] };
     }
   }
 
-  private async ensureSmnStationsRegistryLoaded(): Promise<readonly SmnStationDto[]> {
-    const cached = this.smnStationsRegistrySignal();
+  private async ensureWeatherStationsRegistryLoaded(): Promise<readonly WeatherStationDto[]> {
+    const cached = this.weatherStationsRegistrySignal();
     if (cached) {
       return cached;
     }
-    if (this.smnStationsRegistryInflight) {
-      return this.smnStationsRegistryInflight;
+    if (this.weatherStationsRegistryInflight) {
+      return this.weatherStationsRegistryInflight;
     }
-    this.smnStationsRegistryInflight = this.fetchSmnStationsRegistry();
+    this.weatherStationsRegistryInflight = this.fetchWeatherStationsRegistry();
     try {
-      const registry = await this.smnStationsRegistryInflight;
-      this.smnStationsRegistrySignal.set(registry);
+      const registry = await this.weatherStationsRegistryInflight;
+      this.weatherStationsRegistrySignal.set(registry);
       return registry;
     } finally {
-      this.smnStationsRegistryInflight = null;
+      this.weatherStationsRegistryInflight = null;
     }
   }
 
-  private async fetchSmnStationsRegistry(): Promise<readonly SmnStationDto[]> {
+  private async fetchWeatherStationsRegistry(): Promise<readonly WeatherStationDto[]> {
     const resp = await firstValueFrom(
       this.http.get<BackendRegistryResponse>(buildWeatherStationsRegistryUrl()),
     );
     return resp.stations.map((s) => this.adaptBackendStationToDto(s));
   }
 
-  private adaptBackendStationToDto(s: BackendRegistryEntry): SmnStationDto {
+  private adaptBackendStationToDto(s: BackendRegistryEntry): WeatherStationDto {
     return {
       id: s.station_id,
       name: s.name,
@@ -535,18 +543,18 @@ export class LayerRefreshService {
 
   private joinSnapshotWithRegistry(
     snapshot: BackendSnapshot,
-    registry: readonly SmnStationDto[],
+    registry: readonly WeatherStationDto[],
     referenceTimestamp: Date,
     maxPastHours: number,
     isLatestMode: boolean,
-  ): SmnStationObservation[] {
+  ): WeatherStationObservation[] {
     const observationsById = new Map<number, BackendStationObservation>();
     for (const o of snapshot.stations) {
       observationsById.set(o.station_id, o);
     }
     const windowStart = new Date(referenceTimestamp.getTime() - maxPastHours * 60 * 60 * 1000);
 
-    const result: SmnStationObservation[] = [];
+    const result: WeatherStationObservation[] = [];
     for (const station of registry) {
       const obs = observationsById.get(station.id);
       if (!obs) {
@@ -561,7 +569,7 @@ export class LayerRefreshService {
     return result.sort((a, b) => a.station.name.localeCompare(b.station.name, 'es'));
   }
 
-  private adaptBackendObservationToDto(o: BackendStationObservation): SmnCurrentWeatherStationDto {
+  private adaptBackendObservationToDto(o: BackendStationObservation): CurrentWeatherStationDto {
     return {
       date: o.observed_at ?? '',
       station_id: o.station_id,
@@ -575,24 +583,24 @@ export class LayerRefreshService {
     };
   }
 
-  private syncSmnStationsTemporalControlsWithConfig(config: SmnStationsEndpointConfig): void {
+  private syncWeatherStationsTemporalControlsWithConfig(config: WeatherStationsEndpointConfig): void {
     if (config.tilesetIds.length === 0) {
-      this.layerControlService.setSmnStationsSelectedTilesetId(null);
+      this.layerControlService.setWeatherStationsSelectedTilesetId(null);
       return;
     }
-    const selectedTilesetId = this.resolveRequestedSmnStationsTilesetId(config.tilesetIds);
-    this.layerControlService.setSmnStationsSelectedTilesetId(selectedTilesetId);
+    const selectedTilesetId = this.resolveRequestedWeatherStationsTilesetId(config.tilesetIds);
+    this.layerControlService.setWeatherStationsSelectedTilesetId(selectedTilesetId);
   }
 
-  private resolveRequestedSmnStationsTilesetId(tilesetIds: readonly string[]): string {
-    const selectedTilesetId = this.layerControlService.getSmnStationsSelectedTilesetId();
+  private resolveRequestedWeatherStationsTilesetId(tilesetIds: readonly string[]): string {
+    const selectedTilesetId = this.layerControlService.getWeatherStationsSelectedTilesetId();
     if (selectedTilesetId && tilesetIds.includes(selectedTilesetId)) {
       return selectedTilesetId;
     }
     return tilesetIds[tilesetIds.length - 1] ?? '';
   }
 
-  private fromSmnStationsTilesetId(tilesetId: string): Date | null {
+  private fromWeatherStationsTilesetId(tilesetId: string): Date | null {
     // Backend emits `YYYYMMDDTHH00Z` (always hour-bucketed; minutes are 00).
     const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
     if (!match) {
@@ -608,30 +616,6 @@ export class LayerRefreshService {
   // ============================================================================
   // Private Helpers - Notifications
   // ============================================================================
-
-  /**
-   * Shows initial notification when a layer is activated with the count of available periods.
-   */
-  private showInitialNotification(layerId: string): void {
-    const config = this.layerConfigService.getConfig(layerId);
-    if (!config) {
-      return;
-    }
-
-    const layerName = this.layersService.getLayerDisplayName(layerId);
-    let count = 0;
-
-    switch (config.type) {
-      case LayerType.TILE:
-        count = config.availableTilesets.length;
-        break;
-    }
-
-    if (count > 0) {
-      const message = `${count} período${count !== 1 ? 's' : ''} disponible${count !== 1 ? 's' : ''} para ${layerName}`;
-      this.notificationService.show(NotificationType.SUCCESS, message);
-    }
-  }
 
   /**
    * Compares before and after configurations and shows appropriate notification.

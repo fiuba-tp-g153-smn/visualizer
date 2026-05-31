@@ -3,56 +3,17 @@
 
 :host {
   z-index: layerOrder.$z-main-menu;
-  display: flex;
-  align-self: flex-start;
-  min-height: 0;
-  max-height: 100%;
-  pointer-events: auto;
-  overflow: hidden;
-}
-
-.main-menu-wrapper {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  flex: 0 0 auto;
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
-}
-
-.menu-button-bar {
-  @include overlaySurface.floating-surface();
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-top: 3px solid var(--mat-sys-secondary);
-  flex-shrink: 0;
-  max-height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  mat-divider {
-    width: 100%;
-  }
-}
-
-.smn-logo {
-  padding: 4px;
   display: block;
-}
-
-.menu-button-bar button[mat-icon-button].active {
-  background-color: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  min-height: 0;
+  max-height: 100%;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .menu-panel {
   @include overlaySurface.floating-surface();
 
+  pointer-events: auto;
   width: 450px;
   max-width: 100%;
   min-height: 0;
@@ -99,7 +60,6 @@
     padding-bottom: 0;
   }
 
-  // Child components fill available height
   > * {
     flex: 1 1 auto;
     min-height: 0;
