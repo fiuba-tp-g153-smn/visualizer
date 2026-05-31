@@ -33,6 +33,9 @@ import {
   ScaleRangeInfo,
   ScaleType,
   TileLayerControls,
+  WrfLayerControls,
+  WrfTileLayer,
+  WrfTileLayerConfig,
 } from '../../models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
@@ -46,7 +49,8 @@ import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
 } from '../../config';
-import { formatEcmwfForecastTs } from '../../utils/tileset-timestamp';
+import { buildWrfPointQueryUrl } from '../../config/backend.config';
+import { formatEcmwfForecastTs, formatWrfInitTag } from '../../utils/tileset-timestamp';
 
 interface MouseCoordinates {
   lat: number;
@@ -69,7 +73,7 @@ type DisplaySourceItem = {
   elevationId?: string;
   forecastTs?: string;
   layerName: string;
-  layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer;
+  layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer | WrfTileLayer;
   controls: TileLayerControls;
 };
 
@@ -213,7 +217,29 @@ export class PointQueryViewerService {
         });
       });
 
-    return [...satelliteItems, ...radarItems, ...ecmwfItems];
+    const wrfItems: DisplaySourceItem[] = activeLayers
+      .filter(({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.WRF)
+      .flatMap(({ layer, controls }): DisplaySourceItem[] => {
+        const wrfLayer = layer as WrfTileLayer;
+        const wrfControls = controls as WrfLayerControls;
+        const selectedForecasts = wrfControls.forecast.selectedForecastTimestamps;
+        const baseName = this.layersService.getLayerFullName(wrfLayer);
+
+        return selectedForecasts.map((forecastTs): DisplaySourceItem => {
+          const forecastLabel = formatWrfInitTag(forecastTs);
+
+          return {
+            layerId: createCompositeId(layer.id, forecastTs),
+            sourceKind: 'primary',
+            layerName: `${baseName} - corrida ${forecastLabel}`,
+            forecastTs,
+            layer: wrfLayer,
+            controls: wrfControls,
+          };
+        });
+      });
+
+    return [...satelliteItems, ...radarItems, ...ecmwfItems, ...wrfItems];
   });
 
   readonly floatingViewerEntries = computed<PointQueryViewerEntry[]>(() => {
@@ -561,7 +587,9 @@ export class PointQueryViewerService {
     }
 
     if (
-      (layer.category === LayerCategory.GOES_19 || layer.category === LayerCategory.ECMWF_TP) &&
+      (layer.category === LayerCategory.GOES_19 ||
+        layer.category === LayerCategory.ECMWF_TP ||
+        layer.category === LayerCategory.WRF) &&
       !this.isWithinLayerBounds(layer, lat, lon)
     ) {
       return of(this.buildNoData(layerId, layerName, elevationId));
@@ -569,6 +597,10 @@ export class PointQueryViewerService {
 
     if (layer.category === LayerCategory.ECMWF_TP) {
       return this.queryEcmwfTpLayer(layer, controls as EcmwfTpLayerControls, lat, lon, forecastTs);
+    }
+
+    if (layer.category === LayerCategory.WRF) {
+      return this.queryWrfLayer(layer, controls as WrfLayerControls, lat, lon, forecastTs);
     }
 
     const tilesetId = this.resolveTilesetId(layer.id, controls.playback.timeIndex);
@@ -816,6 +848,62 @@ export class PointQueryViewerService {
     );
   }
 
+  private queryWrfLayer(
+    layer: Layer,
+    controls: WrfLayerControls,
+    lat: number,
+    lon: number,
+    forecastTs?: string,
+  ): Observable<PointQueryDisplayData> {
+    const config = this.layerConfigService.getConfig(layer.id) as WrfTileLayerConfig | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const isForecast = layer.type === LayerType.TILE && layer.isForecast;
+    const idx = Math.max(
+      0,
+      Math.min(
+        controls.playback.timeIndex ??
+          getDefaultCursorIndex(config.availableTilesets.length, isForecast),
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const fxxx = config.availableTilesets[idx].id;
+
+    // If a specific forecast (init run) was requested, validate it covers this
+    // step; otherwise pick the first selected init that does.
+    const forecastsForStep = config.forecastsByPeriod[fxxx];
+    const selectedInits = controls.forecast.selectedForecastTimestamps;
+    const resolvedInitTag = forecastTs
+      ? forecastsForStep?.includes(forecastTs)
+        ? forecastTs
+        : undefined
+      : selectedInits.find((ts) => forecastsForStep?.includes(ts));
+    if (!resolvedInitTag) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const wrfLayer = layer as WrfTileLayer;
+    const url = buildWrfPointQueryUrl(wrfLayer.productId, resolvedInitTag, fxxx, lat, lon);
+    const scaleRange = this.extractScaleRange(wrfLayer);
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: layer.id,
+            layerName: layer.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange: scaleRange ?? undefined,
+          }) as const,
+      ),
+      catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    );
+  }
+
   private resolveTilesetId(layerId: string, timeIndex?: number): string | null {
     const config = this.layerConfigService.getConfig(layerId);
     if (!config || config.type !== LayerType.TILE || config.availableTilesets.length === 0) {
@@ -883,7 +971,7 @@ export class PointQueryViewerService {
   }
 
   private extractScaleRange(
-    layer: GoesTileLayer | RadarTileLayer | EcmwfTpTileLayer,
+    layer: GoesTileLayer | RadarTileLayer | EcmwfTpTileLayer | WrfTileLayer,
   ): ScaleRangeInfo | undefined {
     if (!layer.scale) {
       return undefined;

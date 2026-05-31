@@ -29,6 +29,8 @@ import {
   LayerSelectionMode,
   LayerType,
   TilesetEntry,
+  WrfLayerControls,
+  WrfTileLayerConfig,
 } from '../../../../../models';
 import { LayersService } from '../../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../../services/layers/layer-control.service';
@@ -39,6 +41,7 @@ import {
   formatDateFull,
   formatDateTimeOnly,
   formatEcmwfForecastTs,
+  formatWrfInitTag,
 } from '../../../../../utils/tileset-timestamp';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
@@ -224,8 +227,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       if (activeLayer.controls.category === LayerCategory.RADAR) {
         return this.globalElevationOpacity();
       }
-      // For ECMWF layers, check if forecasts have different opacities
-      if (activeLayer.controls.category === LayerCategory.ECMWF_TP) {
+      // For ECMWF / WRF layers, check if forecasts have different opacities
+      if (
+        activeLayer.controls.category === LayerCategory.ECMWF_TP ||
+        activeLayer.controls.category === LayerCategory.WRF
+      ) {
         return this.globalForecastOpacity();
       }
     }
@@ -306,6 +312,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
           case LayerCategory.ECMWF_TP:
+          case LayerCategory.WRF:
             return true;
           default:
             return false;
@@ -486,6 +493,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
           case LayerCategory.ECMWF_TP:
+          case LayerCategory.WRF:
             return this.configService.getAvailableTilesets(this.layer.id);
           default:
             return undefined;
@@ -641,6 +649,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
           this.controlService.setEcmwfTpForecastOpacity(this.layer.id, ts, opacity);
         });
       }
+      // For WRF layers, update ALL forecast init runs
+      if (activeLayer.controls.category === LayerCategory.WRF) {
+        const allForecasts = this.availableForecasts();
+        allForecasts.forEach((initTag) => {
+          this.controlService.setWrfForecastOpacity(this.layer.id, initTag, opacity);
+        });
+      }
     }
 
     // Always update the layer's base opacity as well
@@ -790,49 +805,64 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Formats an ECMWF forecast timestamp for display in the selector.
+   * Formats a forecast timestamp / WRF init_tag for display.
    */
   formatForecastTs(forecastTs: string): string {
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      return formatWrfInitTag(forecastTs);
+    }
     return formatEcmwfForecastTs(forecastTs);
   }
 
   /**
-   * Checks if the layer requires forecast control (ECMWF only)
+   * Checks if the layer requires forecast control (ECMWF or WRF).
    */
   hasForecastControl = computed(() => {
-    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
+    if (this.layer.type !== LayerType.TILE) return false;
+    if (
+      this.layer.category !== LayerCategory.ECMWF_TP &&
+      this.layer.category !== LayerCategory.WRF
+    ) {
       return false;
     }
     const config = this.configService.getConfig(this.layer.id) as
       | EcmwfTpTileLayerConfig
+      | WrfTileLayerConfig
       | undefined;
     return (config?.availableForecasts?.length ?? 0) > 0;
   });
 
   /**
-   * Available forecast runs (ECMWF layers only)
+   * Available forecast runs (ECMWF / WRF layers).
    */
   availableForecasts = computed((): string[] => {
-    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.ECMWF_TP) {
+    if (this.layer.type !== LayerType.TILE) return [];
+    if (
+      this.layer.category !== LayerCategory.ECMWF_TP &&
+      this.layer.category !== LayerCategory.WRF
+    ) {
       return [];
     }
     const config = this.configService.getConfig(this.layer.id) as
       | EcmwfTpTileLayerConfig
+      | WrfTileLayerConfig
       | undefined;
     return config?.availableForecasts ?? [];
   });
 
   /**
-   * IDs of selected forecasts
+   * IDs of selected forecasts (ECMWF) or init_tags (WRF).
    */
   selectedForecastTimestamps = computed((): string[] => {
     const activeItem = this.getActiveLayer();
     if (!activeItem) return [];
     if (
       activeItem.controls.type === LayerType.TILE &&
-      activeItem.controls.category === LayerCategory.ECMWF_TP
+      (activeItem.controls.category === LayerCategory.ECMWF_TP ||
+        activeItem.controls.category === LayerCategory.WRF)
     ) {
-      return (activeItem.controls as EcmwfTpLayerControls).forecast.selectedForecastTimestamps;
+      return (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls).forecast
+        .selectedForecastTimestamps;
     }
     return [];
   });
@@ -848,6 +878,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Toggles a forecast run (activate/deactivate)
    */
   onForecastToggle(forecastTs: string): void {
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      this.controlService.toggleWrfForecast(this.layer.id, forecastTs);
+      return;
+    }
     this.controlService.toggleEcmwfTpForecast(this.layer.id, forecastTs);
   }
 
@@ -859,10 +893,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!activeItem) return 1;
     if (
       activeItem.controls.type === LayerType.TILE &&
-      activeItem.controls.category === LayerCategory.ECMWF_TP
+      (activeItem.controls.category === LayerCategory.ECMWF_TP ||
+        activeItem.controls.category === LayerCategory.WRF)
     ) {
-      const ecmwfControls = activeItem.controls as EcmwfTpLayerControls;
-      const forecastOpacity = ecmwfControls.forecast.forecastOpacity[forecastTs];
+      const forecastControls = (
+        activeItem.controls as EcmwfTpLayerControls | WrfLayerControls
+      ).forecast;
+      const forecastOpacity = forecastControls.forecastOpacity[forecastTs];
       return forecastOpacity !== undefined ? forecastOpacity : activeItem.controls.opacity;
     }
     return activeItem.controls.opacity;
@@ -879,6 +916,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Sets the opacity of a specific forecast run
    */
   onForecastOpacityChange(forecastTs: string, opacity: number): void {
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      this.controlService.setWrfForecastOpacity(this.layer.id, forecastTs, opacity);
+      return;
+    }
     this.controlService.setEcmwfTpForecastOpacity(this.layer.id, forecastTs, opacity);
   }
 

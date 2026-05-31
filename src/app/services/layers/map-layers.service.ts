@@ -14,6 +14,9 @@ import {
   LayerType,
   RadarLayerControls,
   SecondaryVectorRender,
+  WrfLayerControls,
+  WrfTileLayer,
+  WrfTileLayerConfig,
 } from '../../models';
 import {
   WEATHER_STATION_PANE,
@@ -94,6 +97,7 @@ export class MapLayersService {
             case LayerCategory.RADAR:
             case LayerCategory.GOES_19:
             case LayerCategory.ECMWF_TP:
+            case LayerCategory.WRF:
               if (!this.layerConfigService.hasConfig(layerId)) {
                 continue;
               }
@@ -156,6 +160,22 @@ export class MapLayersService {
               const slotsUsed = forecastCount * slotsPerForecast;
               if (slotsUsed > 1) {
                 zIndexOffset += slotsUsed - 1;
+              }
+              break;
+            }
+
+            case LayerCategory.WRF: {
+              const wrfControls = controls as WrfLayerControls;
+              const forecastCount = wrfControls.forecast.selectedForecastTimestamps.length;
+              const layers = this.layerRenderService.createWrfLayersForPlayback(
+                layerId,
+                wrfControls,
+                controls.opacity,
+                actualZIndex,
+              );
+              layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
+              if (forecastCount > 1) {
+                zIndexOffset += forecastCount - 1;
               }
               break;
             }
@@ -276,71 +296,17 @@ export class MapLayersService {
     for (const layerId of sortedLayerIds) {
       const layer = this.layersService.getLayerById(layerId);
       if (!layer || layer.type !== LayerType.TILE) continue;
-      if (layer.category !== LayerCategory.ECMWF_TP) continue;
 
-      const ecmwfLayer = layer as EcmwfTpTileLayer;
-      const secondary = ecmwfLayer.secondaryRender;
-      if (!secondary) continue;
-
-      const controls = this.controlService.getControls(layerId) as EcmwfTpLayerControls;
-      if (!controls.visible) continue;
-
-      const config = this.layerConfigService.getConfig(layerId) as
-        | EcmwfTpTileLayerConfig
-        | undefined;
-      if (!config) continue;
-
-      const currentTimeIndex = controls.playback.timeIndex ?? 0;
-      const currentEntry = config.availableTilesets[currentTimeIndex];
-      if (!currentEntry) continue;
-      const currentTimestampTs = currentEntry.id;
-
-      const forecastsForCurrent = config.forecastsByPeriod[currentTimestampTs];
-      if (!forecastsForCurrent) continue;
-
-      const layerActualZIndex = layerActualZIndexes.get(layerId);
-      if (layerActualZIndex === undefined) continue;
-
-      controls.forecast.selectedForecastTimestamps.forEach((forecastTs, forecastIndex) => {
-        // Only render isobars if the forecast actually has data for the
-        // current timestamp (mirrors the TP raster's check).
-        if (!forecastsForCurrent.includes(forecastTs)) return;
-
-        // Match the tile renderer's opacity resolution so the isobars fade
-        // in sync with their associated TP raster (per-forecast override,
-        // falling back to the layer-wide opacity).
-        const forecastOpacity = controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
-
-        const url = secondary.buildUrl(forecastTs, currentTimestampTs);
-        const overlayKey = `${layerId}#${secondary.id}#${forecastTs}#${currentTimestampTs}`;
-        const cached = this.vectorOverlay.peek(url);
-
-        // Each forecast reserves 2 z-slots (TP raster + isobars). The raster
-        // sits at `layerActualZIndex + forecastIndex * 2`, so the isobars
-        // for that forecast slot in just above it. This places the SVG
-        // above the matching TP tile but below the next layer/forecast.
-        const forecastRasterZIndex = layerActualZIndex + forecastIndex * 2;
-        const isobarZIndex = forecastRasterZIndex + 1;
-        const paneName = `${VECTOR_OVERLAY_PANE_PREFIX}${layerId}#${secondary.id}#${forecastTs}`;
-        this.ensureVectorOverlayPane(paneName, isobarZIndex);
-
-        if (cached) {
-          const overlay = this.vectorOverlay.buildLayer(
-            cached,
-            secondary,
-            forecastOpacity,
-            paneName,
-          );
-          desired.set(overlayKey, overlay);
-        } else {
-          // Cache miss: trigger an async load. The service bumps `loadTick` on
-          // success, which re-runs the parent effect → re-runs syncLayers().
-          void this.vectorOverlay.load(url);
-        }
-
-        // Prefetch upcoming frames for smooth animation.
-        this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs);
-      });
+      if (layer.category === LayerCategory.ECMWF_TP) {
+        this.collectEcmwfOverlays(
+          layerId,
+          layer as EcmwfTpTileLayer,
+          layerActualZIndexes,
+          desired,
+        );
+      } else if (layer.category === LayerCategory.WRF) {
+        this.collectWrfOverlays(layerId, layer as WrfTileLayer, layerActualZIndexes, desired);
+      }
     }
 
     // Diff against the previously-rendered overlays.
@@ -377,10 +343,165 @@ export class MapLayersService {
     pane.style.zIndex = String(zIndex);
   }
 
+  /**
+   * Collects ECMWF isobar overlays. One overlay is rendered per selected
+   * forecast — each forecast reserves 2 z-slots (TP raster + isobars), so the
+   * isobars slot in just above their matching raster and fade in lockstep with
+   * it.
+   */
+  private collectEcmwfOverlays(
+    layerId: string,
+    ecmwfLayer: EcmwfTpTileLayer,
+    layerActualZIndexes: ReadonlyMap<string, number>,
+    desired: Map<string, L.Layer>,
+  ): void {
+    const secondary = ecmwfLayer.secondaryRender;
+    if (!secondary) return;
+
+    const controls = this.controlService.getControls(layerId) as EcmwfTpLayerControls;
+    if (!controls.visible) return;
+
+    const config = this.layerConfigService.getConfig(layerId) as
+      | EcmwfTpTileLayerConfig
+      | undefined;
+    if (!config) return;
+
+    const currentTimeIndex = controls.playback.timeIndex ?? 0;
+    const currentEntry = config.availableTilesets[currentTimeIndex];
+    if (!currentEntry) return;
+    const currentTimestampTs = currentEntry.id;
+
+    const forecastsForCurrent = config.forecastsByPeriod[currentTimestampTs];
+    if (!forecastsForCurrent) return;
+
+    const layerActualZIndex = layerActualZIndexes.get(layerId);
+    if (layerActualZIndex === undefined) return;
+
+    controls.forecast.selectedForecastTimestamps.forEach((forecastTs, forecastIndex) => {
+      // Only render isobars if the forecast actually has data for the
+      // current timestamp (mirrors the TP raster's check).
+      if (!forecastsForCurrent.includes(forecastTs)) return;
+
+      // Match the tile renderer's opacity resolution so the isobars fade in
+      // sync with their associated TP raster (per-forecast override, falling
+      // back to the layer-wide opacity).
+      const forecastOpacity = controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
+
+      // Each forecast reserves 2 z-slots (TP raster + isobars). The raster sits
+      // at `layerActualZIndex + forecastIndex * 2`, so the isobars for that
+      // forecast slot in just above it.
+      const isobarZIndex = layerActualZIndex + forecastIndex * 2 + 1;
+
+      this.requestOverlay(
+        layerId,
+        secondary,
+        forecastTs,
+        currentTimestampTs,
+        forecastOpacity,
+        isobarZIndex,
+        desired,
+      );
+      // Prefetch upcoming frames for smooth animation.
+      this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs);
+    });
+  }
+
+  /**
+   * WRF mirrors the ECMWF flow but iterates `secondaryRenders[]` (multiple
+   * overlays per product: barbs + contornos + slp) and renders one set per
+   * selected forecast. WRF reserves a single z-slot per forecast (raster), so
+   * every overlay for that forecast stacks just above it.
+   */
+  private collectWrfOverlays(
+    layerId: string,
+    wrfLayer: WrfTileLayer,
+    layerActualZIndexes: ReadonlyMap<string, number>,
+    desired: Map<string, L.Layer>,
+  ): void {
+    const renders = wrfLayer.secondaryRenders;
+    if (!renders || renders.length === 0) return;
+
+    const controls = this.controlService.getControls(layerId) as WrfLayerControls;
+    if (!controls.visible) return;
+
+    const config = this.layerConfigService.getConfig(layerId) as
+      | WrfTileLayerConfig
+      | undefined;
+    if (!config) return;
+
+    const currentTimeIndex = controls.playback.timeIndex ?? 0;
+    const currentEntry = config.availableTilesets[currentTimeIndex];
+    if (!currentEntry) return;
+    const currentTimestampTs = currentEntry.id;
+
+    const forecastsForCurrent = config.forecastsByPeriod[currentTimestampTs];
+    if (!forecastsForCurrent) return;
+
+    const layerActualZIndex = layerActualZIndexes.get(layerId);
+    if (layerActualZIndex === undefined) return;
+
+    controls.forecast.selectedForecastTimestamps.forEach((forecastTs, forecastIndex) => {
+      // Only render overlays if the forecast actually has data for the current
+      // timestamp (mirrors the raster's check).
+      if (!forecastsForCurrent.includes(forecastTs)) return;
+
+      // Per-forecast opacity override, falling back to the layer-wide opacity.
+      const forecastOpacity = controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
+
+      // WRF reserves 1 z-slot per forecast (raster); its overlays stack just
+      // above that raster.
+      const overlayZIndex = layerActualZIndex + forecastIndex + 1;
+
+      for (const render of renders) {
+        this.requestOverlay(
+          layerId,
+          render,
+          forecastTs,
+          currentTimestampTs,
+          forecastOpacity,
+          overlayZIndex,
+          desired,
+        );
+        this.prefetchSecondary(render, config, currentTimeIndex, forecastTs);
+      }
+    });
+  }
+
+  /**
+   * Builds (or schedules the async load of) a single vector overlay for one
+   * `(render, forecast)` pair, placing it in a dedicated per-forecast pane at
+   * the given z-index so it stacks and fades in lockstep with its raster.
+   */
+  private requestOverlay(
+    layerId: string,
+    render: SecondaryVectorRender,
+    forecastTs: string,
+    timestampTs: string,
+    opacity: number,
+    zIndex: number,
+    desired: Map<string, L.Layer>,
+  ): void {
+    const url = render.buildUrl(forecastTs, timestampTs);
+    const overlayKey = `${layerId}#${render.id}#${forecastTs}#${timestampTs}`;
+    const cached = this.vectorOverlay.peek(url);
+
+    const paneName = `${VECTOR_OVERLAY_PANE_PREFIX}${layerId}#${render.id}#${forecastTs}`;
+    this.ensureVectorOverlayPane(paneName, zIndex);
+
+    if (cached) {
+      const overlay = this.vectorOverlay.buildLayer(cached, render, opacity, paneName);
+      desired.set(overlayKey, overlay);
+    } else {
+      // Cache miss: trigger an async load. The service bumps `loadTick` on
+      // success, which re-runs the parent effect → re-runs syncLayers().
+      void this.vectorOverlay.load(url);
+    }
+  }
+
   /** Pre-fetches the GeoJSON for the next N frames (modular wrap inside the active window). */
   private prefetchSecondary(
     secondary: SecondaryVectorRender,
-    config: EcmwfTpTileLayerConfig,
+    config: EcmwfTpTileLayerConfig | WrfTileLayerConfig,
     currentTimeIndex: number,
     forecastTs: string,
   ): void {

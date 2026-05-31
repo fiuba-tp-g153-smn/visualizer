@@ -18,6 +18,9 @@ import {
   EcmwfTpTileLayerConfig,
   WmsLayerControls,
   VectorLayerControls,
+  WrfLayerControls,
+  WrfTileLayer,
+  WrfTileLayerConfig,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -157,6 +160,27 @@ export class LayerControlService {
           // Skip if playback is running — don't interrupt animation
           if (controls.playback.isPlaying) {
             continue;
+          }
+
+          // Auto-populate selectedForecastTimestamps for forecast-model layers
+          // (ECMWF, WRF) when config arrives with data but selection is empty.
+          // Mitigates a stale-localStorage scenario where the layer was activated
+          // while the backend had no runs yet → selection stuck at [].
+          if (
+            (controls.category === LayerCategory.ECMWF_TP ||
+              controls.category === LayerCategory.WRF) &&
+            'forecast' in controls &&
+            controls.forecast.selectedForecastTimestamps.length === 0 &&
+            (config.category === LayerCategory.ECMWF_TP ||
+              config.category === LayerCategory.WRF) &&
+            config.availableForecasts.length > 0
+          ) {
+            const firstForecast = config.availableForecasts[0];
+            if (controls.category === LayerCategory.WRF) {
+              this.toggleWrfForecast(layer.id, firstForecast);
+            } else {
+              this.toggleEcmwfTpForecast(layer.id, firstForecast);
+            }
           }
 
           if (config.availableTilesets.length === 0) continue;
@@ -586,6 +610,23 @@ export class LayerControlService {
               }
               break;
             }
+            case LayerCategory.WRF: {
+              const wrfControls = controls as WrfLayerControls;
+              if (wrfControls.forecast.selectedForecastTimestamps.length === 0) {
+                const wrfConfig = this.layerConfigService.getConfig(layerId);
+                if (
+                  wrfConfig &&
+                  wrfConfig.type === LayerType.TILE &&
+                  wrfConfig.category === LayerCategory.WRF
+                ) {
+                  const firstInit = wrfConfig.availableForecasts[0];
+                  if (firstInit) {
+                    wrfControls.forecast.selectedForecastTimestamps = [firstInit];
+                  }
+                }
+              }
+              break;
+            }
           }
           break;
         case LayerType.VECTOR:
@@ -876,6 +917,63 @@ export class LayerControlService {
   }
 
   /**
+   * Activa/desactiva un init_tag (corrida) en una capa WRF.
+   * Si todas las corridas quedan deseleccionadas la capa se desactiva.
+   */
+  toggleWrfForecast(layerId: string, initTag: string): void {
+    this.updateControls(layerId, (controls) => {
+      if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.WRF) return;
+      const wrf = controls as WrfLayerControls;
+      const current = wrf.forecast.selectedForecastTimestamps;
+      const index = current.indexOf(initTag);
+      if (index === -1) {
+        wrf.forecast.selectedForecastTimestamps = [...current, initTag];
+      } else {
+        wrf.forecast.selectedForecastTimestamps = current.filter((ts) => ts !== initTag);
+      }
+    });
+
+    const updatedControls = this.getControls(layerId) as WrfLayerControls;
+    this.layerConfigService.updateWrfSelectedForecasts(
+      layerId,
+      updatedControls.forecast.selectedForecastTimestamps,
+    );
+
+    if (updatedControls.forecast.selectedForecastTimestamps.length === 0) {
+      this.deactivateLayer(layerId);
+      return;
+    }
+
+    const newConfig = this.layerConfigService.getConfig(layerId) as
+      | WrfTileLayerConfig
+      | undefined;
+    if (
+      newConfig &&
+      updatedControls.playback.timeIndex !== undefined &&
+      updatedControls.playback.timeIndex >= newConfig.availableTilesets.length
+    ) {
+      const layer = this.layersService.getLayerById(layerId);
+      const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+      this.setTimeIndex(
+        layerId,
+        getDefaultCursorIndex(newConfig.availableTilesets.length, isForecast),
+      );
+    }
+  }
+
+  /**
+   * Opacidad por corrida (init_tag) en una capa WRF.
+   */
+  setWrfForecastOpacity(layerId: string, initTag: string, opacity: number): void {
+    const clampedOpacity = Math.max(0, Math.min(1, opacity));
+    this.updateControls(layerId, (controls) => {
+      if (controls.type === LayerType.TILE && controls.category === LayerCategory.WRF) {
+        (controls as WrfLayerControls).forecast.forecastOpacity[initTag] = clampedOpacity;
+      }
+    });
+  }
+
+  /**
    * Reorders layers within a group after drag and drop.
    * Receives the complete layer order for the group and recalculates z-indices.
    */
@@ -1033,6 +1131,7 @@ export class LayerControlService {
           case LayerCategory.GOES_19:
           case LayerCategory.RADAR:
           case LayerCategory.ECMWF_TP:
+          case LayerCategory.WRF:
             return this.layerConfigService.getAvailableTilesets(layerId);
           default:
             throw new Error(`Unsupported tile layer category for playback`);
@@ -1223,6 +1322,16 @@ export class LayerControlService {
                 forecastOpacity: {},
               },
             } as EcmwfTpLayerControls;
+          case LayerCategory.WRF:
+            return {
+              ...baseTileControls,
+              category: LayerCategory.WRF,
+              availablePeriods: (layer as WrfTileLayer).availablePeriods,
+              forecast: {
+                selectedForecastTimestamps: [],
+                forecastOpacity: {},
+              },
+            } as WrfLayerControls;
           default:
             throw new Error(`Layer category does not have a defined controls template`);
         }
