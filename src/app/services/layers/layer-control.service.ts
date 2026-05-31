@@ -78,7 +78,8 @@ type PersistedLayerControls =
   | RadarLayerControls
   | WmsLayerControls
   | VectorLayerControls
-  | PersistedEcmwfTpLayerControls;
+  | PersistedEcmwfTpLayerControls
+  | WrfLayerControls;
 
 /**
  * Service responsible for managing layer controls, visibility, and playback state.

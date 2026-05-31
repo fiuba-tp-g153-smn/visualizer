@@ -96,6 +96,20 @@ export function buildWrfPointQueryUrl(
 }
 
 /**
+ * URL concreta de un tile GeoJSON de barbas WRF (z/x/y).
+ */
+export function buildWrfBarbTileUrl(
+  productId: string,
+  initTag: string,
+  fxxx: string,
+  z: number,
+  x: number,
+  y: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/barbs/${z}/${x}/${y}.json`;
+}
+
+/**
  * URL del GeoJSON de un overlay WRF (barbas / contornos / isobaras).
  */
 export function buildWrfGeojsonUrl(

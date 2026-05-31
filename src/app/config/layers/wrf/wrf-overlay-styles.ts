@@ -1,6 +1,3 @@
-import * as L from 'leaflet';
-import type { Feature } from 'geojson';
-
 import { VectorLineStyle, VectorTextpathOptions } from '../../../models';
 
 // ============================================================================
@@ -148,12 +145,6 @@ export const numericLabelFor = (value: number): string =>
 // the number of pennants / flags / halves.
 // ============================================================================
 
-interface BarbProperties {
-  speed_kt: number;
-  dir_deg: number;
-}
-
-const BARB_VIEW = 28;
 const BARB_STAFF = 16;
 const BARB_FLAG_LEN = 7;
 const BARB_HALF_LEN = 3.5;
@@ -161,107 +152,84 @@ const BARB_PENNANT_HEIGHT = 7;
 const BARB_STEP = 3.2;
 
 /**
- * Builds a meteorological wind-barb marker.
+ * Genera markup SVG de UN barb (sin `<svg>` wrapper) posicionado en (cx, cy).
+ * Pensado para componer múltiples glyphs dentro de un mismo `<svg>` por tile.
  *
- * Convention:
- *   - `dir_deg` is the direction the wind blows FROM (meteorological).
- *   - The staff is drawn from the station along that direction (so for a
- *     northerly wind the staff extends northward on screen).
- *   - Speed is rounded to the nearest 5 kt and decomposed into pennants
- *     (50 kt), flags (10 kt) and halves (5 kt). Pennants are filled triangles,
- *     flags are full-length perpendicular ticks, halves are half-length.
- *   - Glyphs sit on the right side of the staff (matplotlib's
- *     `flip_barb=True`, used by the manual script for the southern hemisphere).
- *   - Speeds < 5 kt render as a small open circle (calm).
+ * Convención SMN hemisferio sur: pennants / flags / halves a la IZQUIERDA del
+ * staff (mirando desde station hacia la punta).
  */
-export function buildBarbMarker(feature: Feature, latlng: L.LatLng): L.Layer {
-  const props = (feature.properties ?? {}) as Partial<BarbProperties>;
-  const rawSpeed = Math.max(0, props.speed_kt ?? 0);
-  const dir = props.dir_deg ?? 0;
-  const speed = Math.round(rawSpeed / 5) * 5;
+export function renderBarbGlyphMarkup(
+  speed_kt: number,
+  dir_deg: number,
+  cx: number,
+  cy: number,
+  scale = 1,
+): string {
+  const staff = BARB_STAFF * scale;
+  const flagLen = BARB_FLAG_LEN * scale;
+  const halfLen = BARB_HALF_LEN * scale;
+  const pennantH = BARB_PENNANT_HEIGHT * scale;
+  const step = BARB_STEP * scale;
+  const gap = 1.2 * scale;
+  const sw = Math.max(0.5, 0.9 * Math.sqrt(scale));
 
-  const html = renderBarbSvg(speed, dir);
-  const icon = L.divIcon({
-    className: 'wrf-wind-barb',
-    html,
-    iconSize: [BARB_VIEW, BARB_VIEW],
-    iconAnchor: [BARB_VIEW / 2, BARB_VIEW / 2],
-  });
-  return L.marker(latlng, { icon, interactive: false });
-}
-
-function renderBarbSvg(speed: number, dir: number): string {
-  const half = BARB_VIEW / 2;
-  const open = `<svg width="${BARB_VIEW}" height="${BARB_VIEW}" viewBox="-${half} -${half} ${BARB_VIEW} ${BARB_VIEW}">`;
-  const close = '</svg>';
+  const speed = Math.round(Math.max(0, speed_kt) / 5) * 5;
 
   if (speed < 5) {
-    return `${open}<circle cx="0" cy="0" r="2" fill="none" stroke="${COLOR_BARB_BLACK}" stroke-width="0.8"/>${close}`;
+    const r = (2 * scale).toFixed(2);
+    return `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${r}" fill="none" stroke="${COLOR_BARB_BLACK}" stroke-width="${(0.8 * Math.sqrt(scale)).toFixed(2)}"/>`;
   }
 
-  const theta = (dir * Math.PI) / 180;
-  // Staff endpoint: in screen coords, +y is down, but meteo north is up
-  // → use (sin θ, -cos θ).
-  const sx = BARB_STAFF * Math.sin(theta);
-  const sy = -BARB_STAFF * Math.cos(theta);
-  // Left-perpendicular unit vector. SMN reference figures place pennants /
-  // flags / halves on the LEFT side of the staff (looking from station toward
-  // tip). Despite the manual script using `flip_barb=True`, the rendered SMN
-  // PDFs show the glyphs mirrored to the left — that's the convention we
-  // match here.
+  const theta = (dir_deg * Math.PI) / 180;
+  const sx = staff * Math.sin(theta);
+  const sy = -staff * Math.cos(theta);
   const px = -Math.cos(theta);
   const py = -Math.sin(theta);
 
-  // Position d (distance from staff origin toward tip): point on staff.
   const at = (d: number): { x: number; y: number } => ({
-    x: (sx * d) / BARB_STAFF,
-    y: (sy * d) / BARB_STAFF,
+    x: cx + (sx * d) / staff,
+    y: cy + (sy * d) / staff,
   });
 
-  let pennants = Math.floor(speed / 50);
-  let rest = speed - pennants * 50;
-  let flags = Math.floor(rest / 10);
-  let halves = Math.floor((rest - flags * 10) / 5);
+  const pennants = Math.floor(speed / 50);
+  const rest = speed - pennants * 50;
+  const flags = Math.floor(rest / 10);
+  const halves = Math.floor((rest - flags * 10) / 5);
 
   const parts: string[] = [];
-  // Staff
   parts.push(
-    `<line x1="0" y1="0" x2="${sx.toFixed(2)}" y2="${sy.toFixed(2)}" stroke="${COLOR_BARB_BLACK}" stroke-width="0.9" stroke-linecap="round"/>`,
+    `<line x1="${cx.toFixed(2)}" y1="${cy.toFixed(2)}" x2="${(cx + sx).toFixed(2)}" y2="${(cy + sy).toFixed(2)}" stroke="${COLOR_BARB_BLACK}" stroke-width="${sw.toFixed(2)}" stroke-linecap="round"/>`,
   );
 
-  // Walk from the tip back toward the origin, placing pennants → flags → halves.
-  let d = BARB_STAFF;
-
+  let d = staff;
   for (let i = 0; i < pennants; i++) {
     const a = at(d);
-    const b = at(d - BARB_STEP);
-    const c = { x: a.x + px * BARB_PENNANT_HEIGHT, y: a.y + py * BARB_PENNANT_HEIGHT };
+    const b = at(d - step);
+    const c = { x: a.x + px * pennantH, y: a.y + py * pennantH };
     parts.push(
-      `<polygon points="${a.x.toFixed(2)},${a.y.toFixed(2)} ${c.x.toFixed(2)},${c.y.toFixed(2)} ${b.x.toFixed(2)},${b.y.toFixed(2)}" fill="${COLOR_BARB_BLACK}" stroke="${COLOR_BARB_BLACK}" stroke-width="0.5"/>`,
+      `<polygon points="${a.x.toFixed(2)},${a.y.toFixed(2)} ${c.x.toFixed(2)},${c.y.toFixed(2)} ${b.x.toFixed(2)},${b.y.toFixed(2)}" fill="${COLOR_BARB_BLACK}" stroke="${COLOR_BARB_BLACK}" stroke-width="${(0.5 * scale).toFixed(2)}"/>`,
     );
-    d -= BARB_STEP;
+    d -= step;
   }
-  if (pennants > 0) d -= 1.2; // small gap after pennants
+  if (pennants > 0) d -= gap;
 
   for (let i = 0; i < flags; i++) {
     const a = at(d);
-    const b = { x: a.x + px * BARB_FLAG_LEN, y: a.y + py * BARB_FLAG_LEN };
+    const b = { x: a.x + px * flagLen, y: a.y + py * flagLen };
     parts.push(
-      `<line x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${COLOR_BARB_BLACK}" stroke-width="0.9" stroke-linecap="round"/>`,
+      `<line x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${COLOR_BARB_BLACK}" stroke-width="${sw.toFixed(2)}" stroke-linecap="round"/>`,
     );
-    d -= BARB_STEP;
+    d -= step;
   }
 
   if (halves > 0) {
-    // If the only feature is a half-flag, inset it slightly from the tip so it
-    // doesn't sit exactly on the endpoint (matches matplotlib's behavior).
-    if (flags === 0 && pennants === 0) d = BARB_STAFF - BARB_STEP;
+    if (flags === 0 && pennants === 0) d = staff - step;
     const a = at(d);
-    const b = { x: a.x + px * BARB_HALF_LEN, y: a.y + py * BARB_HALF_LEN };
+    const b = { x: a.x + px * halfLen, y: a.y + py * halfLen };
     parts.push(
-      `<line x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${COLOR_BARB_BLACK}" stroke-width="0.9" stroke-linecap="round"/>`,
+      `<line x1="${a.x.toFixed(2)}" y1="${a.y.toFixed(2)}" x2="${b.x.toFixed(2)}" y2="${b.y.toFixed(2)}" stroke="${COLOR_BARB_BLACK}" stroke-width="${sw.toFixed(2)}" stroke-linecap="round"/>`,
     );
   }
 
-  return `${open}${parts.join('')}${close}`;
+  return parts.join('');
 }

@@ -885,8 +885,12 @@ export class PointQueryViewerService {
     }
 
     const wrfLayer = layer as WrfTileLayer;
-    const url = buildWrfPointQueryUrl(wrfLayer.productId, resolvedInitTag, fxxx, lat, lon);
     const scaleRange = this.extractScaleRange(wrfLayer);
+    if (!scaleRange) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const url = buildWrfPointQueryUrl(wrfLayer.productId, resolvedInitTag, fxxx, lat, lon);
 
     return this.http.get<PointQueryValueDto>(url).pipe(
       map(
@@ -897,7 +901,7 @@ export class PointQueryViewerService {
             value: response.value,
             unit: response.unit,
             status: PointQueryStatus.VALUE,
-            scaleRange: scaleRange ?? undefined,
+            scaleRange,
           }) as const,
       ),
       catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
