@@ -27,11 +27,7 @@
               (click)="selectBaseMap(baseMap.id)"
             >
               <div class="base-map-preview">
-                @if (getPreviewUrl(baseMap)) {
-                  <img [src]="getPreviewUrl(baseMap)" [alt]="baseMap.name" class="preview-image" />
-                } @else {
-                  <mat-icon class="preview-icon">map</mat-icon>
-                }
+                <img [src]="getPreviewUrl(baseMap)" alt="" class="preview-image" />
               </div>
               <div class="base-map-info">
                 <h4 class="base-map-name">{{ baseMap.name }}</h4>
