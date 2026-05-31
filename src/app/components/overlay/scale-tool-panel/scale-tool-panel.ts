@@ -151,12 +151,6 @@ export class ScaleToolPanelComponent {
       return this.buildExplicitDiscreteLabelEntries(this.discreteScale.labelValues);
     }
 
-    const clipRange = this.getScaleClipRange();
-    if (this.entry.scale.type === ScaleType.DISCRETE && clipRange) {
-      const [rangeMin, rangeMax] = clipRange;
-      return this.buildRangeBasedDiscreteLabelEntries(configuredLabelCount, rangeMin, rangeMax);
-    }
-
     return this.buildBucketBasedDiscreteLabels(entries, configuredLabelCount);
   }
 
@@ -339,20 +333,6 @@ export class ScaleToolPanelComponent {
       return this.DEFAULT_SUBTICK_COUNT;
     }
     return Math.max(0, Math.floor(raw));
-  }
-
-  private buildRangeBasedDiscreteLabelEntries(
-    labelCount: number,
-    min: number,
-    max: number,
-  ): readonly { text: string; top: number }[] {
-    const effectiveLabelCount = Math.max(2, labelCount);
-    return Array.from({ length: effectiveLabelCount }, (_, index) => {
-      const ratio = effectiveLabelCount === 1 ? 0 : index / (effectiveLabelCount - 1);
-      // Orden descendente para coincidir con el eje visual (valor mayor arriba).
-      const interpolatedValue = max - ratio * (max - min);
-      return { text: this.formatValue(interpolatedValue), top: ratio * 100 };
-    });
   }
 
   private buildRangeBasedContinuousLabels(

@@ -1,20 +1,14 @@
+import { PRECIPITATION_UNITS } from '../../../constants';
 import { LayerScale, ScaleType } from '../../../models';
+import { buildBoundedScale } from '../scale-builders';
 
 /**
  * TOTAL PRECIPITATION SCALE — discrete thresholds (ECMWF Total Precipitation).
  * Must match PRECIPITATION_THRESHOLDS / PRECIPITATION_COLORS in tiles-processor.
  */
-export const ECMWF_TP_SCALE: LayerScale = {
+export const ECMWF_TP_SCALE: LayerScale = buildBoundedScale({
   type: ScaleType.DISCRETE,
-  unit: 'mm',
-  entries: [
-    { value: 0.5, color: '#00FFFF' },
-    { value: 2, color: '#007FFF' },
-    { value: 4, color: '#0000FF' },
-    { value: 10, color: '#D900FF' },
-    { value: 25, color: '#FF00FF' },
-    { value: 50, color: '#FF7F00' },
-    { value: 100, color: '#FF0000' },
-    { value: 250, color: '#FF0000' },
-  ],
-};
+  unit: PRECIPITATION_UNITS.MILLIMETERS,
+  bounds: [0.5, 2, 4, 10, 25, 50, 100, 250],
+  hexColors: ['#00FFFF', '#007FFF', '#0000FF', '#D900FF', '#FF00FF', '#FF7F00', '#FF0000'],
+});
