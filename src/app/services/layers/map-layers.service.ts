@@ -16,9 +16,9 @@ import {
   SecondaryVectorRender,
 } from '../../models';
 import {
-  SMN_STATION_PANE,
-  SMN_STATION_PANE_Z_INDEX,
-} from '../../config/layers/smn-stations/config';
+  WEATHER_STATION_PANE,
+  WEATHER_STATION_PANE_Z_INDEX,
+} from '../../config/layers/weather-stations/config';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -46,12 +46,12 @@ export class MapLayersService {
    */
   initialize(map: L.Map): void {
     this.map = map;
-    if (!map.getPane(SMN_STATION_PANE)) {
+    if (!map.getPane(WEATHER_STATION_PANE)) {
       const tilePane = map.getPane(LEAFLET_TILE_PANE);
       const pane = tilePane
-        ? map.createPane(SMN_STATION_PANE, tilePane)
-        : map.createPane(SMN_STATION_PANE);
-      pane.style.zIndex = SMN_STATION_PANE_Z_INDEX;
+        ? map.createPane(WEATHER_STATION_PANE, tilePane)
+        : map.createPane(WEATHER_STATION_PANE);
+      pane.style.zIndex = WEATHER_STATION_PANE_Z_INDEX;
       pane.style.pointerEvents = 'auto';
     }
   }
@@ -63,7 +63,7 @@ export class MapLayersService {
     if (!this.map) return;
 
     const desiredLayersOnMap = new Map<string, L.Layer>();
-    const previousSmnLayers = this.getSmnLayerEntries(this.onMapLayers);
+    const previousWeatherStationLayers = this.getWeatherStationLayerEntries(this.onMapLayers);
 
     // Sort layers by z-index (low to high) so we process bottom layers first
     const sortedLayerIds = [...layerIds].sort((a, b) => {
@@ -171,7 +171,7 @@ export class MapLayersService {
           break;
 
         case LayerType.VECTOR: {
-          const stationLayer = this.layerRenderService.createSmnStationsLayer(
+          const stationLayer = this.layerRenderService.createWeatherStationsLayer(
             layerId,
             controls.opacity,
             Math.round(this.map.getZoom()),
@@ -211,9 +211,9 @@ export class MapLayersService {
     // Update local state
     this.onMapLayers = desiredLayersOnMap;
 
-    const nextSmnLayers = this.getSmnLayerEntries(this.onMapLayers);
+    const nextWeatherStationLayers = this.getWeatherStationLayerEntries(this.onMapLayers);
 
-    if (this.shouldCloseSmnPopup(previousSmnLayers, nextSmnLayers)) {
+    if (this.shouldCloseWeatherStationPopup(previousWeatherStationLayers, nextWeatherStationLayers)) {
       this.map.closePopup();
     }
 
@@ -221,16 +221,16 @@ export class MapLayersService {
     this.syncVectorOverlays(sortedLayerIds, layerActualZIndexes);
   }
 
-  private isSmnLayerId(layerId: string): boolean {
+  private isWeatherStationLayerId(layerId: string): boolean {
     const layer = this.layersService.getLayerById(layerId);
-    return layer?.category === LayerCategory.SMN_STATIONS;
+    return layer?.category === LayerCategory.WEATHER_STATIONS;
   }
 
-  private getSmnLayerEntries(layers: ReadonlyMap<string, L.Layer>): Map<string, L.Layer> {
+  private getWeatherStationLayerEntries(layers: ReadonlyMap<string, L.Layer>): Map<string, L.Layer> {
     const entries = new Map<string, L.Layer>();
 
     for (const [layerId, layerRef] of layers) {
-      if (this.isSmnLayerId(layerId)) {
+      if (this.isWeatherStationLayerId(layerId)) {
         entries.set(layerId, layerRef);
       }
     }
@@ -238,7 +238,7 @@ export class MapLayersService {
     return entries;
   }
 
-  private shouldCloseSmnPopup(
+  private shouldCloseWeatherStationPopup(
     previousLayers: ReadonlyMap<string, L.Layer>,
     nextLayers: ReadonlyMap<string, L.Layer>,
   ): boolean {

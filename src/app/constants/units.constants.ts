@@ -61,9 +61,9 @@ export const DISTANCE_UNITS = {
 } as const;
 
 /**
- * Unidades de estaciones SMN
+ * Unidades estándar de observación meteorológica
  */
-export const SMN_UNITS = {
+export const WEATHER_STATION_UNITS = {
   HUMIDITY: '%',
   PRESSURE: 'hPa',
   VISIBILITY: DISTANCE_UNITS.KILOMETERS,

@@ -1,0 +1,21 @@
+<mat-card class="button-bar">
+  <img src="icono.png" alt="Logo SMN" class="smn-logo" width="40" height="40" />
+
+  <mat-divider />
+
+  @for (section of sections; track section.id) {
+    <button
+      mat-icon-button
+      [class.active]="activePanel() === section.id"
+      (click)="togglePanel(section.id)"
+      [matTooltip]="section.tooltip"
+      matTooltipPosition="right"
+    >
+      <mat-icon>{{ section.icon }}</mat-icon>
+    </button>
+  }
+
+  <a mat-icon-button routerLink="/docs" matTooltip="Documentación" matTooltipPosition="right">
+    <mat-icon>help</mat-icon>
+  </a>
+</mat-card>

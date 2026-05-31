@@ -1,0 +1,36 @@
+@use '../../../../_layer-order' as layerOrder;
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+:host {
+  display: block;
+  pointer-events: auto;
+  z-index: layerOrder.$z-main-menu;
+}
+
+.button-bar {
+  @include overlaySurface.floating-surface();
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-top: 3px solid var(--mat-sys-secondary);
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  mat-divider {
+    width: 100%;
+  }
+}
+
+.smn-logo {
+  padding: 4px;
+  display: block;
+}
+
+.button-bar button[mat-icon-button].active {
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}

@@ -1,4 +1,4 @@
-export const SMN_STATION_RENDER_CONFIG = {
+export const WEATHER_STATION_RENDER_CONFIG = {
   minDistancePx: 38,
   marker: {
     crowdedRadiusPx: 4,

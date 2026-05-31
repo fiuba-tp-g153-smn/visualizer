@@ -2,7 +2,7 @@
   display: flex;
   flex: 1;
   min-height: 0;
-  pointer-events: auto;
+  pointer-events: none;
   overflow: visible;
 }
 
@@ -12,7 +12,7 @@
   flex-direction: row-reverse;
   align-items: stretch;
   gap: 12px;
-  pointer-events: auto;
+  pointer-events: none;
   overflow: visible;
 }
 
@@ -20,6 +20,6 @@ app-scale-tool-panel {
   display: flex;
   flex: 1;
   min-height: 0;
-  pointer-events: auto;
+  pointer-events: none;
   overflow: visible;
 }
