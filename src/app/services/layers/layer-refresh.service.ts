@@ -11,8 +11,7 @@ import {
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
-import { SmnStationsSnapshotCacheService } from './smn-stations-snapshot-cache.service';
-import { BackendSnapshot, BackendStationObservation } from './weather-stations-backend.types';
+import { SmnStationsPrefetchService } from './smn-stations-prefetch.service';
 import { NotificationService } from '../notifications/notification.service';
 import {
   SMN_STATIONS_IMAGE_COUNT_OPTIONS,
@@ -35,8 +34,24 @@ interface SmnStationsEndpointConfig {
   tilesetIds: readonly string[];
 }
 
-// `BackendStationObservation` / `BackendSnapshot` live in
-// `weather-stations-backend.types.ts` so the snapshot cache can share them.
+// Shape of `/weather-stations/{latest,tilesetId}` from the data-service.
+interface BackendStationObservation {
+  station_id: number;
+  observed_at: string | null;
+  temperature: number | null;
+  feels_like: number | null;
+  humidity: number | null;
+  pressure: number | null;
+  visibility: number | null;
+  weather: { id: number; description: string } | null;
+  wind: SmnCurrentWeatherStationDto['wind'] | null;
+}
+
+interface BackendSnapshot {
+  scraped_at: string;
+  source_url: string;
+  stations: BackendStationObservation[];
+}
 
 interface BackendTilesetEntry {
   tileset_id: string;
@@ -85,7 +100,7 @@ export class LayerRefreshService {
   private readonly layersService = inject(LayersService);
   private readonly notificationService = inject(NotificationService);
   private readonly layerControlService = inject(LayerControlService);
-  private readonly smnStationsSnapshotCache = inject(SmnStationsSnapshotCacheService);
+  private readonly smnStationsPrefetch = inject(SmnStationsPrefetchService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
@@ -226,12 +241,13 @@ export class LayerRefreshService {
   }
 
   /**
-   * Force a fresh `/tilesets` fetch (bypassing the TTL), drop cached frame
-   * bodies so the current frame re-fetches, then reload the snapshot.
+   * Force a fresh `/tilesets` fetch (bypassing the in-app TTL), then reload the
+   * snapshot. Snapshot bodies are served by the browser HTTP cache; their
+   * freshness is bounded by their `Cache-Control: max-age` (the button's job is
+   * refreshing the available periods list).
    */
   private async forceRefreshSmnStations(): Promise<void> {
     this.smnStationsEndpointConfigFetchedAt = 0;
-    this.smnStationsSnapshotCache.clear();
     await this.loadSmnStationsSnapshot(true);
   }
 
@@ -381,16 +397,14 @@ export class LayerRefreshService {
       if (!tilesetId) {
         throw new Error('No tilesets available for SMN stations specific mode');
       }
-      // Cache-first: a replayed/scrubbed frame is served from memory (no network).
-      const cached = await this.smnStationsSnapshotCache.load(
-        buildWeatherStationsTilesetUrl(tilesetId, maxPastHours),
+      // Plain GET: the browser HTTP cache serves a replayed/scrubbed frame (no
+      // network), and only this current frame's payload is retained (the signal).
+      backendSnapshot = await firstValueFrom(
+        this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, maxPastHours)),
       );
-      if (!cached) {
-        throw new Error(`Failed to load SMN stations snapshot for tileset ${tilesetId}`);
-      }
-      backendSnapshot = cached;
       referenceTimestamp = this.fromSmnStationsTilesetId(tilesetId) ?? new Date();
-      // Warm the rest of the animation window so playback/scrub stays network-free.
+      // Warm the browser cache for the rest of the window so playback/scrub is
+      // served off-heap from the browser cache rather than re-fetched.
       this.prefetchSmnStationsWindow(endpointConfig.tilesetIds, maxPastHours);
     } else {
       backendSnapshot = await firstValueFrom(
@@ -417,9 +431,9 @@ export class LayerRefreshService {
   }
 
   /**
-   * Prefetch the snapshots for the current animation window (latest `imageCount`
-   * tilesets at the current Max-Past-Hours) so timeline playback replays without
-   * hitting the network. Non-blocking; already-cached frames are skipped.
+   * Warm the browser HTTP cache for the current animation window (latest
+   * `imageCount` tilesets at the current Max-Past-Hours) so timeline playback is
+   * served from the browser cache instead of the network. Non-blocking.
    */
   prefetchSmnStationsWindow(tilesetIds?: readonly string[], maxPastHours?: number): void {
     const ids = tilesetIds ?? this.smnStationsEndpointConfigSignal()?.tilesetIds ?? [];
@@ -429,8 +443,10 @@ export class LayerRefreshService {
     const n = maxPastHours ?? this.layerControlService.getSmnStationsMaxPastHours();
     const imageCount = this.layerControlService.getSmnStationsImageCount();
     const windowIds = imageCount > 0 ? ids.slice(-imageCount) : ids;
-    this.smnStationsSnapshotCache.prefetch(
-      windowIds.map((id) => buildWeatherStationsTilesetUrl(id, n)),
+    // Skip the currently-selected frame — the read path just fetched it directly.
+    const selected = this.layerControlService.getSmnStationsSelectedTilesetId();
+    this.smnStationsPrefetch.prefetch(
+      windowIds.filter((id) => id !== selected).map((id) => buildWeatherStationsTilesetUrl(id, n)),
     );
   }
 

@@ -231,7 +231,10 @@ describe('LayerRefreshService — SMN backend integration', () => {
     expect(byId[87582].hasData).toBe(false);
   });
 
-  it('SPECIFIC mode: prefetches the window and replays frames from cache (no re-request)', async () => {
+  it('SPECIFIC mode: warms the rest of the window into the browser cache', async () => {
+    // Replay-from-cache itself is the browser HTTP cache (Cache-Control), which
+    // HttpTestingController does not simulate — that is verified manually/E2E.
+    // Here we assert the warmer issues a GET for the other window frame.
     const { service, httpMock } = setupHarness({
       temporalMode: SmnStationsTemporalMode.SPECIFIC,
       maxPastHours: 3,
@@ -250,7 +253,7 @@ describe('LayerRefreshService — SMN backend integration', () => {
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
     await new Promise((r) => setTimeout(r, 0));
 
-    // The selected frame loads through the cache...
+    // The selected frame is fetched directly (plain GET; the browser caches it).
     httpMock
       .expectOne(buildWeatherStationsTilesetUrl('20260517T1400Z', 3))
       .flush(
@@ -259,22 +262,10 @@ describe('LayerRefreshService — SMN backend integration', () => {
         ]),
       );
     await first;
-    await new Promise((r) => setTimeout(r, 0));
 
-    // ...and the rest of the window (the 13:00Z frame) is prefetched.
-    httpMock
-      .expectOne(buildWeatherStationsTilesetUrl('20260517T1300Z', 3))
-      .flush(
-        makeSnapshot('2026-05-17T12:55:00Z', [
-          { station_id: 87344, observed_at: '2026-05-17T12:50:00Z' },
-        ]),
-      );
-
-    // Replaying the same frame is served entirely from cache — zero requests.
-    const second = await service.loadSmnStationsSnapshot(true);
-    expect(second.observations).toHaveLength(1);
-    httpMock.expectNone(buildWeatherStationsTilesetsUrl());
-    httpMock.expectNone(buildWeatherStationsRegistryUrl());
+    // The other window frame (13:00Z) is warmed; the selected frame is NOT
+    // re-requested (the read path already fetched it).
+    httpMock.expectOne(buildWeatherStationsTilesetUrl('20260517T1300Z', 3)).flush('{}');
     httpMock.expectNone(buildWeatherStationsTilesetUrl('20260517T1400Z', 3));
   });
 
