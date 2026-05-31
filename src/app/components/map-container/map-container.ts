@@ -1,7 +1,6 @@
 import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import * as L from 'leaflet';
-import 'leaflet-editable';
 import { MAP_CONFIG, MAP_Z_INDEX } from '../../config';
 import { environment } from '../../../environments/environment';
 
@@ -113,7 +112,7 @@ export class MapContainer implements OnInit, OnDestroy {
         const mode = this.polygonDrawingService.drawingMode();
         const editingPolygonId = this.polygonDrawingService.editingPolygonId();
         if (this.map) {
-          this.polygonsService.handleDrawingModeChange(mode, editingPolygonId);
+          void this.polygonsService.handleDrawingModeChange(mode, editingPolygonId);
         }
       });
     }
@@ -149,8 +148,10 @@ export class MapContainer implements OnInit, OnDestroy {
       zoomControl: false,
       attributionControl: false,
       doubleClickZoom: true, // Will be disabled during polygon drawing
-      editable: true,
-    } as L.MapOptions & { editable: boolean });
+      // Note: `editable: true` is intentionally omitted — leaflet-editable is
+      // loaded on demand (see MapPolygonsService.ensureEditTools), so editTools
+      // is wired up the first time the user enters draw/edit mode.
+    });
 
     // Initialize services with the map instance
     this.layersService.initialize(this.map);
