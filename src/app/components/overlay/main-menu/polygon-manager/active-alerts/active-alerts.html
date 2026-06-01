@@ -104,6 +104,11 @@
                     <span class="detail-label">Fin:</span>
                     <span class="detail-value">{{ formatDate(alert.endDatetime) }}</span>
                   </div>
+                  <div class="detail-item">
+                    <mat-icon class="detail-icon">hourglass_bottom</mat-icon>
+                    <span class="detail-label">Tiempo restante:</span>
+                    <span class="detail-value">{{ remaining(alert) }}</span>
+                  </div>
                 </div>
               </div>
             </mat-list-item>

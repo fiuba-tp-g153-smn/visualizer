@@ -9,7 +9,10 @@ import {
 import { DEPARTMENT_STYLE, Z_INDEX } from '../../config/map-polygons.config';
 import { MAP_PANES } from '../../constants/map-polygons.constants';
 import { createDepartmentStyle, lightenColor } from '../../utils/map-styles.utils';
-import { activeAlertColorForExpiry } from '../../utils/active-alert.utils';
+import {
+  activeAlertColorForExpiry,
+  formatActiveAlertRemaining,
+} from '../../utils/active-alert.utils';
 import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
 
 /** Normalizes a department name for matching (lowercase, trimmed, accent-free). */
@@ -149,11 +152,13 @@ export class ActiveAlertsMapService {
   private buildPopup(alert: ActiveAlert): string {
     const start = formatDateTimeLocalized(alert.startDatetime);
     const end = formatDateTimeLocalized(alert.endDatetime);
+    const remaining = formatActiveAlertRemaining(alert.endDatetime);
     return `
       <strong>Aviso #${alert.alertId}</strong><br />
       ${alert.phenomenon}<br />
       Inicio: ${start}<br />
-      Fin: ${end}
+      Fin: ${end}<br />
+      Tiempo restante: ${remaining}
     `;
   }
 }

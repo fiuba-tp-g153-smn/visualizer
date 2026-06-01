@@ -29,6 +29,23 @@ export function activeAlertColorForExpiry(endDatetime: Date, now: number = Date.
 }
 
 /**
+ * Formats the time left until an active alert expires, e.g. "2h 15min", "45min",
+ * "<1min", or "Vencido" when it has already expired.
+ */
+export function formatActiveAlertRemaining(endDatetime: Date, now: number = Date.now()): string {
+  const remainingMs = endDatetime.getTime() - now;
+  if (remainingMs <= 0) return 'Vencido';
+
+  const totalMinutes = Math.floor(remainingMs / 60_000);
+  if (totalMinutes < 1) return '<1min';
+  if (totalMinutes < 60) return `${totalMinutes}min`;
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}min`;
+}
+
+/**
  * Parses the backend polygon string `"[lat,lon],[lat,lon],..."` (2-decimal,
  * latitude first) into Leaflet `[lat, lng]` pairs. Invalid pairs are skipped.
  */

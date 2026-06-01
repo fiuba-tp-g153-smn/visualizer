@@ -10,6 +10,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { ActiveAlertsService } from '../../../../../services/active-alerts/active-alerts.service';
 import { ActiveAlert } from '../../../../../models/geo';
 import { formatDateTimeLocalized } from '../../../../../utils/tileset-timestamp';
+import { formatActiveAlertRemaining } from '../../../../../utils/active-alert.utils';
 
 /**
  * Active alerts tab content: toggle to show active alerts, a manual refresh button
@@ -74,5 +75,9 @@ export class ActiveAlertsComponent {
 
   formatDate(date: Date): string {
     return formatDateTimeLocalized(date);
+  }
+
+  remaining(alert: ActiveAlert): string {
+    return formatActiveAlertRemaining(alert.endDatetime);
   }
 }
