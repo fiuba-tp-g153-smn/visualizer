@@ -283,7 +283,10 @@ function rotateWindMarkers(
     }
     const cx = box.x + box.width / 2;
     const cy = box.y + box.height / 2;
-    marker.setAttribute('transform', `rotate(${deg} ${cx} ${cy})`);
+    // +180°: the Apex triangle marker points up by default, while the right-click
+    // wind compass draws an inward (downward at N) arrow. Offset so both render the
+    // same bearing the same way — otherwise the chart triangles read inverted.
+    marker.setAttribute('transform', `rotate(${deg + 180} ${cx} ${cy})`);
   });
 }
 
@@ -297,17 +300,25 @@ function buildVariableChart(
   xLabels: XAxisLabels,
 ): SeriesChartVm {
   const unit = getDisplayUnit(variable.sourceUnit, unitsSettings);
-  const data = series.points.map((point) => {
-    const raw = variable.accessor(point);
-    return {
-      x: point.t,
-      y:
-        raw === null
-          ? null
-          : Math.round(convertValueForDisplay(raw, variable.sourceUnit, unitsSettings) * 10) / 10,
-    };
-  });
-  const ys = data.map((d) => d.y).filter((y): y is number => y !== null);
+  const toData = (accessor: (point: StationSeriesPoint) => number | null) =>
+    series.points.map((point) => {
+      const raw = accessor(point);
+      return {
+        x: point.t,
+        y:
+          raw === null
+            ? null
+            : Math.round(convertValueForDisplay(raw, variable.sourceUnit, unitsSettings) * 10) / 10,
+      };
+    });
+  const data = toData(variable.accessor);
+
+  // The temperature chart overlays the dew point (same °C scale) so the full-screen
+  // view matches the popover's Temperatura graph (Temperatura + Punto de rocío).
+  const isTemperature = variable.id === 'temperature';
+  const dewData = isTemperature ? toData((point) => point.dewPoint) : null;
+
+  const ys = [...data, ...(dewData ?? [])].map((d) => d.y).filter((y): y is number => y !== null);
   const hasData = ys.length > 0;
   const yRange = tightYRange(ys);
 
@@ -330,8 +341,13 @@ function buildVariableChart(
     unit,
     latestText,
     hasData,
-    colors: [variable.color],
-    series: [{ name: variable.label, data }],
+    colors: dewData ? [variable.color, DEW_COLOR] : [variable.color],
+    series: dewData
+      ? [
+          { name: variable.label, data },
+          { name: 'Punto de rocío', data: dewData },
+        ]
+      : [{ name: variable.label, data }],
     chart: {
       type: 'line',
       height: opts.height,

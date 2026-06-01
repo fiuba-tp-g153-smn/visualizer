@@ -91,9 +91,23 @@ describe('buildSeriesCharts', () => {
     const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
     expect(charts).toHaveLength(6);
     const temp = charts.find((c) => c.variable.id === 'temperature')!;
-    expect(temp.colors).toEqual(['#ff6b59']);
+    // Temperatura overlays the dew point, matching the popover's Temperatura graph.
+    expect(temp.series.map((s) => s.name)).toEqual(['Temperatura', 'Punto de rocío']);
+    expect(temp.colors).toEqual(['#ff6b59', '#003d5c']);
     expect(temp.stroke.curve).toBe('straight');
     expect(temp.chart.group).toBe('ws-48h'); // synced hover across charts
+
+    // Only Temperatura overlays the dew point; every other variable stays single-line.
+    const humidity = charts.find((c) => c.variable.id === 'humidity')!;
+    expect(humidity.series).toHaveLength(1);
+  });
+
+  it('spans both temperature and dew point in the Temperatura chart y-range', () => {
+    const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
+    const temp = charts.find((c) => c.variable.id === 'temperature')!;
+    // Data spans dew min 8 .. temp max 22; the snug range sits just outside that.
+    expect(Number(temp.yaxis.min)).toBeLessThan(8);
+    expect(Number(temp.yaxis.max)).toBeGreaterThanOrEqual(22);
   });
 
   it('shows dots, no guide lines, gridded bands; wind uses direction triangles', () => {
