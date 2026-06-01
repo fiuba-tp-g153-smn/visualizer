@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ACTIVE_ALERT_EXPIRY_COLORS,
   activeAlertColorForExpiry,
+  formatActiveAlertRemaining,
   parseActiveAlertPolygon,
   parseAffectedDepartments,
   toActiveAlert,
@@ -58,6 +59,26 @@ describe('activeAlertColorForExpiry', () => {
     expect(activeAlertColorForExpiry(inMinutes(10), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.RED);
     expect(activeAlertColorForExpiry(inMinutes(1), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.RED);
     expect(activeAlertColorForExpiry(inMinutes(-5), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.RED);
+  });
+});
+
+describe('formatActiveAlertRemaining', () => {
+  const now = new Date('2026-06-01T12:00:00').getTime();
+  const inMinutes = (m: number): Date => new Date(now + m * 60_000);
+
+  it('formats hours and minutes', () => {
+    expect(formatActiveAlertRemaining(inMinutes(135), now)).toBe('2h 15min');
+    expect(formatActiveAlertRemaining(inMinutes(120), now)).toBe('2h');
+  });
+
+  it('formats minutes only when under an hour', () => {
+    expect(formatActiveAlertRemaining(inMinutes(45), now)).toBe('45min');
+    expect(formatActiveAlertRemaining(inMinutes(1), now)).toBe('1min');
+  });
+
+  it('shows <1min for less than a minute and Vencido when expired', () => {
+    expect(formatActiveAlertRemaining(new Date(now + 30_000), now)).toBe('<1min');
+    expect(formatActiveAlertRemaining(inMinutes(-5), now)).toBe('Vencido');
   });
 });
 
