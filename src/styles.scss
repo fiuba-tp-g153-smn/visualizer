@@ -79,7 +79,7 @@ body {
 
 .weather-station-popup .leaflet-popup-content {
   margin: 9px 10px;
-  min-width: 235px;
+  min-width: 260px;
 }
 
 .weather-station-popup-card {
@@ -143,31 +143,19 @@ body {
 .weather-station-popup__trend-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 30px;
+  gap: 6px;
 }
 
 .weather-station-popup__trend-label {
-  flex: 0 0 88px;
-  font-size: 11px;
+  flex: 0 0 64px;
+  font-size: 10px;
   font-weight: 600;
+  line-height: 1.1;
 }
 
 .weather-station-popup__spark {
-  flex: 0 0 132px;
+  flex: 0 0 auto;
   display: block;
-
-  .apexcharts-canvas {
-    margin: 0 auto;
-  }
-}
-
-.weather-station-popup__trend-latest {
-  flex: 1 1 auto;
-  text-align: right;
-  font-size: 12px;
-  font-weight: 700;
-  color: #111827;
 }
 
 .weather-station-popup__history-btn.mat-mdc-outlined-button {
