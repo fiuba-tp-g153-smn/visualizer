@@ -125,12 +125,74 @@ body {
   }
 }
 
+.weather-station-popup__trend {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.weather-station-popup__trend-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.weather-station-popup__trend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.weather-station-popup__trend-label {
+  flex: 0 0 88px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.weather-station-popup__spark {
+  flex: 0 0 132px;
+  display: block;
+
+  .apexcharts-canvas {
+    margin: 0 auto;
+  }
+}
+
+.weather-station-popup__trend-latest {
+  flex: 1 1 auto;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.weather-station-popup__history-btn.mat-mdc-outlined-button {
+  margin-top: 8px;
+  width: 100%;
+  line-height: 30px;
+}
+
 .weather-station-popup__updated {
   margin-top: 7px;
   padding-top: 5px;
   border-top: 1px solid #e5e7eb;
   font-size: 10px;
   color: #6b7280;
+}
+
+// Full-screen dialog hosting the 48 h history charts.
+.ws-history-fullscreen {
+  max-width: 100vw !important;
+
+  .mat-mdc-dialog-surface {
+    border-radius: 0;
+    padding: 0;
+    overflow: hidden;
+  }
 }
 
 .weather-station-badge {

@@ -13,5 +13,43 @@
     }
   </ul>
 
+  @if (hasPreview()) {
+    <div class="weather-station-popup__trend">
+      <div class="weather-station-popup__trend-title">Últimas 48 h</div>
+      @for (vm of previewCharts(); track vm.variable.id) {
+        @if (vm.hasData) {
+          <div class="weather-station-popup__trend-row">
+            <span class="weather-station-popup__trend-label" [style.color]="vm.variable.color">
+              {{ vm.variable.label }}
+            </span>
+            <apx-chart
+              class="weather-station-popup__spark"
+              [series]="vm.series"
+              [chart]="vm.chart"
+              [stroke]="vm.stroke"
+              [colors]="vm.colors"
+              [tooltip]="vm.tooltip"
+              [xaxis]="vm.xaxis"
+              [yaxis]="vm.yaxis"
+              [dataLabels]="vm.dataLabels"
+              [grid]="vm.grid"
+            ></apx-chart>
+            <span class="weather-station-popup__trend-latest">{{ vm.latestText }}</span>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <button
+    mat-stroked-button
+    type="button"
+    class="weather-station-popup__history-btn"
+    (click)="openFullScreen()"
+  >
+    <mat-icon>insights</mat-icon>
+    Ver en pantalla completa
+  </button>
+
   <div class="weather-station-popup__updated">Actualizado: {{ data.updatedAt }}</div>
 </div>
