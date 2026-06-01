@@ -1,5 +1,5 @@
 import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../../constants';
-import { buildLinearScale } from '../scale-builders';
+import { buildScaleFromLinearGradient } from '../scale-builders';
 
 // Paleta base de temperatura: mismos colores anclados a los mismos °C en ambas escalas.
 // Temperatura usa esta paleta completa (-30 a 40 °C).
@@ -30,7 +30,7 @@ const FEELS_LIKE_COLORS = [
 ] as const;
 
 // Temperatura: -30 °C a 40 °C (8 stops cada 10 °C → en Kelvin: 243.15–313.15)
-export const TEMPERATURE_SCALE = buildLinearScale({
+export const TEMPERATURE_SCALE = buildScaleFromLinearGradient({
   min: 243.15,
   max: 313.15,
   unit: TEMPERATURE_UNITS.KELVIN,
@@ -41,7 +41,7 @@ export const TEMPERATURE_SCALE = buildLinearScale({
 
 // Sensación térmica: -40 °C a 50 °C (10 stops cada 10 °C → en Kelvin: 233.15–323.15)
 // Rango extendido para capturar wind chill y heat index extremos.
-export const FEELS_LIKE_SCALE = buildLinearScale({
+export const FEELS_LIKE_SCALE = buildScaleFromLinearGradient({
   min: 233.15,
   max: 323.15,
   unit: TEMPERATURE_UNITS.KELVIN,
@@ -51,7 +51,7 @@ export const FEELS_LIKE_SCALE = buildLinearScale({
 });
 
 // Humedad: 0–100 % (5 stops cada 25 %)
-export const HUMIDITY_SCALE = buildLinearScale({
+export const HUMIDITY_SCALE = buildScaleFromLinearGradient({
   min: 0,
   max: 100,
   unit: WEATHER_STATION_UNITS.HUMIDITY,
@@ -61,7 +61,7 @@ export const HUMIDITY_SCALE = buildLinearScale({
 });
 
 // Presión: 980–1040 hPa (7 stops cada 10 hPa)
-export const PRESSURE_SCALE = buildLinearScale({
+export const PRESSURE_SCALE = buildScaleFromLinearGradient({
   min: 980,
   max: 1040,
   unit: WEATHER_STATION_UNITS.PRESSURE,
@@ -71,7 +71,7 @@ export const PRESSURE_SCALE = buildLinearScale({
 });
 
 // Visibilidad: 0–50 km (6 stops cada 10 km)
-export const VISIBILITY_SCALE = buildLinearScale({
+export const VISIBILITY_SCALE = buildScaleFromLinearGradient({
   min: 0,
   max: 50,
   unit: WEATHER_STATION_UNITS.VISIBILITY,
@@ -81,7 +81,7 @@ export const VISIBILITY_SCALE = buildLinearScale({
 });
 
 // Viento: 0–90 km/h (7 stops cada 15 km/h)
-export const WIND_SPEED_SCALE = buildLinearScale({
+export const WIND_SPEED_SCALE = buildScaleFromLinearGradient({
   min: 0,
   max: 90,
   unit: WEATHER_STATION_UNITS.WIND_SPEED,

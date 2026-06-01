@@ -48,8 +48,6 @@ export interface LayerScale {
   subTickCount?: number;
   labelValues?: readonly number[];
   labelScale?: ScaleLabelScale;
-  labelDomain?: readonly [number, number];
-  // Optional clipping window applied consistently to labels and colors.
   clipRange?: readonly [number, number];
 }
 
