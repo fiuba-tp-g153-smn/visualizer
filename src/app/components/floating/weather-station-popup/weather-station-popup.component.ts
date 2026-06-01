@@ -63,8 +63,10 @@ export class WeatherStationPopupComponent implements OnInit {
       group: 'ws-48h-preview',
       sparkline: true,
       utc: this.timezone.mode() === TIMEZONE_MODES.UTC,
-      height: 34,
-      width: 132,
+      height: 30,
+      // Explicit width: the popup element is detached when ApexCharts renders, so
+      // a parent-relative width would draw an empty 0-px chart (no line).
+      width: 184,
     });
   });
 
