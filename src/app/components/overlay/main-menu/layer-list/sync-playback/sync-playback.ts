@@ -88,9 +88,17 @@ export class SyncPlaybackComponent {
   readonly frameEdgeMin = computed(() => this.edgeLabel(0));
   readonly frameEdgeMax = computed(() => this.edgeLabel(this.effectiveFrameCount() - 1));
 
+  readonly frameEdgeMinFull = computed(() => this.edgeFullLabel(0));
+  readonly frameEdgeMaxFull = computed(() => this.edgeFullLabel(this.effectiveFrameCount() - 1));
+
   private edgeLabel(frameIndex: number): string {
     const info = this.syncService.getFrameInfo(frameIndex);
     return info ? formatDateTimeOnly(info.avgTime) : '--:--';
+  }
+
+  private edgeFullLabel(frameIndex: number): string {
+    const info = this.syncService.getFrameInfo(frameIndex);
+    return info ? formatDateFull(info.avgTime) : '--:--';
   }
 
   isLayerSelected(layerId: string): boolean {
