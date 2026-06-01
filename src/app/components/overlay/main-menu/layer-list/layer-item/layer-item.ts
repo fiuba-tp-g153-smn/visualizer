@@ -181,7 +181,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     switch (this.layer.type) {
       case LayerType.TILE: {
         const staticOptions = this.layer.availablePeriods ?? [1];
-        if (this.layer.category === LayerCategory.ECMWF_TP) {
+        // ECMWF y WRF: reemplazan el preset máximo por el tamaño de la unión
+        // de corridas para poder animar todos los frames (incl. el último que
+        // el cap estático dejaría afuera).
+        if (
+          this.layer.category === LayerCategory.ECMWF_TP ||
+          this.layer.category === LayerCategory.WRF
+        ) {
           const tilesets = this.getAvailableTilesetsForLayer();
           if (tilesets && tilesets.length > 0) {
             return buildEcmwfTpFrameOptions(staticOptions, tilesets.length);

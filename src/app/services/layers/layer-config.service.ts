@@ -350,13 +350,22 @@ export class LayerConfigService {
                 Object.assign(layersByStep, r.layersByStep);
               });
 
-              const forecastsByPeriod = this.buildForecastsByPeriod(periodsByForecast);
+              // forecastsByPeriod (reverse lookup epoch→corridas) se reconstruye
+              // sobre TODAS las corridas para que pasos recién publicados sean
+              // descubribles.
+              const { forecastsByPeriod } = this.buildWrfTimeline(periodsByForecast, initRuns);
 
-              const firstSteps = periodsByForecast[initRuns[0]] ?? [];
-              const availableTilesets: TilesetEntry[] = firstSteps.map((fxxx) => ({
-                id: fxxx,
-                time: parseWrfStepTimestamp(initRuns[0], fxxx) ?? new Date(0),
-              }));
+              // availableTilesets es una vista derivada de la selección
+              // (updateWrfSelectedForecasts). Si ya existe config, preservarla
+              // verbatim: re-sembrarla desde initRuns[0] en cada auto-refresh
+              // (cada 10s) pisaría la unión seleccionada por el usuario. A
+              // diferencia de ECMWF, WRF no tiene efecto de reconciliación que
+              // la restaure. En el primer fetch (sin config previa) se siembra
+              // con la corrida más reciente como default sensato.
+              const existing = this.configMap().get(layer.id) as WrfTileLayerConfig | undefined;
+              const availableTilesets: TilesetEntry[] = existing
+                ? [...existing.availableTilesets]
+                : this.buildWrfTimeline(periodsByForecast, [initRuns[0]]).availableTilesets;
 
               const config: WrfTileLayerConfig = {
                 layerId: layer.id,
@@ -384,33 +393,30 @@ export class LayerConfigService {
    * Recalcula `availableTilesets` para una capa WRF en base a los init_tags
    * seleccionados. Espejo de `updateEcmwfTpSelectedForecasts`.
    */
-  updateWrfSelectedForecasts(layerId: string, selectedInitTags: string[]): void {
+  updateWrfSelectedForecasts(
+    layerId: string,
+    selectedInitTags: string[],
+  ): WrfTileLayerConfig | undefined {
     const config = this.getConfig(layerId) as WrfTileLayerConfig | undefined;
-    if (!config || config.category !== LayerCategory.WRF) return;
+    if (!config || config.category !== LayerCategory.WRF) return undefined;
 
-    const stepSet = new Set<string>();
-    for (const initTag of selectedInitTags) {
-      const steps = config.periodsByForecast[initTag];
-      if (steps) for (const s of steps) stepSet.add(s);
-    }
+    // Unión por instante absoluto: corridas que coinciden en una misma hora
+    // comparten frame (overlap real); las que no, aportan frames propios.
+    const { availableTilesets, forecastsByPeriod } = this.buildWrfTimeline(
+      config.periodsByForecast,
+      selectedInitTags,
+    );
 
-    const selectedPeriodsByForecast: Record<string, string[]> = {};
-    for (const initTag of selectedInitTags) {
-      selectedPeriodsByForecast[initTag] = config.periodsByForecast[initTag] ?? [];
-    }
-
-    const sortedSteps = [...stepSet].sort();
-    const referenceInit = selectedInitTags[0] ?? config.availableForecasts[0];
-    const availableTilesets: TilesetEntry[] = sortedSteps.map((fxxx) => ({
-      id: fxxx,
-      time: parseWrfStepTimestamp(referenceInit, fxxx) ?? new Date(0),
-    }));
-
-    this.updateConfigMap(layerId, {
+    // Se devuelve sincrónicamente para que el caller lea la nueva unión de
+    // inmediato — el write del signal en updateConfigMap es diferido vía
+    // queueMicrotask, así que getConfig() justo después vería la anterior.
+    const newConfig: WrfTileLayerConfig = {
       ...config,
       availableTilesets,
-      forecastsByPeriod: this.buildForecastsByPeriod(selectedPeriodsByForecast),
-    });
+      forecastsByPeriod,
+    };
+    this.updateConfigMap(layerId, newConfig);
+    return newConfig;
   }
 
   // ============================================================================
@@ -527,6 +533,39 @@ export class LayerConfigService {
       if (!this.stringArraysAreEqual(a[key], bArr)) return false;
     }
     return true;
+  }
+
+  /**
+   * Construye el timeline WRF keyado por instante ABSOLUTO (no por fxxx),
+   * de forma análoga a ECMWF. Une los pasos de todas las corridas indicadas:
+   * pasos de distintas corridas que caen en la misma hora absoluta comparten
+   * frame; el id de cada tileset es el epoch (`String(time.getTime())`).
+   *
+   * Devuelve también el reverse lookup `forecastsByPeriod[absId] = init_tags`
+   * que tienen un paso en ese instante. El fxxx concreto por corrida se
+   * deriva en tiempo de render con `wrfFxxxForInitAndTime(initTag, time)`.
+   */
+  private buildWrfTimeline(
+    periodsByForecast: Readonly<Record<string, string[]>>,
+    initTags: readonly string[],
+  ): { availableTilesets: TilesetEntry[]; forecastsByPeriod: Record<string, string[]> } {
+    const byTime = new Map<string, { time: Date; inits: string[] }>();
+    for (const initTag of initTags) {
+      for (const fxxx of periodsByForecast[initTag] ?? []) {
+        const time = parseWrfStepTimestamp(initTag, fxxx);
+        if (!time) continue;
+        const id = String(time.getTime());
+        const entry = byTime.get(id) ?? { time, inits: [] };
+        entry.inits.push(initTag);
+        byTime.set(id, entry);
+      }
+    }
+
+    const sorted = [...byTime.entries()].sort((a, b) => a[1].time.getTime() - b[1].time.getTime());
+    const availableTilesets: TilesetEntry[] = sorted.map(([id, e]) => ({ id, time: e.time }));
+    const forecastsByPeriod: Record<string, string[]> = {};
+    for (const [id, e] of sorted) forecastsByPeriod[id] = e.inits;
+    return { availableTilesets, forecastsByPeriod };
   }
 
   /**
