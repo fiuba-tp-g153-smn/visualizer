@@ -50,7 +50,7 @@ import {
   buildSatellitePointQueryUrl,
 } from '../../config';
 import { buildWrfPointQueryUrl } from '../../config/backend.config';
-import { formatEcmwfForecastTs, formatWrfInitTag } from '../../utils/tileset-timestamp';
+import { formatDateFull, parseEcmwfTimestamp, formatWrfInitTag } from '../../utils/tileset-timestamp';
 
 interface MouseCoordinates {
   lat: number;
@@ -189,7 +189,8 @@ export class PointQueryViewerService {
 
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
-          const forecastLabel = formatEcmwfForecastTs(forecastTs);
+          const forecastDate = parseEcmwfTimestamp(forecastTs);
+          const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
 
           const entries: DisplaySourceItem[] = [
             {

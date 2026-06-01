@@ -40,7 +40,7 @@ import { SyncPlaybackService } from '../../../../../services/layers/sync-playbac
 import {
   formatDateFull,
   formatDateTimeOnly,
-  formatEcmwfForecastTs,
+  parseEcmwfTimestamp,
   formatWrfInitTag,
 } from '../../../../../utils/tileset-timestamp';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
@@ -811,13 +811,19 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Formats a forecast timestamp / WRF init_tag for display.
+   * Formats an ECMWF forecast run timestamp as "HH:MM" for the selector label.
    */
-  formatForecastTs(forecastTs: string): string {
-    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
-      return formatWrfInitTag(forecastTs);
-    }
-    return formatEcmwfForecastTs(forecastTs);
+  formatForecastTime(forecastTs: string): string {
+    const date = parseEcmwfTimestamp(forecastTs);
+    return date ? formatDateTimeOnly(date) : forecastTs;
+  }
+
+  /**
+   * Formats an ECMWF forecast run timestamp as "YYYY-MM-DD HH:MM" for its tooltip.
+   */
+  formatForecastFull(forecastTs: string): string {
+    const date = parseEcmwfTimestamp(forecastTs);
+    return date ? formatDateFull(date) : forecastTs;
   }
 
   /**
