@@ -1,7 +1,13 @@
 :host {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: #111827;
+}
+
+// Both tab panels share a min-height so switching tabs doesn't resize the popover.
+.ws-card__current,
+.ws-card__graph {
+  min-height: 190px;
 }
 
 .ws-card__header {
@@ -119,15 +125,25 @@
   color: #6b7280;
 }
 
-.ws-card__graph {
-  min-height: 230px;
-}
-
 .ws-card__state {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
+  min-height: 150px;
   color: #6b7280;
-  font-size: 12px;
+  font-size: 13px;
+}
+
+.ws-card__all-link {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-weight: 600;
+  color: #0090d0;
+  text-align: center;
+  cursor: pointer;
 }

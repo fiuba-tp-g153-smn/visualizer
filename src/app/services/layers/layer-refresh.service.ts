@@ -573,11 +573,13 @@ export class LayerRefreshService {
     return {
       date: o.observed_at ?? '',
       station_id: o.station_id,
-      temperature: o.temperature ?? 0,
-      feels_like: o.feels_like ?? 0,
-      humidity: o.humidity ?? 0,
-      pressure: o.pressure ?? 0,
-      visibility: o.visibility ?? 0,
+      // Preserve null for every reading so the popup renders "—" (and the marker
+      // is skipped) instead of a misleading 0 when SMN doesn't report a value.
+      temperature: o.temperature,
+      feels_like: o.feels_like,
+      humidity: o.humidity,
+      pressure: o.pressure,
+      visibility: o.visibility,
       weather: o.weather ?? { id: 0, description: '' },
       wind: o.wind ?? { direction: 'Calma', deg: 0, speed: null },
     };

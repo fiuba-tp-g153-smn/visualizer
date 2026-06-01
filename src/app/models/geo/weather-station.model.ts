@@ -41,12 +41,12 @@ export interface WeatherWindDto {
 
 export interface CurrentWeatherStationDto {
   date: string;
-  feels_like: number;
-  humidity: number;
-  pressure: number;
+  feels_like: number | null;
+  humidity: number | null;
+  pressure: number | null;
   station_id: number;
-  temperature: number;
-  visibility: number;
+  temperature: number | null;
+  visibility: number | null;
   weather: WeatherPhenomenonDto;
   wind: WeatherWindDto;
 }

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { NgApexchartsModule } from 'ng-apexcharts';
 
 import { TEMPERATURE_UNITS } from '../../../constants';
@@ -13,6 +14,10 @@ import {
 } from '../../../services/settings/timezone-settings.service';
 import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
 import { WindCompassComponent } from '../wind-compass/wind-compass.component';
+import {
+  WeatherStationHistoryChartsComponent,
+  WeatherStationHistoryChartsData,
+} from '../weather-station-history-charts/weather-station-history-charts.component';
 
 export interface WeatherStationPopupItem {
   label: string;
@@ -60,6 +65,7 @@ export class WeatherStationPopupComponent implements OnInit {
   private readonly historyService = inject(WeatherStationsHistoryService);
   private readonly unitsSettings = inject(UnitsSettingsService);
   private readonly timezone = inject(TimezoneSettingsService);
+  private readonly dialog = inject(MatDialog);
 
   private readonly series = signal<StationSeries | null>(null);
   readonly loading = signal<boolean>(true);
@@ -88,8 +94,9 @@ export class WeatherStationPopupComponent implements OnInit {
     }
     return buildTempDewChart(current, this.unitsSettings, {
       utc: this.timezone.mode() === TIMEZONE_MODES.UTC,
-      height: 210,
-      width: 308,
+      // Sized so chart + legend ≈ the Actual tab's height (popover doesn't resize).
+      height: 150,
+      width: 326,
     });
   });
 
@@ -107,6 +114,25 @@ export class WeatherStationPopupComponent implements OnInit {
 
   setTab(tab: PopupTab): void {
     this.tab.set(tab);
+  }
+
+  openFullScreen(): void {
+    this.dialog.open<WeatherStationHistoryChartsComponent, WeatherStationHistoryChartsData>(
+      WeatherStationHistoryChartsComponent,
+      {
+        panelClass: 'ws-history-fullscreen',
+        width: '100vw',
+        maxWidth: '100vw',
+        height: '100vh',
+        autoFocus: false,
+        data: {
+          stationId: this.data.stationId,
+          stationName: this.data.stationName,
+          province: this.data.province,
+          series: this.series(),
+        },
+      },
+    );
   }
 
   private async loadSeries(): Promise<void> {

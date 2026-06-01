@@ -1,0 +1,106 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ws-history {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  color: #111827;
+}
+
+.ws-history__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.ws-history__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.ws-history__province {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.ws-history__subtitle {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ws-history__close {
+  flex: 0 0 auto;
+}
+
+.ws-history__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 20px 24px;
+}
+
+.ws-history__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 240px;
+  color: #6b7280;
+}
+
+.ws-history__charts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.ws-history__chart {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 4px 0;
+}
+
+.ws-history__chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.ws-history__chart-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.ws-history__chart-latest {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ws-history__chart-empty {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
