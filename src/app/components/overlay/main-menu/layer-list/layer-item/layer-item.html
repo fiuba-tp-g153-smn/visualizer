@@ -208,9 +208,10 @@
                   <mat-checkbox
                     [checked]="isForecastSelected(forecast)"
                     (change)="onForecastToggle(forecast)"
+                    [matTooltip]="formatForecastFull(forecast)"
                     class="forecast-checkbox"
                   >
-                    {{ formatForecastTs(forecast) }}
+                    <span class="forecast-ts">{{ formatForecastTime(forecast) }}</span>
                   </mat-checkbox>
                 }
               </div>
@@ -234,9 +235,10 @@
                   <mat-checkbox
                     [checked]="isForecastSelected(forecast)"
                     (change)="onForecastToggle(forecast)"
+                    [matTooltip]="formatForecastFull(forecast)"
                     class="forecast-item-checkbox"
                   >
-                    {{ formatForecastTs(forecast) }}
+                    <span class="forecast-ts">{{ formatForecastTime(forecast) }}</span>
                   </mat-checkbox>
                   <mat-slider
                     min="0"
@@ -373,7 +375,9 @@
               @if (hasTimeControl()) {
                 <!-- Slider de tiempo con play -->
                 <div class="time-slider-container">
-                  <span class="time-min">{{ getTimeOnly(minTimeIndex()) }}</span>
+                  <span class="time-min" [matTooltip]="getTimeLabel(minTimeIndex())">{{
+                    getTimeOnly(minTimeIndex())
+                  }}</span>
                   <mat-slider
                     [min]="minTimeIndex()"
                     [max]="maxTimeIndex()"
@@ -389,7 +393,9 @@
                       (valueChange)="onTimeIndexChange($event)"
                     />
                   </mat-slider>
-                  <span class="time-max">{{ getTimeOnly(maxTimeIndex()) }}</span>
+                  <span class="time-max" [matTooltip]="getTimeLabel(maxTimeIndex())">{{
+                    getTimeOnly(maxTimeIndex())
+                  }}</span>
                   <button
                     mat-icon-button
                     (click)="togglePlayback()"
