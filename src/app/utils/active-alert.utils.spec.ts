@@ -68,8 +68,8 @@ describe('toActiveAlert', () => {
       phenomenon: 'TORMENTAS',
       area: '<b>BUENOS AIRES:</b> La Matanza.',
       polygon: '[-34.60,-58.50],[-34.70,-58.40]',
-      start_datetime: '2026-06-01T10:00:00',
-      end_datetime: '2026-06-01T13:00:00',
+      start_datetime: '2026-06-01T10:00:00Z',
+      end_datetime: '2026-06-01T13:00:00Z',
     };
 
     const alert = toActiveAlert(res);
@@ -81,7 +81,8 @@ describe('toActiveAlert', () => {
       [-34.6, -58.5],
       [-34.7, -58.4],
     ]);
-    expect(alert.startDatetime).toEqual(new Date('2026-06-01T10:00:00'));
-    expect(alert.endDatetime).toEqual(new Date('2026-06-01T13:00:00'));
+    // The 'Z' suffix must be interpreted as UTC (independent of the runner's tz).
+    expect(alert.startDatetime.getTime()).toBe(Date.UTC(2026, 5, 1, 10, 0, 0));
+    expect(alert.endDatetime.getTime()).toBe(Date.UTC(2026, 5, 1, 13, 0, 0));
   });
 });
