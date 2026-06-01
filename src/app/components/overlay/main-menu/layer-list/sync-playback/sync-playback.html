@@ -18,7 +18,9 @@
             @if (availableFrameCounts().length > 0) {
               @if (isAligned()) {
                 <div class="time-slider-container">
-                  <span class="time-min">{{ frameEdgeMin() }}</span>
+                  <span class="time-min" [matTooltip]="frameEdgeMinFull()">{{
+                    frameEdgeMin()
+                  }}</span>
                   <mat-slider
                     min="0"
                     [max]="effectiveFrameCount() - 1"
@@ -33,7 +35,9 @@
                       (valueChange)="onFrameIndexChange($event)"
                     />
                   </mat-slider>
-                  <span class="time-max">{{ frameEdgeMax() }}</span>
+                  <span class="time-max" [matTooltip]="frameEdgeMaxFull()">{{
+                    frameEdgeMax()
+                  }}</span>
                   <button
                     mat-icon-button
                     (click)="togglePlayback()"
