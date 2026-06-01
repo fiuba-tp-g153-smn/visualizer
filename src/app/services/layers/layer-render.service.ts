@@ -46,10 +46,12 @@ import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../constants';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import {
   convertCelsiusToKelvin,
+  convertKilometersPerHourToKnots,
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
 import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import { windBarbSvg } from '../../utils/wind-barb.util';
 import {
   WeatherStationPopupComponent,
   WeatherStationPopupData,
@@ -270,6 +272,12 @@ export class LayerRenderService {
     const STALE_COLOR = '#9ca3af';
     const STALE_TOOLTIP = 'Sin datos en el período solicitado';
 
+    // Wind barbs are much larger than a badge, so they need extra spacing before
+    // colliding; widen the density thresholds for the wind layer so crowded barbs
+    // collapse to dots (the de-clutter) sooner when zooming out.
+    const declutterFactor =
+      stationLayer.variable === WeatherStationVariable.WIND_SPEED ? 4 : 1;
+
     for (const point of visiblePoints) {
       const observation = point.observation;
       const value = point.value;
@@ -280,11 +288,13 @@ export class LayerRenderService {
       const denseThresholdMeters =
         circleDiameterPx *
         point.metersPerPixel *
-        WEATHER_STATION_RENDER_CONFIG.density.denseDistanceMultiplier;
+        WEATHER_STATION_RENDER_CONFIG.density.denseDistanceMultiplier *
+        declutterFactor;
       const mediumThresholdMeters =
         badgeDiameterPx *
         point.metersPerPixel *
-        WEATHER_STATION_RENDER_CONFIG.density.mediumDistanceMultiplier;
+        WEATHER_STATION_RENDER_CONFIG.density.mediumDistanceMultiplier *
+        declutterFactor;
 
       const level: WeatherStationRenderLevel =
         point.nearestDistMeters <= denseThresholdMeters
@@ -297,8 +307,32 @@ export class LayerRenderService {
       // share the same effective z-index inside the pane.
       const sharedZIndexOffset = -Math.round(point.px.y);
 
+      // When the wind variable is selected, draw a standard wind barb instead of
+      // the value badge (except at the densest DOT level, to avoid overlap).
+      const isWindBarb =
+        stationLayer.variable === WeatherStationVariable.WIND_SPEED &&
+        level !== WeatherStationRenderLevel.DOT;
+
       let marker: L.Marker;
-      if (level === WeatherStationRenderLevel.DOT) {
+      if (isWindBarb) {
+        const knots = convertKilometersPerHourToKnots(observation.weather.wind.speed ?? 0);
+        const { value: tempValue } = this.resolveWeatherStationsTemperatureDisplay(
+          observation.weather.temperature,
+        );
+        const tempLabel =
+          tempValue === null || Number.isNaN(tempValue) ? '' : String(Math.round(tempValue));
+        const textColor = this.resolveWeatherStationsContrastingTextColor(color);
+        const icon = this.buildWeatherStationsWindBarbIcon(
+          knots,
+          observation.weather.wind.deg,
+          Math.round(badgeDiameterPx * 3),
+          badgeDiameterPx,
+          color,
+          textColor,
+          tempLabel,
+        );
+        marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
+      } else if (level === WeatherStationRenderLevel.DOT) {
         const icon = this.buildWeatherStationsDotIcon(
           dotRadiusPx * 2,
           color,
@@ -410,6 +444,30 @@ export class LayerRenderService {
       html: `<div class="weather-station-badge" style="--weather-badge-size:${diameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;">${value}</div>`,
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
+    });
+  }
+
+  /**
+   * Wind marker = the solid value badge (its prior aesthetic, here carrying the
+   * temperature) with a black wind barb behind it, overflowing to the outside.
+   */
+  private buildWeatherStationsWindBarbIcon(
+    speedKnots: number,
+    deg: number | null,
+    sizePx: number,
+    badgeDiameterPx: number,
+    backgroundColor: string,
+    textColor: string,
+    label: string,
+  ): L.DivIcon {
+    const barb = windBarbSvg(speedKnots, deg, { size: sizePx, color: '#111827' });
+    const fontSizePx = WEATHER_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
+    const badge = `<div class="weather-station-badge" style="--weather-badge-size:${badgeDiameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);">${label}</div>`;
+    return L.divIcon({
+      className: 'weather-station-divicon',
+      html: `<div style="position:relative;width:${sizePx}px;height:${sizePx}px;">${barb}${badge}</div>`,
+      iconSize: [sizePx, sizePx],
+      iconAnchor: [sizePx / 2, sizePx / 2],
     });
   }
 
