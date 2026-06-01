@@ -205,14 +205,13 @@
               <!-- Collapsed view: checkboxes -->
               <div class="forecast-checkboxes">
                 @for (forecast of availableForecasts(); track forecast) {
-                  @let parts = formatForecastTsParts(forecast);
                   <mat-checkbox
                     [checked]="isForecastSelected(forecast)"
                     (change)="onForecastToggle(forecast)"
-                    [matTooltip]="parts.date + ' ' + parts.time"
+                    [matTooltip]="formatForecastFull(forecast)"
                     class="forecast-checkbox"
                   >
-                    <span class="forecast-ts">{{ parts.time }}</span>
+                    <span class="forecast-ts">{{ formatForecastTime(forecast) }}</span>
                   </mat-checkbox>
                 }
               </div>
@@ -232,15 +231,14 @@
           @if (isForecastsExpanded()) {
             <div class="forecast-expanded-controls">
               @for (forecast of availableForecasts(); track forecast) {
-                @let parts = formatForecastTsParts(forecast);
                 <div class="forecast-item">
                   <mat-checkbox
                     [checked]="isForecastSelected(forecast)"
                     (change)="onForecastToggle(forecast)"
-                    [matTooltip]="parts.date + ' ' + parts.time"
+                    [matTooltip]="formatForecastFull(forecast)"
                     class="forecast-item-checkbox"
                   >
-                    <span class="forecast-ts">{{ parts.time }}</span>
+                    <span class="forecast-ts">{{ formatForecastTime(forecast) }}</span>
                   </mat-checkbox>
                   <mat-slider
                     min="0"

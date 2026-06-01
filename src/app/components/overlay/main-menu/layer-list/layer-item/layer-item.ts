@@ -38,8 +38,7 @@ import { SyncPlaybackService } from '../../../../../services/layers/sync-playbac
 import {
   formatDateFull,
   formatDateTimeOnly,
-  formatEcmwfForecastTsParts,
-  type EcmwfForecastTsParts,
+  parseEcmwfTimestamp,
 } from '../../../../../utils/tileset-timestamp';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
@@ -791,11 +790,19 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * Formats an ECMWF forecast timestamp into separate date/time parts for the
-   * selector (time label) and its full-timestamp tooltip.
+   * Formats an ECMWF forecast run timestamp as "HH:MM" for the selector label.
    */
-  formatForecastTsParts(forecastTs: string): EcmwfForecastTsParts {
-    return formatEcmwfForecastTsParts(forecastTs);
+  formatForecastTime(forecastTs: string): string {
+    const date = parseEcmwfTimestamp(forecastTs);
+    return date ? formatDateTimeOnly(date) : forecastTs;
+  }
+
+  /**
+   * Formats an ECMWF forecast run timestamp as "YYYY-MM-DD HH:MM" for its tooltip.
+   */
+  formatForecastFull(forecastTs: string): string {
+    const date = parseEcmwfTimestamp(forecastTs);
+    return date ? formatDateFull(date) : forecastTs;
   }
 
   /**

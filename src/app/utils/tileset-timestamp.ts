@@ -82,22 +82,6 @@ export function parseEcmwfTimestamp(ts: string): Date | null {
   return new Date(Date.UTC(year, month, day, hour, minute, 0));
 }
 
-/**
- * Splits an ECMWF forecast timestamp into separate date and time parts.
- * Example: "20260502T1200Z" → { date: "2026-05-02", time: "12:00" }
- */
-export interface EcmwfForecastTsParts {
-  readonly date: string;
-  readonly time: string;
-}
-
-export function formatEcmwfForecastTsParts(forecastTs: string): EcmwfForecastTsParts {
-  const date = parseEcmwfTimestamp(forecastTs);
-  if (!date) return { date: forecastTs, time: '' };
-
-  return { date: formatDateOnly(date), time: formatDateTimeOnly(date) };
-}
-
 // ============================================================================
 // Generic Formatting
 // ============================================================================
