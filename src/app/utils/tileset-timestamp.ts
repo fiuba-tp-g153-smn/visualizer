@@ -92,14 +92,10 @@ export interface EcmwfForecastTsParts {
 }
 
 export function formatEcmwfForecastTsParts(forecastTs: string): EcmwfForecastTsParts {
-  if (forecastTs.length < 13) return { date: forecastTs, time: '' };
+  const date = parseEcmwfTimestamp(forecastTs);
+  if (!date) return { date: forecastTs, time: '' };
 
-  const year = forecastTs.substring(0, 4);
-  const month = forecastTs.substring(4, 6);
-  const day = forecastTs.substring(6, 8);
-  const hour = forecastTs.substring(9, 11);
-  const minute = forecastTs.substring(11, 13);
-  return { date: `${year}-${month}-${day}`, time: `${hour}:${minute}` };
+  return { date: formatDateOnly(date), time: formatDateTimeOnly(date) };
 }
 
 // ============================================================================
@@ -117,14 +113,21 @@ export function formatDateTimeOnly(date: Date): string {
 }
 
 /**
- * Formats a Date as "YYYY-MM-DD HH:MM".
+ * Formats a Date as "YYYY-MM-DD".
  */
-export function formatDateFull(date: Date): string {
+export function formatDateOnly(date: Date): string {
   const yyyy = shouldUseUtc() ? date.getUTCFullYear() : date.getFullYear();
   const mo = String((shouldUseUtc() ? date.getUTCMonth() : date.getMonth()) + 1).padStart(2, '0');
   const dd = String(shouldUseUtc() ? date.getUTCDate() : date.getDate()).padStart(2, '0');
 
-  return `${yyyy}-${mo}-${dd} ${formatDateTimeOnly(date)}`;
+  return `${yyyy}-${mo}-${dd}`;
+}
+
+/**
+ * Formats a Date as "YYYY-MM-DD HH:MM".
+ */
+export function formatDateFull(date: Date): string {
+  return `${formatDateOnly(date)} ${formatDateTimeOnly(date)}`;
 }
 
 /**
