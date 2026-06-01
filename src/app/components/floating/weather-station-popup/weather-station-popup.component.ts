@@ -5,8 +5,14 @@ import { NgApexchartsModule } from 'ng-apexcharts';
 
 import { TEMPERATURE_UNITS } from '../../../constants';
 import { StationSeries } from '../../../models/geo/weather-station-series.model';
+import {
+  LayerCategory,
+  WeatherStationLayer,
+  WeatherStationVariable,
+} from '../../../models/layers/models';
 import { WeatherStationsHistoryService } from '../../../services/layers/weather-stations-history.service';
-import { buildTempDewChart } from '../../../services/layers/weather-station-chart.util';
+import { LayerControlService } from '../../../services/layers/layer-control.service';
+import { buildTabChart } from '../../../services/layers/weather-station-chart.util';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import {
   TIMEZONE_MODES,
@@ -66,6 +72,18 @@ export class WeatherStationPopupComponent implements OnInit {
   private readonly unitsSettings = inject(UnitsSettingsService);
   private readonly timezone = inject(TimezoneSettingsService);
   private readonly dialog = inject(MatDialog);
+  private readonly layerControl = inject(LayerControlService);
+
+  /** The SMN variable currently selected on the map (defaults to Temperatura). */
+  private readonly selectedVariable = computed<WeatherStationVariable>(() => {
+    const entry = this.layerControl
+      .activeLayers()
+      .find((e) => e.layer.category === LayerCategory.WEATHER_STATIONS);
+    return (
+      (entry?.layer as WeatherStationLayer | undefined)?.variable ??
+      WeatherStationVariable.TEMPERATURE
+    );
+  });
 
   private readonly series = signal<StationSeries | null>(null);
   readonly loading = signal<boolean>(true);
@@ -86,13 +104,13 @@ export class WeatherStationPopupComponent implements OnInit {
     return `${value.toFixed(1)} ${unit}`.trim();
   });
 
-  /** The Temperatura + Punto de rocío chart (null until the series loads). */
+  /** Chart for the variable selected on the map (null until the series loads). */
   readonly chart = computed(() => {
     const current = this.series();
     if (!current) {
       return null;
     }
-    return buildTempDewChart(current, this.unitsSettings, {
+    return buildTabChart(current, this.selectedVariable(), this.unitsSettings, {
       utc: this.timezone.mode() === TIMEZONE_MODES.UTC,
       // Sized so chart + legend ≈ the Actual tab's height (popover doesn't resize).
       height: 150,

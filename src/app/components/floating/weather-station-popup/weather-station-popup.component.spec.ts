@@ -10,6 +10,8 @@ import {
 } from './weather-station-popup.component';
 import { WindCompassComponent } from '../wind-compass/wind-compass.component';
 import { WeatherStationsHistoryService } from '../../../services/layers/weather-stations-history.service';
+import { LayerControlService } from '../../../services/layers/layer-control.service';
+import { LayerCategory, WeatherStationVariable } from '../../../models/layers/models';
 import type {
   StationSeries,
   StationSeriesPoint,
@@ -64,16 +66,19 @@ const SERIES: StationSeries = {
 describe('WeatherStationPopupComponent', () => {
   const fetchSeries = vi.fn();
   const dialogOpen = vi.fn();
+  const activeLayers = vi.fn();
 
   beforeEach(() => {
     fetchSeries.mockReset().mockResolvedValue(SERIES);
     dialogOpen.mockReset();
+    activeLayers.mockReset().mockReturnValue([]); // no SMN layer → defaults to Temperatura
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [WeatherStationPopupComponent],
       providers: [
         { provide: WeatherStationsHistoryService, useValue: { fetchSeries } },
         { provide: MatDialog, useValue: { open: dialogOpen } },
+        { provide: LayerControlService, useValue: { activeLayers } },
       ],
     });
     // Stub <apx-chart> (no real ApexCharts in jsdom); keep the real wind compass.
@@ -150,5 +155,35 @@ describe('WeatherStationPopupComponent', () => {
     const config = dialogOpen.mock.calls[0][1];
     expect(config.data.stationId).toBe(87593);
     expect(config.data.lat).toBe(-34.59);
+  });
+
+  it('graphs Temperatura + Punto de rocío by default (no map variable)', async () => {
+    const fixture = TestBed.createComponent(WeatherStationPopupComponent);
+    fixture.componentRef.setInput('data', DATA);
+    fixture.detectChanges();
+    await flush();
+
+    const vm = fixture.componentInstance.chart();
+    expect(vm?.series.map((s) => s.name)).toEqual(['Temperatura', 'Punto de rocío']);
+  });
+
+  it('graphs the single selected map variable (e.g. Humedad)', async () => {
+    activeLayers.mockReturnValue([
+      {
+        layer: {
+          category: LayerCategory.WEATHER_STATIONS,
+          variable: WeatherStationVariable.HUMIDITY,
+        },
+        controls: { visible: true },
+      },
+    ]);
+    const fixture = TestBed.createComponent(WeatherStationPopupComponent);
+    fixture.componentRef.setInput('data', DATA);
+    fixture.detectChanges();
+    await flush();
+
+    const vm = fixture.componentInstance.chart();
+    expect(vm?.series).toHaveLength(1);
+    expect(vm?.series[0].name).toBe('Humedad');
   });
 });

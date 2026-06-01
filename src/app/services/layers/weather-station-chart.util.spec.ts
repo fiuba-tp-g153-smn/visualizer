@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
-import { buildSeriesCharts, buildTempDewChart } from './weather-station-chart.util';
+import { buildSeriesCharts, buildTabChart, buildTempDewChart } from './weather-station-chart.util';
+import { WeatherStationVariable } from '../../models/layers/models';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import type {
   StationSeries,
@@ -63,6 +64,25 @@ describe('buildTempDewChart', () => {
     const empty: StationSeries = { ...SERIES, points: [], latest: null };
     const vm = buildTempDewChart(empty, units(), { utc: true, height: 200 });
     expect(vm.hasData).toBe(false);
+  });
+});
+
+describe('buildTabChart', () => {
+  it('overlays temp + dew when Temperatura is the selected map variable', () => {
+    const vm = buildTabChart(SERIES, WeatherStationVariable.TEMPERATURE, units(), {
+      utc: true,
+      height: 150,
+    });
+    expect(vm.series.map((s) => s.name)).toEqual(['Temperatura', 'Punto de rocío']);
+  });
+
+  it('shows a single line for any other selected map variable', () => {
+    const vm = buildTabChart(SERIES, WeatherStationVariable.HUMIDITY, units(), {
+      utc: true,
+      height: 150,
+    });
+    expect(vm.series).toHaveLength(1);
+    expect(vm.series[0].name).toBe('Humedad');
   });
 });
 
