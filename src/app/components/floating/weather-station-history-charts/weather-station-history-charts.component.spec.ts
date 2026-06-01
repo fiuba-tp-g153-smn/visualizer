@@ -24,6 +24,7 @@ function pt(t: string, temperature: number): StationSeries['points'][number] {
     pressure: 1013,
     visibility: 10,
     dewPoint: temperature - 5,
+    condition: 'Niebla',
     windSpeed: 8,
     windDeg: 5,
     windDirection: 'Norte',
@@ -76,6 +77,26 @@ describe('WeatherStationHistoryChartsComponent', () => {
     expect(charts).toHaveLength(6);
     expect(fixture.nativeElement.textContent).toContain('Temperatura');
     expect(fixture.nativeElement.textContent).toContain('Viento');
+  });
+
+  it('renders the Gráficos, Resumen and Observaciones sections', () => {
+    configure({
+      stationId: 87344,
+      stationName: 'CORDOBA AERO',
+      province: 'CORDOBA',
+      series: SERIES,
+    });
+    const fixture = TestBed.createComponent(WeatherStationHistoryChartsComponent);
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent ?? '';
+    expect(text).toContain('Gráficos');
+    expect(text).toContain('Resumen');
+    expect(text).toContain('Observaciones');
+    // One observations row per point + the condition value.
+    const rows = fixture.nativeElement.querySelectorAll('.ws-history__table tbody tr');
+    expect(rows).toHaveLength(2);
+    expect(text).toContain('Niebla');
   });
 
   it('shows the empty state when the series has no points', () => {

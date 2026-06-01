@@ -17,6 +17,7 @@ export interface BackendStationSeriesPoint {
   pressure: number | null;
   visibility: number | null;
   dew_point: number | null;
+  condition: string | null;
   wind_speed: number | null;
   wind_deg: number | null;
   wind_direction: string | null;
@@ -43,6 +44,7 @@ export interface StationSeriesPoint {
   pressure: number | null;
   visibility: number | null;
   dewPoint: number | null;
+  condition: string | null;
   windSpeed: number | null;
   windDeg: number | null;
   windDirection: string | null;
@@ -133,6 +135,7 @@ function adaptPoint(raw: BackendStationSeriesPoint): StationSeriesPoint {
     pressure: raw.pressure,
     visibility: raw.visibility,
     dewPoint: raw.dew_point,
+    condition: raw.condition,
     windSpeed: raw.wind_speed,
     windDeg: raw.wind_deg,
     windDirection: raw.wind_direction,

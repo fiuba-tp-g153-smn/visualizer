@@ -23,12 +23,13 @@
     } @else if (!hasPoints()) {
       <div class="ws-history__state">Sin datos en las últimas 48 horas.</div>
     } @else {
+      <h3 class="ws-history__section-title">Gráficos</h3>
       <div class="ws-history__charts">
         @for (vm of charts(); track vm.variable.id) {
           <article class="ws-history__chart">
             <div class="ws-history__chart-head">
               <span class="ws-history__chart-label" [style.color]="vm.variable.color">
-                {{ vm.variable.label }}
+                {{ vm.variable.label }} ({{ vm.unit }})
               </span>
               <span class="ws-history__chart-latest">{{ vm.latestText }}</span>
             </div>
@@ -51,6 +52,55 @@
             }
           </article>
         }
+      </div>
+
+      <h3 class="ws-history__section-title">Resumen</h3>
+      <div class="ws-history__summary">
+        @for (group of summary(); track group.title) {
+          <div class="ws-history__summary-group">
+            <div class="ws-history__summary-head">{{ group.title }}</div>
+            @for (row of group.rows; track row.label) {
+              <div class="ws-history__summary-row">
+                <span>{{ row.label }}</span>
+                <strong>{{ row.value }}</strong>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <h3 class="ws-history__section-title">Observaciones</h3>
+      <div class="ws-history__table-wrap">
+        <table class="ws-history__table">
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Temp.</th>
+              <th>P. rocío</th>
+              <th>Humedad</th>
+              <th>Viento</th>
+              <th>Velocidad</th>
+              <th>Presión</th>
+              <th>Visib.</th>
+              <th>Condición</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of observations(); track $index) {
+              <tr>
+                <td>{{ row.time }}</td>
+                <td>{{ row.temperature }}</td>
+                <td>{{ row.dewPoint }}</td>
+                <td>{{ row.humidity }}</td>
+                <td>{{ row.wind }}</td>
+                <td>{{ row.windSpeed }}</td>
+                <td>{{ row.pressure }}</td>
+                <td>{{ row.visibility }}</td>
+                <td>{{ row.condition }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
     }
   </section>
