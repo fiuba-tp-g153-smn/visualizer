@@ -226,6 +226,10 @@
     flex-direction: column;
     gap: 8px;
 
+    .forecast-ts {
+      font-variant-numeric: tabular-nums;
+    }
+
     .forecast-header {
       display: flex;
       align-items: center;
