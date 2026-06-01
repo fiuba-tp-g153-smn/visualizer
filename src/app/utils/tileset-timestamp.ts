@@ -82,19 +82,6 @@ export function parseEcmwfTimestamp(ts: string): Date | null {
   return new Date(Date.UTC(year, month, day, hour, minute, 0));
 }
 
-/**
- * Formats an ECMWF forecast timestamp as "MM-DD HHh" for compact display.
- * Example: "20260502T1200Z" → "05-02 12h"
- */
-export function formatEcmwfForecastTs(forecastTs: string): string {
-  if (forecastTs.length < 13) return forecastTs;
-
-  const month = forecastTs.substring(4, 6);
-  const day = forecastTs.substring(6, 8);
-  const hour = forecastTs.substring(9, 11);
-  return `${month}-${day} ${hour}h`;
-}
-
 // ============================================================================
 // Generic Formatting
 // ============================================================================
@@ -110,14 +97,21 @@ export function formatDateTimeOnly(date: Date): string {
 }
 
 /**
- * Formats a Date as "YYYY-MM-DD HH:MM".
+ * Formats a Date as "YYYY-MM-DD".
  */
-export function formatDateFull(date: Date): string {
+export function formatDateOnly(date: Date): string {
   const yyyy = shouldUseUtc() ? date.getUTCFullYear() : date.getFullYear();
   const mo = String((shouldUseUtc() ? date.getUTCMonth() : date.getMonth()) + 1).padStart(2, '0');
   const dd = String(shouldUseUtc() ? date.getUTCDate() : date.getDate()).padStart(2, '0');
 
-  return `${yyyy}-${mo}-${dd} ${formatDateTimeOnly(date)}`;
+  return `${yyyy}-${mo}-${dd}`;
+}
+
+/**
+ * Formats a Date as "YYYY-MM-DD HH:MM".
+ */
+export function formatDateFull(date: Date): string {
+  return `${formatDateOnly(date)} ${formatDateTimeOnly(date)}`;
 }
 
 /**
