@@ -1,6 +1,6 @@
-<h2 mat-dialog-title>
+<h2 mat-dialog-title class="dialog-title">
   <mat-icon class="dialog-icon">vpn_key</mat-icon>
-  Clave de acceso a las estaciones meteorológicas
+  <span>Clave de acceso a las estaciones meteorológicas</span>
 </h2>
 
 <mat-dialog-content class="dialog-content">
@@ -12,8 +12,7 @@
   }
 
   <p class="dialog-description">
-    Pegá la clave que te dieron para ver las estaciones del SMN. Queda
-    guardada en este navegador.
+    Ingresá la clave de acceso al servicio de estaciones del SMN. Se guarda en el navegador.
   </p>
 
   <mat-form-field appearance="outline" class="key-field">
@@ -28,22 +27,11 @@
     />
     <mat-icon matSuffix>vpn_key</mat-icon>
   </mat-form-field>
-
-  <p class="dialog-hint">
-    Si dejás de ver las estaciones, pedile una clave nueva al administrador
-    del sistema.
-  </p>
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
+<mat-dialog-actions align="end" class="dialog-actions">
   <button mat-stroked-button type="button" (click)="cancel()">Cancelar</button>
-  <button
-    mat-flat-button
-    color="primary"
-    type="button"
-    [disabled]="!key().trim()"
-    (click)="save()"
-  >
+  <button mat-flat-button color="primary" type="button" [disabled]="!key().trim()" (click)="save()">
     Guardar
   </button>
 </mat-dialog-actions>

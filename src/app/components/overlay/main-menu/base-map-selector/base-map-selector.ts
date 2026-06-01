@@ -36,15 +36,8 @@ export class BaseMapSelectorComponent implements MenuPanelComponent {
   readonly loadState = this.baseMapService.loadState;
   readonly currentBaseMapId = computed(() => this.baseMapService.currentBaseMap()?.id ?? null);
 
-  onPanelOpen(): void {
-    // Fire all preview-tile GETs in parallel so the grid renders cache-warm
-    // instead of waterfalling one <img> at a time. Browser dedups with the
-    // later real <img> requests, so no wasted bandwidth.
-    for (const baseMap of this.baseMaps()) {
-      const url = this.getPreviewUrl(baseMap);
-      if (url) new Image().src = url;
-    }
-  }
+  // Panel lifecycle hook (MenuPanelComponent contract); no work needed on open.
+  onPanelOpen(): void {}
 
   isActive(baseMapId: string): boolean {
     return this.currentBaseMapId() === baseMapId;
@@ -56,7 +49,8 @@ export class BaseMapSelectorComponent implements MenuPanelComponent {
 
   /**
    * Returns the preview tile URL for a base map by substituting the configured
-   * preview coordinates into the URL template.
+   * preview coordinates into the URL template. Rendered over a static placeholder
+   * background (see SCSS) so the card shows instantly while the tile loads.
    */
   getPreviewUrl(baseMap: BaseMap): string {
     return baseMap.url

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" role="img" aria-label="Vista previa del mapa">
+  <rect width="100" height="100" fill="#e8eef3" />
+  <!-- abstract land masses -->
+  <path d="M0 60 Q24 50 48 58 T100 54 V100 H0 Z" fill="#d2e2d8" />
+  <path d="M0 78 Q30 70 56 76 T100 72 V100 H0 Z" fill="#c0d6c9" />
+  <!-- abstract roads / grid -->
+  <g stroke="#b4c2cd" stroke-width="1.5" stroke-linecap="round">
+    <line x1="22" y1="0" x2="30" y2="100" />
+    <line x1="64" y1="0" x2="56" y2="100" />
+    <line x1="0" y1="34" x2="100" y2="28" />
+  </g>
+  <!-- location pin (SMN primary) -->
+  <g transform="translate(50 42)">
+    <path d="M0 -15 C7.5 -15 13 -9.5 13 -2 C13 7.5 0 19 0 19 C0 19 -13 7.5 -13 -2 C-13 -9.5 -7.5 -15 0 -15 Z" fill="#0090d0" />
+    <circle cx="0" cy="-2.5" r="4.8" fill="#ffffff" />
+  </g>
+</svg>

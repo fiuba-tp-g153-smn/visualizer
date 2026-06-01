@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
-import { Observable, throwError, firstValueFrom } from 'rxjs';
+import { Observable, throwError, firstValueFrom, from } from 'rxjs';
 import { finalize, map } from 'rxjs/operators';
 import {
   buildWeatherStationsLatestUrl,
@@ -11,6 +11,7 @@ import {
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
+import { WeatherStationsPrefetchService } from './weather-stations-prefetch.service';
 import { NotificationService } from '../notifications/notification.service';
 import {
   WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
@@ -99,6 +100,7 @@ export class LayerRefreshService {
   private readonly layersService = inject(LayersService);
   private readonly notificationService = inject(NotificationService);
   private readonly layerControlService = inject(LayerControlService);
+  private readonly weatherStationsPrefetch = inject(WeatherStationsPrefetchService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
@@ -110,6 +112,11 @@ export class LayerRefreshService {
   private readonly weatherStationsRegistrySignal = signal<readonly WeatherStationDto[] | null>(null);
   private weatherStationsInflight: Promise<WeatherStationSnapshot> | null = null;
   private weatherStationsRegistryInflight: Promise<readonly WeatherStationDto[]> | null = null;
+  // `/tilesets` changes ~hourly (a new bucket appears); cache it for a short TTL
+  // so animation frames don't each re-fetch it. Aligns with its Cache-Control.
+  private readonly WEATHER_STATIONS_TILESETS_TTL_MS = 60_000;
+  private weatherStationsEndpointConfigFetchedAt = 0;
+  private weatherStationsEndpointConfigInflight: Promise<WeatherStationsEndpointConfig> | null = null;
 
   readonly weatherStationsLoadTick = this.weatherStationsLoadTickSignal.asReadonly();
   readonly loadingLayerIds = this.loadingLayerIdsSignal.asReadonly();
@@ -203,6 +210,13 @@ export class LayerRefreshService {
       return throwError(() => new Error('Layer not found'));
     }
 
+    // Weather stations don't use the tile-config flow (`fetchLayerConfig` rejects
+    // the category). Refresh their available periods (`/weather-stations/tilesets`)
+    // and the current snapshot instead.
+    if (layer.category === LayerCategory.WEATHER_STATIONS) {
+      return this.manualRefreshWeatherStations(layerId);
+    }
+
     const beforeConfig = this.layerConfigService.getConfig(layerId);
 
     this.markLoading(layerId);
@@ -213,6 +227,42 @@ export class LayerRefreshService {
       }),
       finalize(() => this.clearLoading(layerId)),
     );
+  }
+
+  /** Manual "Actualizar periodos disponibles" for the weather-stations layer. */
+  private manualRefreshWeatherStations(layerId: string): Observable<void> {
+    const before = this.getWeatherStationsAvailableTilesetIds().length;
+    this.markLoading(layerId);
+    return from(this.forceRefreshWeatherStations()).pipe(
+      map(() => {
+        const after = this.getWeatherStationsAvailableTilesetIds().length;
+        this.notifyWeatherStationsRefresh(layerId, before, after);
+      }),
+      finalize(() => this.clearLoading(layerId)),
+    );
+  }
+
+  /**
+   * Force a fresh `/tilesets` fetch (bypassing the in-app TTL), then reload the
+   * snapshot. Snapshot bodies are served by the browser HTTP cache; their
+   * freshness is bounded by their `Cache-Control: max-age` (the button's job is
+   * refreshing the available periods list).
+   */
+  private async forceRefreshWeatherStations(): Promise<void> {
+    this.weatherStationsEndpointConfigFetchedAt = 0;
+    await this.loadWeatherStationsSnapshot(true);
+  }
+
+  private notifyWeatherStationsRefresh(layerId: string, before: number, after: number): void {
+    const layerName = this.layersService.getLayerDisplayName(layerId);
+    if (after !== before) {
+      this.notificationService.show(
+        NotificationType.SUCCESS,
+        `${after} períodos disponibles para ${layerName}`,
+      );
+    } else {
+      this.notificationService.show(NotificationType.INFO, `Sin cambios para ${layerName}`);
+    }
   }
 
   peekWeatherStationsSnapshot(): WeatherStationSnapshot | null {
@@ -337,7 +387,8 @@ export class LayerRefreshService {
       this.fetchWeatherStationsEndpointConfig(),
       this.ensureWeatherStationsRegistryLoaded(),
     ]);
-    this.weatherStationsEndpointConfigSignal.set(endpointConfig);
+    // The signal is set inside fetchWeatherStationsEndpointConfig (with last-good
+    // preservation), so we only sync the temporal controls here.
     this.syncWeatherStationsTemporalControlsWithConfig(endpointConfig);
 
     let backendSnapshot: BackendSnapshot;
@@ -350,10 +401,15 @@ export class LayerRefreshService {
       if (!tilesetId) {
         throw new Error('No tilesets available for weather stations specific mode');
       }
+      // Plain GET: the browser HTTP cache serves a replayed/scrubbed frame (no
+      // network), and only this current frame's payload is retained (the signal).
       backendSnapshot = await firstValueFrom(
         this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, maxPastHours)),
       );
       referenceTimestamp = this.fromWeatherStationsTilesetId(tilesetId) ?? new Date();
+      // Warm the browser cache for the rest of the window so playback/scrub is
+      // served off-heap from the browser cache rather than re-fetched.
+      this.prefetchWeatherStationsWindow(endpointConfig.tilesetIds, maxPastHours);
     } else {
       backendSnapshot = await firstValueFrom(
         this.http.get<BackendSnapshot>(buildWeatherStationsLatestUrl()),
@@ -378,7 +434,56 @@ export class LayerRefreshService {
     };
   }
 
+  /**
+   * Warm the browser HTTP cache for the current animation window (latest
+   * `imageCount` tilesets at the current Max-Past-Hours) so timeline playback is
+   * served from the browser cache instead of the network. Non-blocking.
+   */
+  prefetchWeatherStationsWindow(tilesetIds?: readonly string[], maxPastHours?: number): void {
+    const ids = tilesetIds ?? this.weatherStationsEndpointConfigSignal()?.tilesetIds ?? [];
+    if (ids.length === 0) {
+      return;
+    }
+    const n = maxPastHours ?? this.layerControlService.getWeatherStationsMaxPastHours();
+    const imageCount = this.layerControlService.getWeatherStationsImageCount();
+    const windowIds = imageCount > 0 ? ids.slice(-imageCount) : ids;
+    // Skip the currently-selected frame — the read path just fetched it directly.
+    const selected = this.layerControlService.getWeatherStationsSelectedTilesetId();
+    this.weatherStationsPrefetch.prefetch(
+      windowIds.filter((id) => id !== selected).map((id) => buildWeatherStationsTilesetUrl(id, n)),
+    );
+  }
+
   private async fetchWeatherStationsEndpointConfig(): Promise<WeatherStationsEndpointConfig> {
+    const cached = this.weatherStationsEndpointConfigSignal();
+    if (
+      cached &&
+      Date.now() - this.weatherStationsEndpointConfigFetchedAt <
+        this.WEATHER_STATIONS_TILESETS_TTL_MS
+    ) {
+      return cached;
+    }
+    if (this.weatherStationsEndpointConfigInflight) {
+      return this.weatherStationsEndpointConfigInflight;
+    }
+    this.weatherStationsEndpointConfigInflight =
+      this.fetchWeatherStationsEndpointConfigFromBackend();
+    try {
+      const config = await this.weatherStationsEndpointConfigInflight;
+      // Keep the last-good config when a refresh comes back empty/failed, rather
+      // than blanking the timeline.
+      if (config.tilesetIds.length > 0) {
+        this.weatherStationsEndpointConfigSignal.set(config);
+        this.weatherStationsEndpointConfigFetchedAt = Date.now();
+        return config;
+      }
+      return cached ?? config;
+    } finally {
+      this.weatherStationsEndpointConfigInflight = null;
+    }
+  }
+
+  private async fetchWeatherStationsEndpointConfigFromBackend(): Promise<WeatherStationsEndpointConfig> {
     try {
       const resp = await firstValueFrom(
         this.http.get<BackendTilesetsResponse>(buildWeatherStationsTilesetsUrl()),
