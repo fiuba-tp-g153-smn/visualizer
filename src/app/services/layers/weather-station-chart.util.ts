@@ -118,7 +118,9 @@ function buildOverlayChart(
     grid: {
       borderColor: '#e5e7eb',
       strokeDashArray: 4,
-      padding: { left: 6, right: 10, top: 0, bottom: 0 },
+      // Extra right room so the last marker and rightmost x-axis label aren't
+      // clipped against the plot edge.
+      padding: { left: 8, right: 20, top: 0, bottom: 0 },
     },
     legend: { show: true, position: 'bottom', fontSize: '11px', itemMargin: { horizontal: 8 } },
     tooltip: {
@@ -376,12 +378,21 @@ function buildVariableChart(
     },
     tooltip: {
       enabled: true,
+      style: { fontSize: '11px' },
       x: { format: 'dd MMM HH:mm' },
       y: {
-        formatter: (val: number) =>
-          val === null || val === undefined
-            ? '—'
-            : `${val.toFixed(variable.decimals)} ${unit}`.trim(),
+        formatter: (val: number, opts?: { dataPointIndex?: number }) => {
+          if (val === null || val === undefined) {
+            return '—';
+          }
+          const text = `${val.toFixed(variable.decimals)} ${unit}`.trim();
+          // The wind chart also shows the bearing the wind comes from (e.g. "Norte").
+          if (!isWind) {
+            return text;
+          }
+          const direction = series.points[opts?.dataPointIndex ?? -1]?.windDirection;
+          return direction ? `${text} · ${direction}` : text;
+        },
       },
     },
     xaxis: {
