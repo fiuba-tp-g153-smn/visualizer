@@ -95,6 +95,27 @@ export function formatEcmwfForecastTs(forecastTs: string): string {
   return `${month}-${day} ${hour}h`;
 }
 
+/**
+ * Splits an ECMWF forecast timestamp into separate date and time parts for
+ * a two-line display.
+ * Example: "20260502T1200Z" → { date: "2026-05-02", time: "12:00" }
+ */
+export interface EcmwfForecastTsParts {
+  readonly date: string;
+  readonly time: string;
+}
+
+export function formatEcmwfForecastTsParts(forecastTs: string): EcmwfForecastTsParts {
+  if (forecastTs.length < 13) return { date: forecastTs, time: '' };
+
+  const year = forecastTs.substring(0, 4);
+  const month = forecastTs.substring(4, 6);
+  const day = forecastTs.substring(6, 8);
+  const hour = forecastTs.substring(9, 11);
+  const minute = forecastTs.substring(11, 13);
+  return { date: `${year}-${month}-${day}`, time: `${hour}:${minute}` };
+}
+
 // ============================================================================
 // Generic Formatting
 // ============================================================================
