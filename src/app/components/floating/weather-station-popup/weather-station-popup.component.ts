@@ -1,47 +1,58 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
 import { NgApexchartsModule } from 'ng-apexcharts';
 
+import { TEMPERATURE_UNITS } from '../../../constants';
 import { StationSeries } from '../../../models/geo/weather-station-series.model';
 import { WeatherStationsHistoryService } from '../../../services/layers/weather-stations-history.service';
+import { buildTempDewChart } from '../../../services/layers/weather-station-chart.util';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import {
   TIMEZONE_MODES,
   TimezoneSettingsService,
 } from '../../../services/settings/timezone-settings.service';
-import { buildSeriesCharts } from '../../../services/layers/weather-station-chart.util';
-import {
-  WeatherStationHistoryChartsComponent,
-  WeatherStationHistoryChartsData,
-} from '../weather-station-history-charts/weather-station-history-charts.component';
+import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
+import { WindCompassComponent } from '../wind-compass/wind-compass.component';
 
 export interface WeatherStationPopupItem {
   label: string;
   value: string;
 }
 
+export interface WeatherStationPopupWind {
+  speed: string;
+  unit: string;
+  deg: number | null;
+  direction: string;
+}
+
 export interface WeatherStationPopupData {
   stationId: number;
   stationName: string;
   province: string;
+  lat: number | null;
+  lon: number | null;
+  temperature: string;
+  feelsLike: string;
+  weatherDescription: string;
   values: ReadonlyArray<WeatherStationPopupItem>;
+  wind: WeatherStationPopupWind;
   updatedAt: string;
 }
 
+type PopupTab = 'current' | 'graph';
+
 /**
- * Right-click preview for a station: the current measurement (always visible)
- * plus a compact 48 h sparkline per variable, and a link to the full-page
- * charts. The 48 h series is fetched once (single bundled request) and handed to
- * the full-page dialog so it opens instantly.
+ * Wundermap-style station card: a header with id/lat/lon and two tabs — **Actual**
+ * (current values + wind compass) and **Gráfico** (Temperatura + Punto de rocío).
+ * The 48 h series is fetched once and feeds both the dew-point value and the chart.
  */
 @Component({
   selector: 'app-weather-station-popup',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, NgApexchartsModule],
+  imports: [CommonModule, NgApexchartsModule, WindCompassComponent],
   templateUrl: './weather-station-popup.component.html',
+  styleUrl: './weather-station-popup.component.scss',
 })
 export class WeatherStationPopupComponent implements OnInit {
   @Input({ required: true }) data!: WeatherStationPopupData;
@@ -49,57 +60,62 @@ export class WeatherStationPopupComponent implements OnInit {
   private readonly historyService = inject(WeatherStationsHistoryService);
   private readonly unitsSettings = inject(UnitsSettingsService);
   private readonly timezone = inject(TimezoneSettingsService);
-  private readonly dialog = inject(MatDialog);
 
   private readonly series = signal<StationSeries | null>(null);
+  readonly loading = signal<boolean>(true);
+  readonly tab = signal<PopupTab>('current');
 
-  /** Compact sparklines (rebuilds when the series / units / timezone change). */
-  readonly previewCharts = computed(() => {
+  /** Dew point of the latest reading, formatted (from the server-computed series). */
+  readonly dewPointText = computed(() => {
+    const latest = this.series()?.latest;
+    if (!latest || latest.dewPoint === null) {
+      return '—';
+    }
+    const unit = getDisplayUnit(TEMPERATURE_UNITS.CELSIUS, this.unitsSettings);
+    const value = convertValueForDisplay(
+      latest.dewPoint,
+      TEMPERATURE_UNITS.CELSIUS,
+      this.unitsSettings,
+    );
+    return `${value.toFixed(1)} ${unit}`.trim();
+  });
+
+  /** The Temperatura + Punto de rocío chart (null until the series loads). */
+  readonly chart = computed(() => {
     const current = this.series();
     if (!current) {
-      return [];
+      return null;
     }
-    return buildSeriesCharts(current, this.unitsSettings, {
-      group: 'ws-48h-preview',
-      sparkline: true,
+    return buildTempDewChart(current, this.unitsSettings, {
       utc: this.timezone.mode() === TIMEZONE_MODES.UTC,
-      height: 30,
-      // Explicit width: the popup element is detached when ApexCharts renders, so
-      // a parent-relative width would draw an empty 0-px chart (no line).
-      width: 184,
+      height: 210,
+      width: 308,
     });
   });
 
-  readonly hasPreview = computed(() => this.previewCharts().some((vm) => vm.hasData));
+  get latText(): string {
+    return this.data.lat === null ? '—' : this.data.lat.toFixed(2);
+  }
+
+  get lonText(): string {
+    return this.data.lon === null ? '—' : this.data.lon.toFixed(2);
+  }
 
   ngOnInit(): void {
     void this.loadSeries();
+  }
+
+  setTab(tab: PopupTab): void {
+    this.tab.set(tab);
   }
 
   private async loadSeries(): Promise<void> {
     try {
       this.series.set(await this.historyService.fetchSeries(this.data.stationId));
     } catch {
-      // Leave the preview hidden; the latest values + link still work.
+      // Leave dew point + chart empty; the current values still render.
+    } finally {
+      this.loading.set(false);
     }
-  }
-
-  openFullScreen(): void {
-    this.dialog.open<WeatherStationHistoryChartsComponent, WeatherStationHistoryChartsData>(
-      WeatherStationHistoryChartsComponent,
-      {
-        panelClass: 'ws-history-fullscreen',
-        width: '100vw',
-        maxWidth: '100vw',
-        height: '100vh',
-        autoFocus: false,
-        data: {
-          stationId: this.data.stationId,
-          stationName: this.data.stationName,
-          province: this.data.province,
-          series: this.series(),
-        },
-      },
-    );
   }
 }

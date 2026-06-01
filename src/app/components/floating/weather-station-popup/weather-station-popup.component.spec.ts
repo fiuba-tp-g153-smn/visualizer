@@ -2,123 +2,123 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatDialog } from '@angular/material/dialog';
 
 import {
   WeatherStationPopupComponent,
   WeatherStationPopupData,
 } from './weather-station-popup.component';
+import { WindCompassComponent } from '../wind-compass/wind-compass.component';
 import { WeatherStationsHistoryService } from '../../../services/layers/weather-stations-history.service';
-import type { StationSeries } from '../../../models/geo/weather-station-series.model';
+import type {
+  StationSeries,
+  StationSeriesPoint,
+} from '../../../models/geo/weather-station-series.model';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const DATA: WeatherStationPopupData = {
-  stationId: 87344,
-  stationName: 'CORDOBA AERO',
-  province: 'CORDOBA',
-  values: [{ label: 'Temperatura', value: '18.4 °C' }],
-  updatedAt: '17/05 14:00',
+  stationId: 87593,
+  stationName: 'BUENOS AIRES',
+  province: 'CABA',
+  lat: -34.59,
+  lon: -58.32,
+  temperature: '11.6 °C',
+  feelsLike: '0.0 °C',
+  weatherDescription: 'Ligeramente nublado',
+  values: [
+    { label: 'Humedad', value: '91 %' },
+    { label: 'Presión', value: '1019.2 hPa' },
+    { label: 'Visibilidad', value: '10.0 km' },
+  ],
+  wind: { speed: '2', unit: 'km/h', deg: 180, direction: 'Sur' },
+  updatedAt: '31/05 20:00',
 };
 
+function pt(t: string, temp: number, dew: number): StationSeriesPoint {
+  return {
+    t: Date.parse(t),
+    observedAt: t,
+    temperature: temp,
+    feelsLike: null,
+    humidity: null,
+    pressure: null,
+    visibility: null,
+    dewPoint: dew,
+    windSpeed: null,
+    windDeg: null,
+    windDirection: null,
+  };
+}
+
 const SERIES: StationSeries = {
-  stationId: 87344,
-  stationName: 'CORDOBA AERO',
-  province: 'CORDOBA',
+  stationId: 87593,
+  stationName: 'BUENOS AIRES',
+  province: 'CABA',
   hours: 48,
-  points: [
-    {
-      t: Date.parse('2026-05-17T13:00:00Z'),
-      observedAt: '2026-05-17T13:00:00Z',
-      temperature: 17,
-      feelsLike: 16,
-      humidity: 60,
-      pressure: 1013,
-      visibility: 10,
-      windSpeed: 5,
-      windDeg: 350,
-      windDirection: 'Norte',
-    },
-    {
-      t: Date.parse('2026-05-17T14:00:00Z'),
-      observedAt: '2026-05-17T14:00:00Z',
-      temperature: 18,
-      feelsLike: 17,
-      humidity: 62,
-      pressure: 1013,
-      visibility: 10,
-      windSpeed: 8,
-      windDeg: 5,
-      windDirection: 'Norte',
-    },
-  ],
-  latest: null,
+  points: [pt('2026-05-31T19:00:00Z', 11, 9), pt('2026-05-31T20:00:00Z', 11.6, 10)],
+  latest: pt('2026-05-31T20:00:00Z', 11.6, 10),
 };
 
 describe('WeatherStationPopupComponent', () => {
   const fetchSeries = vi.fn();
-  const dialogOpen = vi.fn();
 
   beforeEach(() => {
     fetchSeries.mockReset().mockResolvedValue(SERIES);
-    dialogOpen.mockReset();
-
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [WeatherStationPopupComponent],
-      providers: [
-        { provide: WeatherStationsHistoryService, useValue: { fetchSeries } },
-        { provide: MatDialog, useValue: { open: dialogOpen } },
-      ],
+      providers: [{ provide: WeatherStationsHistoryService, useValue: { fetchSeries } }],
     });
-    // Stub out <apx-chart> so the real ApexCharts never renders in jsdom.
+    // Stub <apx-chart> (no real ApexCharts in jsdom); keep the real wind compass.
     TestBed.overrideComponent(WeatherStationPopupComponent, {
       set: {
-        imports: [CommonModule, MatButtonModule, MatIconModule],
+        imports: [CommonModule, WindCompassComponent],
         schemas: [CUSTOM_ELEMENTS_SCHEMA],
       },
     });
   });
 
-  it('renders the current measurement values', () => {
+  it('shows the header with station id, lat and lon, and the current values', () => {
     const fixture = TestBed.createComponent(WeatherStationPopupComponent);
     fixture.componentRef.setInput('data', DATA);
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent ?? '';
-    expect(text).toContain('CORDOBA AERO');
-    expect(text).toContain('Temperatura');
-    expect(text).toContain('18.4 °C');
+    expect(text).toContain('BUENOS AIRES');
+    expect(text).toContain('87593');
+    expect(text).toContain('-34.59');
+    expect(text).toContain('-58.32');
+    expect(text).toContain('11.6 °C');
+    expect(text).toContain('Humedad');
+    expect(text).toContain('desde el Sur'); // wind compass
   });
 
-  it('fetches the 48 h series once and shows the trend preview', async () => {
+  it('fills in the dew point from the loaded series', async () => {
     const fixture = TestBed.createComponent(WeatherStationPopupComponent);
     fixture.componentRef.setInput('data', DATA);
     fixture.detectChanges();
     await flush();
     fixture.detectChanges();
 
-    expect(fetchSeries).toHaveBeenCalledWith(87344);
-    expect(fixture.nativeElement.textContent).toContain('Últimas 48 h');
+    expect(fetchSeries).toHaveBeenCalledWith(87593);
+    expect(fixture.nativeElement.textContent).toContain('Punto de rocío');
+    expect(fixture.nativeElement.textContent).toContain('10.0 °C');
   });
 
-  it('opens the full-screen dialog with the station id and the loaded series', async () => {
+  it('renders the chart only after switching to the Gráfico tab', async () => {
     const fixture = TestBed.createComponent(WeatherStationPopupComponent);
     fixture.componentRef.setInput('data', DATA);
     fixture.detectChanges();
     await flush();
     fixture.detectChanges();
 
-    const button: HTMLButtonElement = fixture.nativeElement.querySelector(
-      '.weather-station-popup__history-btn',
-    );
-    button.click();
+    // Current tab: no chart yet.
+    expect(fixture.nativeElement.querySelector('apx-chart')).toBeNull();
 
-    expect(dialogOpen).toHaveBeenCalledTimes(1);
-    const config = dialogOpen.mock.calls[0][1];
-    expect(config.data.stationId).toBe(87344);
-    expect(config.data.series).toBe(SERIES);
+    const tabs = fixture.nativeElement.querySelectorAll('.ws-card__tab');
+    (tabs[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('apx-chart')).not.toBeNull();
   });
 });

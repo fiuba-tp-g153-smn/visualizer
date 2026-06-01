@@ -956,17 +956,9 @@ export class LayerRenderService {
       observation.weather.wind.direction === 'Calma' && observation.weather.wind.speed === null;
     const { value: windSpeedValue, unit: windSpeedUnit } =
       this.resolveWeatherStationsWindSpeedDisplay(observation.weather.wind.speed);
-    const windText = calmWind
-      ? `0 ${windSpeedUnit}`
-      : formatValue(windSpeedValue, 0, ` ${windSpeedUnit}`);
     const stationName = formatText(observation.station.name);
     const province = formatText(observation.station.province);
-    const windDirection = formatText(observation.weather.wind.direction);
     const windDegrees = observation.weather.wind.deg;
-    const windDirectionWithDegrees =
-      windDegrees === null || windDegrees === undefined || Number.isNaN(windDegrees)
-        ? windDirection
-        : `${windDirection} ${Math.round(windDegrees)}°`;
     const { value: temperatureValue, unit: temperatureUnit } =
       this.resolveWeatherStationsTemperatureDisplay(observation.weather.temperature);
     const { value: feelsLikeValue, unit: feelsLikeUnit } =
@@ -976,19 +968,12 @@ export class LayerRenderService {
       stationId: observation.weather.station_id ?? observation.station.id ?? 0,
       stationName,
       province,
+      lat: observation.station.coord?.lat ?? null,
+      lon: observation.station.coord?.lon ?? null,
+      temperature: formatValue(temperatureValue, 1, ` ${temperatureUnit}`),
+      feelsLike: formatValue(feelsLikeValue, 1, ` ${feelsLikeUnit}`),
+      weatherDescription: formatText(observation.weather.weather?.description),
       values: [
-        {
-          label: 'Tiempo',
-          value: formatText(observation.weather.weather?.description),
-        },
-        {
-          label: 'Temperatura',
-          value: formatValue(temperatureValue, 1, ` ${temperatureUnit}`),
-        },
-        {
-          label: 'Sensación térmica',
-          value: formatValue(feelsLikeValue, 1, ` ${feelsLikeUnit}`),
-        },
         {
           label: 'Humedad',
           value: formatValue(observation.weather.humidity, 0, WEATHER_STATION_UNITS.HUMIDITY),
@@ -1005,11 +990,16 @@ export class LayerRenderService {
             ` ${WEATHER_STATION_UNITS.VISIBILITY}`,
           ),
         },
-        {
-          label: 'Viento',
-          value: `${windText} (${windDirectionWithDegrees})`,
-        },
       ],
+      wind: {
+        speed: calmWind ? '0' : formatValue(windSpeedValue, 0, ''),
+        unit: windSpeedUnit,
+        deg:
+          windDegrees === null || windDegrees === undefined || Number.isNaN(windDegrees)
+            ? null
+            : Math.round(windDegrees),
+        direction: formatText(observation.weather.wind.direction),
+      },
       updatedAt: formatDateTimeLocalized(new Date(observation.weather.date)),
     };
   }
