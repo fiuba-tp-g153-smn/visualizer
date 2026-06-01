@@ -35,7 +35,6 @@ function createLayerScale(params: {
   defaultDiscreteClipRange?: readonly [number, number];
   labelScale?: ScaleLabelScale;
   labelValues?: readonly number[];
-  labelDomain?: readonly [number, number];
 }): LayerScale {
   const {
     type,
@@ -47,7 +46,6 @@ function createLayerScale(params: {
     defaultDiscreteClipRange,
     labelScale,
     labelValues,
-    labelDomain,
   } = params;
 
   const resolvedClipRange =
@@ -62,7 +60,6 @@ function createLayerScale(params: {
     clipRange: resolvedClipRange,
     labelScale,
     labelValues,
-    labelDomain,
   } as const satisfies LayerScale;
 }
 
@@ -123,7 +120,7 @@ function buildLinearEntries(
   });
 }
 
-export function buildIndexedScale(config: IndexedScaleConfig): LayerScale {
+export function buildScaleFromIndexedNodes(config: IndexedScaleConfig): LayerScale {
   const { min, max, unit, labelCount, subTickCount, clipRange } = config;
   const entries = buildIndexedEntries(config);
 
@@ -138,7 +135,7 @@ export function buildIndexedScale(config: IndexedScaleConfig): LayerScale {
   });
 }
 
-export function buildLinearScale(config: LinearScaleConfig): LayerScale {
+export function buildScaleFromLinearGradient(config: LinearScaleConfig): LayerScale {
   const { min, max, unit, labelCount, subTickCount, clipRange } = config;
   const entries = buildLinearEntries(config);
 
@@ -153,7 +150,7 @@ export function buildLinearScale(config: LinearScaleConfig): LayerScale {
   });
 }
 
-export function buildBoundedScale(config: BoundedScaleConfig): LayerScale {
+export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale {
   const { bounds, hexColors, unit, labelCount, subTickCount } = config;
   const entries = bounds.map((value, i) => ({
     value,
@@ -188,7 +185,6 @@ export function buildLogScale(config: LogScaleConfig): LayerScale {
     entries,
     labelScale: ScaleLabelScale.LOG,
     labelValues,
-    labelDomain: [min, max],
     subTickCount,
     clipRange,
   });

@@ -1,6 +1,6 @@
 import { LayerScale, ScaleType } from '../../../models';
 import { RADAR_UNITS } from '../../../constants';
-import { buildBoundedScale, buildLinearScale } from '../scale-builders';
+import { buildScaleFromThresholds, buildScaleFromLinearGradient } from '../scale-builders';
 
 const baseScaleConfig = {
   labelCount: 10,
@@ -12,7 +12,7 @@ const baseScaleConfig = {
  * REFLECTIVITY (DBZH / ZH / TH) - paleta_vmsr
  * Rango: -18 a ~76 dBZ
  */
-export const RADAR_DBZH_SCALE: LayerScale = buildLinearScale({
+export const RADAR_DBZH_SCALE: LayerScale = buildScaleFromLinearGradient({
   ...baseScaleConfig,
   min: -18,
   max: 76.5,
@@ -89,7 +89,7 @@ export const RADAR_DBZH_SCALE: LayerScale = buildLinearScale({
  * VELOCITY (VRAD) - paleta_vmsr_viento
  * Rango: -38.75 a 40 m/s
  */
-export const RADAR_VRAD_SCALE: LayerScale = buildLinearScale({
+export const RADAR_VRAD_SCALE: LayerScale = buildScaleFromLinearGradient({
   ...baseScaleConfig,
   min: -38.75,
   max: 40,
@@ -166,7 +166,7 @@ export const RADAR_VRAD_SCALE: LayerScale = buildLinearScale({
  * CORRELATION COEFFICIENT (RHOHV) - paleta_rhohv
  * Rango: 0.225 a 1.048
  */
-export const RADAR_RHOHV_SCALE: LayerScale = buildBoundedScale({
+export const RADAR_RHOHV_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.CORRELATION,
   hexColors: [
@@ -313,7 +313,7 @@ export const RADAR_RHOHV_SCALE: LayerScale = buildBoundedScale({
  * DIFFERENTIAL REFLECTIVITY (ZDR) - paleta_zdr
  * Rango: -3.0 a 7.9 dB
  */
-export const RADAR_ZDR_SCALE: LayerScale = buildBoundedScale({
+export const RADAR_ZDR_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_REFLECTIVITY,
   hexColors: [
@@ -437,7 +437,7 @@ export const RADAR_ZDR_SCALE: LayerScale = buildBoundedScale({
  * SPECIFIC DIFFERENTIAL PHASE (KDP) - paleta_kdp
  * Rango: -1 a 6.1 °/km
  */
-export const RADAR_KDP_SCALE: LayerScale = buildBoundedScale({
+export const RADAR_KDP_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_PHASE,
   hexColors: [

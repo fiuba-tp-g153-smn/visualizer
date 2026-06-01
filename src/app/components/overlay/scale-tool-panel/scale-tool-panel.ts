@@ -420,8 +420,6 @@ export class ScaleToolPanelComponent {
     const clipRange = this.getScaleClipRange();
     if (clipRange) return clipRange;
 
-    const domain = this.discreteScale.labelDomain;
-    if (domain) return domain;
     const entries = this.sortedDiscreteEntriesDesc;
     return [entries[entries.length - 1]?.value ?? 0, entries[0]?.value ?? 0];
   }
@@ -430,8 +428,6 @@ export class ScaleToolPanelComponent {
     const clipRange = this.getScaleClipRange();
     if (clipRange) return clipRange;
 
-    const domain = this.continuousScale.labelDomain;
-    if (domain) return domain;
     const entries = this.sortedContinuousEntriesAsc;
     return [entries[0]?.value ?? 0, entries[entries.length - 1]?.value ?? 0];
   }

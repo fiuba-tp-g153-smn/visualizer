@@ -1,5 +1,5 @@
 import { LayerScale, ScaleType } from '../../../models';
-import { buildBoundedScale } from '../scale-builders';
+import { buildScaleFromThresholds } from '../scale-builders';
 
 /**
  * Escalas legend para los productos WRF-ARG4K.
@@ -7,7 +7,7 @@ import { buildBoundedScale } from '../scale-builders';
  * tiles-processor (palettes definidas en `wrf_processor.py`).
  *
  * Todas las paletas WRF son discretas por bandas: cada `value` es el umbral
- * inferior de la banda y su `color` la pinta. `buildBoundedScale` empareja
+ * inferior de la banda y su `color` la pinta. `buildScaleFromThresholds` empareja
  * `bounds[i]` con `hexColors[i]` para producir las `entries` del modelo nuevo.
  */
 
@@ -41,14 +41,14 @@ const WRF_COLMAX_COLORS = WRF_COLMAX_BOUNDS.map((bound) => {
   return WRF_COLMAX_ORIGINAL_COLORS[clampedIndex];
 });
 
-export const WRF_COLMAX_SCALE: LayerScale = buildBoundedScale({
+export const WRF_COLMAX_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'dBZ',
   bounds: WRF_COLMAX_BOUNDS,
   hexColors: WRF_COLMAX_COLORS,
 });
 
-export const WRF_RAFAGAS_SCALE: LayerScale = buildBoundedScale({
+export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'kt',
   bounds: [25, 30, 35, 40, 45, 50, 60, 70, 80],
@@ -58,7 +58,7 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildBoundedScale({
   ],
 });
 
-export const WRF_CAMPO900_SCALE: LayerScale = buildBoundedScale({
+export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'g/kg',
   bounds: Array.from({ length: 19 }, (_, i) => i),
@@ -70,7 +70,7 @@ export const WRF_CAMPO900_SCALE: LayerScale = buildBoundedScale({
   ],
 });
 
-export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildBoundedScale({
+export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'mm',
   bounds: [0.1, 1.0, 5.0, 10.0, 15.0, 18.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0, 100.0, 120.0, 150.0, 180.0, 220.0],
@@ -83,7 +83,7 @@ export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildBoundedScale({
   ],
 });
 
-export const WRF_MUCAPE_SCALE: LayerScale = buildBoundedScale({
+export const WRF_MUCAPE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'J/kg',
   bounds: [100, 250, 750, 1000, 1500, 2000, 2500, 3000, 3500],
@@ -93,21 +93,21 @@ export const WRF_MUCAPE_SCALE: LayerScale = buildBoundedScale({
   ],
 });
 
-export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildBoundedScale({
+export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'mm',
   bounds: [20, 30, 40, 50, 60],
   hexColors: ['#cecfe4', '#a5bbd8', '#74a8cd', '#358fbf', '#0570b0'],
 });
 
-export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildBoundedScale({
+export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'kt',
   bounds: [-48, -44, -40, -36, -32, -28, -24],
   hexColors: ['#df1400', '#fd3200', '#fd6000', '#fd9f00', '#fdbf3c', '#fdf8a9', '#fdf8a9'],
 });
 
-export const WRF_CORTANTE_SCALE: LayerScale = buildBoundedScale({
+export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: 'kt',
   bounds: [10, 20, 30, 40, 50],
@@ -116,7 +116,7 @@ export const WRF_CORTANTE_SCALE: LayerScale = buildBoundedScale({
 
 export const WRF_CAPE_BRN_SCALE: LayerScale = WRF_MUCAPE_SCALE;
 
-export const WRF_GRANIZO_SCALE: LayerScale = buildBoundedScale({
+export const WRF_GRANIZO_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: '',
   bounds: [0.1, 1.0, 2.0, 3.0, 4.0],
