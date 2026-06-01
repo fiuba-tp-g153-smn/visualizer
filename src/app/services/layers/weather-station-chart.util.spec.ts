@@ -76,12 +76,15 @@ describe('buildSeriesCharts', () => {
     expect(temp.chart.group).toBe('ws-48h'); // synced hover across charts
   });
 
-  it('uses a clean professional style — no markers or guide lines, gridded bands', () => {
+  it('shows dots, no guide lines, gridded bands; wind uses direction triangles', () => {
     const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
     const temp = charts.find((c) => c.variable.id === 'temperature')!;
-    expect(temp.markers.size).toBe(0);
+    expect(Number(temp.markers.size)).toBeGreaterThan(0); // data-point dots
     expect(temp.annotations.yaxis ?? []).toHaveLength(0);
     expect(temp.grid.column?.colors?.length).toBeGreaterThan(0); // alternating bands
+
+    const wind = charts.find((c) => c.variable.id === 'windSpeed')!;
+    expect(wind.markers.shape).toBe('triangle');
   });
 
   it('shows the shared time axis only on the top and bottom charts', () => {

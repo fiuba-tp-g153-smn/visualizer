@@ -21,9 +21,13 @@ export interface WeatherStationHistoryChartsData {
   stationId: number;
   stationName: string | null;
   province: string | null;
+  lat: number | null;
+  lon: number | null;
   /** Pre-fetched series passed by the popover so the dialog opens with no new request. */
   series?: StationSeries | null;
 }
+
+type DetailSection = 'graficos' | 'resumen' | 'observaciones';
 
 /**
  * Full-screen view of a station's last 48 h: one time-aligned chart per variable
@@ -53,6 +57,11 @@ export class WeatherStationHistoryChartsComponent {
 
   readonly stationName = this.data.stationName ?? 'Estación';
   readonly province = this.data.province ?? '';
+  readonly stationId = this.data.stationId;
+  readonly latText = this.data.lat === null ? '—' : this.data.lat.toFixed(2);
+  readonly lonText = this.data.lon === null ? '—' : this.data.lon.toFixed(2);
+
+  readonly section = signal<DetailSection>('graficos');
 
   private readonly series = signal<StationSeries | null>(this.data.series ?? null);
   readonly loading = signal<boolean>(!this.data.series);
@@ -102,6 +111,10 @@ export class WeatherStationHistoryChartsComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  setSection(section: DetailSection): void {
+    this.section.set(section);
   }
 
   close(): void {

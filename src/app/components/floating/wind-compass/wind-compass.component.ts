@@ -22,11 +22,23 @@ export class WindCompassComponent {
   @Input() deg: number | null = null;
   @Input() direction: string | null = null;
 
+  get isCalm(): boolean {
+    return this.direction === 'Calma';
+  }
+
+  /** No arrow for calm winds (or missing bearing). */
   get hasDirection(): boolean {
-    return this.deg !== null && Number.isFinite(this.deg);
+    return !this.isCalm && this.deg !== null && Number.isFinite(this.deg);
   }
 
   get rotation(): number {
     return this.deg ?? 0;
+  }
+
+  get caption(): string {
+    if (this.isCalm) {
+      return 'Calma · sin dirección';
+    }
+    return this.direction ? `desde el ${this.direction}` : 'Sin dato';
   }
 }

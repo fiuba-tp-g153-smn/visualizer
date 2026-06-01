@@ -129,6 +129,8 @@ export class WeatherStationPopupComponent implements OnInit {
           stationId: this.data.stationId,
           stationName: this.data.stationName,
           province: this.data.province,
+          lat: this.data.lat,
+          lon: this.data.lon,
           series: this.series(),
         },
       },
