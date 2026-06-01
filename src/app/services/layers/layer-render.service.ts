@@ -204,6 +204,16 @@ export class LayerRenderService {
         continue;
       }
 
+      // Wind layer: a null speed is either calm (reported as 'Calma' → shown as 0)
+      // or no reading at all. Drop the latter so the map only shows real wind data.
+      if (
+        stationLayer.variable === WeatherStationVariable.WIND_SPEED &&
+        observation.weather.wind.speed === null &&
+        observation.weather.wind.direction !== 'Calma'
+      ) {
+        continue;
+      }
+
       const px = map.latLngToLayerPoint(latLng);
       visiblePoints.push({
         observation,
@@ -315,12 +325,17 @@ export class LayerRenderService {
 
       let marker: L.Marker;
       if (isWindBarb) {
+        // The barb glyph is always in knots (meteorological standard); the badge
+        // number tracks the user's display unit (km/h ↔ kt toggle) via the same
+        // helper the popover uses, so the on-map value matches the popover.
         const knots = convertKilometersPerHourToKnots(observation.weather.wind.speed ?? 0);
-        const { value: tempValue } = this.resolveWeatherStationsTemperatureDisplay(
-          observation.weather.temperature,
+        const { value: windValue } = this.resolveWeatherStationsWindSpeedDisplay(
+          observation.weather.wind.speed,
         );
-        const tempLabel =
-          tempValue === null || Number.isNaN(tempValue) ? '' : String(Math.round(tempValue));
+        // Any null here is a calm station (no-data was filtered out above); show 0
+        // to match the popover's calm reading.
+        const windLabel =
+          windValue === null || Number.isNaN(windValue) ? '0' : String(Math.round(windValue));
         const textColor = this.resolveWeatherStationsContrastingTextColor(color);
         const icon = this.buildWeatherStationsWindBarbIcon(
           knots,
@@ -329,7 +344,7 @@ export class LayerRenderService {
           badgeDiameterPx,
           color,
           textColor,
-          tempLabel,
+          windLabel,
         );
         marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else if (level === WeatherStationRenderLevel.DOT) {
