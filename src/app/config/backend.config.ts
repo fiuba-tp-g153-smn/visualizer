@@ -137,3 +137,12 @@ export function buildWeatherStationsTilesetsUrl(): string {
 export function buildWeatherStationsRegistryUrl(): string {
   return `${DATA_SERVICE_BASE_URL}/weather-stations/stations`;
 }
+
+/**
+ * URL del histórico bundleado de una estación: todas las variables de las
+ * últimas `hours` horas en un único JSON (el data-service pivotea los snapshots
+ * por hora del lado del servidor, así el front hace una sola request).
+ */
+export function buildWeatherStationsSeriesUrl(stationId: number, hours = 48): string {
+  return `${DATA_SERVICE_BASE_URL}/weather-stations/station/${stationId}/series?hours=${hours}`;
+}

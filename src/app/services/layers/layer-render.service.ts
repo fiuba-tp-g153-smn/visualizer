@@ -973,6 +973,7 @@ export class LayerRenderService {
       this.resolveWeatherStationsTemperatureDisplay(observation.weather.feels_like);
 
     return {
+      stationId: observation.weather.station_id ?? observation.station.id ?? 0,
       stationName,
       province,
       values: [
@@ -1591,11 +1592,13 @@ type WeatherStationObservationLike = {
       lat: number;
       lon: number;
     };
+    id?: number | null;
     name: string | null;
     province: string | null;
   };
   weather: {
     date: string;
+    station_id?: number | null;
     temperature: number | null;
     feels_like: number | null;
     humidity: number | null;
