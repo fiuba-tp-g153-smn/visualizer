@@ -1,3 +1,5 @@
+import type * as L from 'leaflet';
+import type { Feature } from 'geojson';
 import { ActiveLayerGroupId } from './groups.models';
 
 export enum LayerType {
@@ -13,6 +15,7 @@ export enum LayerCategory {
   IGN_WMS = 'ign_wms',
   ECMWF_TP = 'ecmwf_tp',
   WEATHER_STATIONS = 'weather_stations',
+  WRF = 'wrf', // WRF-ARG4K (SMN) — multi-product forecast model
 }
 
 // [[lat_sur, lon_oeste], [lat_norte, lon_este]] — compatible con L.LatLngBoundsExpression
@@ -67,7 +70,8 @@ export type Layer =
   | RadarTileLayer
   | WmsLayer
   | EcmwfTpTileLayer
-  | WeatherStationLayer;
+  | WeatherStationLayer
+  | WrfTileLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
@@ -112,7 +116,30 @@ export interface EcmwfTpTileLayer extends TileLayer {
   secondaryRender?: SecondaryVectorRender;
 }
 
-// Mapea casi 1:1 a L.PathOptions de Leaflet
+/**
+ * Capa WRF-ARG4K. Cada producto del modelo (Colmax, Rafagas, Precipitacion1h, ...)
+ * es una capa independiente identificada por `productId`. Las corridas (init runs)
+ * y pasos de pronóstico (fxxx) se descubren dinámicamente vía data-service.
+ */
+export interface WrfTileLayer extends TileLayer {
+  category: LayerCategory.WRF;
+  /** Identificador del producto WRF (ej. 'Colmax', 'Rafagas', 'JetCapasBajas'). */
+  productId: string;
+  /** Períodos disponibles (cantidad de últimos pasos a mostrar). */
+  availablePeriods?: readonly number[];
+  /**
+   * Renders vectoriales secundarios (barbas, contornos) atados a esta capa.
+   * Cada uno se anima con el primary tile, comparte timeline y forecast run.
+   * A diferencia de ECMWF (un único secondary), WRF puede traer N overlays
+   * por producto (ej. JetCapasBajas: barbas + shear_850_700).
+   */
+  secondaryRenders?: readonly (SecondaryVectorRender | BarbTileRender)[];
+}
+
+/**
+ * Estilo de una línea vectorial (isobaras, contornos, etc.). Se mapea casi
+ * 1:1 a `L.PathOptions` de Leaflet.
+ */
 export interface VectorLineStyle {
   color: string;
   weight: number;
@@ -143,6 +170,28 @@ export interface SecondaryVectorRender {
   labelFor: (value: number) => string | null;
   textpathOptions?: VectorTextpathOptions;
   prefetchWindow?: number;
+  /**
+   * Longitud mínima (en grados) que debe tener una polyline para llevar
+   * etiqueta. Si se omite, se usa el default global del service.
+   */
+  minLabelLengthDeg?: number;
+  /**
+   * Constructor opcional para Point features (barbas, símbolos puntuales).
+   * Cuando está presente, `VectorOverlayService.buildLayer` lo usa como
+   * `pointToLayer` de Leaflet. Para overlays Line/Polyline (isobaras,
+   * contornos) se omite y la renderización cae al style + setText path.
+   */
+  pointToLayer?: (feature: Feature, latlng: L.LatLng) => L.Layer;
+}
+
+/**
+ * Render secundario que se sirve como tiles raster z/x/y (en lugar de GeoJSON
+ * vectorial). Hoy se usa para barbas WRF rasterizadas en el backend.
+ */
+export interface BarbTileRender {
+  readonly kind: 'barb-tile';
+  /** ID estable del overlay; usado para cache y nombrado de pane. */
+  readonly id: string;
 }
 
 export interface WeatherStationLayer extends BaseLayer {
@@ -161,6 +210,10 @@ export enum WeatherStationVariable {
   WIND_SPEED = 'wind_speed',
 }
 
+/**
+ * Capa de tipo WMS (servicios Web Map Service)
+ * Usa L.TileLayer.WMS de Leaflet
+ */
 export interface WmsLayer extends BaseLayer {
   type: LayerType.WMS;
   wmsLayerName: string;

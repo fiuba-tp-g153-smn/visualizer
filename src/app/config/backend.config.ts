@@ -71,6 +71,57 @@ export function buildEcmwfMslpPointQueryUrl(
 }
 
 /**
+ * Construye la URL de un tile WRF para Leaflet (con placeholders {z}/{x}/{y}).
+ */
+export function buildWrfTileUrl(
+  productId: string,
+  initTag: string,
+  fxxx: string,
+): string {
+  const format = environment.tiles.format;
+  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/{z}/{x}/{y}.${format}`;
+}
+
+/**
+ * URL para consultar el valor puntual del COG WRF en una coordenada.
+ */
+export function buildWrfPointQueryUrl(
+  productId: string,
+  initTag: string,
+  fxxx: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
+ * URL concreta de un tile GeoJSON de barbas WRF (z/x/y).
+ */
+export function buildWrfBarbTileUrl(
+  productId: string,
+  initTag: string,
+  fxxx: string,
+  z: number,
+  x: number,
+  y: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/barbs/${z}/${x}/${y}.json`;
+}
+
+/**
+ * URL del GeoJSON de un overlay WRF (barbas / contornos / isobaras).
+ */
+export function buildWrfGeojsonUrl(
+  productId: string,
+  initTag: string,
+  fxxx: string,
+  layer: string,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/${layer}.json`;
+}
+
+/**
  * URL para consultar el valor puntual de una capa de radar en una coordenada.
  */
 export function buildRadarPointQueryUrl(

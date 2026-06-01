@@ -82,17 +82,67 @@ export function parseEcmwfTimestamp(ts: string): Date | null {
   return new Date(Date.UTC(year, month, day, hour, minute, 0));
 }
 
-/**
- * Formats an ECMWF forecast timestamp as "MM-DD HHh" for compact display.
- * Example: "20260502T1200Z" → "05-02 12h"
- */
-export function formatEcmwfForecastTs(forecastTs: string): string {
-  if (forecastTs.length < 13) return forecastTs;
+// ============================================================================
+// WRF Timestamp Parsing & Formatting
+// ============================================================================
 
-  const month = forecastTs.substring(4, 6);
-  const day = forecastTs.substring(6, 8);
-  const hour = forecastTs.substring(9, 11);
-  return `${month}-${day} ${hour}h`;
+/**
+ * Parsea un init_tag WRF en formato 'YYYYMMDD_HHMMSS'.
+ * El init_tag está en UTC (igual que el forecast_ts de ECMWF), así que se
+ * interpreta como UTC — no con el constructor local de Date, que lo correría
+ * por el offset del navegador y desincronizaría el timeline del label.
+ * Ejemplo: '20260430_060000' → 2026-04-30T06:00:00Z
+ */
+export function parseWrfInitTag(initTag: string): Date | null {
+  if (initTag.length < 15 || initTag.charAt(8) !== '_') return null;
+  const year = parseInt(initTag.substring(0, 4));
+  const month = parseInt(initTag.substring(4, 6)) - 1;
+  const day = parseInt(initTag.substring(6, 8));
+  const hour = parseInt(initTag.substring(9, 11));
+  const minute = parseInt(initTag.substring(11, 13));
+  const second = parseInt(initTag.substring(13, 15));
+  if ([year, month, day, hour, minute, second].some((n) => Number.isNaN(n))) return null;
+  return new Date(Date.UTC(year, month, day, hour, minute, second));
+}
+
+/**
+ * Sintetiza el Date de un (init_tag, fxxx) WRF como init + N horas.
+ * Ejemplo: ('20260430_060000', 'F003') → 2026-04-30 09:00.
+ */
+export function parseWrfStepTimestamp(initTag: string, fxxx: string): Date | null {
+  const init = parseWrfInitTag(initTag);
+  if (!init) return null;
+  if (!fxxx.startsWith('F')) return init;
+  const offsetH = parseInt(fxxx.substring(1));
+  if (Number.isNaN(offsetH)) return init;
+  return new Date(init.getTime() + offsetH * 3_600_000);
+}
+
+/**
+ * Inverso de `parseWrfStepTimestamp`: dado un init_tag y un instante absoluto,
+ * sintetiza el paso fxxx ('F003') asumiendo cadencia horaria (1H).
+ * Devuelve null si el instante es anterior al init (offset negativo).
+ * Ejemplo: ('20260430_060000', 2026-04-30 09:00) → 'F003'.
+ */
+export function wrfFxxxForInitAndTime(initTag: string, time: Date): string | null {
+  const init = parseWrfInitTag(initTag);
+  if (!init) return null;
+  const offsetH = Math.round((time.getTime() - init.getTime()) / 3_600_000);
+  if (offsetH < 0) return null;
+  return 'F' + String(offsetH).padStart(3, '0');
+}
+
+/**
+ * Formato compacto para init_tag WRF (mostrar en filtros): "MM-DD HHh".
+ */
+export function formatWrfInitTag(initTag: string): string {
+  const dt = parseWrfInitTag(initTag);
+  if (!dt) return initTag;
+  const utc = shouldUseUtc();
+  const mo = String((utc ? dt.getUTCMonth() : dt.getMonth()) + 1).padStart(2, '0');
+  const dd = String(utc ? dt.getUTCDate() : dt.getDate()).padStart(2, '0');
+  const hh = String(utc ? dt.getUTCHours() : dt.getHours()).padStart(2, '0');
+  return `${mo}-${dd} ${hh}h`;
 }
 
 // ============================================================================
@@ -110,14 +160,21 @@ export function formatDateTimeOnly(date: Date): string {
 }
 
 /**
- * Formats a Date as "YYYY-MM-DD HH:MM".
+ * Formats a Date as "YYYY-MM-DD".
  */
-export function formatDateFull(date: Date): string {
+export function formatDateOnly(date: Date): string {
   const yyyy = shouldUseUtc() ? date.getUTCFullYear() : date.getFullYear();
   const mo = String((shouldUseUtc() ? date.getUTCMonth() : date.getMonth()) + 1).padStart(2, '0');
   const dd = String(shouldUseUtc() ? date.getUTCDate() : date.getDate()).padStart(2, '0');
 
-  return `${yyyy}-${mo}-${dd} ${formatDateTimeOnly(date)}`;
+  return `${yyyy}-${mo}-${dd}`;
+}
+
+/**
+ * Formats a Date as "YYYY-MM-DD HH:MM".
+ */
+export function formatDateFull(date: Date): string {
+  return `${formatDateOnly(date)} ${formatDateTimeOnly(date)}`;
 }
 
 /**

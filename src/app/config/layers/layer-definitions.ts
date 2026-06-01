@@ -3,6 +3,7 @@ import { GLM_SUBGROUP } from './goes/glm/config';
 import { RADAR_SUBGROUPS } from './radar/config';
 import { ECMWF_SUBGROUP } from './ecmwf/config';
 import { WEATHER_STATIONS_SUBGROUP } from './weather-stations/config';
+import { WRF_SUBGROUP } from './wrf/config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
   IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
@@ -44,7 +45,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     description: 'Modelos numéricos de pronóstico',
     icon: 'insights',
     expanded: false,
-    subgroups: [ECMWF_SUBGROUP],
+    subgroups: [ECMWF_SUBGROUP, WRF_SUBGROUP],
   },
   {
     id: 'smn-estaciones',
