@@ -2,6 +2,9 @@
   <header class="ws-history__header">
     <div class="ws-history__titles">
       <h2 class="ws-history__title">{{ stationName }}</h2>
+      <div class="ws-history__meta">
+        ID estación: <strong>{{ stationId }}</strong> · Lat {{ latText }} · Lon {{ lonText }}
+      </div>
       @if (province) {
         <div class="ws-history__province">{{ province }}</div>
       }
@@ -11,6 +14,33 @@
       <mat-icon>close</mat-icon>
     </button>
   </header>
+
+  <nav class="ws-history__nav" role="tablist">
+    <button
+      type="button"
+      class="ws-history__nav-btn"
+      [class.ws-history__nav-btn--active]="section() === 'graficos'"
+      (click)="setSection('graficos')"
+    >
+      Gráficos
+    </button>
+    <button
+      type="button"
+      class="ws-history__nav-btn"
+      [class.ws-history__nav-btn--active]="section() === 'resumen'"
+      (click)="setSection('resumen')"
+    >
+      Resumen
+    </button>
+    <button
+      type="button"
+      class="ws-history__nav-btn"
+      [class.ws-history__nav-btn--active]="section() === 'observaciones'"
+      (click)="setSection('observaciones')"
+    >
+      Observaciones
+    </button>
+  </nav>
 
   <section class="ws-history__body">
     @if (loading()) {
@@ -22,8 +52,7 @@
       <div class="ws-history__state">No se pudo cargar el histórico de la estación.</div>
     } @else if (!hasPoints()) {
       <div class="ws-history__state">Sin datos en las últimas 48 horas.</div>
-    } @else {
-      <h3 class="ws-history__section-title">Gráficos</h3>
+    } @else if (section() === 'graficos') {
       <div class="ws-history__charts">
         @for (vm of charts(); track vm.variable.id) {
           <article class="ws-history__chart">
@@ -53,8 +82,7 @@
           </article>
         }
       </div>
-
-      <h3 class="ws-history__section-title">Resumen</h3>
+    } @else if (section() === 'resumen') {
       <div class="ws-history__summary">
         @for (group of summary(); track group.title) {
           <div class="ws-history__summary-group">
@@ -68,8 +96,7 @@
           </div>
         }
       </div>
-
-      <h3 class="ws-history__section-title">Observaciones</h3>
+    } @else {
       <div class="ws-history__table-wrap">
         <table class="ws-history__table">
           <thead>

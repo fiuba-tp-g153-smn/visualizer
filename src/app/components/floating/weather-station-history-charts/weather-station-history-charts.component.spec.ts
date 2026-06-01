@@ -40,12 +40,16 @@ const SERIES: StationSeries = {
   latest: pt('2026-05-17T14:00:00Z', 18),
 };
 
-function configure(data: WeatherStationHistoryChartsData): void {
+function configure(
+  data: Omit<WeatherStationHistoryChartsData, 'lat' | 'lon'> &
+    Partial<Pick<WeatherStationHistoryChartsData, 'lat' | 'lon'>>,
+): void {
+  const fullData: WeatherStationHistoryChartsData = { lat: -34.59, lon: -58.32, ...data };
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     imports: [WeatherStationHistoryChartsComponent],
     providers: [
-      { provide: MAT_DIALOG_DATA, useValue: data },
+      { provide: MAT_DIALOG_DATA, useValue: fullData },
       { provide: MatDialogRef, useValue: { close: vi.fn() } },
       { provide: WeatherStationsHistoryService, useValue: { fetchSeries: vi.fn() } },
     ],
@@ -79,7 +83,7 @@ describe('WeatherStationHistoryChartsComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Viento');
   });
 
-  it('renders the Gráficos, Resumen and Observaciones sections', () => {
+  it('exposes a nav and renders the Observaciones table when selected', () => {
     configure({
       stationId: 87344,
       stationName: 'CORDOBA AERO',
@@ -89,14 +93,25 @@ describe('WeatherStationHistoryChartsComponent', () => {
     const fixture = TestBed.createComponent(WeatherStationHistoryChartsComponent);
     fixture.detectChanges();
 
-    const text = fixture.nativeElement.textContent ?? '';
-    expect(text).toContain('Gráficos');
-    expect(text).toContain('Resumen');
-    expect(text).toContain('Observaciones');
-    // One observations row per point + the condition value.
+    // The nav offers all three sections; the header shows id/lat/lon.
+    const navText = fixture.nativeElement.textContent ?? '';
+    expect(navText).toContain('Gráficos');
+    expect(navText).toContain('Resumen');
+    expect(navText).toContain('Observaciones');
+    expect(navText).toContain('87344');
+    expect(navText).toContain('-34.59');
+
+    // Default section = Gráficos: no table yet.
+    expect(fixture.nativeElement.querySelector('.ws-history__table')).toBeNull();
+
+    // Switch to Observaciones → one row per point, with the condition.
+    const navButtons = fixture.nativeElement.querySelectorAll('.ws-history__nav-btn');
+    (navButtons[2] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
     const rows = fixture.nativeElement.querySelectorAll('.ws-history__table tbody tr');
     expect(rows).toHaveLength(2);
-    expect(text).toContain('Niebla');
+    expect(fixture.nativeElement.textContent).toContain('Niebla');
   });
 
   it('shows the empty state when the series has no points', () => {

@@ -129,20 +129,26 @@ describe('WeatherStationPopupComponent', () => {
     expect(fixture.nativeElement.querySelector('apx-chart')).not.toBeNull();
   });
 
-  it('opens the full-screen all-variables dialog from the Gráfico tab link', async () => {
+  it('shows the all-variables link in both tabs and opens the dialog with lat/lon', async () => {
     const fixture = TestBed.createComponent(WeatherStationPopupComponent);
     fixture.componentRef.setInput('data', DATA);
     fixture.detectChanges();
     await flush();
 
+    // Present on the default Actual tab (shared footer).
+    expect(fixture.nativeElement.querySelector('.ws-card__all-link')).not.toBeNull();
+
+    // Still present after switching to the Gráfico tab.
     const tabs = fixture.nativeElement.querySelectorAll('.ws-card__tab');
     (tabs[1] as HTMLButtonElement).click();
     fixture.detectChanges();
-
     const link: HTMLButtonElement = fixture.nativeElement.querySelector('.ws-card__all-link');
-    link.click();
+    expect(link).not.toBeNull();
 
+    link.click();
     expect(dialogOpen).toHaveBeenCalledTimes(1);
-    expect(dialogOpen.mock.calls[0][1].data.stationId).toBe(87593);
+    const config = dialogOpen.mock.calls[0][1];
+    expect(config.data.stationId).toBe(87593);
+    expect(config.data.lat).toBe(-34.59);
   });
 });

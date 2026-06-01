@@ -175,6 +175,35 @@ function tightYRange(ys: number[]): { min: number; max: number } | undefined {
 
 type XAxisLabels = 'top' | 'bottom' | 'hidden';
 
+/**
+ * Best-effort: rotate each triangle wind marker to its point's bearing. Relies on
+ * ApexCharts' rendered SVG (`.apexcharts-series-markers path`, one per non-null
+ * point, in order) — guarded so a structure change just leaves the triangles
+ * un-rotated rather than throwing.
+ */
+function rotateWindMarkers(
+  chartContext: { el?: Element } | undefined,
+  degrees: readonly (number | null)[],
+): void {
+  const markers = chartContext?.el?.querySelectorAll('.apexcharts-series-markers path');
+  if (!markers) {
+    return;
+  }
+  markers.forEach((marker, index) => {
+    const deg = degrees[index];
+    if (deg === null || deg === undefined || Number.isNaN(deg)) {
+      return;
+    }
+    const box = (marker as SVGGraphicsElement).getBBox?.();
+    if (!box) {
+      return;
+    }
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    marker.setAttribute('transform', `rotate(${deg} ${cx} ${cy})`);
+  });
+}
+
 function buildVariableChart(
   variable: SeriesVariable,
   series: StationSeries,
@@ -199,6 +228,14 @@ function buildVariableChart(
   const hasData = ys.length > 0;
   const yRange = tightYRange(ys);
 
+  // The wind chart uses triangle markers rotated to each reading's bearing.
+  const isWind = variable.id === 'windSpeed';
+  const windDegrees = isWind
+    ? series.points.filter((p) => p.windSpeed !== null).map((p) => p.windDeg)
+    : [];
+  const rotate = (chart: unknown): void =>
+    rotateWindMarkers(chart as { el?: Element }, windDegrees);
+
   const latestRaw = series.latest ? variable.accessor(series.latest) : null;
   const latestText =
     latestRaw === null
@@ -222,11 +259,14 @@ function buildVariableChart(
       animations: { enabled: false },
       parentHeightOffset: 0,
       fontFamily: 'inherit',
+      ...(isWind ? { events: { mounted: rotate, updated: rotate, animationEnd: rotate } } : {}),
     },
     stroke: { curve: 'straight', width: 2 },
     dataLabels: { enabled: false },
-    // Clean professional look: no markers/guide-lines, gridlines + alternating bands.
-    markers: { size: 0 },
+    // Dots per data point; the wind chart uses direction-rotated triangles.
+    markers: isWind
+      ? { size: 6, shape: 'triangle', strokeWidth: 0 }
+      : { size: 4, strokeWidth: 0, hover: { size: 6 } },
     annotations: {},
     grid: {
       borderColor: '#e5e7eb',

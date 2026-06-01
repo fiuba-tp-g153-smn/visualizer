@@ -37,4 +37,18 @@ describe('WindCompassComponent', () => {
     expect(el.querySelector('.wind-compass__arrow')).toBeNull();
     expect(el.textContent).toContain('Sin dato');
   });
+
+  it('shows "Calma · sin dirección" and no arrow for calm winds', () => {
+    const fixture = TestBed.createComponent(WindCompassComponent);
+    fixture.componentRef.setInput('speed', '0');
+    fixture.componentRef.setInput('unit', 'km/h');
+    fixture.componentRef.setInput('deg', 0);
+    fixture.componentRef.setInput('direction', 'Calma');
+    fixture.detectChanges();
+
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.wind-compass__arrow')).toBeNull();
+    expect(el.textContent).toContain('Calma · sin dirección');
+    expect(el.textContent).not.toContain('desde el');
+  });
 });

@@ -76,7 +76,7 @@ const METRICS: readonly MetricDef[] = [
     title: 'Viento',
     sourceUnit: WEATHER_STATION_UNITS.WIND_SPEED,
     decimals: 0,
-    stats: ['max', 'avg'],
+    stats: ['max', 'min', 'avg'],
     accessor: (p) => p.windSpeed,
   },
 ];

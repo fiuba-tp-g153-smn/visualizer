@@ -32,9 +32,48 @@
   font-weight: 600;
 }
 
+.ws-history__meta {
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: #6b7280;
+
+  strong {
+    color: #0090d0;
+    font-weight: 700;
+  }
+}
+
 .ws-history__province {
   font-size: 0.85rem;
   color: #6b7280;
+}
+
+.ws-history__nav {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ws-history__nav-btn {
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font: inherit;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.ws-history__nav-btn--active {
+  color: #0090d0;
+  border-bottom-color: #0090d0;
 }
 
 .ws-history__subtitle {
