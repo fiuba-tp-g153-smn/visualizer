@@ -17,6 +17,7 @@ function point(t: string, temperature: number | null, dewPoint: number | null): 
     pressure: null,
     visibility: null,
     dewPoint,
+    condition: null,
     windSpeed: null,
     windDeg: null,
     windDirection: null,
@@ -73,7 +74,21 @@ describe('buildSeriesCharts', () => {
     expect(temp.colors).toEqual(['#ff6b59']);
     expect(temp.stroke.curve).toBe('straight');
     expect(temp.chart.group).toBe('ws-48h'); // synced hover across charts
-    // máx guide line from the data max (22).
-    expect((temp.annotations.yaxis ?? [])[0]?.y).toBe(22);
+  });
+
+  it('uses a clean professional style — no markers or guide lines, gridded bands', () => {
+    const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
+    const temp = charts.find((c) => c.variable.id === 'temperature')!;
+    expect(temp.markers.size).toBe(0);
+    expect(temp.annotations.yaxis ?? []).toHaveLength(0);
+    expect(temp.grid.column?.colors?.length).toBeGreaterThan(0); // alternating bands
+  });
+
+  it('shows the shared time axis only on the top and bottom charts', () => {
+    const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
+    expect(charts[0].xaxis.position).toBe('top');
+    expect(charts[0].xaxis.labels?.show).toBe(true);
+    expect(charts[charts.length - 1].xaxis.labels?.show).toBe(true);
+    expect(charts[1].xaxis.labels?.show).toBe(false); // middle hidden
   });
 });

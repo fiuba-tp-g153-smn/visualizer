@@ -14,6 +14,8 @@ import {
   TimezoneSettingsService,
 } from '../../../services/settings/timezone-settings.service';
 import { buildSeriesCharts } from '../../../services/layers/weather-station-chart.util';
+import { buildSeriesSummary } from '../../../services/layers/weather-station-summary.util';
+import { buildObservationRows } from '../../../services/layers/weather-station-observations.util';
 
 export interface WeatherStationHistoryChartsData {
   stationId: number;
@@ -67,6 +69,19 @@ export class WeatherStationHistoryChartsComponent {
       utc: this.timezone.mode() === TIMEZONE_MODES.UTC,
       height: 200,
     });
+  });
+
+  /** Per-variable high/low/average over the window. */
+  readonly summary = computed(() => {
+    const current = this.series();
+    return current ? buildSeriesSummary(current, this.unitsSettings) : [];
+  });
+
+  /** One formatted row per observation (recomputes on unit/timezone change). */
+  readonly observations = computed(() => {
+    const current = this.series();
+    void this.timezone.mode(); // formatDateTimeLocalized reads the global mode
+    return current ? buildObservationRows(current, this.unitsSettings) : [];
   });
 
   readonly hasPoints = computed(() => (this.series()?.points.length ?? 0) > 0);

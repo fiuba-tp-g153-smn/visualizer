@@ -45,6 +45,7 @@ function pt(t: string, temp: number, dew: number): StationSeriesPoint {
     pressure: null,
     visibility: null,
     dewPoint: dew,
+    condition: null,
     windSpeed: null,
     windDeg: null,
     windDirection: null,

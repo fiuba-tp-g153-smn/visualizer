@@ -173,30 +173,7 @@ function tightYRange(ys: number[]): { min: number; max: number } | undefined {
   return { min: minY - base * 0.08, max: maxY + base * 0.12 };
 }
 
-/** A single dashed `máx` guide line, labeled with the value + unit. */
-function buildMaxAnnotation(ys: number[], variable: SeriesVariable, unit: string): ApexAnnotations {
-  if (!ys.length) {
-    return {};
-  }
-  const maxY = Math.max(...ys);
-  return {
-    yaxis: [
-      {
-        y: maxY,
-        borderColor: variable.color,
-        strokeDashArray: 4,
-        opacity: 0.5,
-        label: {
-          text: `máx ${maxY.toFixed(variable.decimals)} ${unit}`.trim(),
-          position: 'right' as const,
-          textAnchor: 'end' as const,
-          borderColor: 'transparent',
-          style: { fontSize: '11px', color: variable.color, background: 'transparent' },
-        },
-      },
-    ],
-  };
-}
+type XAxisLabels = 'top' | 'bottom' | 'hidden';
 
 function buildVariableChart(
   variable: SeriesVariable,
@@ -205,6 +182,7 @@ function buildVariableChart(
   opts: BuildChartsOptions,
   xMin: number | undefined,
   xMax: number | undefined,
+  xLabels: XAxisLabels,
 ): SeriesChartVm {
   const unit = getDisplayUnit(variable.sourceUnit, unitsSettings);
   const data = series.points.map((point) => {
@@ -247,9 +225,16 @@ function buildVariableChart(
     },
     stroke: { curve: 'straight', width: 2 },
     dataLabels: { enabled: false },
-    markers: { size: 3, strokeWidth: 0, hover: { size: 6 } },
-    annotations: buildMaxAnnotation(ys, variable, unit),
-    grid: { borderColor: '#e5e7eb', strokeDashArray: 4 },
+    // Clean professional look: no markers/guide-lines, gridlines + alternating bands.
+    markers: { size: 0 },
+    annotations: {},
+    grid: {
+      borderColor: '#e5e7eb',
+      xaxis: { lines: { show: true } },
+      yaxis: { lines: { show: true } },
+      column: { colors: ['#f8f9fa', 'transparent'], opacity: 1 },
+      padding: { left: 8, right: 12, top: 0, bottom: 0 },
+    },
     tooltip: {
       enabled: true,
       x: { format: 'dd MMM HH:mm' },
@@ -264,7 +249,10 @@ function buildVariableChart(
       type: 'datetime',
       min: xMin,
       max: xMax,
-      labels: { datetimeUTC: opts.utc },
+      position: xLabels === 'top' ? 'top' : 'bottom',
+      labels: { show: xLabels !== 'hidden', datetimeUTC: opts.utc, style: { fontSize: '11px' } },
+      axisTicks: { show: xLabels !== 'hidden' },
+      axisBorder: { show: false },
       tooltip: { enabled: false },
     },
     yaxis: {
@@ -278,8 +266,10 @@ function buildVariableChart(
 }
 
 /**
- * Build the six time-aligned variable charts for the full-screen view. All share
- * `opts.group`, so hovering one timestamp shows the crosshair on every chart.
+ * Build the time-aligned variable charts for the full-screen view. All share
+ * `opts.group`, so hovering one timestamp shows the crosshair on every chart. The
+ * time-axis labels appear only above the top chart and below the bottom chart,
+ * giving the stack a single shared, professional time axis.
  */
 export function buildSeriesCharts(
   series: StationSeries,
@@ -288,7 +278,9 @@ export function buildSeriesCharts(
 ): SeriesChartVm[] {
   const xMin = series.points.length ? series.points[0].t : undefined;
   const xMax = series.points.length ? series.points[series.points.length - 1].t : undefined;
-  return SERIES_VARIABLES.map((variable) =>
-    buildVariableChart(variable, series, unitsSettings, opts, xMin, xMax),
-  );
+  const last = SERIES_VARIABLES.length - 1;
+  return SERIES_VARIABLES.map((variable, index) => {
+    const xLabels: XAxisLabels = index === 0 ? 'top' : index === last ? 'bottom' : 'hidden';
+    return buildVariableChart(variable, series, unitsSettings, opts, xMin, xMax, xLabels);
+  });
 }
