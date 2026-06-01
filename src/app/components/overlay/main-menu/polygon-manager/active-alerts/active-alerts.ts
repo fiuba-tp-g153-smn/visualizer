@@ -12,7 +12,7 @@ import { ActiveAlert } from '../../../../../models/geo';
 import { formatDateTimeLocalized } from '../../../../../utils/tileset-timestamp';
 
 /**
- * "Activas" tab content: toggle to show active alerts, a manual refresh button
+ * Active alerts tab content: toggle to show active alerts, a manual refresh button
  * and the list of active alerts.
  */
 @Component({

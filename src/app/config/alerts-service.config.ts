@@ -35,7 +35,7 @@ export function buildPhenomenaUrl(): string {
 }
 
 /**
- * Construye URL para el endpoint de listado de alertas activas
+ * Construye URL para el endpoint de listado de avisos activos
  */
 export function buildAlertsUrl(): string {
   return `${ALERTS_SERVICE_BASE_URL}/alerts`;
