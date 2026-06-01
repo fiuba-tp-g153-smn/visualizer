@@ -17,6 +17,9 @@ import {
   buildWeatherStationsTilesetsUrl,
 } from '../../config/backend.config';
 import { WeatherStationsTemporalMode } from '../../config/layers/weather-stations/controls.constants';
+import { LayerCategory, type Layer } from '../../models';
+
+const WEATHER_STATIONS_LAYER_ID = 'weather-stations';
 
 // ----------------------------------------------------------------- test doubles
 
@@ -25,18 +28,21 @@ function buildLayerControlStub(
     temporalMode: WeatherStationsTemporalMode;
     maxPastHours: number;
     selectedTilesetId: string | null;
+    imageCount: number;
   }> = {},
 ) {
   const state = {
     temporalMode: overrides.temporalMode ?? WeatherStationsTemporalMode.LATEST,
     maxPastHours: overrides.maxPastHours ?? 6,
     selectedTilesetId: overrides.selectedTilesetId ?? null,
+    imageCount: overrides.imageCount ?? 6,
   };
   return {
     activeLayers: signal<readonly { layer: unknown }[]>([]),
     getWeatherStationsTemporalMode: () => state.temporalMode,
     getWeatherStationsMaxPastHours: () => state.maxPastHours,
     getWeatherStationsSelectedTilesetId: () => state.selectedTilesetId,
+    getWeatherStationsImageCount: () => state.imageCount,
     setWeatherStationsSelectedTilesetId: (id: string | null) => {
       state.selectedTilesetId = id;
     },
@@ -100,6 +106,7 @@ function setupHarness(
     temporalMode: WeatherStationsTemporalMode;
     maxPastHours: number;
     selectedTilesetId: string | null;
+    imageCount: number;
     apiKey: string;
   }> = {},
 ): Harness {
@@ -123,7 +130,13 @@ function setupHarness(
       },
       {
         provide: LayersService,
-        useValue: { getLayerById: () => undefined, getLayerDisplayName: () => '' },
+        useValue: {
+          getLayerById: (id: string) =>
+            id === WEATHER_STATIONS_LAYER_ID
+              ? ({ id, category: LayerCategory.WEATHER_STATIONS } as unknown as Layer)
+              : undefined,
+          getLayerDisplayName: () => 'EMA',
+        },
       },
       { provide: NotificationService, useValue: { show: () => undefined } },
     ],
@@ -165,7 +178,7 @@ describe('LayerRefreshService — weather station backend integration', () => {
     registryReq.flush(REGISTRY_RESPONSE);
 
     // Yield so Promise.all([tilesets, registry]) resolves and /latest fires.
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
 
     const latestReq = httpMock.expectOne(buildWeatherStationsLatestUrl());
     expect(latestReq.request.method).toBe('GET');
@@ -198,7 +211,7 @@ describe('LayerRefreshService — weather station backend integration', () => {
       ],
     });
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
 
     // Target T = 2026-05-17T14:00Z, window = [11:00, 14:00].
     const tilesetReq = httpMock.expectOne(buildWeatherStationsTilesetUrl('20260517T1400Z', 3));
@@ -218,29 +231,106 @@ describe('LayerRefreshService — weather station backend integration', () => {
     expect(byId[87582].hasData).toBe(false);
   });
 
+  it('SPECIFIC mode: warms the rest of the window into the browser cache', async () => {
+    // Replay-from-cache itself is the browser HTTP cache (Cache-Control), which
+    // HttpTestingController does not simulate — that is verified manually/E2E.
+    // Here we assert the warmer issues a GET for the other window frame.
+    const { service, httpMock } = setupHarness({
+      temporalMode: WeatherStationsTemporalMode.SPECIFIC,
+      maxPastHours: 3,
+      selectedTilesetId: '20260517T1400Z',
+      imageCount: 2,
+    });
+    harness = { ...harness, httpMock };
+
+    const first = service.loadWeatherStationsSnapshot(true);
+    httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({
+      tilesets: [
+        { tileset_id: '20260517T1300Z', scraped_at: '2026-05-17T13:00:00Z', station_count: 1 },
+        { tileset_id: '20260517T1400Z', scraped_at: '2026-05-17T14:00:00Z', station_count: 1 },
+      ],
+    });
+    httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
+    await new Promise((r) => setTimeout(r, 0));
+
+    // The selected frame is fetched directly (plain GET; the browser caches it).
+    httpMock
+      .expectOne(buildWeatherStationsTilesetUrl('20260517T1400Z', 3))
+      .flush(
+        makeSnapshot('2026-05-17T13:55:00Z', [
+          { station_id: 87344, observed_at: '2026-05-17T13:50:00Z' },
+        ]),
+      );
+    await first;
+
+    // The other window frame (13:00Z) is warmed; the selected frame is NOT
+    // re-requested (the read path already fetched it).
+    httpMock.expectOne(buildWeatherStationsTilesetUrl('20260517T1300Z', 3)).flush('{}');
+    httpMock.expectNone(buildWeatherStationsTilesetUrl('20260517T1400Z', 3));
+  });
+
   it('caches the registry across multiple snapshot loads (only one GET)', async () => {
     const { service, httpMock } = harness;
     const first = service.loadWeatherStationsSnapshot(true);
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
     httpMock
       .expectOne(buildWeatherStationsLatestUrl())
-      .flush(makeSnapshot('2026-05-17T14:00:00Z', [
-        { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
-      ]));
+      .flush(
+        makeSnapshot('2026-05-17T14:00:00Z', [
+          { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
+        ]),
+      );
     await first;
 
     const second = service.loadWeatherStationsSnapshot(true);
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectNone(buildWeatherStationsRegistryUrl());
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
     httpMock
       .expectOne(buildWeatherStationsLatestUrl())
-      .flush(makeSnapshot('2026-05-17T14:05:00Z', [
-        { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
-      ]));
+      .flush(
+        makeSnapshot('2026-05-17T14:05:00Z', [
+          { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
+        ]),
+      );
     await second;
+  });
+
+  it('manualRefresh on the weather-stations layer refreshes periods instead of the tile config', async () => {
+    const { service, httpMock } = harness; // LATEST default; getLayerById returns the weather-stations layer
+    let errored: unknown = null;
+    let done = false;
+    service.manualRefresh(WEATHER_STATIONS_LAYER_ID).subscribe({
+      next: () => {
+        done = true;
+      },
+      error: (e) => {
+        errored = e;
+      },
+    });
+
+    // Refreshes the weather-stations periods + snapshot — never calls fetchLayerConfig (which
+    // throws "does not require tileset configuration" for this category).
+    httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({
+      tilesets: [
+        { tileset_id: '20260517T1400Z', scraped_at: '2026-05-17T14:00:00Z', station_count: 1 },
+      ],
+    });
+    httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
+    await new Promise((r) => setTimeout(r, 0));
+    httpMock
+      .expectOne(buildWeatherStationsLatestUrl())
+      .flush(
+        makeSnapshot('2026-05-17T14:00:00Z', [
+          { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' },
+        ]),
+      );
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(errored).toBeNull();
+    expect(done).toBe(true);
   });
 
   it('returns an empty snapshot when the backend errors out', async () => {
@@ -249,7 +339,7 @@ describe('LayerRefreshService — weather station backend integration', () => {
 
     httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({ tilesets: [] });
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
-    await new Promise(r => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
     httpMock.expectOne(buildWeatherStationsLatestUrl()).flush('upstream down', {
       status: 503,
       statusText: 'Service Unavailable',

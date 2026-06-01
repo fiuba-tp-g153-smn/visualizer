@@ -58,6 +58,18 @@ export class SidebarMenuService {
   // Es null mientras el chunk se descarga (o cuando no hay panel abierto).
   readonly activeComponent = signal<Type<MenuPanelComponent> | null>(null);
 
+  constructor() {
+    // Eagerly prefetch every panel chunk on startup (this root service is
+    // constructed when the always-present sidebar buttons load), so the first
+    // open is always instant — no empty-panel flash. Chunks stay separate, so
+    // the initial bundle (and TBT) is unaffected; they just download up front.
+    for (const section of this.sections) {
+      section.loadComponent().catch(() => {
+        /* a failed prefetch is harmless — togglePanel will retry on open */
+      });
+    }
+  }
+
   getActiveSection(): MenuSection | undefined {
     return this.sections.find((s) => s.id === this.activePanel());
   }
