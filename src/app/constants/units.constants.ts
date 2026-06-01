@@ -61,6 +61,13 @@ export const DISTANCE_UNITS = {
 } as const;
 
 /**
+ * Unidades de precipitación
+ */
+export const PRECIPITATION_UNITS = {
+  MILLIMETERS: 'mm',
+} as const;
+
+/**
  * Unidades estándar de observación meteorológica
  */
 export const WEATHER_STATION_UNITS = {

@@ -138,6 +138,11 @@ export class LayersService {
               parts.push(layer.name);
               break;
 
+            case LayerCategory.WRF:
+              parts.push('WRF');
+              parts.push(layer.name);
+              break;
+
             default:
               throw new Error(`Unknown layer category`);
           }
