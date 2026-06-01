@@ -8,6 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { AvisosService } from '../../../../../services/avisos/avisos.service';
+import { Aviso } from '../../../../../models/geo';
 import { formatDateTimeLocalized } from '../../../../../utils/tileset-timestamp';
 
 /**
@@ -44,6 +45,22 @@ export class ActiveAvisosComponent {
 
   refresh(): void {
     void this.avisosService.refresh();
+  }
+
+  onDepartmentsOpened(aviso: Aviso): void {
+    void this.avisosService.showDepartments(aviso);
+  }
+
+  onDepartmentsClosed(): void {
+    this.avisosService.hideDepartments();
+  }
+
+  onDepartmentHover(name: string): void {
+    this.avisosService.setHoveredDepartment(name);
+  }
+
+  onDepartmentLeave(): void {
+    this.avisosService.clearHoveredDepartment();
   }
 
   formatDate(date: Date): string {

@@ -1,8 +1,9 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AlertsService } from '../polygons/alerts.service';
-import { Aviso } from '../../models/geo';
+import { Aviso, Department } from '../../models/geo';
 import { toAviso } from '../../utils/aviso.utils';
+import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
 
 /** Auto-refresh cadence for active alerts (matches layer auto-refresh). */
 const AUTO_REFRESH_INTERVAL_MS = 10_000;
@@ -19,6 +20,8 @@ export class AvisosService {
   private readonly showActiveSignal = signal<boolean>(false);
   private readonly avisosSignal = signal<ReadonlyArray<Aviso>>([]);
   private readonly loadingSignal = signal<boolean>(false);
+  private readonly shownDepartmentsSignal = signal<ReadonlyArray<Department>>([]);
+  private readonly hoveredDepartmentSignal = signal<string | null>(null);
 
   /** Whether active avisos should be shown/fetched. */
   readonly showActive = this.showActiveSignal.asReadonly();
@@ -26,6 +29,10 @@ export class AvisosService {
   readonly avisos = this.avisosSignal.asReadonly();
   /** Whether a refresh request is in flight. */
   readonly loading = this.loadingSignal.asReadonly();
+  /** Departments (with geometry) of the aviso whose menu is currently open. */
+  readonly shownDepartments = this.shownDepartmentsSignal.asReadonly();
+  /** Name of the department currently hovered in the open list. */
+  readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
 
   /** Monotonic cursor: highest alert id ever seen, independent of pruning. */
   private lastSeenMaxId: number | undefined = undefined;
@@ -51,7 +58,43 @@ export class AvisosService {
       this.stopAutoRefresh();
       this.avisosSignal.set([]);
       this.lastSeenMaxId = undefined;
+      this.hideDepartments();
     }
+  }
+
+  /**
+   * Loads (with geometry) and shows the affected departments of an aviso on the
+   * map, by intersecting its polygon against the departments layer.
+   */
+  async showDepartments(aviso: Aviso): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.alertsService.intersectDepartments(
+          [...aviso.coordinates],
+          DEPARTMENTS_SIMPLIFICATION_LEVEL,
+        ),
+      );
+      this.shownDepartmentsSignal.set(response.departments);
+    } catch (error) {
+      console.error('Error al cargar departamentos del aviso:', error);
+      this.shownDepartmentsSignal.set([]);
+    }
+  }
+
+  /** Hides the affected departments from the map. */
+  hideDepartments(): void {
+    this.shownDepartmentsSignal.set([]);
+    this.hoveredDepartmentSignal.set(null);
+  }
+
+  /** Marks a department (by name) as hovered to highlight it on the map. */
+  setHoveredDepartment(name: string): void {
+    this.hoveredDepartmentSignal.set(name);
+  }
+
+  /** Clears the hovered department highlight. */
+  clearHoveredDepartment(): void {
+    this.hoveredDepartmentSignal.set(null);
   }
 
   /** Manual/automatic refresh: fetch new avisos since the cursor and prune expired. */

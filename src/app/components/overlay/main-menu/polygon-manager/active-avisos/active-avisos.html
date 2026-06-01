@@ -56,13 +56,24 @@
                     <mat-icon class="detail-icon">map</mat-icon>
                     <span class="detail-label">Departamentos:</span>
                     @if (aviso.departments.length > 0) {
-                      <button mat-button [matMenuTriggerFor]="deptMenu" class="departments-button">
+                      <button
+                        mat-button
+                        [matMenuTriggerFor]="deptMenu"
+                        (menuOpened)="onDepartmentsOpened(aviso)"
+                        (menuClosed)="onDepartmentsClosed()"
+                        class="departments-button"
+                      >
                         <mat-icon>location_city</mat-icon>
                         {{ aviso.departments.length }}
                       </button>
                       <mat-menu #deptMenu="matMenu" class="departments-menu">
                         @for (dept of aviso.departments; track dept.name) {
-                          <button mat-menu-item (click)="$event.stopPropagation()">
+                          <button
+                            mat-menu-item
+                            (click)="$event.stopPropagation()"
+                            (mouseenter)="onDepartmentHover(dept.name)"
+                            (mouseleave)="onDepartmentLeave()"
+                          >
                             {{ dept.name }}
                             @if (dept.province) {
                               <span> ({{ dept.province }})</span>
