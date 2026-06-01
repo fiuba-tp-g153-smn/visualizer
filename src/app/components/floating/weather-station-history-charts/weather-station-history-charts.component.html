@@ -1,0 +1,134 @@
+<div class="ws-history">
+  <header class="ws-history__header">
+    <div class="ws-history__titles">
+      <h2 class="ws-history__title">{{ stationName }}</h2>
+      <div class="ws-history__meta">
+        ID estación: <strong>{{ stationId }}</strong> · Lat {{ latText }} · Lon {{ lonText }}
+      </div>
+      @if (province) {
+        <div class="ws-history__province">{{ province }}</div>
+      }
+      <div class="ws-history__subtitle">Últimas 48 horas</div>
+    </div>
+    <button mat-icon-button aria-label="Cerrar" class="ws-history__close" (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <nav class="ws-history__nav" role="tablist">
+    <button
+      type="button"
+      class="ws-history__nav-btn"
+      [class.ws-history__nav-btn--active]="section() === 'graficos'"
+      (click)="setSection('graficos')"
+    >
+      Gráficos
+    </button>
+    <button
+      type="button"
+      class="ws-history__nav-btn"
+      [class.ws-history__nav-btn--active]="section() === 'resumen'"
+      (click)="setSection('resumen')"
+    >
+      Resumen
+    </button>
+    <button
+      type="button"
+      class="ws-history__nav-btn"
+      [class.ws-history__nav-btn--active]="section() === 'observaciones'"
+      (click)="setSection('observaciones')"
+    >
+      Observaciones
+    </button>
+  </nav>
+
+  <section class="ws-history__body">
+    @if (loading()) {
+      <div class="ws-history__state">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>Cargando histórico…</span>
+      </div>
+    } @else if (error()) {
+      <div class="ws-history__state">No se pudo cargar el histórico de la estación.</div>
+    } @else if (!hasPoints()) {
+      <div class="ws-history__state">Sin datos en las últimas 48 horas.</div>
+    } @else if (section() === 'graficos') {
+      <div class="ws-history__charts">
+        @for (vm of charts(); track vm.variable.id) {
+          <article class="ws-history__chart">
+            <div class="ws-history__chart-head">
+              <span class="ws-history__chart-label" [style.color]="vm.variable.color">
+                {{ vm.variable.label }} ({{ vm.unit }})
+              </span>
+              <span class="ws-history__chart-latest">{{ vm.latestText }}</span>
+            </div>
+            @if (vm.hasData) {
+              <apx-chart
+                [series]="vm.series"
+                [chart]="vm.chart"
+                [xaxis]="vm.xaxis"
+                [yaxis]="vm.yaxis"
+                [stroke]="vm.stroke"
+                [tooltip]="vm.tooltip"
+                [dataLabels]="vm.dataLabels"
+                [grid]="vm.grid"
+                [colors]="vm.colors"
+                [annotations]="vm.annotations"
+                [markers]="vm.markers"
+              ></apx-chart>
+            } @else {
+              <div class="ws-history__chart-empty">Sin datos</div>
+            }
+          </article>
+        }
+      </div>
+    } @else if (section() === 'resumen') {
+      <div class="ws-history__summary">
+        @for (group of summary(); track group.title) {
+          <div class="ws-history__summary-group">
+            <div class="ws-history__summary-head">{{ group.title }}</div>
+            @for (row of group.rows; track row.label) {
+              <div class="ws-history__summary-row">
+                <span>{{ row.label }}</span>
+                <strong>{{ row.value }}</strong>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="ws-history__table-wrap">
+        <table class="ws-history__table">
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Temp.</th>
+              <th>P. rocío</th>
+              <th>Humedad</th>
+              <th>Viento</th>
+              <th>Velocidad</th>
+              <th>Presión</th>
+              <th>Visib.</th>
+              <th>Condición</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of observations(); track $index) {
+              <tr>
+                <td>{{ row.time }}</td>
+                <td>{{ row.temperature }}</td>
+                <td>{{ row.dewPoint }}</td>
+                <td>{{ row.humidity }}</td>
+                <td>{{ row.wind }}</td>
+                <td>{{ row.windSpeed }}</td>
+                <td>{{ row.pressure }}</td>
+                <td>{{ row.visibility }}</td>
+                <td>{{ row.condition }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

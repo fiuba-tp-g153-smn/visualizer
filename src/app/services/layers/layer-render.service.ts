@@ -50,10 +50,12 @@ import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../constants';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import {
   convertCelsiusToKelvin,
+  convertKilometersPerHourToKnots,
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
 import { formatDateTimeLocalized, wrfFxxxForInitAndTime } from '../../utils/tileset-timestamp';
+import { windBarbSvg } from '../../utils/wind-barb.util';
 import {
   WeatherStationPopupComponent,
   WeatherStationPopupData,
@@ -206,6 +208,16 @@ export class LayerRenderService {
         continue;
       }
 
+      // Wind layer: a null speed is either calm (reported as 'Calma' → shown as 0)
+      // or no reading at all. Drop the latter so the map only shows real wind data.
+      if (
+        stationLayer.variable === WeatherStationVariable.WIND_SPEED &&
+        observation.weather.wind.speed === null &&
+        observation.weather.wind.direction !== 'Calma'
+      ) {
+        continue;
+      }
+
       const px = map.latLngToLayerPoint(latLng);
       visiblePoints.push({
         observation,
@@ -274,6 +286,12 @@ export class LayerRenderService {
     const STALE_COLOR = '#9ca3af';
     const STALE_TOOLTIP = 'Sin datos en el período solicitado';
 
+    // Wind barbs are much larger than a badge, so they need extra spacing before
+    // colliding; widen the density thresholds for the wind layer so crowded barbs
+    // collapse to dots (the de-clutter) sooner when zooming out.
+    const declutterFactor =
+      stationLayer.variable === WeatherStationVariable.WIND_SPEED ? 4 : 1;
+
     for (const point of visiblePoints) {
       const observation = point.observation;
       const value = point.value;
@@ -284,11 +302,13 @@ export class LayerRenderService {
       const denseThresholdMeters =
         circleDiameterPx *
         point.metersPerPixel *
-        WEATHER_STATION_RENDER_CONFIG.density.denseDistanceMultiplier;
+        WEATHER_STATION_RENDER_CONFIG.density.denseDistanceMultiplier *
+        declutterFactor;
       const mediumThresholdMeters =
         badgeDiameterPx *
         point.metersPerPixel *
-        WEATHER_STATION_RENDER_CONFIG.density.mediumDistanceMultiplier;
+        WEATHER_STATION_RENDER_CONFIG.density.mediumDistanceMultiplier *
+        declutterFactor;
 
       const level: WeatherStationRenderLevel =
         point.nearestDistMeters <= denseThresholdMeters
@@ -301,8 +321,37 @@ export class LayerRenderService {
       // share the same effective z-index inside the pane.
       const sharedZIndexOffset = -Math.round(point.px.y);
 
+      // When the wind variable is selected, draw a standard wind barb instead of
+      // the value badge (except at the densest DOT level, to avoid overlap).
+      const isWindBarb =
+        stationLayer.variable === WeatherStationVariable.WIND_SPEED &&
+        level !== WeatherStationRenderLevel.DOT;
+
       let marker: L.Marker;
-      if (level === WeatherStationRenderLevel.DOT) {
+      if (isWindBarb) {
+        // The barb glyph is always in knots (meteorological standard); the badge
+        // number tracks the user's display unit (km/h ↔ kt toggle) via the same
+        // helper the popover uses, so the on-map value matches the popover.
+        const knots = convertKilometersPerHourToKnots(observation.weather.wind.speed ?? 0);
+        const { value: windValue } = this.resolveWeatherStationsWindSpeedDisplay(
+          observation.weather.wind.speed,
+        );
+        // Any null here is a calm station (no-data was filtered out above); show 0
+        // to match the popover's calm reading.
+        const windLabel =
+          windValue === null || Number.isNaN(windValue) ? '0' : String(Math.round(windValue));
+        const textColor = this.resolveWeatherStationsContrastingTextColor(color);
+        const icon = this.buildWeatherStationsWindBarbIcon(
+          knots,
+          observation.weather.wind.deg,
+          Math.round(badgeDiameterPx * 3),
+          badgeDiameterPx,
+          color,
+          textColor,
+          windLabel,
+        );
+        marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
+      } else if (level === WeatherStationRenderLevel.DOT) {
         const icon = this.buildWeatherStationsDotIcon(
           dotRadiusPx * 2,
           color,
@@ -414,6 +463,30 @@ export class LayerRenderService {
       html: `<div class="weather-station-badge" style="--weather-badge-size:${diameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;">${value}</div>`,
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
+    });
+  }
+
+  /**
+   * Wind marker = the solid value badge (its prior aesthetic, here carrying the
+   * temperature) with a black wind barb behind it, overflowing to the outside.
+   */
+  private buildWeatherStationsWindBarbIcon(
+    speedKnots: number,
+    deg: number | null,
+    sizePx: number,
+    badgeDiameterPx: number,
+    backgroundColor: string,
+    textColor: string,
+    label: string,
+  ): L.DivIcon {
+    const barb = windBarbSvg(speedKnots, deg, { size: sizePx, color: '#111827' });
+    const fontSizePx = WEATHER_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
+    const badge = `<div class="weather-station-badge" style="--weather-badge-size:${badgeDiameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);">${label}</div>`;
+    return L.divIcon({
+      className: 'weather-station-divicon',
+      html: `<div style="position:relative;width:${sizePx}px;height:${sizePx}px;">${barb}${badge}</div>`,
+      iconSize: [sizePx, sizePx],
+      iconAnchor: [sizePx / 2, sizePx / 2],
     });
   }
 
@@ -960,38 +1033,24 @@ export class LayerRenderService {
       observation.weather.wind.direction === 'Calma' && observation.weather.wind.speed === null;
     const { value: windSpeedValue, unit: windSpeedUnit } =
       this.resolveWeatherStationsWindSpeedDisplay(observation.weather.wind.speed);
-    const windText = calmWind
-      ? `0 ${windSpeedUnit}`
-      : formatValue(windSpeedValue, 0, ` ${windSpeedUnit}`);
     const stationName = formatText(observation.station.name);
     const province = formatText(observation.station.province);
-    const windDirection = formatText(observation.weather.wind.direction);
     const windDegrees = observation.weather.wind.deg;
-    const windDirectionWithDegrees =
-      windDegrees === null || windDegrees === undefined || Number.isNaN(windDegrees)
-        ? windDirection
-        : `${windDirection} ${Math.round(windDegrees)}°`;
     const { value: temperatureValue, unit: temperatureUnit } =
       this.resolveWeatherStationsTemperatureDisplay(observation.weather.temperature);
     const { value: feelsLikeValue, unit: feelsLikeUnit } =
       this.resolveWeatherStationsTemperatureDisplay(observation.weather.feels_like);
 
     return {
+      stationId: observation.weather.station_id ?? observation.station.id ?? 0,
       stationName,
       province,
+      lat: observation.station.coord?.lat ?? null,
+      lon: observation.station.coord?.lon ?? null,
+      temperature: formatValue(temperatureValue, 1, ` ${temperatureUnit}`),
+      feelsLike: formatValue(feelsLikeValue, 1, ` ${feelsLikeUnit}`),
+      weatherDescription: formatText(observation.weather.weather?.description),
       values: [
-        {
-          label: 'Tiempo',
-          value: formatText(observation.weather.weather?.description),
-        },
-        {
-          label: 'Temperatura',
-          value: formatValue(temperatureValue, 1, ` ${temperatureUnit}`),
-        },
-        {
-          label: 'Sensación térmica',
-          value: formatValue(feelsLikeValue, 1, ` ${feelsLikeUnit}`),
-        },
         {
           label: 'Humedad',
           value: formatValue(observation.weather.humidity, 0, WEATHER_STATION_UNITS.HUMIDITY),
@@ -1008,11 +1067,16 @@ export class LayerRenderService {
             ` ${WEATHER_STATION_UNITS.VISIBILITY}`,
           ),
         },
-        {
-          label: 'Viento',
-          value: `${windText} (${windDirectionWithDegrees})`,
-        },
       ],
+      wind: {
+        speed: calmWind ? '0' : formatValue(windSpeedValue, 0, ''),
+        unit: windSpeedUnit,
+        deg:
+          windDegrees === null || windDegrees === undefined || Number.isNaN(windDegrees)
+            ? null
+            : Math.round(windDegrees),
+        direction: formatText(observation.weather.wind.direction),
+      },
       updatedAt: formatDateTimeLocalized(new Date(observation.weather.date)),
     };
   }
@@ -1729,11 +1793,13 @@ type WeatherStationObservationLike = {
       lat: number;
       lon: number;
     };
+    id?: number | null;
     name: string | null;
     province: string | null;
   };
   weather: {
     date: string;
+    station_id?: number | null;
     temperature: number | null;
     feels_like: number | null;
     humidity: number | null;
