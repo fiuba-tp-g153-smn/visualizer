@@ -27,6 +27,7 @@ export {
   buildIntersectDepartmentsUrl,
   buildGenerateAlertsUrl,
   buildPhenomenaUrl,
+  buildAlertsUrl,
 } from './alerts-service.config';
 
 // Timing configuration (delays, tooltips, actions)

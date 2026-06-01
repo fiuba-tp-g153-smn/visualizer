@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
 import { PolygonService } from '../../../../services/polygons/polygon.service';
@@ -24,6 +25,7 @@ import {
 } from '../../../floating/confirm-dialog/confirm-dialog';
 import { PhenomenonSelectionDialogComponent } from '../../../floating/phenomenon-selection-dialog/phenomenon-selection-dialog';
 import { formatDateTimeLocalized } from '../../../../utils/tileset-timestamp';
+import { ActiveAvisosComponent } from './active-avisos/active-avisos';
 
 /**
  * Panel para gestionar polígonos en el mapa
@@ -43,6 +45,8 @@ import { formatDateTimeLocalized } from '../../../../utils/tileset-timestamp';
     MatDividerModule,
     MatSliderModule,
     MatMenuModule,
+    MatTabsModule,
+    ActiveAvisosComponent,
   ],
   templateUrl: './polygon-manager.html',
   styleUrl: './polygon-manager.scss',
