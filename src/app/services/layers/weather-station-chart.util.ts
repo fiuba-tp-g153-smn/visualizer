@@ -13,12 +13,14 @@ import type {
 } from 'ng-apexcharts';
 
 import { TEMPERATURE_UNITS } from '../../constants';
+import { WeatherStationVariable } from '../../models/layers/models';
 import { convertValueForDisplay, getDisplayUnit } from '../../utils/unit-conversion.utils';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import {
   SERIES_VARIABLES,
   type SeriesVariable,
   type StationSeries,
+  type StationSeriesPoint,
 } from '../../models/geo/weather-station-series.model';
 
 /** Wundermap-style chart: Temperatura (red) + Punto de rocío (green) overlaid. */
@@ -52,30 +54,45 @@ function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+/** One line of the popover Graph-tab chart. */
+interface OverlayLine {
+  name: string;
+  color: string;
+  sourceUnit: string;
+  decimals: number;
+  accessor: (point: StationSeriesPoint) => number | null;
+}
+
 /**
- * Build the single Temperatura + Punto de rocío chart for the popover's Graph tab.
- * Both are temperatures (°C) → converted to the user's unit; tooltip is shared so
- * hovering a time shows both values at once; the y-range is tight over both series.
+ * Build the popover Graph-tab chart from one or more lines. Values are converted
+ * to the user's units; the tooltip is shared (all lines at the hovered time) and
+ * the y-range is tight over every line. Unit/decimals come from the first line.
  */
-export function buildTempDewChart(
+function buildOverlayChart(
   series: StationSeries,
+  lines: readonly OverlayLine[],
   unitsSettings: UnitsSettingsService,
   opts: TempDewChartOptions,
 ): TempDewChartVm {
-  const unit = getDisplayUnit(TEMPERATURE_UNITS.CELSIUS, unitsSettings);
-  const toDisplay = (value: number) =>
-    round1(convertValueForDisplay(value, TEMPERATURE_UNITS.CELSIUS, unitsSettings));
+  const unit = getDisplayUnit(lines[0].sourceUnit, unitsSettings);
+  const decimals = lines[0].decimals;
 
-  const tempData = series.points.map((p) => ({
-    x: p.t,
-    y: p.temperature === null ? null : toDisplay(p.temperature),
-  }));
-  const dewData = series.points.map((p) => ({
-    x: p.t,
-    y: p.dewPoint === null ? null : toDisplay(p.dewPoint),
+  const apexSeries = lines.map((line) => ({
+    name: line.name,
+    data: series.points.map((p) => {
+      const raw = line.accessor(p);
+      return {
+        x: p.t,
+        y:
+          raw === null ? null : round1(convertValueForDisplay(raw, line.sourceUnit, unitsSettings)),
+      };
+    }),
   }));
 
-  const ys = [...tempData, ...dewData].map((d) => d.y).filter((y): y is number => y !== null);
+  const ys = apexSeries
+    .flatMap((s) => s.data)
+    .map((d) => d.y)
+    .filter((y): y is number => y !== null);
   const hasData = ys.length > 0;
   const minY = hasData ? Math.min(...ys) : 0;
   const maxY = hasData ? Math.max(...ys) : 0;
@@ -84,11 +101,8 @@ export function buildTempDewChart(
   return {
     hasData,
     unit,
-    colors: [TEMP_COLOR, DEW_COLOR],
-    series: [
-      { name: 'Temperatura', data: tempData },
-      { name: 'Punto de rocío', data: dewData },
-    ],
+    colors: lines.map((l) => l.color),
+    series: apexSeries,
     chart: {
       type: 'line',
       height: opts.height,
@@ -114,7 +128,7 @@ export function buildTempDewChart(
       x: { format: 'dd MMM HH:mm' },
       y: {
         formatter: (val: number) =>
-          val === null || val === undefined ? '—' : `${val.toFixed(1)} ${unit}`.trim(),
+          val === null || val === undefined ? '—' : `${val.toFixed(decimals)} ${unit}`.trim(),
       },
     },
     xaxis: {
@@ -132,6 +146,75 @@ export function buildTempDewChart(
       },
     },
   };
+}
+
+/** Temperatura (red) + Punto de rocío (green) overlaid — the Temperatura tab view. */
+export function buildTempDewChart(
+  series: StationSeries,
+  unitsSettings: UnitsSettingsService,
+  opts: TempDewChartOptions,
+): TempDewChartVm {
+  return buildOverlayChart(
+    series,
+    [
+      {
+        name: 'Temperatura',
+        color: TEMP_COLOR,
+        sourceUnit: TEMPERATURE_UNITS.CELSIUS,
+        decimals: 1,
+        accessor: (p) => p.temperature,
+      },
+      {
+        name: 'Punto de rocío',
+        color: DEW_COLOR,
+        sourceUnit: TEMPERATURE_UNITS.CELSIUS,
+        decimals: 1,
+        accessor: (p) => p.dewPoint,
+      },
+    ],
+    unitsSettings,
+    opts,
+  );
+}
+
+const SERIES_VARIABLE_BY_MAP: Record<WeatherStationVariable, SeriesVariable['id']> = {
+  [WeatherStationVariable.TEMPERATURE]: 'temperature',
+  [WeatherStationVariable.FEELS_LIKE]: 'feelsLike',
+  [WeatherStationVariable.HUMIDITY]: 'humidity',
+  [WeatherStationVariable.PRESSURE]: 'pressure',
+  [WeatherStationVariable.VISIBILITY]: 'visibility',
+  [WeatherStationVariable.WIND_SPEED]: 'windSpeed',
+};
+
+/**
+ * The Graph-tab chart for the variable currently selected on the map. Temperatura
+ * keeps the dew-point overlay; every other variable is shown as a single line.
+ */
+export function buildTabChart(
+  series: StationSeries,
+  mapVariable: WeatherStationVariable,
+  unitsSettings: UnitsSettingsService,
+  opts: TempDewChartOptions,
+): TempDewChartVm {
+  if (mapVariable === WeatherStationVariable.TEMPERATURE) {
+    return buildTempDewChart(series, unitsSettings, opts);
+  }
+  const id = SERIES_VARIABLE_BY_MAP[mapVariable];
+  const variable = SERIES_VARIABLES.find((v) => v.id === id) ?? SERIES_VARIABLES[0];
+  return buildOverlayChart(
+    series,
+    [
+      {
+        name: variable.label,
+        color: variable.color,
+        sourceUnit: variable.sourceUnit,
+        decimals: variable.decimals,
+        accessor: variable.accessor,
+      },
+    ],
+    unitsSettings,
+    opts,
+  );
 }
 
 // ------------------------------------------------ full-screen "all variables"
