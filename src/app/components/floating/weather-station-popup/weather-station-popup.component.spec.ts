@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 
 import {
   WeatherStationPopupComponent,
@@ -61,13 +62,18 @@ const SERIES: StationSeries = {
 
 describe('WeatherStationPopupComponent', () => {
   const fetchSeries = vi.fn();
+  const dialogOpen = vi.fn();
 
   beforeEach(() => {
     fetchSeries.mockReset().mockResolvedValue(SERIES);
+    dialogOpen.mockReset();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [WeatherStationPopupComponent],
-      providers: [{ provide: WeatherStationsHistoryService, useValue: { fetchSeries } }],
+      providers: [
+        { provide: WeatherStationsHistoryService, useValue: { fetchSeries } },
+        { provide: MatDialog, useValue: { open: dialogOpen } },
+      ],
     });
     // Stub <apx-chart> (no real ApexCharts in jsdom); keep the real wind compass.
     TestBed.overrideComponent(WeatherStationPopupComponent, {
@@ -120,5 +126,22 @@ describe('WeatherStationPopupComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('apx-chart')).not.toBeNull();
+  });
+
+  it('opens the full-screen all-variables dialog from the Gráfico tab link', async () => {
+    const fixture = TestBed.createComponent(WeatherStationPopupComponent);
+    fixture.componentRef.setInput('data', DATA);
+    fixture.detectChanges();
+    await flush();
+
+    const tabs = fixture.nativeElement.querySelectorAll('.ws-card__tab');
+    (tabs[1] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const link: HTMLButtonElement = fixture.nativeElement.querySelector('.ws-card__all-link');
+    link.click();
+
+    expect(dialogOpen).toHaveBeenCalledTimes(1);
+    expect(dialogOpen.mock.calls[0][1].data.stationId).toBe(87593);
   });
 });

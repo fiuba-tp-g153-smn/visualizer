@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { buildTempDewChart } from './weather-station-chart.util';
+import { buildSeriesCharts, buildTempDewChart } from './weather-station-chart.util';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import type {
   StationSeries,
@@ -45,7 +45,7 @@ describe('buildTempDewChart', () => {
     const vm = buildTempDewChart(SERIES, units(), { utc: true, height: 200 });
     expect(vm.series).toHaveLength(2);
     expect(vm.series.map((s) => s.name)).toEqual(['Temperatura', 'Punto de rocío']);
-    expect(vm.colors).toEqual(['#e63946', '#2a9d8f']);
+    expect(vm.colors).toEqual(['#ff6b59', '#003d5c']);
     expect(vm.stroke.curve).toBe('straight');
     expect(vm.hasData).toBe(true);
   });
@@ -62,5 +62,18 @@ describe('buildTempDewChart', () => {
     const empty: StationSeries = { ...SERIES, points: [], latest: null };
     const vm = buildTempDewChart(empty, units(), { utc: true, height: 200 });
     expect(vm.hasData).toBe(false);
+  });
+});
+
+describe('buildSeriesCharts', () => {
+  it('builds one chart per variable with the palette colours and straight lines', () => {
+    const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
+    expect(charts).toHaveLength(6);
+    const temp = charts.find((c) => c.variable.id === 'temperature')!;
+    expect(temp.colors).toEqual(['#ff6b59']);
+    expect(temp.stroke.curve).toBe('straight');
+    expect(temp.chart.group).toBe('ws-48h'); // synced hover across charts
+    // máx guide line from the data max (22).
+    expect((temp.annotations.yaxis ?? [])[0]?.y).toBe(22);
   });
 });
