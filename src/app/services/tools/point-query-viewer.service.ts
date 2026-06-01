@@ -62,6 +62,13 @@ interface MouseCoordinates {
   lon: number;
 }
 
+/**
+ * Margen (en grados) agregado al bounding box para consultas puntuales.
+ * Evita descartar clicks válidos cerca de los bordes de grids proyectados
+ * (como WRF). Si el punto está fuera del dominio, el backend responde no-data.
+ */
+const POINT_QUERY_BOUNDS_MARGIN_DEG = 8;
+
 export const POINT_QUERY_PANEL_MODES = {
   FIXED: 'fixed',
   NEAR_MARKER: 'near-marker',
@@ -954,7 +961,8 @@ export class PointQueryViewerService {
     }
 
     const [[south, west], [north, east]] = layer.boundingBox;
-    return lat >= south && lat <= north && lon >= west && lon <= east;
+    const m = POINT_QUERY_BOUNDS_MARGIN_DEG;
+    return lat >= south - m && lat <= north + m && lon >= west - m && lon <= east + m;
   }
 
   private mapErrorToDisplay(
