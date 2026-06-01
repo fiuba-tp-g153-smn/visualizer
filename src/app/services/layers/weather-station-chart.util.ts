@@ -288,7 +288,13 @@ function rotateWindMarkers(
     // +180°: the Apex triangle marker points up by default, while the right-click
     // wind compass draws an inward (downward at N) arrow. Offset so both render the
     // same bearing the same way — otherwise the chart triangles read inverted.
-    marker.setAttribute('transform', `rotate(${deg + 180} ${cx} ${cy})`);
+    // The scale (applied before the rotation, about the marker centre) squeezes the
+    // width / stretches the length so Apex's equilateral triangle becomes a slim
+    // isosceles pointer (height:width ≈ 1.8, matching the map markers).
+    marker.setAttribute(
+      'transform',
+      `rotate(${deg + 180} ${cx} ${cy}) translate(${cx} ${cy}) scale(0.72 1.5) translate(${-cx} ${-cy})`,
+    );
   });
 }
 
