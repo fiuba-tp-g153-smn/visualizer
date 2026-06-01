@@ -88,7 +88,10 @@ export function parseEcmwfTimestamp(ts: string): Date | null {
 
 /**
  * Parsea un init_tag WRF en formato 'YYYYMMDD_HHMMSS'.
- * Ejemplo: '20260430_060000' → Date(2026, 3, 30, 6, 0, 0)
+ * El init_tag está en UTC (igual que el forecast_ts de ECMWF), así que se
+ * interpreta como UTC — no con el constructor local de Date, que lo correría
+ * por el offset del navegador y desincronizaría el timeline del label.
+ * Ejemplo: '20260430_060000' → 2026-04-30T06:00:00Z
  */
 export function parseWrfInitTag(initTag: string): Date | null {
   if (initTag.length < 15 || initTag.charAt(8) !== '_') return null;
@@ -99,7 +102,7 @@ export function parseWrfInitTag(initTag: string): Date | null {
   const minute = parseInt(initTag.substring(11, 13));
   const second = parseInt(initTag.substring(13, 15));
   if ([year, month, day, hour, minute, second].some((n) => Number.isNaN(n))) return null;
-  return new Date(year, month, day, hour, minute, second);
+  return new Date(Date.UTC(year, month, day, hour, minute, second));
 }
 
 /**
@@ -135,9 +138,10 @@ export function wrfFxxxForInitAndTime(initTag: string, time: Date): string | nul
 export function formatWrfInitTag(initTag: string): string {
   const dt = parseWrfInitTag(initTag);
   if (!dt) return initTag;
-  const mo = String(dt.getMonth() + 1).padStart(2, '0');
-  const dd = String(dt.getDate()).padStart(2, '0');
-  const hh = String(dt.getHours()).padStart(2, '0');
+  const utc = shouldUseUtc();
+  const mo = String((utc ? dt.getUTCMonth() : dt.getMonth()) + 1).padStart(2, '0');
+  const dd = String(utc ? dt.getUTCDate() : dt.getDate()).padStart(2, '0');
+  const hh = String(utc ? dt.getUTCHours() : dt.getHours()).padStart(2, '0');
   return `${mo}-${dd} ${hh}h`;
 }
 

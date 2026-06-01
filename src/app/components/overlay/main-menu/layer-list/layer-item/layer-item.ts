@@ -41,7 +41,6 @@ import {
   formatDateFull,
   formatDateTimeOnly,
   parseEcmwfTimestamp,
-  formatWrfInitTag,
 } from '../../../../../utils/tileset-timestamp';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
