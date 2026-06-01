@@ -1,8 +1,11 @@
 import { Injectable, effect, inject } from '@angular/core';
 import * as L from 'leaflet';
-import { AvisosService } from './avisos.service';
-import { Aviso, Department } from '../../models/geo';
-import { AVISO_COLOR, AVISO_POLYGON_OPTIONS } from '../../config/map-avisos.config';
+import { ActiveAlertsService } from './active-alerts.service';
+import { ActiveAlert, Department } from '../../models/geo';
+import {
+  ACTIVE_ALERT_COLOR,
+  ACTIVE_ALERT_POLYGON_OPTIONS,
+} from '../../config/map-active-alerts.config';
 import { DEPARTMENT_STYLE, Z_INDEX } from '../../config/map-polygons.config';
 import { MAP_PANES } from '../../constants/map-polygons.constants';
 import { createDepartmentStyle, lightenColor } from '../../utils/map-styles.utils';
@@ -18,40 +21,43 @@ function normalizeName(name: string): string {
 }
 
 /**
- * Renders active alert ("aviso") polygons on the map in a dedicated layer group,
- * plus the affected departments of the aviso whose list is currently open, with
- * hover highlighting. Read-only overlay, separate from the editable user polygons.
+ * Renders active alert polygons on the map in a dedicated layer group, plus the
+ * affected departments of the alert whose list is currently open, with hover
+ * highlighting. Read-only overlay, separate from the editable user polygons.
  */
 @Injectable({ providedIn: 'root' })
-export class AvisosMapService {
-  private readonly avisosService = inject(AvisosService);
+export class ActiveAlertsMapService {
+  private readonly activeAlertsService = inject(ActiveAlertsService);
 
   private map: L.Map | null = null;
   private readonly layerGroup: L.FeatureGroup = L.featureGroup();
 
-  private readonly departmentColor = lightenColor(AVISO_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
+  private readonly departmentColor = lightenColor(
+    ACTIVE_ALERT_COLOR,
+    DEPARTMENT_STYLE.LIGHTEN_PERCENT,
+  );
   private readonly departmentLayers = new Map<string, L.GeoJSON>(); // normalized name -> layer
 
   constructor() {
     effect(() => {
-      const show = this.avisosService.showActive();
-      const avisos = this.avisosService.avisos();
+      const show = this.activeAlertsService.showActive();
+      const alerts = this.activeAlertsService.activeAlerts();
       if (!this.map) return;
       if (show) {
-        this.render(avisos);
+        this.render(alerts);
       } else {
         this.clear();
       }
     });
 
     effect(() => {
-      const departments = this.avisosService.shownDepartments();
+      const departments = this.activeAlertsService.shownDepartments();
       if (!this.map) return;
       this.renderDepartments(departments);
     });
 
     effect(() => {
-      const hovered = this.avisosService.hoveredDepartment();
+      const hovered = this.activeAlertsService.hoveredDepartment();
       if (!this.map) return;
       this.updateDepartmentHighlight(hovered);
     });
@@ -63,15 +69,15 @@ export class AvisosMapService {
     this.layerGroup.addTo(map);
   }
 
-  private render(avisos: ReadonlyArray<Aviso>): void {
+  private render(alerts: ReadonlyArray<ActiveAlert>): void {
     this.layerGroup.clearLayers();
 
-    for (const aviso of avisos) {
-      if (aviso.coordinates.length < 3) continue; // not a drawable polygon
+    for (const alert of alerts) {
+      if (alert.coordinates.length < 3) continue; // not a drawable polygon
 
-      const latlngs = aviso.coordinates.map(([lat, lng]) => [lat, lng] as L.LatLngExpression);
-      const polygon = L.polygon(latlngs, AVISO_POLYGON_OPTIONS);
-      polygon.bindPopup(this.buildPopup(aviso));
+      const latlngs = alert.coordinates.map(([lat, lng]) => [lat, lng] as L.LatLngExpression);
+      const polygon = L.polygon(latlngs, ACTIVE_ALERT_POLYGON_OPTIONS);
+      polygon.bindPopup(this.buildPopup(alert));
       this.layerGroup.addLayer(polygon);
     }
   }
@@ -125,12 +131,12 @@ export class AvisosMapService {
     target.bringToFront();
   }
 
-  private buildPopup(aviso: Aviso): string {
-    const start = formatDateTimeLocalized(aviso.startDatetime);
-    const end = formatDateTimeLocalized(aviso.endDatetime);
+  private buildPopup(alert: ActiveAlert): string {
+    const start = formatDateTimeLocalized(alert.startDatetime);
+    const end = formatDateTimeLocalized(alert.endDatetime);
     return `
-      <strong>Aviso #${aviso.alertId}</strong><br />
-      ${aviso.phenomenon}<br />
+      <strong>Aviso #${alert.alertId}</strong><br />
+      ${alert.phenomenon}<br />
       Inicio: ${start}<br />
       Fin: ${end}
     `;

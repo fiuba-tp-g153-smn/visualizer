@@ -1,11 +1,11 @@
 /**
- * Active alert ("aviso") read from the alert-service GET /alerts endpoint.
+ * Active alert read from the alert-service GET /alerts endpoint.
  */
 
 /**
- * Raw alert as returned by the backend (snake_case).
+ * Raw active alert as returned by the backend (snake_case).
  */
-export interface AvisoResponse {
+export interface ActiveAlertResponse {
   /** Database ID of the alert */
   alert_id: number;
   /** Phenomenon description */
@@ -23,7 +23,7 @@ export interface AvisoResponse {
 /**
  * Affected department parsed from the backend `area` HTML.
  */
-export interface AvisoDepartment {
+export interface ActiveAlertDepartment {
   /** Department name */
   name: string;
   /** Province the department belongs to */
@@ -33,13 +33,13 @@ export interface AvisoDepartment {
 /**
  * Domain model for an active alert used by the frontend.
  */
-export interface Aviso {
+export interface ActiveAlert {
   /** Database ID of the alert */
   alertId: number;
   /** Phenomenon description */
   phenomenon: string;
   /** Affected departments parsed from the backend `area` HTML, sorted by name */
-  departments: ReadonlyArray<AvisoDepartment>;
+  departments: ReadonlyArray<ActiveAlertDepartment>;
   /** Polygon vertices as Leaflet [lat, lng] pairs */
   coordinates: ReadonlyArray<[number, number]>;
   /** Start datetime */

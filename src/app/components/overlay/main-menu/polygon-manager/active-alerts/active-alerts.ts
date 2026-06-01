@@ -7,16 +7,16 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
-import { AvisosService } from '../../../../../services/avisos/avisos.service';
-import { Aviso } from '../../../../../models/geo';
+import { ActiveAlertsService } from '../../../../../services/active-alerts/active-alerts.service';
+import { ActiveAlert } from '../../../../../models/geo';
 import { formatDateTimeLocalized } from '../../../../../utils/tileset-timestamp';
 
 /**
- * "Activas" tab content: toggle to show active alerts ("avisos"), a manual
- * refresh button and the list of active avisos.
+ * "Activas" tab content: toggle to show active alerts, a manual refresh button
+ * and the list of active alerts.
  */
 @Component({
-  selector: 'app-active-avisos',
+  selector: 'app-active-alerts',
   standalone: true,
   imports: [
     MatCheckboxModule,
@@ -28,39 +28,39 @@ import { formatDateTimeLocalized } from '../../../../../utils/tileset-timestamp'
     MatDividerModule,
     MatMenuModule,
   ],
-  templateUrl: './active-avisos.html',
-  styleUrl: './active-avisos.scss',
+  templateUrl: './active-alerts.html',
+  styleUrl: './active-alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ActiveAvisosComponent {
-  private readonly avisosService = inject(AvisosService);
+export class ActiveAlertsComponent {
+  private readonly activeAlertsService = inject(ActiveAlertsService);
 
-  readonly showActive = this.avisosService.showActive;
-  readonly avisos = this.avisosService.avisos;
-  readonly loading = this.avisosService.loading;
+  readonly showActive = this.activeAlertsService.showActive;
+  readonly activeAlerts = this.activeAlertsService.activeAlerts;
+  readonly loading = this.activeAlertsService.loading;
 
   onToggle(checked: boolean): void {
-    this.avisosService.setShowActive(checked);
+    this.activeAlertsService.setShowActive(checked);
   }
 
   refresh(): void {
-    void this.avisosService.refresh();
+    void this.activeAlertsService.refresh();
   }
 
-  onDepartmentsOpened(aviso: Aviso): void {
-    void this.avisosService.showDepartments(aviso);
+  onDepartmentsOpened(alert: ActiveAlert): void {
+    void this.activeAlertsService.showDepartments(alert);
   }
 
   onDepartmentsClosed(): void {
-    this.avisosService.hideDepartments();
+    this.activeAlertsService.hideDepartments();
   }
 
   onDepartmentHover(name: string): void {
-    this.avisosService.setHoveredDepartment(name);
+    this.activeAlertsService.setHoveredDepartment(name);
   }
 
   onDepartmentLeave(): void {
-    this.avisosService.clearHoveredDepartment();
+    this.activeAlertsService.clearHoveredDepartment();
   }
 
   formatDate(date: Date): string {

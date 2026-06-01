@@ -25,7 +25,7 @@ import {
 } from '../../../floating/confirm-dialog/confirm-dialog';
 import { PhenomenonSelectionDialogComponent } from '../../../floating/phenomenon-selection-dialog/phenomenon-selection-dialog';
 import { formatDateTimeLocalized } from '../../../../utils/tileset-timestamp';
-import { ActiveAvisosComponent } from './active-avisos/active-avisos';
+import { ActiveAlertsComponent } from './active-alerts/active-alerts';
 
 /**
  * Panel para gestionar polígonos en el mapa
@@ -46,7 +46,7 @@ import { ActiveAvisosComponent } from './active-avisos/active-avisos';
     MatSliderModule,
     MatMenuModule,
     MatTabsModule,
-    ActiveAvisosComponent,
+    ActiveAlertsComponent,
   ],
   templateUrl: './polygon-manager.html',
   styleUrl: './polygon-manager.scss',

@@ -15,7 +15,7 @@ import { PolygonService } from '../../services/polygons/polygon.service';
 import { PolygonDrawingService } from '../../services/polygons/polygon-drawing.service';
 import { MapLayersService } from '../../services/layers/map-layers.service';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
-import { AvisosMapService } from '../../services/avisos/avisos-map.service';
+import { ActiveAlertsMapService } from '../../services/active-alerts/active-alerts-map.service';
 import { VectorOverlayService } from '../../services/layers/vector-overlay.service';
 import { LayerRefreshService } from '../../services/layers/layer-refresh.service';
 import { UnitsSettingsService } from '../../services/settings/units-settings.service';
@@ -44,7 +44,7 @@ export class MapContainer implements OnInit, OnDestroy {
   // Services
   private layersService = inject(MapLayersService);
   private polygonsService = inject(MapPolygonsService);
-  private avisosMapService = inject(AvisosMapService);
+  private activeAlertsMapService = inject(ActiveAlertsMapService);
   private vectorOverlayService = inject(VectorOverlayService);
   private layerRefreshService = inject(LayerRefreshService);
   private unitsSettings = inject(UnitsSettingsService);
@@ -159,7 +159,7 @@ export class MapContainer implements OnInit, OnDestroy {
     // Initialize services with the map instance
     this.layersService.initialize(this.map);
     this.polygonsService.initialize(this.map);
-    this.avisosMapService.initialize(this.map);
+    this.activeAlertsMapService.initialize(this.map);
     this.mapInfoService.initialize(this.map);
 
     // Prevent UI elements from propagating events to the map
