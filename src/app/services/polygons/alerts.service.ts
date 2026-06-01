@@ -9,7 +9,7 @@ import {
   buildAlertsUrl,
   getProvinceNameFromDepartmentCode,
 } from '../../config';
-import { AvisoResponse, DepartmentsResponse } from '../../models/geo';
+import { ActiveAlertResponse, DepartmentsResponse } from '../../models/geo';
 import { Phenomenon } from '../../models/phenomenon.model';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
 
@@ -137,17 +137,17 @@ export class AlertsService {
   }
 
   /**
-   * Obtiene los avisos activos. Con `sinceId` solo devuelve los de id mayor.
-   * @param sinceId - Devuelve solo avisos con alert_id mayor a este valor
-   * @returns Observable con la lista de avisos activos
+   * Obtiene las alertas activas. Con `sinceId` solo devuelve las de id mayor.
+   * @param sinceId - Devuelve solo alertas con alert_id mayor a este valor
+   * @returns Observable con la lista de alertas activas
    */
-  getAlerts(sinceId?: number): Observable<AvisoResponse[]> {
+  getAlerts(sinceId?: number): Observable<ActiveAlertResponse[]> {
     const url = buildAlertsUrl();
     let params = new HttpParams();
     if (sinceId !== undefined) {
       params = params.set('since_id', sinceId.toString());
     }
 
-    return this.http.get<AvisoResponse[]>(url, { params });
+    return this.http.get<ActiveAlertResponse[]>(url, { params });
   }
 }

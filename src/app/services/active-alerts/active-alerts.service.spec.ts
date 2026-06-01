@@ -3,15 +3,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { AvisosService } from './avisos.service';
-import { AvisoResponse } from '../../models/geo';
+import { ActiveAlertsService } from './active-alerts.service';
+import { ActiveAlertResponse } from '../../models/geo';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 const futureIso = (): string => new Date(Date.now() + 3 * 3_600_000).toISOString();
 const pastIso = (): string => new Date(Date.now() - 3_600_000).toISOString();
 
-function aviso(id: number, end: string): AvisoResponse {
+function activeAlert(id: number, end: string): ActiveAlertResponse {
   return {
     alert_id: id,
     phenomenon: 'TORMENTAS',
@@ -24,8 +24,8 @@ function aviso(id: number, end: string): AvisoResponse {
 
 const alertsRequest = (req: { url: string }) => req.url.endsWith('/alerts');
 
-describe('AvisosService', () => {
-  let service: AvisosService;
+describe('ActiveAlertsService', () => {
+  let service: ActiveAlertsService;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('AvisosService', () => {
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
-    service = TestBed.inject(AvisosService);
+    service = TestBed.inject(ActiveAlertsService);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
@@ -42,40 +42,40 @@ describe('AvisosService', () => {
     httpMock.verify();
   });
 
-  it('fetches all active avisos when enabled and prunes expired ones', async () => {
+  it('fetches all active alerts when enabled and prunes expired ones', async () => {
     service.setShowActive(true);
 
     const req = httpMock.expectOne(alertsRequest);
     expect(req.request.params.has('since_id')).toBe(false);
-    req.flush([aviso(1, futureIso()), aviso(2, pastIso())]); // id 2 already expired
+    req.flush([activeAlert(1, futureIso()), activeAlert(2, pastIso())]); // id 2 already expired
     await tick();
 
-    expect(service.avisos().map((a) => a.alertId)).toEqual([1]);
+    expect(service.activeAlerts().map((a) => a.alertId)).toEqual([1]);
   });
 
-  it('refresh uses since_id with the highest seen id and merges new avisos', async () => {
+  it('refresh uses since_id with the highest seen id and merges new alerts', async () => {
     service.setShowActive(true);
-    httpMock.expectOne(alertsRequest).flush([aviso(1, futureIso())]);
+    httpMock.expectOne(alertsRequest).flush([activeAlert(1, futureIso())]);
     await tick();
 
     const refreshPromise = service.refresh();
     const req = httpMock.expectOne(alertsRequest);
     expect(req.request.params.get('since_id')).toBe('1');
-    req.flush([aviso(2, futureIso())]);
+    req.flush([activeAlert(2, futureIso())]);
     await refreshPromise;
     await tick();
 
-    expect(service.avisos().map((a) => a.alertId)).toEqual([1, 2]);
+    expect(service.activeAlerts().map((a) => a.alertId)).toEqual([1, 2]);
   });
 
   it('clears the list when disabled', async () => {
     service.setShowActive(true);
-    httpMock.expectOne(alertsRequest).flush([aviso(1, futureIso())]);
+    httpMock.expectOne(alertsRequest).flush([activeAlert(1, futureIso())]);
     await tick();
-    expect(service.avisos().length).toBe(1);
+    expect(service.activeAlerts().length).toBe(1);
 
     service.setShowActive(false);
-    expect(service.avisos()).toEqual([]);
+    expect(service.activeAlerts()).toEqual([]);
     expect(service.showActive()).toBe(false);
   });
 });

@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { parseAvisoPolygon, parseAffectedDepartments, toAviso } from './aviso.utils';
-import { AvisoResponse } from '../models/geo';
+import {
+  parseActiveAlertPolygon,
+  parseAffectedDepartments,
+  toActiveAlert,
+} from './active-alert.utils';
+import { ActiveAlertResponse } from '../models/geo';
 
-describe('parseAvisoPolygon', () => {
+describe('parseActiveAlertPolygon', () => {
   it('parses "[lat,lon],..." into [lat, lng] pairs', () => {
-    const result = parseAvisoPolygon('[-34.60,-58.50],[-34.70,-58.40],[-34.80,-58.60]');
+    const result = parseActiveAlertPolygon('[-34.60,-58.50],[-34.70,-58.40],[-34.80,-58.60]');
     expect(result).toEqual([
       [-34.6, -58.5],
       [-34.7, -58.4],
@@ -13,8 +17,8 @@ describe('parseAvisoPolygon', () => {
   });
 
   it('tolerates whitespace and returns [] for an empty string', () => {
-    expect(parseAvisoPolygon('[ -34.6 , -58.5 ]')).toEqual([[-34.6, -58.5]]);
-    expect(parseAvisoPolygon('')).toEqual([]);
+    expect(parseActiveAlertPolygon('[ -34.6 , -58.5 ]')).toEqual([[-34.6, -58.5]]);
+    expect(parseActiveAlertPolygon('')).toEqual([]);
   });
 });
 
@@ -34,9 +38,9 @@ describe('parseAffectedDepartments', () => {
   });
 });
 
-describe('toAviso', () => {
+describe('toActiveAlert', () => {
   it('maps the backend response into the domain model', () => {
-    const res: AvisoResponse = {
+    const res: ActiveAlertResponse = {
       alert_id: 42,
       phenomenon: 'TORMENTAS',
       area: '<b>BUENOS AIRES:</b> La Matanza.',
@@ -45,16 +49,16 @@ describe('toAviso', () => {
       end_datetime: '2026-06-01T13:00:00',
     };
 
-    const aviso = toAviso(res);
+    const alert = toActiveAlert(res);
 
-    expect(aviso.alertId).toBe(42);
-    expect(aviso.phenomenon).toBe('TORMENTAS');
-    expect(aviso.departments).toEqual([{ name: 'La Matanza', province: 'BUENOS AIRES' }]);
-    expect(aviso.coordinates).toEqual([
+    expect(alert.alertId).toBe(42);
+    expect(alert.phenomenon).toBe('TORMENTAS');
+    expect(alert.departments).toEqual([{ name: 'La Matanza', province: 'BUENOS AIRES' }]);
+    expect(alert.coordinates).toEqual([
       [-34.6, -58.5],
       [-34.7, -58.4],
     ]);
-    expect(aviso.startDatetime).toEqual(new Date('2026-06-01T10:00:00'));
-    expect(aviso.endDatetime).toEqual(new Date('2026-06-01T13:00:00'));
+    expect(alert.startDatetime).toEqual(new Date('2026-06-01T10:00:00'));
+    expect(alert.endDatetime).toEqual(new Date('2026-06-01T13:00:00'));
   });
 });

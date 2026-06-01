@@ -1,35 +1,35 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AlertsService } from '../polygons/alerts.service';
-import { Aviso, Department } from '../../models/geo';
-import { toAviso } from '../../utils/aviso.utils';
+import { ActiveAlert, Department } from '../../models/geo';
+import { toActiveAlert } from '../../utils/active-alert.utils';
 import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
 
 /** Auto-refresh cadence for active alerts (matches layer auto-refresh). */
 const AUTO_REFRESH_INTERVAL_MS = 10_000;
 
 /**
- * Stateful service for active alerts ("avisos"). Owns the "show active" toggle,
- * the list of active avisos, manual/automatic refresh and expiry pruning.
+ * Stateful service for active alerts. Owns the "show active" toggle, the list of
+ * active alerts, manual/automatic refresh and expiry pruning.
  */
 @Injectable({ providedIn: 'root' })
-export class AvisosService {
+export class ActiveAlertsService {
   private readonly alertsService = inject(AlertsService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly showActiveSignal = signal<boolean>(false);
-  private readonly avisosSignal = signal<ReadonlyArray<Aviso>>([]);
+  private readonly activeAlertsSignal = signal<ReadonlyArray<ActiveAlert>>([]);
   private readonly loadingSignal = signal<boolean>(false);
   private readonly shownDepartmentsSignal = signal<ReadonlyArray<Department>>([]);
   private readonly hoveredDepartmentSignal = signal<string | null>(null);
 
-  /** Whether active avisos should be shown/fetched. */
+  /** Whether active alerts should be shown/fetched. */
   readonly showActive = this.showActiveSignal.asReadonly();
-  /** Current list of active avisos. */
-  readonly avisos = this.avisosSignal.asReadonly();
+  /** Current list of active alerts. */
+  readonly activeAlerts = this.activeAlertsSignal.asReadonly();
   /** Whether a refresh request is in flight. */
   readonly loading = this.loadingSignal.asReadonly();
-  /** Departments (with geometry) of the aviso whose menu is currently open. */
+  /** Departments (with geometry) of the alert whose menu is currently open. */
   readonly shownDepartments = this.shownDepartmentsSignal.asReadonly();
   /** Name of the department currently hovered in the open list. */
   readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
@@ -43,7 +43,7 @@ export class AvisosService {
   }
 
   /**
-   * Enables or disables showing active avisos. Enabling triggers a full fetch
+   * Enables or disables showing active alerts. Enabling triggers a full fetch
    * and starts auto-refresh; disabling clears state and stops polling.
    */
   setShowActive(on: boolean): void {
@@ -56,27 +56,27 @@ export class AvisosService {
       this.startAutoRefresh();
     } else {
       this.stopAutoRefresh();
-      this.avisosSignal.set([]);
+      this.activeAlertsSignal.set([]);
       this.lastSeenMaxId = undefined;
       this.hideDepartments();
     }
   }
 
   /**
-   * Loads (with geometry) and shows the affected departments of an aviso on the
+   * Loads (with geometry) and shows the affected departments of an alert on the
    * map, by intersecting its polygon against the departments layer.
    */
-  async showDepartments(aviso: Aviso): Promise<void> {
+  async showDepartments(alert: ActiveAlert): Promise<void> {
     try {
       const response = await firstValueFrom(
         this.alertsService.intersectDepartments(
-          [...aviso.coordinates],
+          [...alert.coordinates],
           DEPARTMENTS_SIMPLIFICATION_LEVEL,
         ),
       );
       this.shownDepartmentsSignal.set(response.departments);
     } catch (error) {
-      console.error('Error al cargar departamentos del aviso:', error);
+      console.error('Error al cargar departamentos de la alerta:', error);
       this.shownDepartmentsSignal.set([]);
     }
   }
@@ -97,7 +97,7 @@ export class AvisosService {
     this.hoveredDepartmentSignal.set(null);
   }
 
-  /** Manual/automatic refresh: fetch new avisos since the cursor and prune expired. */
+  /** Manual/automatic refresh: fetch new alerts since the cursor and prune expired. */
   async refresh(): Promise<void> {
     if (!this.showActiveSignal()) return;
     await this.fetch(this.lastSeenMaxId);
@@ -107,36 +107,36 @@ export class AvisosService {
     this.loadingSignal.set(true);
     try {
       const responses = await firstValueFrom(this.alertsService.getAlerts(sinceId));
-      const incoming = responses.map(toAviso);
+      const incoming = responses.map(toActiveAlert);
       this.mergeAndPrune(incoming);
     } catch (error) {
-      console.error('Error al obtener avisos activos:', error);
-      // Still prune locally so expired avisos disappear even if the fetch failed.
+      console.error('Error al obtener alertas activas:', error);
+      // Still prune locally so expired alerts disappear even if the fetch failed.
       this.mergeAndPrune([]);
     } finally {
       this.loadingSignal.set(false);
     }
   }
 
-  private mergeAndPrune(incoming: ReadonlyArray<Aviso>): void {
+  private mergeAndPrune(incoming: ReadonlyArray<ActiveAlert>): void {
     const now = Date.now();
-    const byId = new Map<number, Aviso>();
+    const byId = new Map<number, ActiveAlert>();
 
-    for (const aviso of this.avisosSignal()) {
-      byId.set(aviso.alertId, aviso);
+    for (const alert of this.activeAlertsSignal()) {
+      byId.set(alert.alertId, alert);
     }
-    for (const aviso of incoming) {
-      byId.set(aviso.alertId, aviso);
-      if (this.lastSeenMaxId === undefined || aviso.alertId > this.lastSeenMaxId) {
-        this.lastSeenMaxId = aviso.alertId;
+    for (const alert of incoming) {
+      byId.set(alert.alertId, alert);
+      if (this.lastSeenMaxId === undefined || alert.alertId > this.lastSeenMaxId) {
+        this.lastSeenMaxId = alert.alertId;
       }
     }
 
     const merged = Array.from(byId.values())
-      .filter((aviso) => aviso.endDatetime.getTime() > now)
+      .filter((alert) => alert.endDatetime.getTime() > now)
       .sort((a, b) => a.alertId - b.alertId);
 
-    this.avisosSignal.set(merged);
+    this.activeAlertsSignal.set(merged);
   }
 
   private startAutoRefresh(): void {
