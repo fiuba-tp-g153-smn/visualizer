@@ -37,14 +37,23 @@
       <div class="alerts-list-container">
         <mat-list class="alerts-list">
           @for (alert of activeAlerts(); track alert.alertId) {
-            <mat-list-item class="polygon-item">
+            <mat-list-item class="polygon-item" [class.hidden]="isHidden(alert.alertId)">
               <div class="polygon-card">
-                <div class="polygon-details">
-                  <div class="detail-item">
-                    <mat-icon class="detail-icon">tag</mat-icon>
-                    <span class="detail-label">ID:</span>
-                    <span class="detail-value">{{ alert.alertId }}</span>
+                <div class="polygon-header">
+                  <span class="alert-title">Aviso #{{ alert.alertId }}</span>
+                  <div class="polygon-actions">
+                    <button
+                      mat-icon-button
+                      (click)="toggleHidden(alert.alertId)"
+                      [matTooltip]="isHidden(alert.alertId) ? 'Mostrar' : 'Ocultar'"
+                    >
+                      <mat-icon>{{
+                        isHidden(alert.alertId) ? 'visibility_off' : 'visibility'
+                      }}</mat-icon>
+                    </button>
                   </div>
+                </div>
+                <div class="polygon-details">
                   <div class="detail-item column">
                     <div class="detail-row">
                       <mat-icon class="detail-icon">warning</mat-icon>

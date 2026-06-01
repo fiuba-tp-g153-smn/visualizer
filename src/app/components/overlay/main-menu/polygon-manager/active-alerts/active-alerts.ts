@@ -38,9 +38,18 @@ export class ActiveAlertsComponent {
   readonly showActive = this.activeAlertsService.showActive;
   readonly activeAlerts = this.activeAlertsService.activeAlerts;
   readonly loading = this.activeAlertsService.loading;
+  readonly hiddenIds = this.activeAlertsService.hiddenIds;
 
   onToggle(checked: boolean): void {
     this.activeAlertsService.setShowActive(checked);
+  }
+
+  isHidden(alertId: number): boolean {
+    return this.hiddenIds().has(alertId);
+  }
+
+  toggleHidden(alertId: number): void {
+    this.activeAlertsService.toggleHidden(alertId);
   }
 
   refresh(): void {

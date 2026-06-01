@@ -41,9 +41,10 @@ export class ActiveAlertsMapService {
     effect(() => {
       const show = this.activeAlertsService.showActive();
       const alerts = this.activeAlertsService.activeAlerts();
+      const hiddenIds = this.activeAlertsService.hiddenIds();
       if (!this.map) return;
       if (show) {
-        this.render(alerts);
+        this.render(alerts, hiddenIds);
       } else {
         this.clear();
       }
@@ -75,11 +76,12 @@ export class ActiveAlertsMapService {
     this.layerGroup.addTo(map);
   }
 
-  private render(alerts: ReadonlyArray<ActiveAlert>): void {
+  private render(alerts: ReadonlyArray<ActiveAlert>, hiddenIds: ReadonlySet<number>): void {
     this.layerGroup.clearLayers();
 
     const now = Date.now();
     for (const alert of alerts) {
+      if (hiddenIds.has(alert.alertId)) continue; // hidden by the user
       if (alert.coordinates.length < 3) continue; // not a drawable polygon
 
       const latlngs = alert.coordinates.map(([lat, lng]) => [lat, lng] as L.LatLngExpression);
