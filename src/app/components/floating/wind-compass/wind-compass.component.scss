@@ -1,0 +1,47 @@
+.wind-compass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.wind-compass__dial {
+  width: 72px;
+  height: 72px;
+}
+
+.wind-compass__ring {
+  fill: #ffffff;
+  stroke: #cbd5e1;
+  stroke-width: 2;
+}
+
+.wind-compass__cardinal {
+  fill: #94a3b8;
+  font-size: 8px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.wind-compass__arrow {
+  fill: #0090d0;
+}
+
+.wind-compass__speed {
+  fill: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.wind-compass__unit {
+  fill: #6b7280;
+  font-size: 8px;
+  text-anchor: middle;
+}
+
+.wind-compass__caption {
+  font-size: 10px;
+  color: #6b7280;
+  text-align: center;
+}

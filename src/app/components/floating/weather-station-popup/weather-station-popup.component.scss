@@ -1,0 +1,133 @@
+:host {
+  display: block;
+  font-size: 12px;
+  color: #111827;
+}
+
+.ws-card__header {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ws-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ws-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.ws-card__id strong {
+  color: #0090d0;
+  font-weight: 700;
+}
+
+.ws-card__province {
+  margin-top: 1px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.ws-card__tabs {
+  display: flex;
+  gap: 4px;
+  margin: 6px 0 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ws-card__tab {
+  flex: 1 1 auto;
+  padding: 7px 4px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font: inherit;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.ws-card__tab--active {
+  color: #0090d0;
+  border-bottom-color: #0090d0;
+}
+
+.ws-card__primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ws-card__temp {
+  font-size: 34px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.ws-card__feels {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.ws-card__desc {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ws-card__grid {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid #f1f5f9;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  span {
+    color: #6b7280;
+  }
+
+  strong {
+    font-weight: 700;
+    text-align: right;
+  }
+}
+
+.ws-card__updated {
+  margin-top: 8px;
+  padding-top: 5px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.ws-card__graph {
+  min-height: 230px;
+}
+
+.ws-card__state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: #6b7280;
+  font-size: 12px;
+}

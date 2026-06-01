@@ -1,0 +1,20 @@
+<div class="wind-compass">
+  <svg viewBox="0 0 72 72" class="wind-compass__dial" aria-hidden="true">
+    <circle cx="36" cy="36" r="30" class="wind-compass__ring" />
+    <text x="36" y="11" class="wind-compass__cardinal">N</text>
+    @if (hasDirection) {
+      <g [attr.transform]="'rotate(' + rotation + ' 36 36)'">
+        <path d="M36 6 L41 19 L36 15 L31 19 Z" class="wind-compass__arrow" />
+      </g>
+    }
+    <text x="36" y="38" class="wind-compass__speed">{{ speed }}</text>
+    <text x="36" y="50" class="wind-compass__unit">{{ unit }}</text>
+  </svg>
+  <div class="wind-compass__caption">
+    @if (direction) {
+      desde el {{ direction }}
+    } @else {
+      Sin dato
+    }
+  </div>
+</div>
