@@ -6,6 +6,29 @@ import { ActiveAlert, ActiveAlertDepartment, ActiveAlertResponse } from '../mode
 const NO_DEPARTMENTS_MARKER = 'Sin departamentos';
 
 /**
+ * Colors used to convey how close an active alert is to expiring.
+ */
+export const ACTIVE_ALERT_EXPIRY_COLORS = {
+  GREEN: '#6FC040',
+  YELLOW: '#F5D427',
+  RED: '#C82613',
+} as const;
+
+const GREEN_THRESHOLD_MS = 30 * 60_000; // more than 30 min remaining
+const YELLOW_THRESHOLD_MS = 10 * 60_000; // 10 min or less remaining → red
+
+/**
+ * Returns the color for an active alert based on how long is left until it
+ * expires: green (> 30 min), yellow (11–30 min) or red (≤ 10 min).
+ */
+export function activeAlertColorForExpiry(endDatetime: Date, now: number = Date.now()): string {
+  const remainingMs = endDatetime.getTime() - now;
+  if (remainingMs > GREEN_THRESHOLD_MS) return ACTIVE_ALERT_EXPIRY_COLORS.GREEN;
+  if (remainingMs > YELLOW_THRESHOLD_MS) return ACTIVE_ALERT_EXPIRY_COLORS.YELLOW;
+  return ACTIVE_ALERT_EXPIRY_COLORS.RED;
+}
+
+/**
  * Parses the backend polygon string `"[lat,lon],[lat,lon],..."` (2-decimal,
  * latitude first) into Leaflet `[lat, lng]` pairs. Invalid pairs are skipped.
  */

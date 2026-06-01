@@ -9,6 +9,7 @@ import {
 import { DEPARTMENT_STYLE, Z_INDEX } from '../../config/map-polygons.config';
 import { MAP_PANES } from '../../constants/map-polygons.constants';
 import { createDepartmentStyle, lightenColor } from '../../utils/map-styles.utils';
+import { activeAlertColorForExpiry } from '../../utils/active-alert.utils';
 import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
 
 /** Normalizes a department name for matching (lowercase, trimmed, accent-free). */
@@ -32,10 +33,8 @@ export class ActiveAlertsMapService {
   private map: L.Map | null = null;
   private readonly layerGroup: L.FeatureGroup = L.featureGroup();
 
-  private readonly departmentColor = lightenColor(
-    ACTIVE_ALERT_COLOR,
-    DEPARTMENT_STYLE.LIGHTEN_PERCENT,
-  );
+  // Lightened version of the shown alert's expiry color; updated on render.
+  private departmentColor = lightenColor(ACTIVE_ALERT_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
   private readonly departmentLayers = new Map<string, L.GeoJSON>(); // normalized name -> layer
 
   constructor() {
@@ -52,7 +51,14 @@ export class ActiveAlertsMapService {
 
     effect(() => {
       const departments = this.activeAlertsService.shownDepartments();
+      const alert = this.activeAlertsService.shownDepartmentsAlert();
       if (!this.map) return;
+      if (alert) {
+        this.departmentColor = lightenColor(
+          activeAlertColorForExpiry(alert.endDatetime),
+          DEPARTMENT_STYLE.LIGHTEN_PERCENT,
+        );
+      }
       this.renderDepartments(departments);
     });
 
@@ -72,11 +78,18 @@ export class ActiveAlertsMapService {
   private render(alerts: ReadonlyArray<ActiveAlert>): void {
     this.layerGroup.clearLayers();
 
+    const now = Date.now();
     for (const alert of alerts) {
       if (alert.coordinates.length < 3) continue; // not a drawable polygon
 
       const latlngs = alert.coordinates.map(([lat, lng]) => [lat, lng] as L.LatLngExpression);
-      const polygon = L.polygon(latlngs, ACTIVE_ALERT_POLYGON_OPTIONS);
+      // Color reflects time left until expiry (green → yellow → red).
+      const color = activeAlertColorForExpiry(alert.endDatetime, now);
+      const polygon = L.polygon(latlngs, {
+        ...ACTIVE_ALERT_POLYGON_OPTIONS,
+        color,
+        fillColor: color,
+      });
       polygon.bindPopup(this.buildPopup(alert));
       this.layerGroup.addLayer(polygon);
     }

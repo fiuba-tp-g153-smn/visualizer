@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ACTIVE_ALERT_EXPIRY_COLORS,
+  activeAlertColorForExpiry,
   parseActiveAlertPolygon,
   parseAffectedDepartments,
   toActiveAlert,
@@ -35,6 +37,27 @@ describe('parseAffectedDepartments', () => {
   it('returns [] when there are no departments', () => {
     expect(parseAffectedDepartments('(Sin departamentos en el área)')).toEqual([]);
     expect(parseAffectedDepartments('')).toEqual([]);
+  });
+});
+
+describe('activeAlertColorForExpiry', () => {
+  const now = new Date('2026-06-01T12:00:00').getTime();
+  const inMinutes = (m: number): Date => new Date(now + m * 60_000);
+
+  it('is green when more than 30 minutes remain', () => {
+    expect(activeAlertColorForExpiry(inMinutes(40), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.GREEN);
+    expect(activeAlertColorForExpiry(inMinutes(31), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.GREEN);
+  });
+
+  it('is yellow when between 11 and 30 minutes remain', () => {
+    expect(activeAlertColorForExpiry(inMinutes(30), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.YELLOW);
+    expect(activeAlertColorForExpiry(inMinutes(11), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.YELLOW);
+  });
+
+  it('is red when 10 minutes or less remain (including expired)', () => {
+    expect(activeAlertColorForExpiry(inMinutes(10), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.RED);
+    expect(activeAlertColorForExpiry(inMinutes(1), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.RED);
+    expect(activeAlertColorForExpiry(inMinutes(-5), now)).toBe(ACTIVE_ALERT_EXPIRY_COLORS.RED);
   });
 });
 
