@@ -223,3 +223,31 @@
   color: #9ca3af;
   font-size: 0.85rem;
 }
+
+// Compact hover tooltip so it hides less of the chart behind it: tight padding and
+// margins, with a slightly larger font than the popover for legibility.
+:host ::ng-deep {
+  .apexcharts-tooltip {
+    font-size: 11px;
+  }
+
+  .apexcharts-tooltip-title {
+    padding: 2px 6px;
+    margin-bottom: 0;
+    font-size: 11px;
+  }
+
+  .apexcharts-tooltip-series-group {
+    padding: 0 6px;
+  }
+
+  .apexcharts-tooltip-y-group {
+    padding: 1px 0;
+  }
+
+  .apexcharts-tooltip-marker {
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+  }
+}

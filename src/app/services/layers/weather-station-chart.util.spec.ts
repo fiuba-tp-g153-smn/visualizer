@@ -121,6 +121,27 @@ describe('buildSeriesCharts', () => {
     expect(wind.markers.shape).toBe('triangle');
   });
 
+  it('appends the wind direction to the wind chart tooltip value', () => {
+    const windy: StationSeries = {
+      ...SERIES,
+      points: [{ ...SERIES.points[0], windSpeed: 12, windDeg: 90, windDirection: 'Este' }],
+      latest: { ...SERIES.points[0], windSpeed: 12, windDeg: 90, windDirection: 'Este' },
+    };
+    const charts = buildSeriesCharts(windy, units(), { group: 'ws-48h', utc: true, height: 200 });
+    const wind = charts.find((c) => c.variable.id === 'windSpeed')!;
+    const y = wind.tooltip.y as {
+      formatter: (val: number, opts: { dataPointIndex: number }) => string;
+    };
+    expect(y.formatter(12, { dataPointIndex: 0 })).toContain('Este');
+
+    // The temperature chart shares the formatter shape but never appends a bearing.
+    const temp = charts.find((c) => c.variable.id === 'temperature')!;
+    const ty = temp.tooltip.y as {
+      formatter: (val: number, opts: { dataPointIndex: number }) => string;
+    };
+    expect(ty.formatter(18, { dataPointIndex: 0 })).not.toContain('Este');
+  });
+
   it('shows the shared time axis only on the top and bottom charts', () => {
     const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
     expect(charts[0].xaxis.position).toBe('top');
