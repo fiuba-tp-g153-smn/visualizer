@@ -1,14 +1,26 @@
 import { Injectable, effect, inject } from '@angular/core';
 import * as L from 'leaflet';
 import { AvisosService } from './avisos.service';
-import { Aviso } from '../../models/geo';
-import { AVISO_POLYGON_OPTIONS } from '../../config/map-avisos.config';
+import { Aviso, Department } from '../../models/geo';
+import { AVISO_COLOR, AVISO_POLYGON_OPTIONS } from '../../config/map-avisos.config';
+import { DEPARTMENT_STYLE, Z_INDEX } from '../../config/map-polygons.config';
+import { MAP_PANES } from '../../constants/map-polygons.constants';
+import { createDepartmentStyle, lightenColor } from '../../utils/map-styles.utils';
 import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+
+/** Normalizes a department name for matching (lowercase, trimmed, accent-free). */
+function normalizeName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // strip combining diacritical marks
+    .trim()
+    .toLowerCase();
+}
 
 /**
  * Renders active alert ("aviso") polygons on the map in a dedicated layer group,
- * reacting to AvisosService state. Read-only overlay, separate from the editable
- * user polygons.
+ * plus the affected departments of the aviso whose list is currently open, with
+ * hover highlighting. Read-only overlay, separate from the editable user polygons.
  */
 @Injectable({ providedIn: 'root' })
 export class AvisosMapService {
@@ -16,6 +28,9 @@ export class AvisosMapService {
 
   private map: L.Map | null = null;
   private readonly layerGroup: L.FeatureGroup = L.featureGroup();
+
+  private readonly departmentColor = lightenColor(AVISO_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
+  private readonly departmentLayers = new Map<string, L.GeoJSON>(); // normalized name -> layer
 
   constructor() {
     effect(() => {
@@ -27,6 +42,18 @@ export class AvisosMapService {
       } else {
         this.clear();
       }
+    });
+
+    effect(() => {
+      const departments = this.avisosService.shownDepartments();
+      if (!this.map) return;
+      this.renderDepartments(departments);
+    });
+
+    effect(() => {
+      const hovered = this.avisosService.hoveredDepartment();
+      if (!this.map) return;
+      this.updateDepartmentHighlight(hovered);
     });
   }
 
@@ -51,6 +78,51 @@ export class AvisosMapService {
 
   private clear(): void {
     this.layerGroup.clearLayers();
+  }
+
+  private renderDepartments(departments: ReadonlyArray<Department>): void {
+    this.clearDepartments();
+    if (!this.map || departments.length === 0) return;
+
+    if (!this.map.getPane(MAP_PANES.DEPARTMENTS)) {
+      const pane = this.map.createPane(MAP_PANES.DEPARTMENTS);
+      pane.style.zIndex = String(Z_INDEX.DEPARTMENTS);
+      pane.style.pointerEvents = 'none';
+    }
+
+    for (const dept of departments) {
+      const layer = L.geoJSON(dept.geometry as GeoJSON.GeoJsonObject, {
+        pane: MAP_PANES.DEPARTMENTS,
+        interactive: false,
+        style: createDepartmentStyle(this.departmentColor),
+      });
+      const tooltip = dept.province ? `${dept.name} (${dept.province})` : dept.name;
+      layer.bindTooltip(tooltip, { direction: 'center', className: 'department-tooltip' });
+      layer.addTo(this.map);
+      this.departmentLayers.set(normalizeName(dept.name), layer);
+    }
+  }
+
+  private clearDepartments(): void {
+    this.departmentLayers.forEach((layer) => layer.remove());
+    this.departmentLayers.clear();
+  }
+
+  private updateDepartmentHighlight(hovered: string | null): void {
+    const base = createDepartmentStyle(this.departmentColor);
+    this.departmentLayers.forEach((layer) => layer.setStyle(base));
+
+    if (!hovered) return;
+    const target = this.departmentLayers.get(normalizeName(hovered));
+    if (!target) return;
+
+    target.setStyle({
+      ...base,
+      fillOpacity: DEPARTMENT_STYLE.FILL_OPACITY * 2.5,
+      opacity: DEPARTMENT_STYLE.OPACITY * 1.5,
+      weight: DEPARTMENT_STYLE.WEIGHT * 1.5,
+    });
+    target.bringToFront();
   }
 
   private buildPopup(aviso: Aviso): string {
