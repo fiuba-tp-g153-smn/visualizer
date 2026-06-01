@@ -21,6 +21,7 @@ export class ActiveAlertsService {
   private readonly activeAlertsSignal = signal<ReadonlyArray<ActiveAlert>>([]);
   private readonly loadingSignal = signal<boolean>(false);
   private readonly shownDepartmentsSignal = signal<ReadonlyArray<Department>>([]);
+  private readonly shownDepartmentsAlertSignal = signal<ActiveAlert | null>(null);
   private readonly hoveredDepartmentSignal = signal<string | null>(null);
 
   /** Whether active alerts should be shown/fetched. */
@@ -31,6 +32,8 @@ export class ActiveAlertsService {
   readonly loading = this.loadingSignal.asReadonly();
   /** Departments (with geometry) of the alert whose menu is currently open. */
   readonly shownDepartments = this.shownDepartmentsSignal.asReadonly();
+  /** The alert whose departments are currently shown (drives their color). */
+  readonly shownDepartmentsAlert = this.shownDepartmentsAlertSignal.asReadonly();
   /** Name of the department currently hovered in the open list. */
   readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
 
@@ -67,6 +70,7 @@ export class ActiveAlertsService {
    * map, by intersecting its polygon against the departments layer.
    */
   async showDepartments(alert: ActiveAlert): Promise<void> {
+    this.shownDepartmentsAlertSignal.set(alert);
     try {
       const response = await firstValueFrom(
         this.alertsService.intersectDepartments(
@@ -84,6 +88,7 @@ export class ActiveAlertsService {
   /** Hides the affected departments from the map. */
   hideDepartments(): void {
     this.shownDepartmentsSignal.set([]);
+    this.shownDepartmentsAlertSignal.set(null);
     this.hoveredDepartmentSignal.set(null);
   }
 
