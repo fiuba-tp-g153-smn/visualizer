@@ -23,6 +23,7 @@ export class ActiveAlertsService {
   private readonly shownDepartmentsSignal = signal<ReadonlyArray<Department>>([]);
   private readonly shownDepartmentsAlertSignal = signal<ActiveAlert | null>(null);
   private readonly hoveredDepartmentSignal = signal<string | null>(null);
+  private readonly hiddenIdsSignal = signal<ReadonlySet<number>>(new Set());
 
   /** Whether active alerts should be shown/fetched. */
   readonly showActive = this.showActiveSignal.asReadonly();
@@ -36,6 +37,8 @@ export class ActiveAlertsService {
   readonly shownDepartmentsAlert = this.shownDepartmentsAlertSignal.asReadonly();
   /** Name of the department currently hovered in the open list. */
   readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
+  /** IDs of alerts the user has hidden from the map. */
+  readonly hiddenIds = this.hiddenIdsSignal.asReadonly();
 
   /** Monotonic cursor: highest alert id ever seen, independent of pruning. */
   private lastSeenMaxId: number | undefined = undefined;
@@ -61,8 +64,20 @@ export class ActiveAlertsService {
       this.stopAutoRefresh();
       this.activeAlertsSignal.set([]);
       this.lastSeenMaxId = undefined;
+      this.hiddenIdsSignal.set(new Set());
       this.hideDepartments();
     }
+  }
+
+  /** Toggles whether an alert is hidden from the map. */
+  toggleHidden(alertId: number): void {
+    const next = new Set(this.hiddenIdsSignal());
+    if (next.has(alertId)) {
+      next.delete(alertId);
+    } else {
+      next.add(alertId);
+    }
+    this.hiddenIdsSignal.set(next);
   }
 
   /**
