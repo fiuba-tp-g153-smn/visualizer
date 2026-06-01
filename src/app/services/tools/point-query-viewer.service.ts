@@ -50,7 +50,12 @@ import {
   buildSatellitePointQueryUrl,
 } from '../../config';
 import { buildWrfPointQueryUrl } from '../../config/backend.config';
-import { formatDateFull, parseEcmwfTimestamp, formatWrfInitTag } from '../../utils/tileset-timestamp';
+import {
+  formatDateFull,
+  parseEcmwfTimestamp,
+  formatWrfInitTag,
+  wrfFxxxForInitAndTime,
+} from '../../utils/tileset-timestamp';
 
 interface MouseCoordinates {
   lat: number;
@@ -870,11 +875,14 @@ export class PointQueryViewerService {
         config.availableTilesets.length - 1,
       ),
     );
-    const fxxx = config.availableTilesets[idx].id;
+    // availableTilesets está keyado por instante absoluto (epoch); ese id es la
+    // clave de forecastsByPeriod. El fxxx concreto se deriva por corrida.
+    const tilesetEntry = config.availableTilesets[idx];
+    const tilesetId = tilesetEntry.id;
 
     // If a specific forecast (init run) was requested, validate it covers this
     // step; otherwise pick the first selected init that does.
-    const forecastsForStep = config.forecastsByPeriod[fxxx];
+    const forecastsForStep = config.forecastsByPeriod[tilesetId];
     const selectedInits = controls.forecast.selectedForecastTimestamps;
     const resolvedInitTag = forecastTs
       ? forecastsForStep?.includes(forecastTs)
@@ -882,6 +890,11 @@ export class PointQueryViewerService {
         : undefined
       : selectedInits.find((ts) => forecastsForStep?.includes(ts));
     if (!resolvedInitTag) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const fxxx = wrfFxxxForInitAndTime(resolvedInitTag, tilesetEntry.time);
+    if (!fxxx) {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
