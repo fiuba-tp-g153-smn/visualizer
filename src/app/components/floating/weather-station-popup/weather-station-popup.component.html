@@ -1,17 +1,95 @@
-<div class="weather-station-popup-card">
-  <div class="weather-station-popup__station">
-    <div class="weather-station-popup__title">{{ data.stationName }}</div>
-    <div class="weather-station-popup__meta">{{ data.province }}</div>
+<div class="ws-card">
+  <div class="ws-card__header">
+    <div class="ws-card__name">{{ data.stationName }}</div>
+    <div class="ws-card__meta">
+      <span class="ws-card__id"
+        >ID estación: <strong>{{ data.stationId }}</strong></span
+      >
+      <span class="ws-card__coords">Lat {{ latText }} · Lon {{ lonText }}</span>
+    </div>
+    @if (data.province && data.province !== '-') {
+      <div class="ws-card__province">{{ data.province }}</div>
+    }
   </div>
 
-  <ul class="weather-station-popup__values">
-    @for (item of data.values; track item.label) {
-      <li>
-        <span>{{ item.label }}</span>
-        <strong>{{ item.value }}</strong>
-      </li>
-    }
-  </ul>
+  <div class="ws-card__tabs" role="tablist">
+    <button
+      type="button"
+      class="ws-card__tab"
+      [class.ws-card__tab--active]="tab() === 'current'"
+      (click)="setTab('current')"
+    >
+      Actual
+    </button>
+    <button
+      type="button"
+      class="ws-card__tab"
+      [class.ws-card__tab--active]="tab() === 'graph'"
+      (click)="setTab('graph')"
+    >
+      Gráfico
+    </button>
+  </div>
 
-  <div class="weather-station-popup__updated">Actualizado: {{ data.updatedAt }}</div>
+  @if (tab() === 'current') {
+    <div class="ws-card__current">
+      <div class="ws-card__primary">
+        <div class="ws-card__temp-block">
+          <div class="ws-card__temp">{{ data.temperature }}</div>
+          <div class="ws-card__feels">Sensación {{ data.feelsLike }}</div>
+          <div class="ws-card__desc">{{ data.weatherDescription }}</div>
+        </div>
+        <app-wind-compass
+          [speed]="data.wind.speed"
+          [unit]="data.wind.unit"
+          [deg]="data.wind.deg"
+          [direction]="data.wind.direction"
+        ></app-wind-compass>
+      </div>
+
+      <ul class="ws-card__grid">
+        <li>
+          <span>Punto de rocío</span>
+          <strong>{{ dewPointText() }}</strong>
+        </li>
+        @for (item of data.values; track item.label) {
+          <li>
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+          </li>
+        }
+      </ul>
+
+      <div class="ws-card__updated">Actualizado: {{ data.updatedAt }}</div>
+    </div>
+  } @else {
+    <div class="ws-card__graph">
+      @if (chart(); as vm) {
+        @if (vm.hasData) {
+          <apx-chart
+            [series]="vm.series"
+            [chart]="vm.chart"
+            [xaxis]="vm.xaxis"
+            [yaxis]="vm.yaxis"
+            [stroke]="vm.stroke"
+            [tooltip]="vm.tooltip"
+            [dataLabels]="vm.dataLabels"
+            [grid]="vm.grid"
+            [legend]="vm.legend"
+            [colors]="vm.colors"
+          ></apx-chart>
+        } @else {
+          <div class="ws-card__state">Sin datos en las últimas 48 h.</div>
+        }
+      } @else if (loading()) {
+        <div class="ws-card__state">Cargando…</div>
+      } @else {
+        <div class="ws-card__state">No se pudo cargar el gráfico.</div>
+      }
+    </div>
+  }
+
+  <button type="button" class="ws-card__all-link" (click)="openFullScreen()">
+    Ver todas las variables y gráficos
+  </button>
 </div>
