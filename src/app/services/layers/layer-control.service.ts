@@ -934,8 +934,10 @@ export class LayerControlService {
       }
     });
 
+    // Devuelve la nueva unión sincrónicamente; getConfig() justo después vería
+    // la anterior (write diferido vía queueMicrotask).
     const updatedControls = this.getControls(layerId) as WrfLayerControls;
-    this.layerConfigService.updateWrfSelectedForecasts(
+    const newConfig = this.layerConfigService.updateWrfSelectedForecasts(
       layerId,
       updatedControls.forecast.selectedForecastTimestamps,
     );
@@ -945,20 +947,28 @@ export class LayerControlService {
       return;
     }
 
-    const newConfig = this.layerConfigService.getConfig(layerId) as
-      | WrfTileLayerConfig
-      | undefined;
+    if (!newConfig) return;
+    const newUnionCount = newConfig.availableTilesets.length;
+    const layer = this.layersService.getLayerById(layerId);
+
+    // Clamp timeIndex si la unión se achicó — reset al cursor por defecto.
     if (
-      newConfig &&
       updatedControls.playback.timeIndex !== undefined &&
-      updatedControls.playback.timeIndex >= newConfig.availableTilesets.length
+      updatedControls.playback.timeIndex >= newUnionCount
     ) {
-      const layer = this.layersService.getLayerById(layerId);
       const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
-      this.setTimeIndex(
-        layerId,
-        getDefaultCursorIndex(newConfig.availableTilesets.length, isForecast),
-      );
+      this.setTimeIndex(layerId, getDefaultCursorIndex(newUnionCount, isForecast));
+    }
+
+    // Reconcilia imageCount con el nuevo tamaño de unión: si el valor actual
+    // ya no está en las opciones del dropdown (p.ej. era 10 con 2 corridas y
+    // al deseleccionar una la unión bajó a 7), lo ajusta al nuevo máximo para
+    // que el selector quede válido sin un re-pick manual. Espejo de ECMWF.
+    if (newUnionCount > 0 && layer?.type === LayerType.TILE && layer.category === LayerCategory.WRF) {
+      const options = buildEcmwfTpFrameOptions(layer.availablePeriods ?? [1], newUnionCount);
+      if (!options.includes(updatedControls.playback.imageCount)) {
+        this.setImageCount(layerId, newUnionCount);
+      }
     }
   }
 

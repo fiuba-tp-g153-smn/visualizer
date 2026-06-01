@@ -129,6 +129,20 @@ export function parseWrfStepTimestamp(initTag: string, fxxx: string): Date | nul
 }
 
 /**
+ * Inverso de `parseWrfStepTimestamp`: dado un init_tag y un instante absoluto,
+ * sintetiza el paso fxxx ('F003') asumiendo cadencia horaria (1H).
+ * Devuelve null si el instante es anterior al init (offset negativo).
+ * Ejemplo: ('20260430_060000', 2026-04-30 09:00) → 'F003'.
+ */
+export function wrfFxxxForInitAndTime(initTag: string, time: Date): string | null {
+  const init = parseWrfInitTag(initTag);
+  if (!init) return null;
+  const offsetH = Math.round((time.getTime() - init.getTime()) / 3_600_000);
+  if (offsetH < 0) return null;
+  return 'F' + String(offsetH).padStart(3, '0');
+}
+
+/**
  * Formato compacto para init_tag WRF (mostrar en filtros): "MM-DD HHh".
  */
 export function formatWrfInitTag(initTag: string): string {

@@ -24,6 +24,7 @@ import {
   WEATHER_STATION_PANE,
   WEATHER_STATION_PANE_Z_INDEX,
 } from '../../config/layers/weather-stations/config';
+import { wrfFxxxForInitAndTime } from '../../utils/tileset-timestamp';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -454,9 +455,10 @@ export class MapLayersService {
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
     const currentEntry = config.availableTilesets[currentTimeIndex];
     if (!currentEntry) return;
-    const currentTimestampTs = currentEntry.id;
 
-    const forecastsForCurrent = config.forecastsByPeriod[currentTimestampTs];
+    // currentEntry.id es el instante absoluto (epoch); el fxxx por corrida se
+    // deriva más abajo con wrfFxxxForInitAndTime.
+    const forecastsForCurrent = config.forecastsByPeriod[currentEntry.id];
     if (!forecastsForCurrent) return;
 
     const layerActualZIndex = layerActualZIndexes.get(layerId);
@@ -466,6 +468,10 @@ export class MapLayersService {
       // Only render overlays if the forecast actually has data for the current
       // timestamp (mirrors the raster's check).
       if (!forecastsForCurrent.includes(forecastTs)) return;
+
+      // fxxx concreto de esta corrida para el instante actual.
+      const fxxx = wrfFxxxForInitAndTime(forecastTs, currentEntry.time);
+      if (!fxxx) return;
 
       // Per-forecast opacity override, falling back to the layer-wide opacity.
       const forecastOpacity = controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
@@ -484,7 +490,7 @@ export class MapLayersService {
             wrfLayer.productId,
             render,
             forecastTs,
-            currentTimestampTs,
+            fxxx,
             overlayZIndex,
             desired,
           );
@@ -494,7 +500,7 @@ export class MapLayersService {
           layerId,
           render,
           forecastTs,
-          currentTimestampTs,
+          fxxx,
           forecastOpacity,
           overlayZIndex,
           desired,
@@ -580,6 +586,10 @@ export class MapLayersService {
     const total = config.availableTilesets.length;
     if (total <= 1) return;
 
+    // WRF keya availableTilesets por instante absoluto → la URL necesita el
+    // fxxx derivado. ECMWF ya usa el timestamp absoluto como id de la URL.
+    const isWrfConfig = config.category === LayerCategory.WRF;
+
     const urls: string[] = [];
     for (let offset = 1; offset <= window; offset++) {
       const idx = (currentTimeIndex + offset) % total;
@@ -588,7 +598,10 @@ export class MapLayersService {
       // Only prefetch frames whose forecast actually has data for that timestamp.
       const forecastsForFrame = config.forecastsByPeriod[entry.id];
       if (!forecastsForFrame || !forecastsForFrame.includes(forecastTs)) continue;
-      urls.push(secondary.buildUrl(forecastTs, entry.id));
+      // entry.id es el instante absoluto; la URL necesita el fxxx de la corrida.
+      const fxxx = isWrfConfig ? wrfFxxxForInitAndTime(forecastTs, entry.time) : entry.id;
+      if (!fxxx) continue;
+      urls.push(secondary.buildUrl(forecastTs, fxxx));
     }
     if (urls.length > 0) this.vectorOverlay.prefetch(urls);
   }

@@ -53,7 +53,7 @@ import {
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
-import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import { formatDateTimeLocalized, wrfFxxxForInitAndTime } from '../../utils/tileset-timestamp';
 import {
   WeatherStationPopupComponent,
   WeatherStationPopupData,
@@ -1142,10 +1142,14 @@ export class LayerRenderService {
 
     const stepEntry = config.availableTilesets[timeIndex];
     if (!stepEntry) return null;
-    const fxxx = stepEntry.id;
 
-    const forecastsForStep = config.forecastsByPeriod[fxxx];
+    // entry.id es el instante absoluto (epoch); forecastsByPeriod indica qué
+    // corridas tienen un paso ahí, y el fxxx concreto se deriva por corrida.
+    const forecastsForStep = config.forecastsByPeriod[stepEntry.id];
     if (!forecastsForStep || !forecastsForStep.includes(initTag)) return null;
+
+    const fxxx = wrfFxxxForInitAndTime(initTag, stepEntry.time);
+    if (!fxxx) return null;
 
     return this.createWrfTileLayerForForecast(layerId, controls, initTag, fxxx);
   }
@@ -1170,18 +1174,16 @@ export class LayerRenderService {
 
     const currentEntry = config.availableTilesets[currentTimeIndex];
     if (!currentEntry) return result;
-    const currentFxxx = currentEntry.id;
+    const forecastsForStep = config.forecastsByPeriod[currentEntry.id];
 
     selectedForecasts.forEach((initTag, index) => {
       const forecastZIndex = absoluteZIndex + index;
       const forecastOpacity = controls.forecast.forecastOpacity[initTag];
       const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
 
-      const forecastsForStep = config.forecastsByPeriod[currentFxxx];
-      if (forecastsForStep && forecastsForStep.includes(initTag)) {
-        const tileLayer = this.createWrfTileLayerForForecast(
-          layerId, controls, initTag, currentFxxx,
-        );
+      const fxxx = wrfFxxxForInitAndTime(initTag, currentEntry.time);
+      if (fxxx && forecastsForStep && forecastsForStep.includes(initTag)) {
+        const tileLayer = this.createWrfTileLayerForForecast(layerId, controls, initTag, fxxx);
         this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
         result.set(`${layerId}#${initTag}#${currentTimeIndex}`, tileLayer);
       }
