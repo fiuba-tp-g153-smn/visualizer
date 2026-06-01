@@ -18,9 +18,9 @@ const MENU_SECTIONS: ReadonlyArray<MenuSection> = [
   },
   {
     id: 'polygons',
-    title: 'Polígonos',
+    title: 'Avisos a Corto Plazo',
     icon: 'polyline',
-    tooltip: 'Graficar polígono',
+    tooltip: 'Avisos a Corto Plazo',
     loadComponent: () =>
       import('./polygon-manager/polygon-manager').then((m) => m.PolygonManagerComponent),
   },

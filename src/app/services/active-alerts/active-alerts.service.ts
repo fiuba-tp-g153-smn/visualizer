@@ -130,7 +130,7 @@ export class ActiveAlertsService {
       const incoming = responses.map(toActiveAlert);
       this.mergeAndPrune(incoming);
     } catch (error) {
-      console.error('Error al obtener alertas activas:', error);
+      console.error('Error al obtener avisos activos:', error);
       // Still prune locally so expired alerts disappear even if the fetch failed.
       this.mergeAndPrune([]);
     } finally {

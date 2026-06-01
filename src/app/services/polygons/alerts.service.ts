@@ -137,9 +137,9 @@ export class AlertsService {
   }
 
   /**
-   * Obtiene las alertas activas. Con `sinceId` solo devuelve las de id mayor.
-   * @param sinceId - Devuelve solo alertas con alert_id mayor a este valor
-   * @returns Observable con la lista de alertas activas
+   * Obtiene los avisos activos. Con `sinceId` solo devuelve los de id mayor.
+   * @param sinceId - Devuelve solo avisos con alert_id mayor a este valor
+   * @returns Observable con la lista de avisos activos
    */
   getAlerts(sinceId?: number): Observable<ActiveAlertResponse[]> {
     const url = buildAlertsUrl();
