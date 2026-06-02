@@ -16,7 +16,7 @@ export enum LayerCategory {
   IGN_WMS = 'ign_wms',
   ECMWF_TP = 'ecmwf_tp',
   WEATHER_STATIONS = 'weather_stations',
-  WRF = 'wrf', // WRF-ARG4K (SMN) — multi-product forecast model
+  WRF = 'wrf',
 }
 
 // [[lat_sur, lon_oeste], [lat_norte, lon_este]] — compatible con L.LatLngBoundsExpression
