@@ -31,7 +31,7 @@
         }
       </div>
     </div>
-    @if (isLogContinuous) {
+    @if (isLogContinuous || hasExplicitContinuousLabels) {
       <div class="scale-values scale-values-discrete">
         <div class="scale-value-row scale-value-sizer" aria-hidden="true">
           <div class="scale-value">{{ continuousLabelSizerText }}</div>

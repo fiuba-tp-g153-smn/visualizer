@@ -2,8 +2,24 @@ import { RADAR_UNITS, ScaleToolGroupKey } from '../../constants';
 import { LayerScale, ScaleType } from '../../models';
 import { buildScaleFromLinearGradient } from './scale-builders';
 
+const DBZH_MIN = -18;
+const DBZH_MAX = 76.5;
+
+function buildDbzhLabelValues(): readonly number[] {
+  const firstMultiple = Math.ceil(DBZH_MIN / 5) * 5;
+  const lastMultiple = Math.floor(DBZH_MAX / 5) * 5;
+  return firstMultiple <= lastMultiple
+    ? Array.from(
+        { length: Math.floor((lastMultiple - firstMultiple) / 5) + 1 },
+        (_, index) => firstMultiple + index * 5,
+      )
+    : [];
+}
+
+const DBZH_LABEL_VALUES = buildDbzhLabelValues();
+
 const DBZH_BASE_SCALE_CONFIG = {
-  labelCount: 10,
+  labelValues: DBZH_LABEL_VALUES,
   subTickCount: 4,
   type: ScaleType.CONTINUOUS,
 } as const;
@@ -14,8 +30,8 @@ const DBZH_BASE_SCALE_CONFIG = {
  */
 export const SHARED_DBZH_SCALE: LayerScale = buildScaleFromLinearGradient({
   ...DBZH_BASE_SCALE_CONFIG,
-  min: -18,
-  max: 76.5,
+  min: DBZH_MIN,
+  max: DBZH_MAX,
   unit: RADAR_UNITS.REFLECTIVITY,
   scaleDisplayName: 'Reflectividad',
   scaleRoutingKey: ScaleToolGroupKey.SHARED_REFLECTIVITY_DBZ,
