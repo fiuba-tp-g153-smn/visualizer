@@ -12,6 +12,7 @@ export const ABI_CH2_SCALE = buildScaleFromLinearGradient({
   min: 0,
   max: 1,
   unit: ABI_UNITS.REFLECTANCE,
+  scaleDisplayName: 'Reflectancia CH2',
   colors: ['#000000', '#ffffff'],
   labelCount: 11,
 });
@@ -20,6 +21,7 @@ export const ABI_CH9_SCALE = buildScaleFromIndexedNodes({
   ...baseAbiThermalIndexedScaleConfig,
   min: 161,
   max: 330,
+  scaleDisplayName: 'Temperatura de brillo CH9',
   clipRange: [183.15, 323.15],
   nodes: [
     { index: 0, color: '#ffffff' },
@@ -67,6 +69,7 @@ export const ABI_CH13_SCALE = buildScaleFromIndexedNodes({
   ...baseAbiThermalIndexedScaleConfig,
   min: 183.15,
   max: 323.15,
+  scaleDisplayName: 'Temperatura de brillo CH13',
   nodes: [
     { index: 0, color: '#ffffff' },
     { index: 17, color: '#1b1b1b' },
