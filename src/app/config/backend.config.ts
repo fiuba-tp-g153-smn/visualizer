@@ -96,6 +96,21 @@ export function buildWrfPointQueryUrl(
 }
 
 /**
+ * URL del dato puntual de una variable secundaria WRF (viento, slp, shear, ...).
+ * `variable` es la clave del COG secundario en el backend.
+ */
+export function buildWrfSecondaryPointQueryUrl(
+  productId: string,
+  initTag: string,
+  fxxx: string,
+  variable: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/secondary/${variable}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
  * URL concreta de un tile GeoJSON de barbas WRF (z/x/y).
  */
 export function buildWrfBarbTileUrl(

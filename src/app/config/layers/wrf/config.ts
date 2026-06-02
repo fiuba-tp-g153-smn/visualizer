@@ -57,9 +57,21 @@ const WRF_DEFAULTS = {
 // `SecondaryVectorRender` configs. The `id` is used as a stable cache key.
 // ============================================================================
 
-const barbsRender = (productId: string): BarbTileRender => ({
+// Variable de viento (magnitud de las barbas), consultable en el dato puntual.
+// `variable: 'wind'` matchea el COG secundario del backend.
+const WIND_POINT_QUERY = {
+  variable: 'wind',
+  name: 'Velocidad de viento',
+  unit: 'kt',
+  scaleRange: { min: 0, max: 80, totalSteps: 80 },
+} as const;
+
+// `withWindPointQuery=false` para productos cuyas barbas no son viento real
+// (ej. CortanteNivelesBajos usa el vector de cizalladura = igual al primary).
+const barbsRender = (productId: string, withWindPointQuery = true): BarbTileRender => ({
   kind: 'barb-tile',
   id: `wrf-${productId}-barbs`,
+  ...(withWindPointQuery ? { pointQuery: { ...WIND_POINT_QUERY } } : {}),
 });
 
 const slpRender = (productId: string): SecondaryVectorRender => ({
@@ -70,6 +82,12 @@ const slpRender = (productId: string): SecondaryVectorRender => ({
   labelFor: slpLabelFor,
   textpathOptions: SLP_TEXTPATH_OPTIONS,
   prefetchWindow: 4,
+  pointQuery: {
+    variable: 'slp',
+    name: 'Presión a nivel del mar',
+    unit: 'hPa',
+    scaleRange: { min: 950, max: 1050, totalSteps: 100 },
+  },
 });
 
 interface ContourRenderOptions {
@@ -77,6 +95,7 @@ interface ContourRenderOptions {
   textpathOptions: SecondaryVectorRender['textpathOptions'];
   labelFor?: SecondaryVectorRender['labelFor'];
   minLabelLengthDeg?: SecondaryVectorRender['minLabelLengthDeg'];
+  pointQuery?: SecondaryVectorRender['pointQuery'];
 }
 
 const contourRender = (
@@ -92,6 +111,7 @@ const contourRender = (
   textpathOptions: opts.textpathOptions,
   prefetchWindow: 4,
   minLabelLengthDeg: opts.minLabelLengthDeg,
+  pointQuery: opts.pointQuery,
 });
 
 export const WRF_SUBGROUP: LayerSubgroup = {
@@ -153,6 +173,12 @@ export const WRF_SUBGROUP: LayerSubgroup = {
         contourRender('MUCAPE', 'shear_850_500', {
           styleFor: shear850_500StyleFor,
           textpathOptions: SHEAR_850_500_TEXTPATH_OPTIONS,
+          pointQuery: {
+            variable: 'shear_850_500',
+            name: 'Cizalladura 850-500 hPa',
+            unit: 'kt',
+            scaleRange: { min: 0, max: 60, totalSteps: 60 },
+          },
         }),
       ],
     },
@@ -176,6 +202,12 @@ export const WRF_SUBGROUP: LayerSubgroup = {
         contourRender('JetCapasBajas', 'shear_850_700', {
           styleFor: shear850_700StyleFor,
           textpathOptions: SHEAR_850_700_TEXTPATH_OPTIONS,
+          pointQuery: {
+            variable: 'shear_850_700',
+            name: 'Cizalladura 850-700 hPa',
+            unit: 'kt',
+            scaleRange: { min: 0, max: 30, totalSteps: 30 },
+          },
         }),
       ],
     },
@@ -186,7 +218,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       name: 'Cortante niveles bajos',
       description: 'Cortante sigma1-sigma2 (kt) — WRF-ARG4K',
       scale: WRF_CORTANTE_SCALE,
-      secondaryRenders: [barbsRender('CortanteNivelesBajos')],
+      secondaryRenders: [barbsRender('CortanteNivelesBajos', false)],
     },
     {
       ...WRF_DEFAULTS,
@@ -199,6 +231,12 @@ export const WRF_SUBGROUP: LayerSubgroup = {
         contourRender('CAPE_BRN', 'brn', {
           styleFor: brnStyleFor,
           textpathOptions: BRN_TEXTPATH_OPTIONS,
+          pointQuery: {
+            variable: 'brn',
+            name: 'Bulk Richardson Number',
+            unit: '',
+            scaleRange: { min: 0, max: 100, totalSteps: 100 },
+          },
         }),
       ],
     },
@@ -214,6 +252,12 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           styleFor: haildiamStyleFor,
           textpathOptions: HAILDIAM_TEXTPATH_OPTIONS,
           labelFor: haildiamLabelFor,
+          pointQuery: {
+            variable: 'haildiammax',
+            name: 'Diámetro máximo de granizo',
+            unit: 'mm',
+            scaleRange: { min: 0, max: 100, totalSteps: 100 },
+          },
         }),
       ],
     },
