@@ -78,6 +78,19 @@ export const WEATHER_STATION_UNITS = {
 } as const;
 
 /**
+ * Unidades de productos WRF
+ */
+export const WRF_UNITS = {
+  REFLECTIVITY: RADAR_UNITS.REFLECTIVITY,
+  WIND_SPEED: WIND_SPEED_UNITS.KNOTS,
+  SPECIFIC_HUMIDITY: 'g/kg',
+  PRECIPITATION: PRECIPITATION_UNITS.MILLIMETERS,
+  MUCAPE: 'J/kg',
+  SEA_LEVEL_PRESSURE: WEATHER_STATION_UNITS.PRESSURE,
+  DIMENSIONLESS: '',
+} as const;
+
+/**
  * Offset de conversión de Kelvin a Celsius
  */
 export const KELVIN_TO_CELSIUS_OFFSET = 273.15;
