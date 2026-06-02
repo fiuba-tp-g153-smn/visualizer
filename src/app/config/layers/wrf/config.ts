@@ -116,7 +116,7 @@ const contourRender = (
 
 export const WRF_SUBGROUP: LayerSubgroup = {
   id: 'wrf',
-  name: 'WRF (SMN)',
+  name: 'WRF',
   description: 'Modelo numérico WRF-ARG4K del Servicio Meteorológico Nacional',
   expanded: false,
   layers: [
