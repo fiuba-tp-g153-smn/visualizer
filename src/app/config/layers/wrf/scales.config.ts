@@ -1,4 +1,5 @@
 import { WRF_UNITS } from '../../../constants';
+import { ScaleToolGroupKey } from '../../../constants/scale-tools.constants';
 import { LayerScale, ScaleType } from '../../../models';
 import { buildScaleFromThresholds, buildScaleFromUniformThresholds } from '../scale-builders';
 import { SHARED_DBZH_SCALE } from '../shared-scales.config';
@@ -102,13 +103,18 @@ export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
   ],
 });
 
-export const WRF_MUCAPE_SCALE: LayerScale = buildScaleFromThresholds({
+const SHARED_WRF_CAPE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.MUCAPE,
-  scaleDisplayName: 'CAPE máximo',
+  scaleRoutingKey: ScaleToolGroupKey.SHARED_WRF_CAPE,
   bounds: [100, 250, 750, 1000, 1500, 2000, 2500, 3000, 3500],
   colors: ['#b2f8a9', '#77f373', '#37d13c', '#fdf8a9', '#fde678', '#ffc03c', '#ff6000', '#ff3200'],
 });
+
+export const WRF_MUCAPE_SCALE: LayerScale = {
+  ...SHARED_WRF_CAPE_SCALE,
+  scaleDisplayName: 'CAPE máximo',
+};
 
 export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
@@ -137,7 +143,7 @@ export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromUniformThresholds({
 });
 
 export const WRF_CAPE_BRN_SCALE: LayerScale = {
-  ...WRF_MUCAPE_SCALE,
+  ...SHARED_WRF_CAPE_SCALE,
   scaleDisplayName: 'CAPE + BRN',
 };
 
