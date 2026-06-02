@@ -54,4 +54,10 @@ describe('windBarbSvg', () => {
   it('rotates the glyph to the bearing', () => {
     expect(windBarbSvg(20, 135, OPTS)).toContain('rotate(135');
   });
+
+  it('lets the barb overflow the viewport so the tip is never clipped into a wedge', () => {
+    // The lone full barb at 10 kt reaches past the staff tip; the root <svg> must
+    // not clip it, or the rounded end gets sliced flat at the box edge.
+    expect(windBarbSvg(10, 90, OPTS)).toContain('overflow:visible');
+  });
 });

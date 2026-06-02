@@ -40,7 +40,9 @@ export function windBarbSvg(speedKnots: number, deg: number | null, opts: WindBa
   const c = size / 2;
   const strokeW = Math.max(1, size * 0.06);
   const defs = `<defs><filter id="wb-halo" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="0" stdDeviation="${(size * 0.03).toFixed(2)}" flood-color="#ffffff" flood-opacity="1" /></filter></defs>`;
-  const open = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="display:block" xmlns="http://www.w3.org/2000/svg">${defs}`;
+  // overflow:visible so a barb that reaches past the staff tip (e.g. the lone full
+  // barb at 10 kt) isn't clipped flat by the square viewport into a "wedge".
+  const open = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="display:block;overflow:visible" xmlns="http://www.w3.org/2000/svg">${defs}`;
   const close = `</svg>`;
 
   const rounded = Math.round((Number.isFinite(speedKnots) ? speedKnots : 0) / 5) * 5;

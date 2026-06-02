@@ -56,6 +56,7 @@ import {
 } from '../../utils/unit-conversion.utils';
 import { formatDateTimeLocalized, wrfFxxxForInitAndTime } from '../../utils/tileset-timestamp';
 import { windBarbSvg } from '../../utils/wind-barb.util';
+import { windDirectionTriangleSvg } from '../../utils/wind-direction.util';
 import {
   WeatherStationPopupComponent,
   WeatherStationPopupData,
@@ -243,6 +244,9 @@ export class LayerRenderService {
       Math.round(markerRadius * WEATHER_STATION_RENDER_CONFIG.marker.badgeDiameterFactor),
     );
     const circleDiameterPx = circleRadiusPx * 2;
+    // Minimized wind stations render a direction triangle instead of a dot; size it
+    // well above the dot (~3.5–8.4px) yet below the barb so it stays de-cluttered.
+    const windDirSizePx = Math.max(20, Math.round(markerRadius * 2.3));
 
     const cellSize = Math.max(WEATHER_STATION_RENDER_CONFIG.minDistancePx, circleDiameterPx);
     const grid = new Map<string, VisiblePoint[]>();
@@ -352,11 +356,23 @@ export class LayerRenderService {
         );
         marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else if (level === WeatherStationRenderLevel.DOT) {
-        const icon = this.buildWeatherStationsDotIcon(
-          dotRadiusPx * 2,
-          color,
-          Math.max(WEATHER_STATION_RENDER_CONFIG.marker.dotMinFillOpacity, opacity),
-        );
+        // Wind layer: a minimized station shows its direction as a (speed-coloured)
+        // triangle, matching the popover's wind-compass arrow. Calm / unknown bearing
+        // has no honest direction, so it stays a plain dot (as do all other layers).
+        const deg = observation.weather.wind.deg;
+        const hasBearing =
+          stationLayer.variable === WeatherStationVariable.WIND_SPEED &&
+          observation.weather.wind.direction !== 'Calma' &&
+          deg !== null &&
+          Number.isFinite(deg);
+        const icon =
+          hasBearing && deg !== null
+            ? this.buildWeatherStationsWindDirIcon(deg, windDirSizePx, color)
+            : this.buildWeatherStationsDotIcon(
+                dotRadiusPx * 2,
+                color,
+                Math.max(WEATHER_STATION_RENDER_CONFIG.marker.dotMinFillOpacity, opacity),
+              );
         marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else if (level === WeatherStationRenderLevel.CIRCLE) {
         const icon = this.buildWeatherStationsCircleIcon(
@@ -485,6 +501,20 @@ export class LayerRenderService {
     return L.divIcon({
       className: 'weather-station-divicon',
       html: `<div style="position:relative;width:${sizePx}px;height:${sizePx}px;">${barb}${badge}</div>`,
+      iconSize: [sizePx, sizePx],
+      iconAnchor: [sizePx / 2, sizePx / 2],
+    });
+  }
+
+  /**
+   * Minimized wind marker = a speed-coloured triangle pointing in the wind
+   * direction (same convention as the popover's wind-compass arrow), used at the
+   * dense DOT level instead of a directionless dot.
+   */
+  private buildWeatherStationsWindDirIcon(deg: number, sizePx: number, color: string): L.DivIcon {
+    return L.divIcon({
+      className: 'weather-station-divicon',
+      html: windDirectionTriangleSvg(deg, { size: sizePx, color }),
       iconSize: [sizePx, sizePx],
       iconAnchor: [sizePx / 2, sizePx / 2],
     });

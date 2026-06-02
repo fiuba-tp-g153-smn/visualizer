@@ -1,7 +1,7 @@
 /**
  * Color único para todos los polígonos
  */
-export const POLYGON_COLOR = '#FF0000'; // Rojo
+export const POLYGON_COLOR = '#FF7F00'; // Naranja
 
 /**
  * Nivel de simplificación fijo para cargar departamentos (0-10)
