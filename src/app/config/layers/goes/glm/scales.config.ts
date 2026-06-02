@@ -11,6 +11,7 @@ export const GLM_FED_SCALE = buildLogScale({
   min: 1,
   max: 128,
   unit: GLM_UNITS.FLASH_DENSITY,
+  scaleDisplayName: 'Densidad de flashes',
   colors: [
     '#0000b8',
     '#0702c1',
@@ -39,6 +40,7 @@ export const GLM_TOE_SCALE = buildLogScale({
   min: 0.01,
   max: 1500,
   unit: GLM_UNITS.ENERGY,
+  scaleDisplayName: 'Energia optica total',
   colors: [
     '#000004',
     '#0a0822',
@@ -67,6 +69,7 @@ export const GLM_MFA_SCALE = buildLogScale({
   min: 64,
   max: 2500,
   unit: GLM_UNITS.AREA,
+  scaleDisplayName: 'Area media de flash',
   colors: [
     '#fde725',
     '#d5e21a',
