@@ -270,6 +270,56 @@ export class ScaleToolPanelComponent {
     return `linear-gradient(to top, ${segments.join(', ')})`;
   }
 
+  get specialPointEntries(): readonly {
+    top: number;
+    label: string;
+    color: string;
+  }[] {
+    const points = this.entry.scale.specialPoints;
+    if (!points || points.length === 0) {
+      return [];
+    }
+
+    const [domainMin, domainMax] = this.getSpecialPointDomain();
+    const isLogDomain =
+      this.entry.scale.labelScale === ScaleLabelScale.LOG &&
+      this.entry.scale.type === ScaleType.CONTINUOUS;
+
+    return points
+      .filter((point) => point.value >= domainMin && point.value <= domainMax)
+      .map((point) => {
+        const top =
+          this.entry.scale.type === ScaleType.DISCRETE
+            ? this.discreteThresholdPosition(point.value)
+            : isLogDomain
+              ? (this.logPositionsForDomain([point.value], domainMin, domainMax)?.[0] ??
+                this.linearPosition(point.value, domainMin, domainMax))
+              : this.linearPosition(point.value, domainMin, domainMax);
+
+        return {
+          top,
+          label: this.formatSpecialPointLabel(point.value, point.label),
+          color: point.color,
+        };
+      });
+  }
+
+  private formatSpecialPointLabel(value: number, label?: string): string {
+    const displayUnit = getDisplayUnit(this.entry.scale.unit, this.unitsSettings);
+    const formattedValue = this.formatValue(value);
+    const valueWithUnit = `${formattedValue} ${displayUnit}`;
+
+    if (!label) {
+      return valueWithUnit;
+    }
+
+    if (label.includes('{value}') || label.includes('{unit}')) {
+      return label.replaceAll('{value}', formattedValue).replaceAll('{unit}', displayUnit);
+    }
+
+    return `${label}: ${valueWithUnit}`;
+  }
+
   private get sortedContinuousEntriesAsc(): readonly ScaleColorStop[] {
     return [...this.continuousScale.entries].sort((a, b) => a.value - b.value);
   }
@@ -442,6 +492,12 @@ export class ScaleToolPanelComponent {
     return start <= end ? [start, end] : [end, start];
   }
 
+  private getSpecialPointDomain(): readonly [number, number] {
+    return this.entry.scale.type === ScaleType.CONTINUOUS
+      ? this.getContinuousLabelDomain()
+      : this.getDiscreteLabelDomain();
+  }
+
   tickTopStyle(percentTop: number): string {
     return `calc(${percentTop}% - ${percentTop / 100}px)`;
   }
@@ -454,6 +510,33 @@ export class ScaleToolPanelComponent {
     if (max <= min) return 0;
     const ratio = (value - min) / (max - min);
     return Math.max(0, Math.min(100, (1 - ratio) * 100));
+  }
+
+  private discreteThresholdPosition(value: number): number {
+    const entries = this.sortedDiscreteEntriesDesc;
+    const lastIndex = entries.length - 1;
+
+    if (lastIndex <= 0) {
+      return 0;
+    }
+
+    const exactIndex = entries.findIndex((entry) => entry.value === value);
+    if (exactIndex >= 0) {
+      return (exactIndex / lastIndex) * 100;
+    }
+
+    for (let i = 0; i < lastIndex; i++) {
+      const upper = entries[i].value;
+      const lower = entries[i + 1].value;
+
+      if (value <= upper && value >= lower) {
+        const span = upper - lower;
+        const t = span === 0 ? 0 : (upper - value) / span;
+        return ((i + t) / lastIndex) * 100;
+      }
+    }
+
+    return value > entries[0].value ? 0 : 100;
   }
 
   private logPositionsForDomain(

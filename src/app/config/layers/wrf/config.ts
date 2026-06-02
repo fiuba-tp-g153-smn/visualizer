@@ -134,7 +134,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/Rafagas',
       productId: 'Rafagas',
       name: 'Ráfagas en superficie',
-      description: 'Ráfagas viento 10 m (kt) — WRF-ARG4K',
+      description:
+        'Ráfagas viento 10 m (kt) — WRF-ARG4K. Barbas de viento. Contorno azul en 35 kt.',
       scale: WRF_RAFAGAS_SCALE,
       secondaryRenders: [
         barbsRender('Rafagas'),
@@ -150,7 +151,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/Campo900hPa',
       productId: 'Campo900hPa',
       name: 'Humedad específica 900 hPa',
-      description: 'Humedad específica 900 hPa (g/kg) — WRF-ARG4K',
+      description:
+        'Humedad específica 900 hPa (g/kg) — WRF-ARG4K. Barbas de viento. Máscara marrón en cordillera y zona sur.',
       scale: WRF_CAMPO900_SCALE,
       secondaryRenders: [barbsRender('Campo900hPa')],
     },
@@ -159,7 +161,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/Precipitacion1h',
       productId: 'Precipitacion1h',
       name: 'Precipitación 1h',
-      description: 'Precipitación acumulada 1 hora (mm) — WRF-ARG4K',
+      description:
+        'Precipitación acumulada 1 hora (mm) — WRF-ARG4K. Barbas de viento. Isobaras de presión a nivel del mar (976/984/992/1000/1008/1016 hPa).',
       scale: WRF_PRECIPITACION1H_SCALE,
       secondaryRenders: [barbsRender('Precipitacion1h'), slpRender('Precipitacion1h')],
     },
@@ -168,7 +171,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/MUCAPE',
       productId: 'MUCAPE',
       name: 'CAPE máximo',
-      description: 'CAPE máximo (J/kg) — WRF-ARG4K',
+      description:
+        'CAPE máximo (J/kg) — WRF-ARG4K. Contornos de cizalladura 850–500 hPa (10/20/30/40/50 kt).',
       scale: WRF_MUCAPE_SCALE,
       secondaryRenders: [
         contourRender('MUCAPE', 'shear_850_500', {
@@ -196,7 +200,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/JetCapasBajas',
       productId: 'JetCapasBajas',
       name: 'Jet capas bajas',
-      description: 'Componente meridional del viento 850 hPa (kt) — WRF-ARG4K',
+      description:
+        'Componente meridional del viento 850 hPa (kt) — WRF-ARG4K. Barbas de viento. Contornos de cizalladura 850–700 hPa (6/10/14 kt). Máscara marrón en cordillera y zona sur.',
       scale: WRF_JETCAPASBAJAS_SCALE,
       secondaryRenders: [
         barbsRender('JetCapasBajas'),
@@ -226,7 +231,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/CAPE_BRN',
       productId: 'CAPE_BRN',
       name: 'CAPE + BRN',
-      description: 'CAPE máximo + Bulk Richardson Number — WRF-ARG4K',
+      description:
+        'CAPE máximo + Bulk Richardson Number — WRF-ARG4K. Contornos BRN (niveles 10 y 45).',
       scale: WRF_CAPE_BRN_SCALE,
       secondaryRenders: [
         contourRender('CAPE_BRN', 'brn', {
@@ -246,7 +252,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/Granizo',
       productId: 'Granizo',
       name: 'Granizo (SHIP)',
-      description: 'Severe Hail Parameter + diámetro Hailcast — WRF-ARG4K',
+      description:
+        'Severe Hail Parameter + diámetro Hailcast — WRF-ARG4K. Contornos de diámetro de granizo (0.5/3/5 cm). Máscara marrón en cordillera y zona sur.',
       scale: WRF_GRANIZO_SCALE,
       secondaryRenders: [
         contourRender('Granizo', 'haildiammax', {
