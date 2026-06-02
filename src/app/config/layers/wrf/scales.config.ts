@@ -116,7 +116,7 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
 export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.SPECIFIC_HUMIDITY,
-  bounds: Array.from({ length: 19 }, (_, i) => i),
+  bounds: Array.from({ length: 18 }, (_, i) => i),
   hexColors: [
     '#85d0f6',
     '#aeeffd',
@@ -135,7 +135,6 @@ export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromThresholds({
     '#a40000',
     '#7060dc',
     '#483cc8',
-    '#3a27b1',
     '#3a27b1',
   ],
 });
