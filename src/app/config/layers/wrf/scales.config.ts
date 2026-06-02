@@ -70,14 +70,21 @@ export const WRF_CAMPO900_SCALE: LayerScale = buildBoundedScale({
   ],
 });
 
+const WRF_PRECIPITACION1H_BOUNDS = [
+  0.1, 1.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0, 100.0, 120.0,
+  150.0, 180.0, 220.0, 260.0
+];
+
 export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildBoundedScale({
   type: ScaleType.DISCRETE,
   unit: 'mm',
-  bounds: [0.1, 1.0, 5.0, 10.0, 15.0, 18.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0, 100.0, 120.0, 150.0, 180.0, 220.0],
+  bounds: WRF_PRECIPITACION1H_BOUNDS,
+  // Una etiqueta por umbral (sin esto, el default de 10 decima y oculta varias).
+  labelCount: WRF_PRECIPITACION1H_BOUNDS.length,
   hexColors: [
     '#006736', '#31a154', '#77c479', '#c1e498',
-    '#fefe9c', '#055a8d', '#358fbf', '#a5bbd9',
-    '#d2d1d4', '#e1ded5', '#a63603', '#f06813',
+    '#fefe9c', '#055a8d', '#358fbf', '#a6bcda',
+    '#e2e1e4', '#a63603', '#f06813',
     '#fdae6b', '#770074', '#c51b8a', '#f768a1',
     '#fbb4b9', '#636363', '#bbbbbb',
   ],
@@ -89,14 +96,14 @@ export const WRF_MUCAPE_SCALE: LayerScale = buildBoundedScale({
   bounds: [100, 250, 750, 1000, 1500, 2000, 2500, 3000, 3500],
   hexColors: [
     '#b2f8a9', '#77f373', '#37d13c', '#fdf8a9', '#fde678',
-    '#ffc03c', '#ff6000', '#ff3200', '#e01300',
+    '#ffc03c', '#ff6000', '#ff3200'
   ],
 });
 
 export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildBoundedScale({
   type: ScaleType.DISCRETE,
   unit: 'mm',
-  bounds: [20, 30, 40, 50, 60],
+  bounds: [20, 30, 40, 50, 60, 70],
   hexColors: ['#cecfe4', '#a5bbd8', '#74a8cd', '#358fbf', '#0570b0'],
 });
 
