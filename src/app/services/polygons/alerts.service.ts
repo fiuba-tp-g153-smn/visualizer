@@ -6,9 +6,10 @@ import {
   buildIntersectDepartmentsUrl,
   buildGenerateAlertsUrl,
   buildPhenomenaUrl,
+  buildAlertsUrl,
   getProvinceNameFromDepartmentCode,
 } from '../../config';
-import { DepartmentsResponse } from '../../models/geo';
+import { ActiveAlertResponse, DepartmentsResponse } from '../../models/geo';
 import { Phenomenon } from '../../models/phenomenon.model';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
 
@@ -133,5 +134,20 @@ export class AlertsService {
   getPhenomena(): Observable<Phenomenon[]> {
     const url = buildPhenomenaUrl();
     return this.http.get<Phenomenon[]>(url);
+  }
+
+  /**
+   * Obtiene los avisos activos. Con `sinceId` solo devuelve los de id mayor.
+   * @param sinceId - Devuelve solo avisos con alert_id mayor a este valor
+   * @returns Observable con la lista de avisos activos
+   */
+  getAlerts(sinceId?: number): Observable<ActiveAlertResponse[]> {
+    const url = buildAlertsUrl();
+    let params = new HttpParams();
+    if (sinceId !== undefined) {
+      params = params.set('since_id', sinceId.toString());
+    }
+
+    return this.http.get<ActiveAlertResponse[]>(url, { params });
   }
 }

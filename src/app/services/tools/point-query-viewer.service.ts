@@ -34,6 +34,7 @@ import {
   ScaleType,
   TileLayerControls,
   WrfLayerControls,
+  WrfSecondaryPointQuery,
   WrfTileLayer,
   WrfTileLayerConfig,
 } from '../../models';
@@ -49,13 +50,28 @@ import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
 } from '../../config';
-import { buildWrfPointQueryUrl } from '../../config/backend.config';
-import { formatDateFull, parseEcmwfTimestamp, formatWrfInitTag } from '../../utils/tileset-timestamp';
+import {
+  buildWrfPointQueryUrl,
+  buildWrfSecondaryPointQueryUrl,
+} from '../../config/backend.config';
+import {
+  formatDateFull,
+  parseEcmwfTimestamp,
+  formatWrfInitTag,
+  wrfFxxxForInitAndTime,
+} from '../../utils/tileset-timestamp';
 
 interface MouseCoordinates {
   lat: number;
   lon: number;
 }
+
+/**
+ * Margen (en grados) agregado al bounding box para consultas puntuales.
+ * Evita descartar clicks válidos cerca de los bordes de grids proyectados
+ * (como WRF). Si el punto está fuera del dominio, el backend responde no-data.
+ */
+const POINT_QUERY_BOUNDS_MARGIN_DEG = 8;
 
 export const POINT_QUERY_PANEL_MODES = {
   FIXED: 'fixed',
@@ -75,6 +91,8 @@ type DisplaySourceItem = {
   layerName: string;
   layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer | WrfTileLayer;
   controls: TileLayerControls;
+  /** Metadata de la variable secundaria WRF (presente solo en items WRF secondary). */
+  secondary?: WrfSecondaryPointQuery;
 };
 
 interface PointQueryViewerEntry {
@@ -226,17 +244,39 @@ export class PointQueryViewerService {
         const selectedForecasts = wrfControls.forecast.selectedForecastTimestamps;
         const baseName = this.layersService.getLayerFullName(wrfLayer);
 
-        return selectedForecasts.map((forecastTs): DisplaySourceItem => {
-          const forecastLabel = formatWrfInitTag(forecastTs);
+        // Renders secundarios consultables (viento + contornos con pointQuery).
+        const queryableSecondaries = (wrfLayer.secondaryRenders ?? [])
+          .map((r) => r.pointQuery)
+          .filter((pq): pq is WrfSecondaryPointQuery => pq !== undefined);
 
-          return {
-            layerId: createCompositeId(layer.id, forecastTs),
-            sourceKind: 'primary',
-            layerName: `${baseName} - corrida ${forecastLabel}`,
-            forecastTs,
-            layer: wrfLayer,
-            controls: wrfControls,
-          };
+        return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
+          const forecastLabel = formatWrfInitTag(forecastTs);
+          const primaryLayerId = createCompositeId(layer.id, forecastTs);
+
+          const items: DisplaySourceItem[] = [
+            {
+              layerId: primaryLayerId,
+              sourceKind: 'primary',
+              layerName: `${baseName} - corrida ${forecastLabel}`,
+              forecastTs,
+              layer: wrfLayer,
+              controls: wrfControls,
+            },
+          ];
+
+          for (const secondary of queryableSecondaries) {
+            items.push({
+              layerId: `${primaryLayerId}#secondary:${secondary.variable}`,
+              sourceKind: 'secondary',
+              layerName: `${secondary.name} - corrida ${forecastLabel}`,
+              forecastTs,
+              layer: wrfLayer,
+              controls: wrfControls,
+              secondary,
+            });
+          }
+
+          return items;
         });
       });
 
@@ -417,6 +457,7 @@ export class PointQueryViewerService {
                       coordinates.lat,
                       coordinates.lon,
                       forecastTs,
+                      entry.secondary,
                     )
                   : this.queryLayerPoint(
                       layer,
@@ -633,8 +674,23 @@ export class PointQueryViewerService {
     lat: number,
     lon: number,
     forecastTs?: string,
+    wrfSecondary?: WrfSecondaryPointQuery,
   ): Observable<PointQueryDisplayData> | null {
     if (layer.type !== LayerType.TILE) return null;
+
+    if (layer.category === LayerCategory.WRF) {
+      return wrfSecondary
+        ? this.queryWrfSecondaryPoint(
+            layer,
+            controls as WrfLayerControls,
+            wrfSecondary,
+            lat,
+            lon,
+            forecastTs,
+          )
+        : null;
+    }
+
     if (layer.category !== LayerCategory.ECMWF_TP) return null;
 
     const ecmwfLayer = layer as EcmwfTpTileLayer;
@@ -870,11 +926,14 @@ export class PointQueryViewerService {
         config.availableTilesets.length - 1,
       ),
     );
-    const fxxx = config.availableTilesets[idx].id;
+    // availableTilesets está keyado por instante absoluto (epoch); ese id es la
+    // clave de forecastsByPeriod. El fxxx concreto se deriva por corrida.
+    const tilesetEntry = config.availableTilesets[idx];
+    const tilesetId = tilesetEntry.id;
 
     // If a specific forecast (init run) was requested, validate it covers this
     // step; otherwise pick the first selected init that does.
-    const forecastsForStep = config.forecastsByPeriod[fxxx];
+    const forecastsForStep = config.forecastsByPeriod[tilesetId];
     const selectedInits = controls.forecast.selectedForecastTimestamps;
     const resolvedInitTag = forecastTs
       ? forecastsForStep?.includes(forecastTs)
@@ -882,6 +941,11 @@ export class PointQueryViewerService {
         : undefined
       : selectedInits.find((ts) => forecastsForStep?.includes(ts));
     if (!resolvedInitTag) {
+      return of(this.buildNoData(layer.id, layer.name));
+    }
+
+    const fxxx = wrfFxxxForInitAndTime(resolvedInitTag, tilesetEntry.time);
+    if (!fxxx) {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
@@ -906,6 +970,81 @@ export class PointQueryViewerService {
           }) as const,
       ),
       catchError((error) => of(this.mapErrorToDisplay(layer.id, layer.name, error))),
+    );
+  }
+
+  private queryWrfSecondaryPoint(
+    layer: Layer,
+    controls: WrfLayerControls,
+    secondary: WrfSecondaryPointQuery,
+    lat: number,
+    lon: number,
+    forecastTs?: string,
+  ): Observable<PointQueryDisplayData> {
+    // pylint-style: mirrors queryWrfLayer but targets a secondary-variable COG.
+    const secondaryLayerId = forecastTs
+      ? `${createCompositeId(layer.id, forecastTs)}#secondary:${secondary.variable}`
+      : `${layer.id}#secondary:${secondary.variable}`;
+
+    if (!this.isWithinLayerBounds(layer, lat, lon)) {
+      return of(this.buildNoData(secondaryLayerId, secondary.name));
+    }
+
+    const config = this.layerConfigService.getConfig(layer.id) as WrfTileLayerConfig | undefined;
+    if (!config || config.availableTilesets.length === 0) {
+      return of(this.buildNoData(secondaryLayerId, secondary.name));
+    }
+
+    const isForecast = layer.type === LayerType.TILE && layer.isForecast;
+    const idx = Math.max(
+      0,
+      Math.min(
+        controls.playback.timeIndex ??
+          getDefaultCursorIndex(config.availableTilesets.length, isForecast),
+        config.availableTilesets.length - 1,
+      ),
+    );
+    const tilesetEntry = config.availableTilesets[idx];
+
+    const forecastsForStep = config.forecastsByPeriod[tilesetEntry.id];
+    const selectedInits = controls.forecast.selectedForecastTimestamps;
+    const resolvedInitTag = forecastTs
+      ? forecastsForStep?.includes(forecastTs)
+        ? forecastTs
+        : undefined
+      : selectedInits.find((ts) => forecastsForStep?.includes(ts));
+    if (!resolvedInitTag) {
+      return of(this.buildNoData(secondaryLayerId, secondary.name));
+    }
+
+    const fxxx = wrfFxxxForInitAndTime(resolvedInitTag, tilesetEntry.time);
+    if (!fxxx) {
+      return of(this.buildNoData(secondaryLayerId, secondary.name));
+    }
+
+    const wrfLayer = layer as WrfTileLayer;
+    const url = buildWrfSecondaryPointQueryUrl(
+      wrfLayer.productId,
+      resolvedInitTag,
+      fxxx,
+      secondary.variable,
+      lat,
+      lon,
+    );
+
+    return this.http.get<PointQueryValueDto>(url).pipe(
+      map(
+        (response) =>
+          ({
+            layerId: secondaryLayerId,
+            layerName: secondary.name,
+            value: response.value,
+            unit: response.unit,
+            status: PointQueryStatus.VALUE,
+            scaleRange: secondary.scaleRange,
+          }) as const,
+      ),
+      catchError((error) => of(this.mapErrorToDisplay(secondaryLayerId, secondary.name, error))),
     );
   }
 
@@ -941,7 +1080,8 @@ export class PointQueryViewerService {
     }
 
     const [[south, west], [north, east]] = layer.boundingBox;
-    return lat >= south && lat <= north && lon >= west && lon <= east;
+    const m = POINT_QUERY_BOUNDS_MARGIN_DEG;
+    return lat >= south - m && lat <= north + m && lon >= west - m && lon <= east + m;
   }
 
   private mapErrorToDisplay(

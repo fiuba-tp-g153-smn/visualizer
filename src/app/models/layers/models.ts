@@ -1,6 +1,7 @@
 import type * as L from 'leaflet';
 import type { Feature } from 'geojson';
 import { ActiveLayerGroupId } from './groups.models';
+import type { ScaleRangeInfo } from './point-query.models';
 
 export enum LayerType {
   TILE = 'tile',
@@ -154,9 +155,23 @@ export interface VectorTextpathOptions {
   attributes?: Record<string, string>;
 }
 
+/**
+ * Metadata para consultar una variable secundaria en el dato puntual.
+ * `variable` es la clave del COG secundario en el backend (ej. 'wind', 'slp').
+ * El front aporta nombre, unidad y escala; el backend devuelve el valor.
+ */
+export interface WrfSecondaryPointQuery {
+  variable: string;
+  name: string;
+  unit: string;
+  scaleRange: ScaleRangeInfo;
+}
+
 export interface SecondaryVectorRender {
   id: string;
   buildUrl: (forecastTs: string, timestampTs: string) => string;
+  /** Habilita una fila de dato puntual para esta variable secundaria. */
+  pointQuery?: WrfSecondaryPointQuery;
   buildPointQueryUrl?: (
     forecastTs: string,
     timestampTs: string,
@@ -190,6 +205,8 @@ export interface BarbTileRender {
   readonly kind: 'barb-tile';
   /** ID estable del overlay; usado para cache y nombrado de pane. */
   readonly id: string;
+  /** Habilita una fila de dato puntual (magnitud del viento) para las barbas. */
+  readonly pointQuery?: WrfSecondaryPointQuery;
 }
 
 export interface WeatherStationLayer extends BaseLayer {
