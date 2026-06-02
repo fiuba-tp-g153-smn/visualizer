@@ -39,6 +39,12 @@ export enum ScaleLabelScale {
   LOG = 'log',
 }
 
+export interface ScaleSpecialPoint {
+  value: number;
+  color: string;
+  label?: string;
+}
+
 export interface LayerScale {
   type: ScaleType;
   unit: string;
@@ -48,6 +54,7 @@ export interface LayerScale {
   labelValues?: readonly number[];
   labelScale?: ScaleLabelScale;
   clipRange?: readonly [number, number];
+  specialPoints?: readonly ScaleSpecialPoint[];
   scaleRoutingKey?: string;
   scaleDisplayName?: string;
 }

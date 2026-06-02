@@ -19,6 +19,13 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.WIND_SPEED,
   scaleDisplayName: 'Ráfagas',
+  specialPoints: [
+    {
+      value: 35,
+      label: 'Umbral',
+      color: '#0000FF',
+    },
+  ],
   bounds: [25, 30, 35, 40, 45, 50, 60, 70, 80],
   colors: [
     '#b3b2aa',
