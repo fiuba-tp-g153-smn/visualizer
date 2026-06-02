@@ -234,16 +234,18 @@ export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale
 
 export function buildScaleFromUniformThresholds(config: UniformBoundedScaleConfig): LayerScale {
   const { min, max, colors } = config;
-  const steps = Math.max(colors.length - 1, 0);
+  const bucketCount = colors.length;
   const bounds =
-    steps === 0
-      ? [min]
-      : Array.from({ length: colors.length }, (_, i) =>
-          roundScaleValue(min + (i * (max - min)) / steps),
+    bucketCount === 0
+      ? [min, max]
+      : Array.from({ length: bucketCount + 1 }, (_, i) =>
+          roundScaleValue(min + (i * (max - min)) / bucketCount),
         );
+  const labelCount = config.labelCount ?? bounds.length;
 
   return buildScaleFromThresholds({
     ...config,
+    labelCount,
     bounds,
   });
 }
