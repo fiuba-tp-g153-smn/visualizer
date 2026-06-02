@@ -48,6 +48,10 @@ export class ScaleToolPanelComponent {
     return this.isContinuous && this.continuousScale.labelScale === ScaleLabelScale.LOG;
   }
 
+  get hasExplicitContinuousLabels(): boolean {
+    return !!this.continuousScale.labelValues?.length;
+  }
+
   get continuousScale(): LayerScale {
     return this.entry.scale as LayerScale;
   }
@@ -96,6 +100,10 @@ export class ScaleToolPanelComponent {
   }
 
   get continuousScaleLabels(): readonly string[] {
+    if (this.hasExplicitContinuousLabels && this.continuousScale.labelValues) {
+      return this.continuousScale.labelValues.map((value) => this.formatValue(value));
+    }
+
     const entries = this.sortedContinuousDisplayEntriesDesc;
     if (entries.length === 0) {
       return [];
@@ -177,12 +185,16 @@ export class ScaleToolPanelComponent {
   }
 
   get continuousTickEntries(): readonly { top: number; major: boolean }[] {
-    if (this.isLogContinuous && this.continuousScale.labelValues) {
-      return this.buildLogTickEntries(
-        this.continuousLabelEntries,
-        this.continuousScale.labelValues,
-        ...this.getContinuousLabelDomain(),
-      );
+    if (this.continuousScale.labelValues) {
+      if (this.isLogContinuous) {
+        return this.buildLogTickEntries(
+          this.continuousLabelEntries,
+          this.continuousScale.labelValues,
+          ...this.getContinuousLabelDomain(),
+        );
+      }
+
+      return this.buildLinearTickEntriesFromLabels(this.continuousLabelEntries);
     }
 
     const labelCount = this.getConfiguredLabelCount();
@@ -430,6 +442,27 @@ export class ScaleToolPanelComponent {
       text: this.formatValue(value),
       top: positions?.[index] ?? this.linearPosition(value, domainMin, domainMax),
     }));
+  }
+
+  private buildLinearTickEntriesFromLabels(
+    labels: readonly { top: number }[],
+  ): readonly { top: number; major: boolean }[] {
+    const subTickCount = this.getConfiguredSubTickCount();
+    if (labels.length === 0) return [];
+
+    const result: { top: number; major: boolean }[] = [];
+    for (let i = 0; i < labels.length; i++) {
+      result.push({ top: labels[i].top, major: true });
+      if (i < labels.length - 1) {
+        const topA = labels[i].top;
+        const topB = labels[i + 1].top;
+        for (let j = 1; j <= subTickCount; j++) {
+          result.push({ top: topA + (j / (subTickCount + 1)) * (topB - topA), major: false });
+        }
+      }
+    }
+
+    return result;
   }
 
   private buildLogTickEntries(

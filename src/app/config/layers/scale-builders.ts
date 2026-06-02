@@ -76,6 +76,7 @@ interface BaseScaleConfig {
   readonly unit: string;
   readonly type?: SupportedScaleType;
   readonly labelCount?: number;
+  readonly labelValues?: readonly number[];
   readonly subTickCount?: number;
   readonly clipRange?: readonly [number, number];
   readonly specialPoints?: readonly ScaleSpecialPoint[];
@@ -144,6 +145,7 @@ export function buildScaleFromIndexedNodes(config: IndexedScaleConfig): LayerSca
     max,
     unit,
     labelCount,
+    labelValues,
     subTickCount,
     clipRange,
     specialPoints,
@@ -157,6 +159,7 @@ export function buildScaleFromIndexedNodes(config: IndexedScaleConfig): LayerSca
     unit,
     entries,
     labelCount,
+    labelValues,
     subTickCount,
     clipRange,
     defaultDiscreteClipRange: [min, max],
@@ -172,6 +175,7 @@ export function buildScaleFromLinearGradient(config: LinearScaleConfig): LayerSc
     max,
     unit,
     labelCount,
+    labelValues,
     subTickCount,
     clipRange,
     specialPoints,
@@ -185,6 +189,7 @@ export function buildScaleFromLinearGradient(config: LinearScaleConfig): LayerSc
     unit,
     entries,
     labelCount,
+    labelValues,
     subTickCount,
     clipRange,
     defaultDiscreteClipRange: [min, max],
@@ -200,6 +205,7 @@ export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale
     colors,
     unit,
     labelCount,
+    labelValues,
     subTickCount,
     specialPoints,
     scaleDisplayName,
@@ -216,6 +222,7 @@ export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale
     unit,
     entries,
     labelCount,
+    labelValues,
     subTickCount,
     clipRange: config.clipRange,
     defaultDiscreteClipRange: domain,
