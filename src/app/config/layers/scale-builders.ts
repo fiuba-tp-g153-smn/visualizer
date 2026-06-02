@@ -90,7 +90,7 @@ export interface LinearScaleConfig extends BaseScaleConfig {
 
 export interface BoundedScaleConfig extends BaseScaleConfig {
   readonly bounds: readonly number[];
-  readonly hexColors: readonly string[];
+  readonly colors: readonly string[];
 }
 
 export interface LogScaleConfig extends Omit<BaseScaleConfig, 'labelCount'> {
@@ -151,10 +151,10 @@ export function buildScaleFromLinearGradient(config: LinearScaleConfig): LayerSc
 }
 
 export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale {
-  const { bounds, hexColors, unit, labelCount, subTickCount } = config;
+  const { bounds, colors, unit, labelCount, subTickCount } = config;
   const entries = bounds.map((value, i) => ({
     value,
-    color: hexColors[i] ?? hexColors[hexColors.length - 1],
+    color: colors[i] ?? colors[colors.length - 1],
   }));
   const domain = entriesDomain(entries);
 

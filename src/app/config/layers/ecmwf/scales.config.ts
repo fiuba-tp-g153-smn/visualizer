@@ -10,5 +10,5 @@ export const ECMWF_TP_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: PRECIPITATION_UNITS.MILLIMETERS,
   bounds: [0.5, 2, 4, 10, 25, 50, 100, 250],
-  hexColors: ['#00FFFF', '#007FFF', '#0000FF', '#D900FF', '#FF00FF', '#FF7F00', '#FF0000'],
+  colors: ['#00FFFF', '#007FFF', '#0000FF', '#D900FF', '#FF00FF', '#FF7F00', '#FF0000'],
 });
