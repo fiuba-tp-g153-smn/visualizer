@@ -13,14 +13,14 @@
   @if (scaleTools.enabled()) {
     <div class="sources-section">
       <span class="section-label">
-        Capas activas
+        Variables activas
         @if (scaleTools.selectedLayerIdsOrdered().length > 0) {
           <span class="selected-count">({{ scaleTools.selectedLayerIdsOrdered().length }})</span>
         }
       </span>
 
       @if (scaleTools.displayItems().length === 0) {
-        <p class="status-hint">No hay capas activas con escala configurada</p>
+        <p class="status-hint">No hay variables activas con escala configurada</p>
       } @else {
         <div class="source-list">
           @for (item of scaleTools.displayItems(); track item.layerId) {

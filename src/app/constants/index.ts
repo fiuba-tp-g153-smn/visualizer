@@ -29,4 +29,6 @@ export {
   KNOT_TO_KILOMETERS_PER_HOUR_FACTOR,
 } from './units.constants';
 
+export { ScaleToolGroupKey } from './scale-tools.constants';
+
 export { STORAGE_KEYS } from './storage-keys.constants';
