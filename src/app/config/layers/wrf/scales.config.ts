@@ -1,6 +1,6 @@
 import { WRF_UNITS } from '../../../constants';
 import { LayerScale, ScaleType } from '../../../models';
-import { buildScaleFromThresholds } from '../scale-builders';
+import { buildScaleFromThresholds, buildScaleFromUniformThresholds } from '../scale-builders';
 import { SHARED_DBZH_SCALE } from '../shared-scales.config';
 
 /**
@@ -40,11 +40,12 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
   ],
 });
 
-export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromThresholds({
+export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.SPECIFIC_HUMIDITY,
   scaleDisplayName: 'Humedad específica en 900 hPa',
-  bounds: Array.from({ length: 18 }, (_, i) => i),
+  min: 0,
+  max: 17,
   colors: [
     '#85d0f6',
     '#aeeffd',
@@ -109,11 +110,12 @@ export const WRF_MUCAPE_SCALE: LayerScale = buildScaleFromThresholds({
   colors: ['#b2f8a9', '#77f373', '#37d13c', '#fdf8a9', '#fde678', '#ffc03c', '#ff6000', '#ff3200'],
 });
 
-export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromThresholds({
+export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.PRECIPITATION,
   scaleDisplayName: 'Agua precipitable',
-  bounds: [20, 30, 40, 50, 60, 70],
+  min: 20,
+  max: 70,
   colors: ['#cecfe4', '#a5bbd8', '#74a8cd', '#358fbf', '#0570b0'],
 });
 
@@ -125,11 +127,12 @@ export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildScaleFromThresholds({
   colors: ['#df1400', '#fd3200', '#fd6000', '#fd9f00', '#fdbf3c', '#fdf8a9', '#fdf8a9'],
 });
 
-export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromThresholds({
+export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.WIND_SPEED,
   scaleDisplayName: 'Cortante en niveles bajos',
-  bounds: [10, 20, 30, 40, 50],
+  min: 10,
+  max: 50,
   colors: ['#fdf8a8', '#ffc03c', '#ff6000', '#e11400', '#e11400'],
 });
 

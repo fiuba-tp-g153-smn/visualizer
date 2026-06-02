@@ -105,6 +105,12 @@ export interface BoundedScaleConfig extends BaseScaleConfig {
   readonly colors: readonly string[];
 }
 
+export interface UniformBoundedScaleConfig extends BaseScaleConfig {
+  readonly min: number;
+  readonly max: number;
+  readonly colors: readonly string[];
+}
+
 export interface LogScaleConfig extends Omit<BaseScaleConfig, 'labelCount'> {
   readonly min: number;
   readonly max: number;
@@ -216,6 +222,22 @@ export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale
     specialPoints,
     scaleDisplayName,
     scaleRoutingKey,
+  });
+}
+
+export function buildScaleFromUniformThresholds(config: UniformBoundedScaleConfig): LayerScale {
+  const { min, max, colors } = config;
+  const steps = Math.max(colors.length - 1, 0);
+  const bounds =
+    steps === 0
+      ? [min]
+      : Array.from({ length: colors.length }, (_, i) =>
+          roundScaleValue(min + (i * (max - min)) / steps),
+        );
+
+  return buildScaleFromThresholds({
+    ...config,
+    bounds,
   });
 }
 
