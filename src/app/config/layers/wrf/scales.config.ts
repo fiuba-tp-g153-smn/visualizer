@@ -1,3 +1,4 @@
+import { WRF_UNITS } from '../../../constants';
 import { LayerScale, ScaleType } from '../../../models';
 import { buildScaleFromThresholds } from '../scale-builders';
 
@@ -90,14 +91,14 @@ const WRF_COLMAX_COLORS = WRF_COLMAX_BOUNDS.map((bound) => {
 
 export const WRF_COLMAX_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'dBZ',
+  unit: WRF_UNITS.REFLECTIVITY,
   bounds: WRF_COLMAX_BOUNDS,
   hexColors: WRF_COLMAX_COLORS,
 });
 
 export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'kt',
+  unit: WRF_UNITS.WIND_SPEED,
   bounds: [25, 30, 35, 40, 45, 50, 60, 70, 80],
   hexColors: [
     '#b3b2aa',
@@ -114,7 +115,7 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
 
 export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'g/kg',
+  unit: WRF_UNITS.SPECIFIC_HUMIDITY,
   bounds: Array.from({ length: 19 }, (_, i) => i),
   hexColors: [
     '#85d0f6',
@@ -146,7 +147,7 @@ const WRF_PRECIPITACION1H_BOUNDS = [
 
 export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'mm',
+  unit: WRF_UNITS.PRECIPITATION,
   bounds: WRF_PRECIPITACION1H_BOUNDS,
   // Una etiqueta por umbral (sin esto, el default de 10 decima y oculta varias).
   labelCount: WRF_PRECIPITACION1H_BOUNDS.length,
@@ -174,7 +175,7 @@ export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
 
 export const WRF_MUCAPE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'J/kg',
+  unit: WRF_UNITS.MUCAPE,
   bounds: [100, 250, 750, 1000, 1500, 2000, 2500, 3000, 3500],
   hexColors: [
     '#b2f8a9',
@@ -190,21 +191,21 @@ export const WRF_MUCAPE_SCALE: LayerScale = buildScaleFromThresholds({
 
 export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'mm',
+  unit: WRF_UNITS.PRECIPITATION,
   bounds: [20, 30, 40, 50, 60, 70],
   hexColors: ['#cecfe4', '#a5bbd8', '#74a8cd', '#358fbf', '#0570b0'],
 });
 
 export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'kt',
+  unit: WRF_UNITS.WIND_SPEED,
   bounds: [-48, -44, -40, -36, -32, -28, -24],
   hexColors: ['#df1400', '#fd3200', '#fd6000', '#fd9f00', '#fdbf3c', '#fdf8a9', '#fdf8a9'],
 });
 
 export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: 'kt',
+  unit: WRF_UNITS.WIND_SPEED,
   bounds: [10, 20, 30, 40, 50],
   hexColors: ['#fdf8a8', '#ffc03c', '#ff6000', '#e11400', '#e11400'],
 });
@@ -213,7 +214,7 @@ export const WRF_CAPE_BRN_SCALE: LayerScale = WRF_MUCAPE_SCALE;
 
 export const WRF_GRANIZO_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
-  unit: '',
+  unit: WRF_UNITS.DIMENSIONLESS,
   bounds: [0.1, 1.0, 2.0, 3.0, 4.0],
   hexColors: ['#fdf8a9', '#ffc03c', '#ff6000', '#e11400', '#e11400'],
 });

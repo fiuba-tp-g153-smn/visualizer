@@ -6,6 +6,7 @@ import {
   SecondaryVectorRender,
   WrfTileLayer,
 } from '../../../models';
+import { WRF_UNITS } from '../../../constants';
 import { LayerSubgroup } from '../../../models/layers/groups.models';
 import { buildWrfGeojsonUrl } from '../../backend.config';
 import {
@@ -62,7 +63,7 @@ const WRF_DEFAULTS = {
 const WIND_POINT_QUERY = {
   variable: 'wind',
   name: 'Velocidad de viento',
-  unit: 'kt',
+  unit: WRF_UNITS.WIND_SPEED,
   scaleRange: { min: 0, max: 80, totalSteps: 80 },
 } as const;
 
@@ -85,7 +86,7 @@ const slpRender = (productId: string): SecondaryVectorRender => ({
   pointQuery: {
     variable: 'slp',
     name: 'Presión a nivel del mar',
-    unit: 'hPa',
+    unit: WRF_UNITS.SEA_LEVEL_PRESSURE,
     scaleRange: { min: 950, max: 1050, totalSteps: 100 },
   },
 });
@@ -176,7 +177,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           pointQuery: {
             variable: 'shear_850_500',
             name: 'Cizalladura 850-500 hPa',
-            unit: 'kt',
+            unit: WRF_UNITS.WIND_SPEED,
             scaleRange: { min: 0, max: 60, totalSteps: 60 },
           },
         }),
@@ -205,7 +206,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           pointQuery: {
             variable: 'shear_850_700',
             name: 'Cizalladura 850-700 hPa',
-            unit: 'kt',
+            unit: WRF_UNITS.WIND_SPEED,
             scaleRange: { min: 0, max: 30, totalSteps: 30 },
           },
         }),
@@ -234,7 +235,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           pointQuery: {
             variable: 'brn',
             name: 'Bulk Richardson Number',
-            unit: '',
+            unit: WRF_UNITS.DIMENSIONLESS,
             scaleRange: { min: 0, max: 100, totalSteps: 100 },
           },
         }),
@@ -255,7 +256,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           pointQuery: {
             variable: 'haildiammax',
             name: 'Diámetro máximo de granizo',
-            unit: 'mm',
+            unit: WRF_UNITS.PRECIPITATION,
             scaleRange: { min: 0, max: 100, totalSteps: 100 },
           },
         }),
