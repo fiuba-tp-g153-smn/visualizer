@@ -1,0 +1,123 @@
+<div class="active-alerts">
+  <!-- Header: toggle + refresh -->
+  <div class="alerts-controls">
+    <mat-checkbox [checked]="showActive()" (change)="onToggle($event.checked)">
+      Mostrar avisos activos
+    </mat-checkbox>
+
+    @if (showActive()) {
+      <button
+        mat-icon-button
+        (click)="refresh()"
+        [disabled]="loading()"
+        [matTooltip]="
+          loading()
+            ? 'Actualizando alertas...'
+            : 'Actualizar alertas (se actualiza automáticamente cada 10 segundos)'
+        "
+        class="reload-btn"
+      >
+        @if (loading()) {
+          <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+        } @else {
+          <mat-icon>refresh</mat-icon>
+        }
+      </button>
+    }
+  </div>
+
+  @if (showActive()) {
+    @if (activeAlerts().length === 0) {
+      <div class="empty-state-container">
+        <mat-icon class="empty-icon">notifications_off</mat-icon>
+        <h3>Sin avisos activos</h3>
+        <p>No hay avisos vigentes en este momento.</p>
+      </div>
+    } @else {
+      <div class="alerts-list-container">
+        <mat-list class="alerts-list">
+          @for (alert of activeAlerts(); track alert.alertId) {
+            <mat-list-item class="polygon-item" [class.hidden]="isHidden(alert.alertId)">
+              <div class="polygon-card">
+                <div class="polygon-header">
+                  <span class="alert-title">Aviso #{{ alert.alertId }}</span>
+                  <div class="polygon-actions">
+                    <button
+                      mat-icon-button
+                      (click)="toggleHidden(alert.alertId)"
+                      [matTooltip]="isHidden(alert.alertId) ? 'Mostrar' : 'Ocultar'"
+                    >
+                      <mat-icon>{{
+                        isHidden(alert.alertId) ? 'visibility_off' : 'visibility'
+                      }}</mat-icon>
+                    </button>
+                  </div>
+                </div>
+                <div class="polygon-details">
+                  <div class="detail-item column">
+                    <div class="detail-row">
+                      <mat-icon class="detail-icon">warning</mat-icon>
+                      <span class="detail-label">Fenómeno:</span>
+                    </div>
+                    <span class="detail-value phenomenon">{{ alert.phenomenon }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <mat-icon class="detail-icon">map</mat-icon>
+                    <span class="detail-label">Departamentos:</span>
+                    @if (alert.departments.length > 0) {
+                      <button
+                        mat-button
+                        [matMenuTriggerFor]="deptMenu"
+                        (menuOpened)="onDepartmentsOpened(alert)"
+                        (menuClosed)="onDepartmentsClosed()"
+                        class="departments-button"
+                      >
+                        <mat-icon>location_city</mat-icon>
+                        {{ alert.departments.length }}
+                      </button>
+                      <mat-menu #deptMenu="matMenu" class="departments-menu">
+                        @for (dept of alert.departments; track dept.name) {
+                          <button
+                            mat-menu-item
+                            (click)="$event.stopPropagation()"
+                            (mouseenter)="onDepartmentHover(dept.name)"
+                            (mouseleave)="onDepartmentLeave()"
+                          >
+                            {{ dept.name }}
+                            @if (dept.province) {
+                              <span> ({{ dept.province }})</span>
+                            }
+                          </button>
+                        }
+                      </mat-menu>
+                    } @else {
+                      <span class="detail-value">Sin departamentos</span>
+                    }
+                  </div>
+                  <div class="detail-item">
+                    <mat-icon class="detail-icon">schedule</mat-icon>
+                    <span class="detail-label">Inicio:</span>
+                    <span class="detail-value">{{ formatDate(alert.startDatetime) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <mat-icon class="detail-icon">event_busy</mat-icon>
+                    <span class="detail-label">Fin:</span>
+                    <span class="detail-value">{{ formatDate(alert.endDatetime) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <mat-icon class="detail-icon">hourglass_bottom</mat-icon>
+                    <span class="detail-label">Tiempo restante:</span>
+                    <span class="detail-value">{{ remaining(alert) }}</span>
+                  </div>
+                </div>
+              </div>
+            </mat-list-item>
+            @if (!$last) {
+              <mat-divider />
+            }
+          }
+        </mat-list>
+      </div>
+    }
+  }
+</div>
