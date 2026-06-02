@@ -28,17 +28,7 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
     },
   ],
   bounds: [25, 30, 35, 40, 45, 50, 60, 70, 80],
-  colors: [
-    '#b3b2aa',
-    '#fee779',
-    '#fec03d',
-    '#fea001',
-    '#fe6101',
-    '#ff3200',
-    '#e11400',
-    '#c00000',
-    '#c00000',
-  ],
+  colors: ['#b3b2aa', '#fee779', '#fec03d', '#fea001', '#fe6101', '#ff3200', '#e11400', '#c00000'],
 });
 
 export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromUniformThresholds({
@@ -46,26 +36,27 @@ export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromUniformThresholds({
   unit: WRF_UNITS.SPECIFIC_HUMIDITY,
   scaleDisplayName: 'Humedad específica en 900 hPa',
   min: 0,
-  max: 17,
+  max: 19,
   colors: [
-    '#85d0f6',
-    '#aeeffd',
-    '#c6fdfd',
-    '#f8fdf6',
-    '#c6fda8',
-    '#b3f8a8',
-    '#fdf8a8',
-    '#fde678',
-    '#fdbf3c',
-    '#fd9f00',
-    '#fd6000',
-    '#fd3200',
-    '#df1400',
-    '#bf0000',
-    '#a40000',
-    '#7060dc',
-    '#483cc8',
-    '#3a27b1',
+    '#84cff4',
+    '#acedfb',
+    '#c4fbfb',
+    '#f6fbf4',
+    '#c4fba8',
+    '#b1f6a8',
+    '#fbf6a8',
+    '#fbe47a',
+    '#fbbd40',
+    '#fb9d0f',
+    '#fb5f06',
+    '#fb3203',
+    '#dd1402',
+    '#bd0201',
+    '#a20100',
+    '#7060da',
+    '#493dc6',
+    '#3b28af',
+    '#2e20a3',
   ],
 });
 
@@ -125,12 +116,13 @@ export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromUniformThres
   colors: ['#cecfe4', '#a5bbd8', '#74a8cd', '#358fbf', '#0570b0'],
 });
 
-export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildScaleFromThresholds({
+export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.WIND_SPEED,
   scaleDisplayName: 'Viento meridional en 850 hPa',
-  bounds: [-48, -44, -40, -36, -32, -28, -24],
-  colors: ['#df1400', '#fd3200', '#fd6000', '#fd9f00', '#fdbf3c', '#fdf8a9', '#fdf8a9'],
+  min: -48,
+  max: -24,
+  colors: ['#df1400', '#fd3200', '#fd6000', '#fd9f00', '#fdbf3c', '#fdf8a9'],
 });
 
 export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromUniformThresholds({
@@ -139,7 +131,7 @@ export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromUniformThresholds({
   scaleDisplayName: 'Cortante en niveles bajos',
   min: 10,
   max: 50,
-  colors: ['#fdf8a8', '#ffc03c', '#ff6000', '#e11400', '#e11400'],
+  colors: ['#fdf8a8', '#ffc03c', '#ff6000', '#e11400'],
 });
 
 export const WRF_CAPE_BRN_SCALE: LayerScale = {
@@ -152,5 +144,5 @@ export const WRF_GRANIZO_SCALE: LayerScale = buildScaleFromThresholds({
   unit: WRF_UNITS.DIMENSIONLESS,
   scaleDisplayName: 'Granizo (SHIP)',
   bounds: [0.1, 1.0, 2.0, 3.0, 4.0],
-  colors: ['#fdf8a9', '#ffc03c', '#ff6000', '#e11400', '#e11400'],
+  colors: ['#fdf8a9', '#ffc03c', '#ff6000', '#e11400'],
 });
