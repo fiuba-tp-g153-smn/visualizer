@@ -169,7 +169,7 @@ export const RADAR_VRAD_SCALE: LayerScale = buildScaleFromLinearGradient({
 export const RADAR_RHOHV_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.CORRELATION,
-  hexColors: [
+  colors: [
     '#151391',
     '#141296',
     '#13119b',
@@ -316,7 +316,7 @@ export const RADAR_RHOHV_SCALE: LayerScale = buildScaleFromThresholds({
 export const RADAR_ZDR_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_REFLECTIVITY,
-  hexColors: [
+  colors: [
     '#707070',
     '#767676',
     '#7B7B7B',
@@ -440,7 +440,7 @@ export const RADAR_ZDR_SCALE: LayerScale = buildScaleFromThresholds({
 export const RADAR_KDP_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_PHASE,
-  hexColors: [
+  colors: [
     '#474747',
     '#444444',
     '#424242',
