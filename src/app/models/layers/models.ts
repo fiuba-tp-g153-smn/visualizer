@@ -34,12 +34,10 @@ export enum ScaleType {
   DISCRETE = 'discrete',
 }
 
-export const ScaleLabelScale = {
-  LINEAR: 'linear',
-  LOG: 'log',
-} as const;
-
-export type ScaleLabelScale = (typeof ScaleLabelScale)[keyof typeof ScaleLabelScale];
+export enum ScaleLabelScale {
+  LINEAR = 'linear',
+  LOG = 'log',
+}
 
 export interface LayerScale {
   type: ScaleType;
@@ -50,6 +48,8 @@ export interface LayerScale {
   labelValues?: readonly number[];
   labelScale?: ScaleLabelScale;
   clipRange?: readonly [number, number];
+  scaleRoutingKey?: string;
+  scaleDisplayName?: string;
 }
 
 interface BaseLayer {
