@@ -42,7 +42,7 @@ const WRF_DEFAULTS = {
   type: LayerType.TILE,
   category: LayerCategory.WRF,
   zIndexGroup: ActiveLayerGroupId.BASE,
-  availablePeriods: [1, 3, 6] as const,
+  availablePeriods: [1, 3, 6, 12, 24, 36] as const,
   minNativeZoom: 4,
   maxNativeZoom: 9,
   boundingBox: [
