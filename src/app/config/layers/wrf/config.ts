@@ -166,7 +166,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf/MUCAPE',
       productId: 'MUCAPE',
-      name: 'CAPE máximo',
+      name: 'MUCAPE',
       description: 'CAPE máximo (J/kg) — WRF-ARG4K',
       scale: WRF_MUCAPE_SCALE,
       secondaryRenders: [
@@ -175,7 +175,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           textpathOptions: SHEAR_850_500_TEXTPATH_OPTIONS,
           pointQuery: {
             variable: 'shear_850_500',
-            name: 'Cizalladura 850-500 hPa',
+            name: 'Cortante',
             unit: 'kt',
             scaleRange: { min: 0, max: 60, totalSteps: 60 },
           },
@@ -204,7 +204,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           textpathOptions: SHEAR_850_700_TEXTPATH_OPTIONS,
           pointQuery: {
             variable: 'shear_850_700',
-            name: 'Cizalladura 850-700 hPa',
+            name: 'Cortante',
             unit: 'kt',
             scaleRange: { min: 0, max: 30, totalSteps: 30 },
           },
