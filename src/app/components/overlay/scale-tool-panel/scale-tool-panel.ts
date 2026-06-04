@@ -48,6 +48,10 @@ export class ScaleToolPanelComponent {
     return this.isContinuous && this.continuousScale.labelScale === ScaleLabelScale.LOG;
   }
 
+  get hasExplicitContinuousLabels(): boolean {
+    return !!this.continuousScale.labelValues?.length;
+  }
+
   get continuousScale(): LayerScale {
     return this.entry.scale as LayerScale;
   }
@@ -96,6 +100,10 @@ export class ScaleToolPanelComponent {
   }
 
   get continuousScaleLabels(): readonly string[] {
+    if (this.hasExplicitContinuousLabels && this.continuousScale.labelValues) {
+      return this.continuousScale.labelValues.map((value) => this.formatValue(value));
+    }
+
     const entries = this.sortedContinuousDisplayEntriesDesc;
     if (entries.length === 0) {
       return [];
@@ -177,12 +185,16 @@ export class ScaleToolPanelComponent {
   }
 
   get continuousTickEntries(): readonly { top: number; major: boolean }[] {
-    if (this.isLogContinuous && this.continuousScale.labelValues) {
-      return this.buildLogTickEntries(
-        this.continuousLabelEntries,
-        this.continuousScale.labelValues,
-        ...this.getContinuousLabelDomain(),
-      );
+    if (this.continuousScale.labelValues) {
+      if (this.isLogContinuous) {
+        return this.buildLogTickEntries(
+          this.continuousLabelEntries,
+          this.continuousScale.labelValues,
+          ...this.getContinuousLabelDomain(),
+        );
+      }
+
+      return this.buildLinearTickEntriesFromLabels(this.continuousLabelEntries);
     }
 
     const labelCount = this.getConfiguredLabelCount();
@@ -268,6 +280,56 @@ export class ScaleToolPanelComponent {
     }
 
     return `linear-gradient(to top, ${segments.join(', ')})`;
+  }
+
+  get specialPointEntries(): readonly {
+    top: number;
+    label: string;
+    color: string;
+  }[] {
+    const points = this.entry.scale.specialPoints;
+    if (!points || points.length === 0) {
+      return [];
+    }
+
+    const [domainMin, domainMax] = this.getSpecialPointDomain();
+    const isLogDomain =
+      this.entry.scale.labelScale === ScaleLabelScale.LOG &&
+      this.entry.scale.type === ScaleType.CONTINUOUS;
+
+    return points
+      .filter((point) => point.value >= domainMin && point.value <= domainMax)
+      .map((point) => {
+        const top =
+          this.entry.scale.type === ScaleType.DISCRETE
+            ? this.discreteThresholdPosition(point.value)
+            : isLogDomain
+              ? (this.logPositionsForDomain([point.value], domainMin, domainMax)?.[0] ??
+                this.linearPosition(point.value, domainMin, domainMax))
+              : this.linearPosition(point.value, domainMin, domainMax);
+
+        return {
+          top,
+          label: this.formatSpecialPointLabel(point.value, point.label),
+          color: point.color,
+        };
+      });
+  }
+
+  private formatSpecialPointLabel(value: number, label?: string): string {
+    const displayUnit = getDisplayUnit(this.entry.scale.unit, this.unitsSettings);
+    const formattedValue = this.formatValue(value);
+    const valueWithUnit = `${formattedValue} ${displayUnit}`;
+
+    if (!label) {
+      return valueWithUnit;
+    }
+
+    if (label.includes('{value}') || label.includes('{unit}')) {
+      return label.replaceAll('{value}', formattedValue).replaceAll('{unit}', displayUnit);
+    }
+
+    return `${label}: ${valueWithUnit}`;
   }
 
   private get sortedContinuousEntriesAsc(): readonly ScaleColorStop[] {
@@ -382,6 +444,27 @@ export class ScaleToolPanelComponent {
     }));
   }
 
+  private buildLinearTickEntriesFromLabels(
+    labels: readonly { top: number }[],
+  ): readonly { top: number; major: boolean }[] {
+    const subTickCount = this.getConfiguredSubTickCount();
+    if (labels.length === 0) return [];
+
+    const result: { top: number; major: boolean }[] = [];
+    for (let i = 0; i < labels.length; i++) {
+      result.push({ top: labels[i].top, major: true });
+      if (i < labels.length - 1) {
+        const topA = labels[i].top;
+        const topB = labels[i + 1].top;
+        for (let j = 1; j <= subTickCount; j++) {
+          result.push({ top: topA + (j / (subTickCount + 1)) * (topB - topA), major: false });
+        }
+      }
+    }
+
+    return result;
+  }
+
   private buildLogTickEntries(
     labels: readonly { top: number }[],
     values: readonly number[],
@@ -420,8 +503,6 @@ export class ScaleToolPanelComponent {
     const clipRange = this.getScaleClipRange();
     if (clipRange) return clipRange;
 
-    const domain = this.discreteScale.labelDomain;
-    if (domain) return domain;
     const entries = this.sortedDiscreteEntriesDesc;
     return [entries[entries.length - 1]?.value ?? 0, entries[0]?.value ?? 0];
   }
@@ -430,8 +511,6 @@ export class ScaleToolPanelComponent {
     const clipRange = this.getScaleClipRange();
     if (clipRange) return clipRange;
 
-    const domain = this.continuousScale.labelDomain;
-    if (domain) return domain;
     const entries = this.sortedContinuousEntriesAsc;
     return [entries[0]?.value ?? 0, entries[entries.length - 1]?.value ?? 0];
   }
@@ -446,6 +525,12 @@ export class ScaleToolPanelComponent {
     return start <= end ? [start, end] : [end, start];
   }
 
+  private getSpecialPointDomain(): readonly [number, number] {
+    return this.entry.scale.type === ScaleType.CONTINUOUS
+      ? this.getContinuousLabelDomain()
+      : this.getDiscreteLabelDomain();
+  }
+
   tickTopStyle(percentTop: number): string {
     return `calc(${percentTop}% - ${percentTop / 100}px)`;
   }
@@ -458,6 +543,33 @@ export class ScaleToolPanelComponent {
     if (max <= min) return 0;
     const ratio = (value - min) / (max - min);
     return Math.max(0, Math.min(100, (1 - ratio) * 100));
+  }
+
+  private discreteThresholdPosition(value: number): number {
+    const entries = this.sortedDiscreteEntriesDesc;
+    const lastIndex = entries.length - 1;
+
+    if (lastIndex <= 0) {
+      return 0;
+    }
+
+    const exactIndex = entries.findIndex((entry) => entry.value === value);
+    if (exactIndex >= 0) {
+      return (exactIndex / lastIndex) * 100;
+    }
+
+    for (let i = 0; i < lastIndex; i++) {
+      const upper = entries[i].value;
+      const lower = entries[i + 1].value;
+
+      if (value <= upper && value >= lower) {
+        const span = upper - lower;
+        const t = span === 0 ? 0 : (upper - value) / span;
+        return ((i + t) / lastIndex) * 100;
+      }
+    }
+
+    return value > entries[0].value ? 0 : 100;
   }
 
   private logPositionsForDomain(

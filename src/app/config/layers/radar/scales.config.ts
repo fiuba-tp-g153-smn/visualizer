@@ -1,6 +1,7 @@
 import { LayerScale, ScaleType } from '../../../models';
 import { RADAR_UNITS } from '../../../constants';
-import { buildBoundedScale, buildLinearScale } from '../scale-builders';
+import { buildScaleFromLinearGradient, buildScaleFromThresholds } from '../scale-builders';
+import { SHARED_DBZH_SCALE } from '../shared-scales.config';
 
 const baseScaleConfig = {
   labelCount: 10,
@@ -12,88 +13,18 @@ const baseScaleConfig = {
  * REFLECTIVITY (DBZH / ZH / TH) - paleta_vmsr
  * Rango: -18 a ~76 dBZ
  */
-export const RADAR_DBZH_SCALE: LayerScale = buildLinearScale({
-  ...baseScaleConfig,
-  min: -18,
-  max: 76.5,
-  unit: RADAR_UNITS.REFLECTIVITY,
-  colors: [
-    '#3C426D',
-    '#3C426D',
-    '#3C426D',
-    '#3C426D',
-    '#3C426D',
-    '#3D4E7B',
-    '#3D4E7B',
-    '#3D4E7B',
-    '#3D5988',
-    '#3D5988',
-    '#3D5988',
-    '#3C6596',
-    '#3C6596',
-    '#3C6596',
-    '#3971A3',
-    '#3971A3',
-    '#3971A3',
-    '#357DAF',
-    '#357DAF',
-    '#2F89BB',
-    '#2F89BB',
-    '#2897C6',
-    '#2897C6',
-    '#26A3D1',
-    '#2BB0DA',
-    '#53F337',
-    '#4DE133',
-    '#47D12F',
-    '#40C02B',
-    '#3AB027',
-    '#34A022',
-    '#2C891D',
-    '#247217',
-    '#EDEF3D',
-    '#E1E439',
-    '#D6DA34',
-    '#CDD230',
-    '#C0C62B',
-    '#CEAD20',
-    '#D69719',
-    '#DB8115',
-    '#EB0B2E',
-    '#CB001B',
-    '#C10015',
-    '#B20009',
-    '#9B0000',
-    '#C2005F',
-    '#D600A0',
-    '#EA00EA',
-    '#CB00CD',
-    '#B300B7',
-    '#9A00A0',
-    '#FFFFFF',
-    '#DFF6ED',
-    '#C6F1E1',
-    '#B7ECD8',
-    '#A7ECCF',
-    '#97E3C6',
-    '#97E3C6',
-    '#87DFBE',
-    '#87DFBE',
-    '#87DFBE',
-    '#87DFBE',
-    '#87DFBE',
-  ] as const,
-});
+export const RADAR_DBZH_SCALE: LayerScale = SHARED_DBZH_SCALE;
 
 /**
  * VELOCITY (VRAD) - paleta_vmsr_viento
  * Rango: -38.75 a 40 m/s
  */
-export const RADAR_VRAD_SCALE: LayerScale = buildLinearScale({
+export const RADAR_VRAD_SCALE: LayerScale = buildScaleFromLinearGradient({
   ...baseScaleConfig,
   min: -38.75,
   max: 40,
   unit: RADAR_UNITS.VELOCITY,
+  scaleDisplayName: 'Velocidad radial',
   colors: [
     '#6C0498',
     '#550599',
@@ -166,10 +97,11 @@ export const RADAR_VRAD_SCALE: LayerScale = buildLinearScale({
  * CORRELATION COEFFICIENT (RHOHV) - paleta_rhohv
  * Rango: 0.225 a 1.048
  */
-export const RADAR_RHOHV_SCALE: LayerScale = buildBoundedScale({
+export const RADAR_RHOHV_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.CORRELATION,
-  hexColors: [
+  scaleDisplayName: 'Coeficiente de correlación',
+  colors: [
     '#151391',
     '#141296',
     '#13119b',
@@ -313,10 +245,11 @@ export const RADAR_RHOHV_SCALE: LayerScale = buildBoundedScale({
  * DIFFERENTIAL REFLECTIVITY (ZDR) - paleta_zdr
  * Rango: -3.0 a 7.9 dB
  */
-export const RADAR_ZDR_SCALE: LayerScale = buildBoundedScale({
+export const RADAR_ZDR_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_REFLECTIVITY,
-  hexColors: [
+  scaleDisplayName: 'Reflectividad diferencial',
+  colors: [
     '#707070',
     '#767676',
     '#7B7B7B',
@@ -437,10 +370,11 @@ export const RADAR_ZDR_SCALE: LayerScale = buildBoundedScale({
  * SPECIFIC DIFFERENTIAL PHASE (KDP) - paleta_kdp
  * Rango: -1 a 6.1 °/km
  */
-export const RADAR_KDP_SCALE: LayerScale = buildBoundedScale({
+export const RADAR_KDP_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.DIFFERENTIAL_PHASE,
-  hexColors: [
+  scaleDisplayName: 'Fase diferencial específica',
+  colors: [
     '#474747',
     '#444444',
     '#424242',

@@ -71,11 +71,44 @@
   align-items: stretch;
 }
 
+.scale-bar-stack {
+  position: relative;
+  display: flex;
+  align-self: stretch;
+}
+
 .scale-bar {
   width: 14px;
   align-self: stretch;
   overflow: hidden;
   border: 1px solid var(--mat-sys-on-surface-variant);
+}
+
+.special-point {
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+}
+
+.special-point-dot {
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid;
+  pointer-events: auto;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65);
+  transform: translate(-50%, -50%);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.special-point-dot:hover,
+.special-point-dot:focus-visible {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
+  outline: none;
 }
 
 .scale-ticks {

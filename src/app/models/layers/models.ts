@@ -16,7 +16,7 @@ export enum LayerCategory {
   IGN_WMS = 'ign_wms',
   ECMWF_TP = 'ecmwf_tp',
   WEATHER_STATIONS = 'weather_stations',
-  WRF = 'wrf', // WRF-ARG4K (SMN) — multi-product forecast model
+  WRF = 'wrf',
 }
 
 // [[lat_sur, lon_oeste], [lat_norte, lon_este]] — compatible con L.LatLngBoundsExpression
@@ -34,12 +34,16 @@ export enum ScaleType {
   DISCRETE = 'discrete',
 }
 
-export const ScaleLabelScale = {
-  LINEAR: 'linear',
-  LOG: 'log',
-} as const;
+export enum ScaleLabelScale {
+  LINEAR = 'linear',
+  LOG = 'log',
+}
 
-export type ScaleLabelScale = (typeof ScaleLabelScale)[keyof typeof ScaleLabelScale];
+export interface ScaleSpecialPoint {
+  value: number;
+  color: string;
+  label?: string;
+}
 
 export interface LayerScale {
   type: ScaleType;
@@ -49,9 +53,10 @@ export interface LayerScale {
   subTickCount?: number;
   labelValues?: readonly number[];
   labelScale?: ScaleLabelScale;
-  labelDomain?: readonly [number, number];
-  // Optional clipping window applied consistently to labels and colors.
   clipRange?: readonly [number, number];
+  specialPoints?: readonly ScaleSpecialPoint[];
+  scaleRoutingKey?: string;
+  scaleDisplayName?: string;
 }
 
 interface BaseLayer {
