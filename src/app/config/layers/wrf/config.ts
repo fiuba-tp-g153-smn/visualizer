@@ -43,7 +43,7 @@ const WRF_DEFAULTS = {
   type: LayerType.TILE,
   category: LayerCategory.WRF,
   zIndexGroup: ActiveLayerGroupId.BASE,
-  availablePeriods: [1, 3, 6] as const,
+  availablePeriods: [1, 3, 6, 12, 24, 36] as const,
   minNativeZoom: 4,
   maxNativeZoom: 9,
   boundingBox: [
@@ -170,9 +170,9 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf/MUCAPE',
       productId: 'MUCAPE',
-      name: 'CAPE máximo',
+      name: 'MUCAPE',
       description:
-        'CAPE máximo (J/kg) — WRF-ARG4K. Contornos de cizalladura 850–500 hPa (10/20/30/40/50 kt).',
+        'CAPE máximo (J/kg) — WRF-ARG4K',
       scale: WRF_MUCAPE_SCALE,
       secondaryRenders: [
         contourRender('MUCAPE', 'shear_850_500', {
@@ -180,7 +180,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           textpathOptions: SHEAR_850_500_TEXTPATH_OPTIONS,
           pointQuery: {
             variable: 'shear_850_500',
-            name: 'Cizalladura 850-500 hPa',
+            name: 'Cortante 850-500 hPa',
             unit: WRF_UNITS.WIND_SPEED,
             scaleRange: { min: 0, max: 60, totalSteps: 60 },
           },
@@ -210,7 +210,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           textpathOptions: SHEAR_850_700_TEXTPATH_OPTIONS,
           pointQuery: {
             variable: 'shear_850_700',
-            name: 'Cizalladura 850-700 hPa',
+            name: 'Cortante 850-700 hPa',
             unit: WRF_UNITS.WIND_SPEED,
             scaleRange: { min: 0, max: 30, totalSteps: 30 },
           },

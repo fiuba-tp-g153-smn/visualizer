@@ -18,7 +18,7 @@ interface UnitsSettings {
 })
 export class UnitsSettingsService {
   readonly temperatureUnit = signal<TemperatureUnit>(TEMPERATURE_UNITS.CELSIUS);
-  readonly windSpeedUnit = signal<WindSpeedUnit>(WIND_SPEED_UNITS.KILOMETERS_PER_HOUR);
+  readonly windSpeedUnit = signal<WindSpeedUnit>(WIND_SPEED_UNITS.KNOTS);
   readonly decimalPrecision = signal<DecimalPrecision>(2);
 
   // Computed formatter que se actualiza cuando cambia la precisión
@@ -61,7 +61,7 @@ export class UnitsSettingsService {
 
       const parsed = JSON.parse(raw) as UnitsSettings;
       this.temperatureUnit.set(parsed.temperatureUnit ?? TEMPERATURE_UNITS.CELSIUS);
-      this.windSpeedUnit.set(parsed.windSpeedUnit ?? WIND_SPEED_UNITS.KILOMETERS_PER_HOUR);
+      this.windSpeedUnit.set(parsed.windSpeedUnit ?? WIND_SPEED_UNITS.KNOTS);
       this.decimalPrecision.set(parsed.decimalPrecision ?? 2);
     } catch (error) {
       console.warn('Failed to load units settings from localStorage:', error);
