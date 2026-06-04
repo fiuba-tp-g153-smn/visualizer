@@ -47,16 +47,24 @@ const RADAR_DEFAULTS = {
 };
 
 const satelitePrefix = 'radar';
-const products = ['DBZH', 'KDP', 'VRAD', 'RHOHV', 'ZDR'] as const;
+enum RadarProduct {
+  DBZH = 'DBZH',
+  KDP = 'KDP',
+  VRAD = 'VRAD',
+  RHOHV = 'RHOHV',
+  ZDR = 'ZDR',
+}
+
+const products = Object.values(RadarProduct) as readonly RadarProduct[];
 const MIN_ZOOM = 4;
 const MAX_ZOOM = 9;
 
-const RADAR_SCALES: Record<(typeof products)[number], LayerScale> = {
-  DBZH: RADAR_DBZH_SCALE,
-  KDP: RADAR_KDP_SCALE,
-  VRAD: RADAR_VRAD_SCALE,
-  RHOHV: RADAR_RHOHV_SCALE,
-  ZDR: RADAR_ZDR_SCALE,
+const RADAR_SCALES: Record<RadarProduct, LayerScale> = {
+  [RadarProduct.DBZH]: RADAR_DBZH_SCALE,
+  [RadarProduct.KDP]: RADAR_KDP_SCALE,
+  [RadarProduct.VRAD]: RADAR_VRAD_SCALE,
+  [RadarProduct.RHOHV]: RADAR_RHOHV_SCALE,
+  [RadarProduct.ZDR]: RADAR_ZDR_SCALE,
 };
 
 // Ubicaciones y configuraciones de los 18 radares de la red SINARAME (SMN/INTA)
@@ -266,14 +274,16 @@ export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   name: `RMA ${radar.number} - ${radar.ubi}`,
   description: `Capas del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
   expanded: false,
-  layers: products.map((product) => ({
-    ...RADAR_DEFAULTS,
-    id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
-    name: product,
-    scale: RADAR_SCALES[product],
-    description: `Producto ${product} del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
-    minNativeZoom: radar.minNativeZoom,
-    maxNativeZoom: radar.maxNativeZoom,
-    boundingBox: radar.boundingBox,
-  })) as RadarTileLayer[],
+  layers: products.map((product) => {
+    return {
+      ...RADAR_DEFAULTS,
+      id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
+      name: product,
+      scale: RADAR_SCALES[product],
+      description: `Producto ${product} del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
+      minNativeZoom: radar.minNativeZoom,
+      maxNativeZoom: radar.maxNativeZoom,
+      boundingBox: radar.boundingBox,
+    };
+  }) as RadarTileLayer[],
 }));

@@ -1,27 +1,28 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 
-import { Layer, LayerCategory, LayerControls, ScaleType } from '../../models';
+import { Layer, LayerControls, LayerScale, ScaleType } from '../../models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayersService } from '../layers/layers.service';
 
-type ScalableLayer = Layer & { scale?: NonNullable<Layer['scale']> };
+type LayerWithScale = Layer & { scale: LayerScale };
 
 type ActiveLayerEntryWithScale = {
-  layer: ScalableLayer;
+  layer: LayerWithScale;
   controls: LayerControls;
 };
 
 export interface ScaleLayerItem {
   layerId: string;
-  layer: ScalableLayer;
+  layer: LayerWithScale;
+  scaleGroupKey: string;
   layerName: string;
 }
 
 export interface ScaleToolEntry {
   layerId: string;
   layerName: string;
-  scale: NonNullable<Layer['scale']>;
+  scale: LayerScale;
 }
 
 interface PersistedScaleToolsState {
@@ -44,27 +45,26 @@ export class ScaleToolsService {
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
 
   readonly displayItems = computed<ScaleLayerItem[]>(() => {
-    const seenRadarProducts = new Set<string>();
+    const seenScaleGroupKeys = new Set<string>();
 
     return this.controlService
       .activeLayers()
       .filter((entry): entry is ActiveLayerEntryWithScale => this.hasValidScale(entry.layer))
-      .flatMap(({ layer }): ScaleLayerItem[] => {
-        if (layer.category === LayerCategory.RADAR) {
-          if (seenRadarProducts.has(layer.name)) {
-            return [];
-          }
-          seenRadarProducts.add(layer.name);
-          return [{ layerId: layer.id, layer, layerName: layer.name }];
+      .flatMap(({ layer }) => {
+        const scaleGroupKey = this.getScaleGroupKeyForLayer(layer);
+        if (seenScaleGroupKeys.has(scaleGroupKey)) {
+          return [];
         }
+        seenScaleGroupKeys.add(scaleGroupKey);
 
-        return [
-          {
-            layerId: layer.id,
-            layer,
-            layerName: this.layersService.getLayerFullName(layer),
-          },
-        ];
+        const item: ScaleLayerItem = {
+          layerId: layer.id,
+          layer,
+          scaleGroupKey,
+          layerName: this.getScaleDisplayName(layer),
+        };
+
+        return [item];
       });
   });
 
@@ -72,21 +72,24 @@ export class ScaleToolsService {
     const itemsById = new Map<string, ScaleLayerItem>(
       this.displayItems().map((item) => [item.layerId, item]),
     );
+    const seenScaleGroups = new Set<string>();
 
     return this.selectedLayerIdsOrdered()
       .map((layerId) => itemsById.get(layerId) ?? null)
       .filter((item): item is ScaleLayerItem => item !== null)
       .flatMap((item): ScaleToolEntry[] => {
-        if (this.hasValidScale(item.layer)) {
-          return [
-            {
-              layerId: item.layerId,
-              layerName: item.layerName,
-              scale: item.layer.scale as NonNullable<Layer['scale']>,
-            },
-          ];
+        if (seenScaleGroups.has(item.scaleGroupKey)) {
+          return [];
         }
-        return [];
+        seenScaleGroups.add(item.scaleGroupKey);
+
+        return [
+          {
+            layerId: item.layerId,
+            layerName: item.layerName,
+            scale: item.layer.scale,
+          },
+        ];
       });
   });
 
@@ -110,14 +113,16 @@ export class ScaleToolsService {
 
         // Remove deactivated layers from selection
         const filteredSelection = currentSelection.filter((layerId) => activeLayerIds.has(layerId));
+        const normalizedSelection = this.uniqueCanonicalLayerIds(filteredSelection);
 
         // Auto-select only truly newly activated layers.
         const newLayerIds = Array.from(activeLayerIds).filter(
           (layerId) => !this.previousDisplayLayerIds.has(layerId),
         );
+        const newCanonicalIds = this.uniqueCanonicalLayerIds(newLayerIds);
 
-        const updatedSelection = [...filteredSelection];
-        for (const layerId of newLayerIds) {
+        const updatedSelection = [...normalizedSelection];
+        for (const layerId of newCanonicalIds) {
           if (!updatedSelection.includes(layerId)) {
             updatedSelection.push(layerId);
           }
@@ -169,31 +174,50 @@ export class ScaleToolsService {
 
   /**
    * Map any layer id to the canonical display id used by the scale tools.
-   * For RADAR layers multiple layer ids may share the same scale; displayItems
-   * deduplicates by product name and uses a representative layer id. This
-   * method resolves a given layer id to that representative id when needed.
+   * Any layers that belong to the same scale group resolve to a single
+   * representative item shown in the tool.
    */
   private getCanonicalLayerId(layerId: string): string | undefined {
     const items = this.displayItems();
+    const itemById = new Map(items.map((item) => [item.layerId, item]));
 
-    // If the layerId is already one of the display items, return it directly
-    if (items.some((it) => it.layerId === layerId)) return layerId;
+    if (itemById.has(layerId)) {
+      return layerId;
+    }
 
-    // Otherwise, try to find a display item that represents the same logical
-    // layer. For RADAR layers we deduplicate by product name, so match by name.
-    const layer = this.layersService.getLayerById(layerId as string);
+    const layer = this.layersService.getLayerById(layerId);
     if (!layer) return undefined;
 
-    // Match by layer name to find the representative item
-    const match = items.find((it) => it.layer.name === layer.name);
-    return match?.layerId;
+    const sourceKey = this.getScaleGroupKeyForLayer(layer);
+    const byGroup = items.find((it) => it.scaleGroupKey === sourceKey);
+    if (byGroup) return byGroup.layerId;
+
+    return undefined;
+  }
+
+  private uniqueCanonicalLayerIds(layerIds: readonly string[]): string[] {
+    const result: string[] = [];
+    for (const layerId of layerIds) {
+      const canonical = this.getCanonicalLayerId(layerId);
+      if (!canonical || result.includes(canonical)) continue;
+      result.push(canonical);
+    }
+    return result;
+  }
+
+  private getScaleGroupKeyForLayer(layer: Layer): string {
+    return layer.scale?.scaleRoutingKey ?? layer.id;
+  }
+
+  private getScaleDisplayName(layer: Layer): string {
+    return layer.scale?.scaleDisplayName ?? layer.name;
   }
 
   clearSelection(): void {
     this.selectedLayerIdsOrdered.set([]);
   }
 
-  private hasValidScale(layer: Layer): layer is ScalableLayer {
+  private hasValidScale(layer: Layer): layer is LayerWithScale {
     if (!layer.scale) {
       return false;
     }

@@ -1,5 +1,5 @@
 import { ABI_UNITS, TEMPERATURE_UNITS } from '../../../../constants';
-import { buildIndexedScale, buildLinearScale } from '../../scale-builders';
+import { buildScaleFromIndexedNodes, buildScaleFromLinearGradient } from '../../scale-builders';
 
 const baseAbiThermalIndexedScaleConfig = {
   count: 256,
@@ -8,18 +8,20 @@ const baseAbiThermalIndexedScaleConfig = {
 };
 
 // Reflectance: pure greyscale 0–1
-export const ABI_CH2_SCALE = buildLinearScale({
+export const ABI_CH2_SCALE = buildScaleFromLinearGradient({
   min: 0,
   max: 1,
   unit: ABI_UNITS.REFLECTANCE,
+  scaleDisplayName: 'Reflectancia CH2',
   colors: ['#000000', '#ffffff'],
   labelCount: 11,
 });
 
-export const ABI_CH9_SCALE = buildIndexedScale({
+export const ABI_CH9_SCALE = buildScaleFromIndexedNodes({
   ...baseAbiThermalIndexedScaleConfig,
   min: 161,
   max: 330,
+  scaleDisplayName: 'Temperatura de brillo CH9',
   clipRange: [183.15, 323.15],
   nodes: [
     { index: 0, color: '#ffffff' },
@@ -63,10 +65,11 @@ export const ABI_CH9_SCALE = buildIndexedScale({
   ],
 });
 // Thermal IR (BD / Clean IR): 183.15–323.15 K
-export const ABI_CH13_SCALE = buildIndexedScale({
+export const ABI_CH13_SCALE = buildScaleFromIndexedNodes({
   ...baseAbiThermalIndexedScaleConfig,
   min: 183.15,
   max: 323.15,
+  scaleDisplayName: 'Temperatura de brillo CH13',
   nodes: [
     { index: 0, color: '#ffffff' },
     { index: 17, color: '#1b1b1b' },

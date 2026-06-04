@@ -6,7 +6,21 @@
 
   @if (isContinuous) {
     <div class="scale-bar-wrapper">
-      <div class="scale-bar scale-bar-continuous" [style.background]="gradientBackground"></div>
+      <div class="scale-bar-stack">
+        <div class="scale-bar scale-bar-continuous" [style.background]="gradientBackground"></div>
+        @for (point of specialPointEntries; track $index) {
+          <div class="special-point" [style.top]="tickTopStyle(point.top)">
+            <div
+              class="special-point-dot"
+              [style.border-color]="point.color"
+              [style.background-color]="point.color"
+              [matTooltip]="point.label"
+              matTooltipPosition="left"
+              tabindex="0"
+            ></div>
+          </div>
+        }
+      </div>
       <div class="scale-ticks">
         @for (tick of continuousTickEntries; track $index) {
           <div
@@ -17,7 +31,7 @@
         }
       </div>
     </div>
-    @if (isLogContinuous) {
+    @if (isLogContinuous || hasExplicitContinuousLabels) {
       <div class="scale-values scale-values-discrete">
         <div class="scale-value-row scale-value-sizer" aria-hidden="true">
           <div class="scale-value">{{ continuousLabelSizerText }}</div>
@@ -37,10 +51,24 @@
     }
   } @else {
     <div class="scale-bar-wrapper">
-      <div class="scale-bar scale-bar-discrete">
-        @for (block of discreteColorBlocks; track $index) {
-          <div class="discrete-step-row">
-            <div class="discrete-step" [style.backgroundColor]="block.color"></div>
+      <div class="scale-bar-stack">
+        <div class="scale-bar scale-bar-discrete">
+          @for (block of discreteColorBlocks; track $index) {
+            <div class="discrete-step-row">
+              <div class="discrete-step" [style.backgroundColor]="block.color"></div>
+            </div>
+          }
+        </div>
+        @for (point of specialPointEntries; track $index) {
+          <div class="special-point" [style.top]="tickTopStyle(point.top)">
+            <div
+              class="special-point-dot"
+              [style.border-color]="point.color"
+              [style.background-color]="point.color"
+              [matTooltip]="point.label"
+              matTooltipPosition="left"
+              tabindex="0"
+            ></div>
           </div>
         }
       </div>
