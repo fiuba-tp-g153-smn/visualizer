@@ -14,8 +14,6 @@ import { SHARED_DBZH_SCALE } from '../shared-scales.config';
  * `bounds[i]` con `colors[i]` para producir las `entries` del modelo nuevo.
  */
 
-export const WRF_COLMAX_SCALE: LayerScale = SHARED_DBZH_SCALE;
-
 export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.WIND_SPEED,
@@ -27,8 +25,17 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
       color: '#0000FF',
     },
   ],
-  bounds: [25, 30, 35, 40, 45, 50, 60, 70, 80],
-  colors: ['#b3b2aa', '#fee779', '#fec03d', '#fea001', '#fe6101', '#ff3200', '#e11400', '#c00000'],
+  stops: [
+    { value: 25, color: '#b3b2aa' },
+    { value: 30, color: '#fee779' },
+    { value: 35, color: '#fec03d' },
+    { value: 40, color: '#fea001' },
+    { value: 45, color: '#fe6101' },
+    { value: 50, color: '#ff3200' },
+    { value: 60, color: '#e11400' },
+    { value: 70, color: '#c00000' },
+    { value: 80, color: '#c00000' },
+  ] as const,
 });
 
 export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromUniformThresholds({
@@ -69,37 +76,46 @@ export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.PRECIPITATION,
   scaleDisplayName: 'Precipitación en 1 h',
-  bounds: WRF_PRECIPITACION1H_BOUNDS,
+  stops: [
+    { value: 0.1, color: '#006736' },
+    { value: 1.0, color: '#31a154' },
+    { value: 5.0, color: '#77c479' },
+    { value: 10.0, color: '#c1e498' },
+    { value: 15.0, color: '#fefe9c' },
+    { value: 20.0, color: '#055a8d' },
+    { value: 25.0, color: '#358fbf' },
+    { value: 30.0, color: '#a6bcda' },
+    { value: 35.0, color: '#e2e1e4' },
+    { value: 40.0, color: '#a63603' },
+    { value: 50.0, color: '#f06813' },
+    { value: 60.0, color: '#fdae6b' },
+    { value: 80.0, color: '#770074' },
+    { value: 100.0, color: '#c51b8a' },
+    { value: 120.0, color: '#f768a1' },
+    { value: 150.0, color: '#fbb4b9' },
+    { value: 180.0, color: '#636363' },
+    { value: 220.0, color: '#bbbbbb' },
+    { value: 260.0, color: '#bbbbbb' },
+  ] as const,
   // Una etiqueta por umbral (sin esto, el default de 10 decima y oculta varias).
   labelCount: WRF_PRECIPITACION1H_BOUNDS.length,
-  colors: [
-    '#006736',
-    '#31a154',
-    '#77c479',
-    '#c1e498',
-    '#fefe9c',
-    '#055a8d',
-    '#358fbf',
-    '#a6bcda',
-    '#e2e1e4',
-    '#a63603',
-    '#f06813',
-    '#fdae6b',
-    '#770074',
-    '#c51b8a',
-    '#f768a1',
-    '#fbb4b9',
-    '#636363',
-    '#bbbbbb',
-  ],
 });
 
 const SHARED_WRF_CAPE_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.MUCAPE,
   scaleRoutingKey: ScaleToolGroupKey.SHARED_WRF_CAPE,
-  bounds: [100, 250, 750, 1000, 1500, 2000, 2500, 3000, 3500],
-  colors: ['#b2f8a9', '#77f373', '#37d13c', '#fdf8a9', '#fde678', '#ffc03c', '#ff6000', '#ff3200'],
+  stops: [
+    { value: 100, color: '#b2f8a9' },
+    { value: 250, color: '#77f373' },
+    { value: 750, color: '#37d13c' },
+    { value: 1000, color: '#fdf8a9' },
+    { value: 1500, color: '#fde678' },
+    { value: 2000, color: '#ffc03c' },
+    { value: 2500, color: '#ff6000' },
+    { value: 3000, color: '#ff3200' },
+    { value: 3500, color: '#ff3200' },
+  ] as const,
 });
 
 export const WRF_MUCAPE_SCALE: LayerScale = {
@@ -143,6 +159,11 @@ export const WRF_GRANIZO_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.DIMENSIONLESS,
   scaleDisplayName: 'Granizo (SHIP)',
-  bounds: [0.1, 1.0, 2.0, 3.0, 4.0],
-  colors: ['#fdf8a9', '#ffc03c', '#ff6000', '#e11400'],
+  stops: [
+    { value: 0.1, color: '#fdf8a9' },
+    { value: 1.0, color: '#ffc03c' },
+    { value: 2.0, color: '#ff6000' },
+    { value: 3.0, color: '#e11400' },
+    { value: 4.0, color: '#e11400' },
+  ] as const,
 });
