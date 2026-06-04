@@ -40,6 +40,7 @@ export class ScaleToolsService {
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
   private previousDisplayLayerIds = new Set<string>();
+  private restoredSelectionFromStorage = false;
 
   readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
@@ -98,7 +99,7 @@ export class ScaleToolsService {
   });
 
   constructor() {
-    this.loadStateFromStorage();
+    this.restoredSelectionFromStorage = this.loadStateFromStorage();
 
     effect(() => {
       this.saveStateToStorage();
@@ -110,15 +111,19 @@ export class ScaleToolsService {
 
       untracked(() => {
         const currentSelection = this.selectedLayerIdsOrdered();
+        const isInitialSync = this.previousDisplayLayerIds.size === 0;
+        const shouldAutoSelectNewLayers = !(isInitialSync && this.restoredSelectionFromStorage);
 
         // Remove deactivated layers from selection
         const filteredSelection = currentSelection.filter((layerId) => activeLayerIds.has(layerId));
         const normalizedSelection = this.uniqueCanonicalLayerIds(filteredSelection);
 
         // Auto-select only truly newly activated layers.
-        const newLayerIds = Array.from(activeLayerIds).filter(
-          (layerId) => !this.previousDisplayLayerIds.has(layerId),
-        );
+        const newLayerIds = shouldAutoSelectNewLayers
+          ? Array.from(activeLayerIds).filter(
+              (layerId) => !this.previousDisplayLayerIds.has(layerId),
+            )
+          : [];
         const newCanonicalIds = this.uniqueCanonicalLayerIds(newLayerIds);
 
         const updatedSelection = [...normalizedSelection];
@@ -141,6 +146,10 @@ export class ScaleToolsService {
         }
 
         this.previousDisplayLayerIds = activeLayerIds;
+
+        if (isInitialSync) {
+          this.restoredSelectionFromStorage = false;
+        }
       });
     });
   }
@@ -232,24 +241,26 @@ export class ScaleToolsService {
     }
   }
 
-  private loadStateFromStorage(): void {
+  private loadStateFromStorage(): boolean {
     if (typeof localStorage === 'undefined') {
-      return;
+      return false;
     }
 
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.SCALE_TOOLS);
       if (!raw) {
-        return;
+        return false;
       }
 
       const parsed = JSON.parse(raw) as PersistedScaleToolsState;
 
       this.enabled.set(parsed.enabled ?? false);
       this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
+      return true;
     } catch {
       this.enabled.set(false);
       this.selectedLayerIdsOrdered.set([]);
+      return false;
     }
   }
 
