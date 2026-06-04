@@ -106,6 +106,10 @@ body {
   color: var(--weather-badge-fg, #111827);
   font-weight: 700;
   font-size: var(--weather-badge-font-size, 12px);
+  letter-spacing: var(--weather-badge-letter-spacing, 0px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  opacity: var(--weather-badge-opacity, 1);
   border: 2px solid #000;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
