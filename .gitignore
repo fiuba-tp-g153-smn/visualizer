@@ -38,6 +38,9 @@ testem.log
 /typings
 __screenshots__/
 
+# Generated reports
+/layer-report/
+
 # System files
 .DS_Store
 Thumbs.db
@@ -47,8 +50,8 @@ Thumbs.db
 referencia.html
 
 # SMN stations backup snapshots (timestamped exports)
-src/app/testing/fixtures/smn-stations/stations.*T*.json
-src/app/testing/fixtures/smn-stations/weather.*T*.json
-src/app/testing/fixtures/smn-stations/*.json
-public/testing/fixtures/smn-stations/stations.*T*.json
-public/testing/fixtures/smn-stations/weather.*T*.json
+src/app/testing/fixtures/weather-stations/stations.*T*.json
+src/app/testing/fixtures/weather-stations/weather.*T*.json
+src/app/testing/fixtures/weather-stations/*.json
+public/testing/fixtures/weather-stations/stations.*T*.json
+public/testing/fixtures/weather-stations/weather.*T*.json
