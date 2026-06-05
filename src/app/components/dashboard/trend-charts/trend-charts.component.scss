@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--mat-sys-outline-variant, #e0e0e0); // gap lines between cells
+}
+
+.cell {
+  background: var(--mat-sys-surface, #ffffff);
+  padding: 0 0 12px;
+}
+
+.cell__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 0;
+}
+
+.cell__t {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface, #1f1f1f);
+}
+
+.cell__info {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  line-height: 15px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  cursor: help;
+}
+
+.cell__sub {
+  padding: 1px 12px 8px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cell__select {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--mat-sys-on-surface, #1f1f1f);
+  background: var(--mat-sys-surface, #fff);
+  border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.cell__box {
+  height: 240px;
+  padding: 0 8px;
+}
+
+.note {
+  padding: 9px 12px;
+  font-size: 11px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+@media (max-width: 900px) {
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}

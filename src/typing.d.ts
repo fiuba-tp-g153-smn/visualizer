@@ -8,4 +8,5 @@ interface Env {
   TILE_FORMAT: string;
   APP_HOST_PORT: integer;
   DOCS_URL: string;
+  METRICS_SERVICE_BASE_URL: string;
 }

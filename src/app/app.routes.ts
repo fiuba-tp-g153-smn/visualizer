@@ -24,5 +24,10 @@ function docsPathMatcher(segments: UrlSegment[]) {
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { matcher: docsPathMatcher, component: DocsComponent },
+  {
+    path: 'status',
+    loadComponent: () =>
+      import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

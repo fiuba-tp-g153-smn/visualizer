@@ -1,0 +1,16 @@
+<div class="jobs__scroll">
+  <app-sortable-table
+    [headers]="table().headers"
+    [rows]="table().tableRows"
+    [initialSort]="initialSort"
+    emptyText="aún no hay trabajos registrados"
+  />
+</div>
+
+<div class="jobs__foot">
+  <button mat-stroked-button [disabled]="!hasMore()" (click)="loadMore.emit()">
+    cargar 50 más
+  </button>
+  <span class="jobs__count">{{ jobs().length }} cargados</span>
+  <span class="jobs__hint">· el orden aplica a las filas cargadas</span>
+</div>

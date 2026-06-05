@@ -1,0 +1,38 @@
+:host {
+  display: block;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.card {
+  padding: 12px 14px;
+  border-right: 1px solid var(--mat-sys-outline-variant, #ececec);
+  border-bottom: 1px solid var(--mat-sys-outline-variant, #ececec);
+}
+
+.card__label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+.card__value {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
+  margin-top: 5px;
+  color: var(--mat-sys-on-surface, #1f1f1f);
+  font-variant-numeric: tabular-nums;
+}
+
+.card__value--orange {
+  color: var(--metric-error, #e8702a);
+}
+
+.card__value--red {
+  color: var(--metric-dlq, #d23b4e);
+}

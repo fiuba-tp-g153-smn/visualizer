@@ -1,0 +1,105 @@
+<div class="dash">
+  <header class="dash__head">
+    <button mat-icon-button (click)="goBack()" aria-label="Volver" matTooltip="Ir al mapa">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <span class="dash__title">Panel de rendimiento</span>
+    <span class="dash__spacer"></span>
+
+    <label class="dash__ctl"
+      >ventana
+      <select [value]="windowHours()" (change)="onWindowChange($event)">
+        <option [value]="0">todo</option>
+        <option [value]="24">24h</option>
+        <option [value]="168">7d</option>
+      </select>
+    </label>
+    <label class="dash__ctl"
+      >intervalo
+      <select [value]="bucket()" (change)="onBucketChange($event)">
+        <option value="hour">hora</option>
+        <option value="day">día</option>
+      </select>
+    </label>
+    <label class="dash__ctl"
+      >auto
+      <select [value]="refreshSecs()" (change)="onRefreshChange($event)">
+        <option [value]="0">no</option>
+        <option [value]="10">10s</option>
+        <option [value]="30">30s</option>
+        <option [value]="60">60s</option>
+      </select>
+    </label>
+    <button mat-stroked-button class="dash__refresh" (click)="refreshNow()">
+      <mat-icon>refresh</mat-icon> actualizar
+    </button>
+    <span class="dash__updated">
+      @if (errorMsg(); as err) {
+        error: {{ err }}
+      } @else {
+        actualizado {{ updatedAt() }}
+      }
+    </span>
+  </header>
+
+  <main class="dash__body">
+    <app-metric-panel
+      title="Resumen general"
+      tip="Totales del período seleccionado (ventana): trabajos finalizados, tasa de éxito, fallos, descartes (DLQ), reencolados y omitidos, más la cantidad de tipos de trabajo activos."
+    >
+      <app-metric-stat-cards [summary]="summary()" />
+    </app-metric-panel>
+
+    <app-metric-panel
+      title="En vivo · cola y en proceso"
+      tip="Estado en tiempo real: profundidad de la cola de trabajo y de la cola de descartes (RabbitMQ), y los trabajos que se están procesando ahora mismo (rastreador de progreso). Muestra 'n/a' si RabbitMQ no responde."
+    >
+      <app-live-status-panel [live]="live()" />
+    </app-metric-panel>
+
+    <app-metric-panel
+      title="Tendencias de tiempos"
+      tip="Cómo evolucionan los tiempos de procesamiento a lo largo del tiempo, agrupados por intervalo (hora/día) y tipo de trabajo. Se calculan solo sobre trabajos exitosos."
+    >
+      <app-trend-charts [timing]="timing()" [throughput]="throughput()" />
+    </app-metric-panel>
+
+    <app-metric-panel
+      title="Throughput · cada 10 min"
+      tip="Evolución del throughput en una ventana corta con intervalos de 10 minutos: trabajos finalizados por cada bloque de 10 min y por tipo de trabajo. Útil para ver picos y huecos recientes que la vista por hora suaviza."
+    >
+      <label panelActions class="dash__ctl"
+        >rango
+        <select [value]="tpWindowHours()" (change)="onTpWindowChange($event)">
+          <option [value]="1">1h</option>
+          <option [value]="3">3h</option>
+          <option [value]="6">6h</option>
+          <option [value]="12">12h</option>
+        </select>
+      </label>
+      <div class="dash__tp10">
+        @if (tp10Options(); as opts) {
+          <app-metric-chart [options]="opts" />
+        } @else {
+          <div class="dash__note">Sin trabajos en este rango.</div>
+        }
+      </div>
+    </app-metric-panel>
+
+    <app-metric-panel
+      title="Por tipo de trabajo · tiempos y resultados"
+      tip="Estadísticas agregadas por tipo de trabajo: conteos por resultado, % de error y distribución de tiempos (prom/mín/máx/p95). Los tiempos se calculan solo sobre trabajos exitosos. Clic en una columna para ordenar."
+    >
+      <div class="dash__scroll-x">
+        <app-job-type-summary-table [summary]="summary()" />
+      </div>
+    </app-metric-panel>
+
+    <app-metric-panel
+      title="Trabajos recientes"
+      tip="Últimos trabajos finalizados (todos los resultados), del más nuevo al más viejo. Clic en las columnas para ordenar; 'cargar más' trae las siguientes 50 filas."
+    >
+      <app-recent-jobs-table [jobs]="jobs()" [hasMore]="jobsHasMore()" (loadMore)="onLoadMore()" />
+    </app-metric-panel>
+  </main>
+</div>

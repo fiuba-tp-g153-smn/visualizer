@@ -1,0 +1,25 @@
+:host {
+  display: block;
+}
+
+.jobs__scroll {
+  max-height: 460px;
+  overflow: auto;
+}
+
+.jobs__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant, #ececec);
+  font-size: 11px;
+}
+
+.jobs__count {
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+.jobs__hint {
+  color: var(--mat-sys-on-surface-variant, #9aa0a6);
+}

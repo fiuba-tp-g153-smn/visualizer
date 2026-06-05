@@ -1,0 +1,79 @@
+@if (rows().length === 0) {
+  <div class="empty">{{ emptyText() }}</div>
+} @else {
+  <table class="stable">
+    <thead>
+      <tr>
+        @for (header of headers(); track header.key) {
+          <th
+            [class]="
+              'stable__th' +
+              (header.sortable ? ' stable__th--sortable' : '') +
+              (isActive(header) ? ' stable__th--active' : '')
+            "
+            (click)="onHeaderClick(header)"
+          >
+            {{ header.label }}<span class="stable__caret">{{ caret(header) }}</span>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of sortedRows(); track $index) {
+        <tr>
+          @for (cell of row.cells; track $index) {
+            <td class="stable__td" [style.text-align]="headers()[$index].align">
+              @switch (cell.kind) {
+                @case ('text') {
+                  <span
+                    [class.muted]="cell.muted"
+                    [class.strong]="cell.strong"
+                    [title]="cell.title ?? ''"
+                    >{{ cell.text }}</span
+                  >
+                }
+                @case ('pill') {
+                  <span [class]="'pill pill--' + cell.outcome">{{ cell.label }}</span>
+                  @if (cell.suffix) {
+                    <span class="muted">{{ cell.suffix }}</span>
+                  }
+                }
+                @case ('pills') {
+                  @if (!cell.items?.length) {
+                    <span class="muted">—</span>
+                  } @else {
+                    @for (item of cell.items ?? []; track item.outcome) {
+                      <span [class]="'pill pill--' + item.outcome" [title]="item.label">{{
+                        item.count
+                      }}</span>
+                    }
+                  }
+                }
+                @case ('bar') {
+                  @if (!cell.segments?.length) {
+                    <span class="muted">—</span>
+                  } @else {
+                    <div class="bar">
+                      @for (segment of cell.segments ?? []; track $index) {
+                        <span
+                          class="bar__seg"
+                          [style.width.%]="segment.widthPct"
+                          [style.background]="segment.color"
+                          [title]="segment.title"
+                        ></span>
+                      }
+                    </div>
+                    <div class="bar__legend">{{ cell.legend }}</div>
+                  }
+                }
+                @case ('error') {
+                  <span class="err" [title]="cell.message ?? ''">{{ cell.message }}</span>
+                }
+              }
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+}
