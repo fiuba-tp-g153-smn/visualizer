@@ -45,7 +45,11 @@ const GRID_COLOR = '#e3e3e6';
 const LABEL_COLOR = '#5f6368';
 const DEFAULT_HEIGHT = 240;
 
-/** Paleta estable y legible sobre fondo claro (la primaria de la app primero). */
+/**
+ * Paleta estable y legible sobre fondo claro (la primaria de la app primero).
+ * Ampliada a 20 tonos bien separados para que `buildTypeColorMap` asigne color
+ * por índice sin colisiones aun con muchos tipos de trabajo (~15-25).
+ */
 const TYPE_PALETTE: readonly string[] = [
   '#0090d0',
   '#2e9b51',
@@ -59,6 +63,14 @@ const TYPE_PALETTE: readonly string[] = [
   '#3b6fb5',
   '#b5892a',
   '#4aa3df',
+  '#7e57c2',
+  '#00838f',
+  '#558b2f',
+  '#ad1457',
+  '#5d4037',
+  '#0277bd',
+  '#ef6c00',
+  '#9e9d24',
 ];
 
 const STAGE_COLORS: Readonly<Record<string, string>> = {
@@ -96,6 +108,38 @@ export function typeColor(jobType: string): string {
 /** Color de una etapa del pipeline (gris por defecto si es desconocida). */
 export function stageColor(stage: string): string {
   return STAGE_COLORS[stage] ?? '#8e8e8e';
+}
+
+/** Oscurece un hex de forma determinista (mezcla hacia negro; `amount` en [0,1]). */
+function shade(hex: string, amount: number): string {
+  const match = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!match) {
+    return hex;
+  }
+  const factor = Math.max(0, 1 - amount);
+  const byte = (component: string): string =>
+    Math.round(parseInt(component, 16) * factor)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${byte(match[1])}${byte(match[2])}${byte(match[3])}`;
+}
+
+/**
+ * Mapa de color estable por tipo de trabajo a partir del conjunto de tipos del
+ * dataset. Asigna por índice del conjunto único y ordenado → sin colisiones
+ * dentro de la paleta; al agotarla repite el tono base pero oscurecido por
+ * "vuelta", de modo que aun así queda distinto. Como todos los gráficos de un
+ * mismo render comparten este mapa, un tipo conserva su color entre ellos.
+ */
+export function buildTypeColorMap(types: readonly string[]): (type: string) => string {
+  const unique = [...new Set(types)].sort();
+  const map = new Map<string, string>();
+  unique.forEach((type, index) => {
+    const base = TYPE_PALETTE[index % TYPE_PALETTE.length];
+    const cycle = Math.floor(index / TYPE_PALETTE.length);
+    map.set(type, cycle === 0 ? base : shade(base, cycle * 0.18));
+  });
+  return (type) => map.get(type) ?? typeColor(type);
 }
 
 // ── Pivot ──────────────────────────────────────────────────────────────────
@@ -194,6 +238,7 @@ export function buildLineChart(
   valueKey: string,
   unit: 'secs' | 'count',
   height: number = DEFAULT_HEIGHT,
+  colorFor: (type: string) => string = typeColor,
 ): MetricsChartOptions {
   const data = pivot(rows, valueKey);
   const formatter = unit === 'secs' ? secsFormatter : countFormatter;
@@ -203,7 +248,7 @@ export function buildLineChart(
       data: data.buckets.map((bucket) => data.at(bucket, type)),
     })),
     chart: baseChart('line', false, height),
-    colors: data.types.map(typeColor),
+    colors: data.types.map(colorFor),
     xaxis: categoryXAxis(data.buckets.map(fmtBucket)),
     yaxis: valueYAxis(formatter),
     stroke: { curve: 'straight', width: 2 },
@@ -220,6 +265,7 @@ export function buildLineChart(
 export function buildThroughputBarChart(
   rows: readonly ThroughputBucket[],
   height: number = DEFAULT_HEIGHT,
+  colorFor: (type: string) => string = typeColor,
 ): MetricsChartOptions {
   const data = pivot(rows, 'count');
   return {
@@ -228,7 +274,7 @@ export function buildThroughputBarChart(
       data: data.buckets.map((bucket) => data.at(bucket, type) ?? 0),
     })),
     chart: baseChart('bar', true, height),
-    colors: data.types.map(typeColor),
+    colors: data.types.map(colorFor),
     xaxis: categoryXAxis(data.buckets.map(fmtBucket)),
     yaxis: valueYAxis(countFormatter),
     stroke: { width: 0 },

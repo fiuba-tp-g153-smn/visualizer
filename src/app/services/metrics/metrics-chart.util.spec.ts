@@ -5,6 +5,7 @@ import {
   buildLineChart,
   buildStageAreaChart,
   buildThroughputBarChart,
+  buildTypeColorMap,
   pivot,
   typeColor,
 } from './metrics-chart.util';
@@ -30,6 +31,26 @@ describe('typeColor', () => {
   it('is deterministic and returns a hex from the palette', () => {
     expect(typeColor('radar_DBZH')).toBe(typeColor('radar_DBZH'));
     expect(typeColor('radar_DBZH')).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+});
+
+describe('buildTypeColorMap', () => {
+  it('gives a type the same color regardless of input order (stable)', () => {
+    const a = buildTypeColorMap(['radar_DBZH', 'goes_band_13', 'glm_fed']);
+    const b = buildTypeColorMap(['glm_fed', 'goes_band_13', 'radar_DBZH']);
+    expect(a('goes_band_13')).toBe(b('goes_band_13'));
+    expect(a('goes_band_13')).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
+  it('assigns a distinct color per type even past the palette length', () => {
+    const types = Array.from({ length: 25 }, (_, i) => `tipo_${i}`);
+    const colorFor = buildTypeColorMap(types);
+    expect(new Set(types.map(colorFor)).size).toBe(types.length);
+  });
+
+  it('is used by buildLineChart in place of typeColor', () => {
+    const opts = buildLineChart(THROUGHPUT, 'count', 'count', undefined, () => '#123456');
+    expect(opts.colors).toEqual(['#123456', '#123456']);
   });
 });
 

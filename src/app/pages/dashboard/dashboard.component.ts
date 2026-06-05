@@ -2,13 +2,16 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -22,6 +25,7 @@ import { RecentJobsTableComponent } from '../../components/dashboard/recent-jobs
 import { TrendChartsComponent } from '../../components/dashboard/trend-charts/trend-charts.component';
 import type {
   Bucket,
+  JobOutcome,
   JobTypeSummary,
   LiveStatus,
   RecentJob,
@@ -33,8 +37,10 @@ import type {
 } from '../../models/metrics/metrics.models';
 import {
   buildLineChart,
+  buildTypeColorMap,
   type MetricsChartOptions,
 } from '../../services/metrics/metrics-chart.util';
+import { OUTCOME_LABELS, prod } from '../../services/metrics/metrics-labels.constants';
 import { MetricsService } from '../../services/metrics/metrics.service';
 
 const JOBS_PAGE = 50;
@@ -51,6 +57,7 @@ const JOBS_PAGE = 50;
   imports: [
     MatButtonModule,
     MatIconModule,
+    MatProgressSpinnerModule,
     MatTooltipModule,
     MetricPanelComponent,
     MetricStatCardsComponent,
@@ -74,6 +81,24 @@ export class DashboardComponent {
   readonly refreshSecs = signal<RefreshSeconds>(10);
   readonly tpWindowHours = signal<TenMinWindowHours>(6);
 
+  // Filtros de la tabla de trabajos recientes ('' = todos). Se aplican del lado
+  // del servidor vía getJobs (que ya acepta type/outcome).
+  readonly outcomeFilter = signal<JobOutcome | ''>('');
+  readonly typeFilter = signal<string>('');
+
+  /** Opciones del filtro de resultado (clave del API + etiqueta en español). */
+  readonly outcomeOptions: ReadonlyArray<{ value: string; label: string }> = Object.entries(
+    OUTCOME_LABELS,
+  ).map(([value, label]) => ({ value, label }));
+
+  /** Opciones del filtro de tipo, derivadas del resumen (mismas claves del backend). */
+  readonly jobTypeOptions = computed<ReadonlyArray<{ value: string; label: string }>>(() =>
+    this.summary().map((entry) => ({
+      value: entry.job_type,
+      label: prod(entry.product_label ?? entry.job_type),
+    })),
+  );
+
   // Datos
   readonly summary = signal<readonly JobTypeSummary[]>([]);
   readonly jobs = signal<readonly RecentJob[]>([]);
@@ -86,10 +111,29 @@ export class DashboardComponent {
   readonly updatedAt = signal<string>('—');
   readonly errorMsg = signal<string | null>(null);
 
+  // Estado de carga: `loading` indica un refresco en curso; `hasLoaded`, que ya
+  // se completó al menos una carga con éxito. `firstLoad` es la primera carga
+  // (aún sin datos): muestra un spinner. Los refrescos en segundo plano NO
+  // vacían la vista — los datos previos siguen visibles hasta que llegan los
+  // nuevos o falla (en cuyo caso se conservan y aparece el banner de error).
+  readonly loading = signal<boolean>(false);
+  readonly hasLoaded = signal<boolean>(false);
+  readonly firstLoad = computed<boolean>(() => this.loading() && !this.hasLoaded());
+
+  /** Panel de trabajos recientes, para hacer scroll al filtrar desde el resumen. */
+  private readonly recentJobsPanel = viewChild('recentJobsPanel', { read: ElementRef });
+
   /** Gráfico de throughput de 10 min (null cuando no hay datos en el rango). */
   readonly tp10Options = computed<MetricsChartOptions | null>(() => {
     const rows = this.tp10();
-    return rows.length ? buildLineChart(rows, 'count', 'count', 260) : null;
+    if (!rows.length) {
+      return null;
+    }
+    // Mapa local: este panel es un dataset aparte (bucket de 10 min), así que
+    // sus colores quedan únicos dentro del gráfico; la paridad exacta con el
+    // panel de tendencias es best-effort (datasets y orden distintos).
+    const colorFor = buildTypeColorMap(rows.map((row) => row.job_type));
+    return buildLineChart(rows, 'count', 'count', 260, colorFor);
   });
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
@@ -128,6 +172,24 @@ export class DashboardComponent {
     void this.loadTp10();
   }
 
+  onOutcomeFilterChange(event: Event): void {
+    this.outcomeFilter.set(this.stringValue(event) as JobOutcome | '');
+    void this.loadJobs(true);
+  }
+
+  onTypeFilterChange(event: Event): void {
+    this.typeFilter.set(this.stringValue(event));
+    void this.loadJobs(true);
+  }
+
+  /** Drill-down desde el resumen: filtra los trabajos recientes por ese tipo. */
+  onSummaryTypeClick(jobType: string): void {
+    this.typeFilter.set(jobType);
+    this.outcomeFilter.set('');
+    void this.loadJobs(true);
+    this.recentJobsPanel()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   onLoadMore(): void {
     void this.loadJobs(false);
   }
@@ -143,13 +205,21 @@ export class DashboardComponent {
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   private async refresh(): Promise<void> {
+    if (this.loading()) {
+      return; // evita refrescos solapados disparados por el intervalo
+    }
+    this.loading.set(true);
     try {
       this.summary.set(await firstValueFrom(this.metrics.getSummary(this.windowHours())));
       await Promise.all([this.loadJobs(true), this.loadCharts(), this.loadLive(), this.loadTp10()]);
       this.updatedAt.set(new Date().toLocaleTimeString());
       this.errorMsg.set(null);
+      this.hasLoaded.set(true);
     } catch (error) {
+      // Conserva los datos ya cargados; solo muestra el banner de error.
       this.errorMsg.set(this.describeError(error));
+    } finally {
+      this.loading.set(false);
     }
   }
 
@@ -163,15 +233,17 @@ export class DashboardComponent {
   }
 
   private async loadJobs(reset: boolean): Promise<void> {
+    const type = this.typeFilter() || undefined;
+    const outcome = this.outcomeFilter() || undefined;
     if (reset) {
       const limit = Math.max(JOBS_PAGE, this.jobs().length);
-      const page = await firstValueFrom(this.metrics.getJobs({ limit, offset: 0 }));
+      const page = await firstValueFrom(this.metrics.getJobs({ limit, offset: 0, type, outcome }));
       this.jobs.set(page);
       this.jobsHasMore.set(page.length >= JOBS_PAGE);
       return;
     }
     const page = await firstValueFrom(
-      this.metrics.getJobs({ limit: JOBS_PAGE, offset: this.jobs().length }),
+      this.metrics.getJobs({ limit: JOBS_PAGE, offset: this.jobs().length, type, outcome }),
     );
     this.jobs.update((current) => [...current, ...page]);
     this.jobsHasMore.set(page.length === JOBS_PAGE);

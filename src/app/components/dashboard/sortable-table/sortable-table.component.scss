@@ -56,6 +56,10 @@
   background: var(--mat-sys-surface-container-low, #fafafa);
 }
 
+.stable__row--clickable {
+  cursor: pointer;
+}
+
 .muted {
   color: var(--mat-sys-on-surface-variant, #5f6368);
 }

@@ -1,0 +1,34 @@
+<h1 mat-dialog-title class="jd__title">
+  <span class="jd__name" [title]="job.job_type">{{ title() }}</span>
+  <span class="jd__pill" [class]="'jd__pill--' + job.outcome">{{ outcomeText() }}</span>
+</h1>
+
+<mat-dialog-content>
+  <dl class="jd__grid">
+    @for (row of rows(); track row.label) {
+      <dt>{{ row.label }}</dt>
+      <dd [title]="row.title ?? ''">{{ row.value }}</dd>
+    }
+  </dl>
+
+  @if (job.error_message) {
+    <div class="jd__error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ job.error_message }}</span>
+    </div>
+  }
+
+  @if (stages().length) {
+    <h2 class="jd__subtitle">Desglose por etapa</h2>
+    <dl class="jd__grid">
+      @for (stage of stages(); track stage.label) {
+        <dt>{{ stage.label }}</dt>
+        <dd>{{ stage.value }}</dd>
+      }
+    </dl>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

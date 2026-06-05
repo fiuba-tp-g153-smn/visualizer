@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 
 import { SortableTableComponent } from './sortable-table.component';
-import { textCell, type HeaderDef, type TableRow } from './sortable-table.models';
+import {
+  buildTable,
+  textCell,
+  type ColumnSpec,
+  type HeaderDef,
+  type TableRow,
+} from './sortable-table.models';
 
 const HEADERS: HeaderDef[] = [
   { key: 'name', label: 'name', align: 'left', sortable: true },
@@ -57,5 +63,39 @@ describe('SortableTableComponent', () => {
 
     cmp.onHeaderClick(fixedHeader);
     expect(cmp.activeKey()).toBeNull();
+  });
+
+  it('emits the row key when a keyed row is clicked', () => {
+    const cmp = createTable().componentInstance;
+    let emitted: string | number | undefined;
+    cmp.rowClick.subscribe((key) => (emitted = key));
+
+    cmp.onRowClick({ cells: [], sortValues: [], key: 42 });
+    expect(emitted).toBe(42);
+  });
+
+  it('does not emit when a keyless row is clicked', () => {
+    const cmp = createTable().componentInstance;
+    let called = false;
+    cmp.rowClick.subscribe(() => (called = true));
+
+    cmp.onRowClick({ cells: [], sortValues: [] });
+    expect(called).toBe(false);
+  });
+});
+
+describe('buildTable', () => {
+  const COLUMNS: ReadonlyArray<ColumnSpec<{ id: number; name: string }>> = [
+    { header: HEADERS[0], cell: (r) => textCell(r.name), sortValue: (r) => r.name },
+  ];
+
+  it('sets row.key when keyOf is provided', () => {
+    const { tableRows } = buildTable(COLUMNS, [{ id: 7, name: 'a' }], (r) => r.id);
+    expect(tableRows[0].key).toBe(7);
+  });
+
+  it('leaves row.key undefined without keyOf', () => {
+    const { tableRows } = buildTable(COLUMNS, [{ id: 7, name: 'a' }]);
+    expect(tableRows[0].key).toBeUndefined();
   });
 });

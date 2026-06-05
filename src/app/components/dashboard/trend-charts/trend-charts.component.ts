@@ -7,6 +7,7 @@ import {
   buildLineChart,
   buildStageAreaChart,
   buildThroughputBarChart,
+  buildTypeColorMap,
   type MetricsChartOptions,
 } from '../../../services/metrics/metrics-chart.util';
 import { MetricChartComponent } from '../metric-chart/metric-chart.component';
@@ -43,17 +44,29 @@ export class TrendChartsComponent {
 
   readonly hasData = computed<boolean>(() => this.timing().length > 0);
 
+  /**
+   * Mapa de color compartido por los tres gráficos por tipo (evolución, p95 y
+   * throughput), construido sobre la unión de tipos de ambas series para que un
+   * mismo tipo conserve su color entre ellos y no haya colisiones intra-gráfico.
+   */
+  private readonly colorFor = computed<(type: string) => string>(() =>
+    buildTypeColorMap([
+      ...this.timing().map((point) => point.job_type),
+      ...this.throughput().map((bucket) => bucket.job_type),
+    ]),
+  );
+
   readonly evolutionChart = computed<MetricsChartOptions>(() =>
-    buildLineChart(this.timing(), 'avg_total_s', 'secs'),
+    buildLineChart(this.timing(), 'avg_total_s', 'secs', undefined, this.colorFor()),
   );
   readonly throughputChart = computed<MetricsChartOptions>(() =>
-    buildThroughputBarChart(this.throughput()),
+    buildThroughputBarChart(this.throughput(), undefined, this.colorFor()),
   );
   readonly stageChart = computed<MetricsChartOptions>(() =>
     buildStageAreaChart(this.timing(), this.effectiveType()),
   );
   readonly p95Chart = computed<MetricsChartOptions>(() =>
-    buildLineChart(this.timing(), 'p95_total_s', 'secs'),
+    buildLineChart(this.timing(), 'p95_total_s', 'secs', undefined, this.colorFor()),
   );
 
   onStageTypeChange(event: Event): void {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 
 import type { JobTypeSummary } from '../../../models/metrics/metrics.models';
 import { ago, pct, secs } from '../../../services/metrics/metrics-format.util';
@@ -85,12 +85,22 @@ const COLUMNS: ReadonlyArray<ColumnSpec<JobTypeSummary>> = [
       [rows]="table().tableRows"
       [initialSort]="initialSort"
       emptyText="aún no hay trabajos registrados"
+      (rowClick)="onRowClick($event)"
     />
   `,
 })
 export class JobTypeSummaryTableComponent {
   readonly summary = input.required<readonly JobTypeSummary[]>();
+
+  /** Emite el `job_type` de la fila clickeada (drill-down hacia los trabajos). */
+  readonly typeClick = output<string>();
+
   readonly initialSort = INITIAL_SORT;
 
-  readonly table = computed(() => buildTable(COLUMNS, this.summary()));
+  // `keyOf` = job_type → la fila es clickeable y reemite ese tipo.
+  readonly table = computed(() => buildTable(COLUMNS, this.summary(), (row) => row.job_type));
+
+  onRowClick(key: string | number): void {
+    this.typeClick.emit(String(key));
+  }
 }

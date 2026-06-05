@@ -1,0 +1,95 @@
+// El diálogo se monta en el overlay del CDK (fuera del :host del dashboard), así
+// que NO hereda las variables --metric-*; los colores de estado van explícitos.
+:host {
+  display: block;
+}
+
+.jd__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jd__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jd__pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.jd__pill--success {
+  color: #2e9b51;
+  background: #e6f4ec;
+}
+
+.jd__pill--error {
+  color: #e8702a;
+  background: #fdeee5;
+}
+
+.jd__pill--dlq {
+  color: #fff;
+  background: #d23b4e;
+}
+
+.jd__pill--requeued {
+  color: #b5892a;
+  background: #f7efdc;
+}
+
+.jd__pill--skipped {
+  color: #6b7280;
+  background: #eceef0;
+}
+
+.jd__grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+
+  dt {
+    align-self: center;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface, #1f1f1f);
+    word-break: break-word;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.jd__subtitle {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.jd__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: #fdeee5;
+  color: #d23b4e;
+  font-size: 12px;
+  word-break: break-word;
+
+  mat-icon {
+    flex: 0 0 auto;
+  }
+}

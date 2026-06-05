@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
 import type { HeaderDef, SortDir, SortState, TableRow } from './sortable-table.models';
 
@@ -19,6 +19,9 @@ export class SortableTableComponent {
   readonly rows = input.required<readonly TableRow[]>();
   readonly initialSort = input<SortState | null>(null);
   readonly emptyText = input<string>('Sin datos');
+
+  /** Emite la `key` de la fila clickeada (solo en filas con identidad). */
+  readonly rowClick = output<string | number>();
 
   private readonly userSortKey = signal<string | null>(null);
   private readonly userSortDir = signal<SortDir | null>(null);
@@ -65,6 +68,12 @@ export class SortableTableComponent {
       return '';
     }
     return this.activeDir() === 'desc' ? ' ▼' : ' ▲';
+  }
+
+  onRowClick(row: TableRow): void {
+    if (row.key !== undefined) {
+      this.rowClick.emit(row.key);
+    }
   }
 
   onHeaderClick(header: HeaderDef): void {
