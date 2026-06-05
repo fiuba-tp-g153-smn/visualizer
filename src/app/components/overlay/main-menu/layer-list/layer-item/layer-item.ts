@@ -597,7 +597,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Alterna la expansión de los controles de corridas ECMWF
    */
   toggleForecastsExpansion(): void {
-    this.isForecastsExpanded.set(!this.isForecastsExpanded());
+    const newExpanded = !this.isForecastsExpanded();
+    this.isForecastsExpanded.set(newExpanded);
+    if (newExpanded) {
+      this.expandedForecastRuns.set(new Set(this.selectedForecastTimestamps()));
+    }
   }
 
   toggleForecastRunExpansion(forecastTs: string): void {
@@ -982,11 +986,23 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Toggles a forecast run (activate/deactivate)
    */
   onForecastToggle(forecastTs: string): void {
+    const wasSelected = this.isForecastSelected(forecastTs);
+
     if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
       this.controlService.toggleWrfForecast(this.layer.id, forecastTs);
-      return;
+    } else {
+      this.controlService.toggleEcmwfTpForecast(this.layer.id, forecastTs);
     }
-    this.controlService.toggleEcmwfTpForecast(this.layer.id, forecastTs);
+
+    this.expandedForecastRuns.update((prev) => {
+      const next = new Set(prev);
+      if (wasSelected) {
+        next.delete(forecastTs);
+      } else if (this.isForecastsExpanded()) {
+        next.add(forecastTs);
+      }
+      return next;
+    });
   }
 
   /**
@@ -1084,15 +1100,22 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         renderId,
         nextVisible,
       );
-      return;
+    } else {
+      this.controlService.setEcmwfTpForecastRenderVisible(
+        this.layer.id,
+        forecastTs,
+        renderId,
+        nextVisible,
+      );
     }
 
-    this.controlService.setEcmwfTpForecastRenderVisible(
-      this.layer.id,
-      forecastTs,
-      renderId,
-      nextVisible,
-    );
+    if (!nextVisible && this.isForecastSelected(forecastTs)) {
+      const allRenderIds = [PRIMARY_RENDER_ID, ...this.getForecastRenders().map((r) => r.id)];
+      const allHidden = allRenderIds.every((id) => !this.getForecastRenderVisible(forecastTs, id));
+      if (allHidden) {
+        this.onForecastToggle(forecastTs);
+      }
+    }
   }
 
   getForecastRenderOpacity(forecastTs: string, renderId: string): number {
@@ -1189,6 +1212,22 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   hasScale(): boolean {
     return this.layer.scale !== undefined;
   }
+
+  /**
+   * True when the layer has a primary tile visible for at least one selected forecast run.
+   * For non-forecast layers this is always true. When false, the scale button is disabled.
+   */
+  isPrimaryRenderActiveForAnyForecast = computed((): boolean => {
+    if (
+      this.layer.type !== LayerType.TILE ||
+      (this.layer.category !== LayerCategory.ECMWF_TP && this.layer.category !== LayerCategory.WRF)
+    ) {
+      return true;
+    }
+    const selected = this.selectedForecastTimestamps();
+    if (selected.length === 0) return false;
+    return selected.some((ts) => this.getForecastRenderVisible(ts, PRIMARY_RENDER_ID));
+  });
 
   isScaleSelected(): boolean {
     return this.scaleTools.enabled() && this.scaleTools.isLayerSelected(this.layer.id);

@@ -41,6 +41,12 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
         id: 'ecmwf-mslp-isobars',
         buildUrl: buildEcmwfMslpGeojsonUrl,
         buildPointQueryUrl: buildEcmwfMslpPointQueryUrl,
+        pointQuery: {
+          variable: 'pressure_hpa',
+          name: 'Presión a nivel del mar',
+          unit: 'hPa',
+          scaleRange: { min: 950, max: 1050, totalSteps: 100 },
+        },
         valueProperty: 'pressure_hpa',
         styleFor: isobarStyleFor,
         labelFor: isobarLabelFor,

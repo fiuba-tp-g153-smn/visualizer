@@ -61,12 +61,15 @@ export class ScaleToolPanelComponent {
   }
 
   get verticalLabel(): string {
-    return `${this.entry.layerName} (${getDisplayUnit(this.entry.scale.unit, this.unitsSettings)})`;
+    const unit = getDisplayUnit(this.entry.scale.unit, this.unitsSettings);
+    return unit ? `${this.entry.layerName} (${unit})` : this.entry.layerName;
   }
 
   get scaleTooltip(): string {
     const { min, max } = this.scaleRange;
-    return `${this.entry.layerName}\nRango: ${this.formatValue(min)} - ${this.formatValue(max)} ${getDisplayUnit(this.entry.scale.unit, this.unitsSettings)}`;
+    const unit = getDisplayUnit(this.entry.scale.unit, this.unitsSettings);
+    const range = `${this.formatValue(min)} - ${this.formatValue(max)}${unit ? ` ${unit}` : ''}`;
+    return `${this.entry.layerName}\nRango: ${range}`;
   }
 
   get scaleRange(): { min: number; max: number } {
@@ -319,7 +322,7 @@ export class ScaleToolPanelComponent {
   private formatSpecialPointLabel(value: number, label?: string): string {
     const displayUnit = getDisplayUnit(this.entry.scale.unit, this.unitsSettings);
     const formattedValue = this.formatValue(value);
-    const valueWithUnit = `${formattedValue} ${displayUnit}`;
+    const valueWithUnit = displayUnit ? `${formattedValue} ${displayUnit}` : formattedValue;
 
     if (!label) {
       return valueWithUnit;

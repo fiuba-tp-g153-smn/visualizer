@@ -256,7 +256,7 @@ export const IGN_WMS_OTHER_SUBGROUP: LayerSubgroup = {
       id: 'ign-linea-de-transmision-electrica',
       name: 'Línea de transmisión eléctrica',
       description:
-        ' Sistema de cableado compuesto por torres y cables que transmite o distribuye energía eléctrica.',
+        'Sistema de cableado compuesto por torres y cables que transmite o distribuye energía eléctrica.',
       wmsLayerName: 'ign:lineas_de_energia_AT030',
       ...IGN_WMS_OTHER_DEFAULTS,
     },
