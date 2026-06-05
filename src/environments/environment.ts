@@ -11,6 +11,7 @@ const envFallback = {
   SMN_API_PROMPT_FOR_TOKEN: 'true',
   TILE_FORMAT: 'webp',
   DOCS_URL: '',
+  METRICS_SERVICE_BASE_URL: 'http://localhost:6020',
 };
 
 export const environment = {
@@ -45,4 +46,10 @@ export const environment = {
       : envFallback.SMN_API_PROMPT_FOR_TOKEN !== 'false',
   },
   docsUrl: envDefined ? $ENV.DOCS_URL : envFallback.DOCS_URL,
+  metricsService: {
+    // tiles-processor backoffice metrics API (consumed by the dashboard page).
+    baseUrl: envDefined
+      ? $ENV.METRICS_SERVICE_BASE_URL || envFallback.METRICS_SERVICE_BASE_URL
+      : envFallback.METRICS_SERVICE_BASE_URL,
+  },
 };

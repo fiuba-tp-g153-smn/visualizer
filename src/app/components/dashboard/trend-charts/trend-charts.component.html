@@ -1,0 +1,68 @@
+<div class="charts">
+  <div class="cell">
+    <div class="cell__head">
+      <span class="cell__t">Evolución de tiempos</span>
+      <mat-icon
+        class="cell__info"
+        matTooltip="Tiempo total promedio (descarga + procesamiento) por tipo de trabajo en cada intervalo."
+        matTooltipPosition="above"
+        >info_outline</mat-icon
+      >
+    </div>
+    <div class="cell__sub">tiempo total promedio por tipo de trabajo</div>
+    <div class="cell__box"><app-metric-chart [options]="evolutionChart()" /></div>
+  </div>
+
+  <div class="cell">
+    <div class="cell__head">
+      <span class="cell__t">Throughput</span>
+      <mat-icon
+        class="cell__info"
+        matTooltip="Cantidad de trabajos finalizados por intervalo, apilados por tipo de trabajo (incluye todos los resultados)."
+        matTooltipPosition="above"
+        >info_outline</mat-icon
+      >
+    </div>
+    <div class="cell__sub">trabajos finalizados por intervalo (apilado)</div>
+    <div class="cell__box"><app-metric-chart [options]="throughputChart()" /></div>
+  </div>
+
+  <div class="cell">
+    <div class="cell__head">
+      <span class="cell__t">Desglose por etapa</span>
+      <mat-icon
+        class="cell__info"
+        matTooltip="Segundos promedio en cada etapa del pipeline (georref., COG, teselado, subida, etc.) para el tipo de trabajo seleccionado."
+        matTooltipPosition="above"
+        >info_outline</mat-icon
+      >
+    </div>
+    <div class="cell__sub">
+      segundos promedio por etapa ·
+      <select class="cell__select" [value]="effectiveType()" (change)="onStageTypeChange($event)">
+        @for (jobType of jobTypes(); track jobType) {
+          <option [value]="jobType">{{ jobType }}</option>
+        }
+      </select>
+    </div>
+    <div class="cell__box"><app-metric-chart [options]="stageChart()" /></div>
+  </div>
+
+  <div class="cell">
+    <div class="cell__head">
+      <span class="cell__t">Latencia p95</span>
+      <mat-icon
+        class="cell__info"
+        matTooltip="Percentil 95 del tiempo total por tipo: detecta regresiones de cola (los peores casos) que el promedio oculta."
+        matTooltipPosition="above"
+        >info_outline</mat-icon
+      >
+    </div>
+    <div class="cell__sub">tiempo total p95 por tipo</div>
+    <div class="cell__box"><app-metric-chart [options]="p95Chart()" /></div>
+  </div>
+</div>
+
+@if (!hasData()) {
+  <div class="note">Aún no hay trabajos exitosos en esta ventana.</div>
+}

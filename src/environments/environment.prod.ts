@@ -22,4 +22,7 @@ export const environment = {
     promptForToken: $ENV.SMN_API_PROMPT_FOR_TOKEN !== 'false',
   },
   docsUrl: $ENV.DOCS_URL,
+  metricsService: {
+    baseUrl: $ENV.METRICS_SERVICE_BASE_URL,
+  },
 };
