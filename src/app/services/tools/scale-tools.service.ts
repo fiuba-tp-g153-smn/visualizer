@@ -1,6 +1,16 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 
-import { Layer, LayerControls, LayerScale, ScaleType } from '../../models';
+import {
+  EcmwfTpLayerControls,
+  Layer,
+  LayerCategory,
+  LayerControls,
+  LayerScale,
+  LayerType,
+  ScaleType,
+  WrfLayerControls,
+} from '../../models';
+import { PRIMARY_RENDER_ID } from '../../models/layers/controls.models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayersService } from '../layers/layers.service';
@@ -51,6 +61,7 @@ export class ScaleToolsService {
     return this.controlService
       .activeLayers()
       .filter((entry): entry is ActiveLayerEntryWithScale => this.hasValidScale(entry.layer))
+      .filter(({ layer, controls }) => this.isPrimaryRenderActive(layer, controls))
       .flatMap(({ layer }) => {
         const scaleGroupKey = this.getScaleGroupKeyForLayer(layer);
         if (seenScaleGroupKeys.has(scaleGroupKey)) {
@@ -224,6 +235,29 @@ export class ScaleToolsService {
 
   clearSelection(): void {
     this.selectedLayerIdsOrdered.set([]);
+  }
+
+  /**
+   * Returns false for WRF/ECMWF layers where no selected forecast run has the
+   * primary tile visible (e.g. only secondary renders like isobars are shown).
+   */
+  private isPrimaryRenderActive(layer: Layer, controls: LayerControls): boolean {
+    if (layer.type !== LayerType.TILE) return true;
+    if (
+      layer.category !== LayerCategory.ECMWF_TP &&
+      layer.category !== LayerCategory.WRF
+    ) {
+      return true;
+    }
+
+    const forecastControls = (controls as EcmwfTpLayerControls | WrfLayerControls).forecast;
+    const selected = forecastControls.selectedForecastTimestamps;
+    if (selected.length === 0) return false;
+
+    return selected.some((ts) => {
+      const renderControl = forecastControls.renderControls[ts];
+      return renderControl ? renderControl.selectedRenderIds.includes(PRIMARY_RENDER_ID) : true;
+    });
   }
 
   private hasValidScale(layer: Layer): layer is LayerWithScale {

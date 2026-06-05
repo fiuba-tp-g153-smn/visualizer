@@ -31,7 +31,7 @@
       }
       <div class="header-actions">
         @if (isActive()) {
-          @if (hasScale()) {
+          @if (hasScale() && isPrimaryRenderActiveForAnyForecast()) {
             <button
               mat-icon-button
               (click)="toggleScale()"
@@ -68,7 +68,7 @@
 
       <!-- Botones de control (derecha) -->
       <div class="header-actions">
-        @if (hasScale()) {
+        @if (hasScale() && isPrimaryRenderActiveForAnyForecast()) {
           <button
             mat-icon-button
             (click)="toggleScale()"
@@ -292,6 +292,7 @@
                           [checked]="isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)"
                           (change)="onForecastRenderToggle(group.forecastTs, PRIMARY_RENDER_ID)"
                           [disabled]="!isForecastSelected(group.forecastTs)"
+                          [matTooltip]="layerShortName()"
                           class="forecast-render-checkbox"
                         >
                           <span class="forecast-render-name">{{ layerShortName() }}</span>
@@ -333,6 +334,7 @@
                             [checked]="isForecastRenderSelected(group.forecastTs, render.id)"
                             (change)="onForecastRenderToggle(group.forecastTs, render.id)"
                             [disabled]="!isForecastSelected(group.forecastTs)"
+                            [matTooltip]="render.name"
                             class="forecast-render-checkbox"
                           >
                             <span class="forecast-render-name">{{ render.name }}</span>
