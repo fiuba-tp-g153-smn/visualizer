@@ -3,7 +3,7 @@
     [headers]="table().headers"
     [rows]="table().tableRows"
     [initialSort]="initialSort"
-    emptyText="aún no hay trabajos registrados"
+    emptyText="Aún no hay trabajos registrados."
     (rowClick)="onRowClick($event)"
   />
 </div>
@@ -13,5 +13,5 @@
     cargar 50 más
   </button>
   <span class="jobs__count">{{ jobs().length }} cargados</span>
-  <span class="jobs__hint">· el orden aplica a las filas cargadas</span>
+  <span class="jobs__hint">(el orden aplica a las filas cargadas)</span>
 </div>

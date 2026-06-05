@@ -3,15 +3,29 @@
     <button mat-icon-button (click)="goBack()" aria-label="Volver" matTooltip="Ir al mapa">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <span class="dash__title">Panel de rendimiento</span>
+    <span class="dash__brand">
+      <span
+        class="dash__status"
+        [class.dash__status--up]="online() === true"
+        [class.dash__status--down]="online() === false"
+        [matTooltip]="
+          online() === false
+            ? 'Servicio de métricas sin conexión'
+            : online() === true
+              ? 'Servicio de métricas operativo'
+              : 'Conectando…'
+        "
+      ></span>
+      <span class="dash__title">Panel de rendimiento y estado del procesamiento</span>
+    </span>
     <span class="dash__spacer"></span>
 
     <label class="dash__ctl"
       >ventana
       <select [value]="windowHours()" (change)="onWindowChange($event)">
-        <option value="0">todo</option>
         <option value="24">24h</option>
         <option value="168">7d</option>
+        <option value="0">todo</option>
       </select>
     </label>
     <label class="dash__ctl"
@@ -22,7 +36,7 @@
       </select>
     </label>
     <label class="dash__ctl"
-      >refresh
+      >Actualización cada
       <select [value]="refreshSecs()" (change)="onRefreshChange($event)">
         <option value="0">no</option>
         <option value="10">10s</option>
@@ -30,15 +44,19 @@
         <option value="60">60s</option>
       </select>
     </label>
-    <button mat-stroked-button class="dash__refresh" (click)="refreshNow()" [disabled]="loading()">
-      @if (loading()) {
-        <mat-spinner diameter="16" />
-      } @else {
-        <mat-icon>refresh</mat-icon>
-      }
-      actualizar
-    </button>
-    <span class="dash__updated">actualizado {{ updatedAt() }}</span>
+    <div class="dash__refresh-wrap">
+      <button mat-stroked-button class="dash__refresh" (click)="refreshNow()" [disabled]="loading()">
+        <span class="dash__refresh-glyph">
+          @if (loading()) {
+            <mat-spinner diameter="16" />
+          } @else {
+            <mat-icon>refresh</mat-icon>
+          }
+        </span>
+        Actualizar
+      </button>
+      <span class="dash__updated">Actualizado {{ updatedAt() }}</span>
+    </div>
   </header>
 
   <main class="dash__body">
@@ -65,7 +83,7 @@
 
       <app-metric-panel
         title="En vivo · cola y en proceso"
-        tip="Estado en tiempo real: profundidad de la cola de trabajo y de la cola de descartes (RabbitMQ), y los trabajos que se están procesando ahora mismo (rastreador de progreso). Muestra 'n/a' si RabbitMQ no responde."
+        tip="Estado en tiempo real: profundidad de la cola de trabajo y de la cola de descartes (RabbitMQ), y los trabajos que se están procesando ahora mismo (rastreador de progreso). Muestra 'N/A' si RabbitMQ no responde."
       >
         <app-live-status-panel [live]="live()" />
       </app-metric-panel>
@@ -101,7 +119,7 @@
 
       <app-metric-panel
         title="Por tipo de trabajo · tiempos y resultados"
-        tip="Estadísticas agregadas por tipo de trabajo: conteos por resultado, % de error y distribución de tiempos (prom/mín/máx/p95). Los tiempos se calculan solo sobre trabajos exitosos. Clic en una columna para ordenar; clic en una fila para filtrar los trabajos por ese tipo."
+        tip="Estadísticas agregadas por tipo de trabajo: conteos por resultado, % de error y distribución de tiempos (prom/mín/máx/p95). Los tiempos se calculan solo sobre trabajos exitosos. Clic en una columna para ordenar; clic en una fila para ver el desglose por etapa."
       >
         <div class="dash__scroll-x">
           <app-job-type-summary-table
@@ -112,7 +130,6 @@
       </app-metric-panel>
 
       <app-metric-panel
-        #recentJobsPanel
         title="Trabajos recientes"
         tip="Últimos trabajos finalizados (todos los resultados), del más nuevo al más viejo. Clic en las columnas para ordenar; clic en una fila para ver el detalle; 'cargar más' trae las siguientes 50 filas."
       >

@@ -84,7 +84,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<JobTypeSummary>> = [
       [headers]="table().headers"
       [rows]="table().tableRows"
       [initialSort]="initialSort"
-      emptyText="aún no hay trabajos registrados"
+      emptyText="Aún no hay trabajos registrados."
       (rowClick)="onRowClick($event)"
     />
   `,

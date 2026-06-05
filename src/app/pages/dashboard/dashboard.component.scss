@@ -41,6 +41,29 @@
   border-bottom: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
 }
 
+.dash__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Punto de conectividad con el servicio de métricas.
+.dash__status {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mat-sys-outline, #9aa0a6); // desconocido / conectando
+}
+
+.dash__status--up {
+  background: var(--metric-success, #2e9b51); // operativo
+}
+
+.dash__status--down {
+  background: var(--metric-dlq, #d23b4e); // caído
+}
+
 .dash__title {
   font-size: 15px;
   font-weight: 600;
@@ -73,12 +96,32 @@
 
 .dash__refresh {
   white-space: nowrap;
+}
 
-  mat-spinner {
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 2px;
+// Hueco de tamaño fijo para el ícono/spinner, así el botón no cambia de ancho.
+.dash__refresh-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: middle;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
   }
+}
+
+// Apila el botón "Actualizar" y, debajo, la marca de tiempo de actualización.
+.dash__refresh-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .dash__updated {

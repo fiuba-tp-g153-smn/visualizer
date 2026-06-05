@@ -11,7 +11,7 @@ interface LiveStat {
 
 /**
  * Vista en vivo: profundidad de colas (RabbitMQ) y trabajos en proceso
- * (rastreador de progreso). Degrada a "n/a" cuando una cola no responde.
+ * (rastreador de progreso). Degrada a "N/A" cuando una cola no responde.
  */
 @Component({
   selector: 'app-live-status-panel',
@@ -26,7 +26,7 @@ export class LiveStatusPanelComponent {
   readonly stats = computed<LiveStat[]>(() => {
     const queues = this.live()?.queues;
     const fmtQueue = (value: number | null | undefined): string =>
-      value == null ? 'n/a' : String(value);
+      value == null ? 'N/A' : String(value);
     return [
       { key: 'cola de trabajo', value: fmtQueue(queues?.work), sub: 'en espera' },
       { key: 'descartes (DLQ)', value: fmtQueue(queues?.dlq), sub: 'mensajes' },
