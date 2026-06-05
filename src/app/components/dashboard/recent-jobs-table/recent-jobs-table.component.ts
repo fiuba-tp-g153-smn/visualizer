@@ -1,9 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 
 import type { RecentJob } from '../../../models/metrics/metrics.models';
 import { ago, secs } from '../../../services/metrics/metrics-format.util';
 import { outcomeLabel, prod } from '../../../services/metrics/metrics-labels.constants';
+import { JobDetailDialogComponent } from '../job-detail-dialog/job-detail-dialog.component';
 import { stageLegend } from '../metrics-cells.util';
 import { SortableTableComponent } from '../sortable-table/sortable-table.component';
 import {
@@ -91,7 +100,19 @@ export class RecentJobsTableComponent {
   readonly hasMore = input<boolean>(false);
   readonly loadMore = output<void>();
 
+  private readonly dialog = inject(MatDialog);
+
   readonly initialSort = INITIAL_SORT;
 
-  readonly table = computed(() => buildTable(COLUMNS, this.jobs()));
+  // `keyOf` = id estable → la fila ordenada se puede mapear de vuelta al trabajo.
+  readonly table = computed(() => buildTable(COLUMNS, this.jobs(), (job) => job.id));
+
+  private readonly byId = computed(() => new Map(this.jobs().map((job) => [job.id, job])));
+
+  onRowClick(key: string | number): void {
+    const job = this.byId().get(Number(key));
+    if (job) {
+      this.dialog.open(JobDetailDialogComponent, { data: job, width: '560px', autoFocus: false });
+    }
+  }
 }

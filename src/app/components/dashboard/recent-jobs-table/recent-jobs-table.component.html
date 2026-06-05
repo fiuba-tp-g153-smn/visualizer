@@ -4,6 +4,7 @@
     [rows]="table().tableRows"
     [initialSort]="initialSort"
     emptyText="aún no hay trabajos registrados"
+    (rowClick)="onRowClick($event)"
   />
 </div>
 

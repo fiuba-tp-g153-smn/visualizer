@@ -47,6 +47,8 @@ export interface Cell {
 export interface TableRow {
   readonly cells: readonly Cell[];
   readonly sortValues: ReadonlyArray<number | string | null>;
+  /** Identidad opcional del dominio: habilita el click de fila (ver `buildTable`). */
+  readonly key?: string | number;
 }
 
 export interface SortState {
@@ -88,16 +90,22 @@ export function errorCell(message: string): Cell {
   return { kind: 'error', message };
 }
 
-/** Aplana especificaciones de columna + filas del dominio a la forma de la tabla. */
+/**
+ * Aplana especificaciones de columna + filas del dominio a la forma de la tabla.
+ * Si se pasa `keyOf`, cada fila lleva una `key` estable del dominio que la tabla
+ * emite al hacer click (permite mapear la fila ordenada de vuelta a su objeto).
+ */
 export function buildTable<T>(
   specs: ReadonlyArray<ColumnSpec<T>>,
   rows: readonly T[],
+  keyOf?: (row: T, index: number) => string | number,
 ): { headers: HeaderDef[]; tableRows: TableRow[] } {
   return {
     headers: specs.map((spec) => spec.header),
-    tableRows: rows.map((row) => ({
+    tableRows: rows.map((row, index) => ({
       cells: specs.map((spec) => spec.cell(row)),
       sortValues: specs.map((spec) => spec.sortValue(row)),
+      ...(keyOf ? { key: keyOf(row, index) } : {}),
     })),
   };
 }
