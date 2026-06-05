@@ -38,6 +38,7 @@ import {
   WrfTileLayer,
   WrfTileLayerConfig,
 } from '../../models';
+import { PRIMARY_RENDER_ID } from '../../models/layers/controls.models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayerConfigService } from '../layers/layer-config.service';
@@ -211,16 +212,18 @@ export class PointQueryViewerService {
           const forecastDate = parseEcmwfTimestamp(forecastTs);
           const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
 
-          const entries: DisplaySourceItem[] = [
-            {
+          const entries: DisplaySourceItem[] = [];
+
+          if (this.isForecastRenderVisible(ecmwfControls, forecastTs, PRIMARY_RENDER_ID)) {
+            entries.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
               layerName: `${baseName} - corrida ${forecastLabel}`,
               forecastTs,
               layer: ecmwfLayer,
               controls: ecmwfControls,
-            },
-          ];
+            });
+          }
 
           if (
             secondaryRender?.buildPointQueryUrl &&
@@ -253,16 +256,18 @@ export class PointQueryViewerService {
           const forecastLabel = formatWrfInitTag(forecastTs);
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
 
-          const items: DisplaySourceItem[] = [
-            {
+          const items: DisplaySourceItem[] = [];
+
+          if (this.isForecastRenderVisible(wrfControls, forecastTs, PRIMARY_RENDER_ID)) {
+            items.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
               layerName: `${baseName} - corrida ${forecastLabel}`,
               forecastTs,
               layer: wrfLayer,
               controls: wrfControls,
-            },
-          ];
+            });
+          }
 
           for (const render of wrfLayer.secondaryRenders ?? []) {
             if (!render.pointQuery) {
