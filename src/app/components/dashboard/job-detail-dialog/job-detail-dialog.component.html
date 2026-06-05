@@ -18,15 +18,8 @@
     </div>
   }
 
-  @if (stages().length) {
-    <h2 class="jd__subtitle">Desglose por etapa</h2>
-    <dl class="jd__grid">
-      @for (stage of stages(); track stage.label) {
-        <dt>{{ stage.label }}</dt>
-        <dd>{{ stage.value }}</dd>
-      }
-    </dl>
-  }
+  <h2 class="jd__subtitle">Desglose por etapa</h2>
+  <app-stage-pie-chart [stages]="job.stage_timings" [networkSecs]="job.download_s" />
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">

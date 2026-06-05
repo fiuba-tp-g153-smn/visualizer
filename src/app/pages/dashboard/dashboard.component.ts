@@ -1,18 +1,18 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  ElementRef,
   computed,
   effect,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
@@ -22,6 +22,7 @@ import { MetricChartComponent } from '../../components/dashboard/metric-chart/me
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
 import { MetricStatCardsComponent } from '../../components/dashboard/metric-stat-cards/metric-stat-cards.component';
 import { RecentJobsTableComponent } from '../../components/dashboard/recent-jobs-table/recent-jobs-table.component';
+import { StagePieDialogComponent } from '../../components/dashboard/stage-pie-chart/stage-pie-dialog.component';
 import { TrendChartsComponent } from '../../components/dashboard/trend-charts/trend-charts.component';
 import type {
   Bucket,
@@ -67,6 +68,13 @@ const JOBS_PAGE = 50;
     JobTypeSummaryTableComponent,
     RecentJobsTableComponent,
   ],
+  // Tooltips instantáneos solo en el dashboard (no afecta al resto de la app).
+  providers: [
+    {
+      provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
+      useValue: { showDelay: 0, hideDelay: 0, touchendHideDelay: 1000 },
+    },
+  ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -74,6 +82,7 @@ export class DashboardComponent {
   private readonly metrics = inject(MetricsService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dialog = inject(MatDialog);
 
   // Controles
   readonly windowHours = signal<WindowHours>(24);
@@ -120,8 +129,13 @@ export class DashboardComponent {
   readonly hasLoaded = signal<boolean>(false);
   readonly firstLoad = computed<boolean>(() => this.loading() && !this.hasLoaded());
 
-  /** Panel de trabajos recientes, para hacer scroll al filtrar desde el resumen. */
-  private readonly recentJobsPanel = viewChild('recentJobsPanel', { read: ElementRef });
+  /** Conectividad con el servicio de métricas: true=operativo, false=caído, null=conectando. */
+  readonly online = computed<boolean | null>(() => {
+    if (this.errorMsg()) {
+      return false;
+    }
+    return this.hasLoaded() ? true : null;
+  });
 
   /** Gráfico de throughput de 10 min (null cuando no hay datos en el rango). */
   readonly tp10Options = computed<MetricsChartOptions | null>(() => {
@@ -182,12 +196,21 @@ export class DashboardComponent {
     void this.loadJobs(true);
   }
 
-  /** Drill-down desde el resumen: filtra los trabajos recientes por ese tipo. */
+  /** Drill-down desde el resumen: abre la torta del desglose de ese tipo. */
   onSummaryTypeClick(jobType: string): void {
-    this.typeFilter.set(jobType);
-    this.outcomeFilter.set('');
-    void this.loadJobs(true);
-    this.recentJobsPanel()?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const entry = this.summary().find((item) => item.job_type === jobType);
+    if (!entry) {
+      return;
+    }
+    this.dialog.open(StagePieDialogComponent, {
+      data: {
+        title: prod(entry.product_label ?? entry.job_type),
+        stages: entry.stages,
+        networkSecs: entry.download_s.avg,
+      },
+      width: '460px',
+      autoFocus: false,
+    });
   }
 
   onLoadMore(): void {
@@ -279,6 +302,12 @@ export class DashboardComponent {
   }
 
   private describeError(error: unknown): string {
-    return error instanceof Error ? error.message : 'No se pudieron cargar las métricas';
+    if (error instanceof HttpErrorResponse) {
+      // status 0 = inalcanzable (servicio caído / conexión rechazada / CORS).
+      return error.status === 0
+        ? 'el servicio no responde'
+        : `el servicio respondió HTTP ${error.status}`;
+    }
+    return error instanceof Error ? error.message : 'error desconocido';
   }
 }

@@ -5,7 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 
 import type { RecentJob } from '../../../models/metrics/metrics.models';
 import { secs } from '../../../services/metrics/metrics-format.util';
-import { outcomeLabel, prod, stageLabel } from '../../../services/metrics/metrics-labels.constants';
+import { outcomeLabel, prod } from '../../../services/metrics/metrics-labels.constants';
+import { StagePieChartComponent } from '../stage-pie-chart/stage-pie-chart.component';
 
 /** Fila etiqueta/valor del detalle. */
 interface DetailRow {
@@ -24,7 +25,7 @@ interface DetailRow {
   selector: 'app-job-detail-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatDialogModule, MatIconModule],
+  imports: [MatButtonModule, MatDialogModule, MatIconModule, StagePieChartComponent],
   templateUrl: './job-detail-dialog.component.html',
   styleUrl: './job-detail-dialog.component.scss',
 })
@@ -55,11 +56,4 @@ export class JobDetailDialogComponent {
     ];
   });
 
-  /** Desglose por etapa (vacío si el trabajo no registró tiempos por etapa). */
-  readonly stages = computed<DetailRow[]>(() =>
-    Object.entries(this.job.stage_timings ?? {}).map(([name, value]) => ({
-      label: stageLabel(name),
-      value: secs(value),
-    })),
-  );
 }

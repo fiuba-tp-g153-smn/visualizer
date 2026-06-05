@@ -5,6 +5,7 @@ import type {
   ApexFill,
   ApexGrid,
   ApexLegend,
+  ApexNonAxisChartSeries,
   ApexPlotOptions,
   ApexStroke,
   ApexTooltip,
@@ -41,13 +42,28 @@ export interface MetricsChartOptions {
   plotOptions: ApexPlotOptions;
 }
 
+/** Opciones para el gráfico de torta (donut) del desglose por etapa. */
+export interface StagePieOptions {
+  series: ApexNonAxisChartSeries;
+  chart: ApexChart;
+  labels: string[];
+  colors: string[];
+  legend: ApexLegend;
+  dataLabels: ApexDataLabels;
+  tooltip: ApexTooltip;
+  plotOptions: ApexPlotOptions;
+  stroke: ApexStroke;
+}
+
 const GRID_COLOR = '#e3e3e6';
 const LABEL_COLOR = '#5f6368';
 const DEFAULT_HEIGHT = 240;
+// Color de la porción "red" (tiempo de descarga), distinto de toda etapa.
+const NETWORK_COLOR = '#90a4ae';
 
 /**
  * Paleta estable y legible sobre fondo claro (la primaria de la app primero).
- * Ampliada a 20 tonos bien separados para que `buildTypeColorMap` asigne color
+ * Ampliada a 30 tonos bien separados para que `buildTypeColorMap` asigne color
  * por índice sin colisiones aun con muchos tipos de trabajo (~15-25).
  */
 const TYPE_PALETTE: readonly string[] = [
@@ -71,6 +87,16 @@ const TYPE_PALETTE: readonly string[] = [
   '#0277bd',
   '#ef6c00',
   '#9e9d24',
+  '#00acc1',
+  '#8e24aa',
+  '#43a047',
+  '#f4511e',
+  '#3949ab',
+  '#c2185b',
+  '#00897b',
+  '#f9a825',
+  '#6d4c41',
+  '#546e7a',
 ];
 
 const STAGE_COLORS: Readonly<Record<string, string>> = {
@@ -316,5 +342,49 @@ export function buildStageAreaChart(
     grid: baseGrid(),
     tooltip: baseTooltip(secsFormatter),
     plotOptions: {},
+  };
+}
+
+/**
+ * Torta (donut) del desglose por etapa de un trabajo o tipo. Cuando `includeRed`
+ * y hay tiempo de red (`networkSecs`), agrega una porción "Red" (descarga).
+ */
+export function buildStagePieChart(
+  stages: StageTimings,
+  networkSecs: number | null,
+  includeRed: boolean,
+): StagePieOptions {
+  const labels: string[] = [];
+  const series: number[] = [];
+  const colors: string[] = [];
+  for (const [name, value] of Object.entries(stages ?? {})) {
+    labels.push(stageLabel(name));
+    series.push(value);
+    colors.push(stageColor(name));
+  }
+  if (includeRed && networkSecs != null && networkSecs > 0) {
+    labels.push('Red');
+    series.push(networkSecs);
+    colors.push(NETWORK_COLOR);
+  }
+  return {
+    series,
+    chart: {
+      type: 'donut',
+      height: 280,
+      animations: { enabled: false },
+      fontFamily: 'inherit',
+    },
+    labels,
+    colors,
+    legend: baseLegend(),
+    dataLabels: {
+      enabled: true,
+      formatter: (value: string | number | number[]) => `${Math.round(Number(value))}%`,
+      style: { fontSize: '11px' },
+    },
+    tooltip: { theme: 'light', y: { formatter: secsFormatter } },
+    plotOptions: { pie: { donut: { size: '55%' } } },
+    stroke: { width: 1, colors: ['#fff'] },
   };
 }

@@ -29,8 +29,32 @@
 // Cap the pending-work list so it never blows up the page vertically.
 .live__scroll {
   max-height: 240px;
-  overflow-y: auto;
+  overflow-y: scroll; // barra de scroll siempre visible
   border-top: 1px solid var(--mat-sys-outline-variant, #ececec);
+
+  // Barra de scroll clásica (no overlay) siempre visible, para que se note que
+  // la lista es desplazable. Firefox:
+  scrollbar-width: thin;
+  scrollbar-color: var(--mat-sys-outline, #9aa0a6) var(--mat-sys-surface-container, #f3f3f5);
+
+  // Chromium / WebKit:
+  &::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--mat-sys-surface-container, #f3f3f5);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--mat-sys-outline, #9aa0a6);
+    border-radius: 6px;
+    border: 3px solid var(--mat-sys-surface-container, #f3f3f5);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--mat-sys-on-surface-variant, #5f6368);
+  }
 }
 
 .live__table {
@@ -41,13 +65,17 @@
   th {
     position: sticky;
     top: 0;
-    text-align: left;
+    text-align: center;
     padding: 7px 11px;
     font-size: 11px;
     font-weight: 600;
     color: var(--mat-sys-on-surface-variant, #5f6368);
     background: var(--mat-sys-surface-container, #f3f3f5);
     border-bottom: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+
+    &::first-letter {
+      text-transform: uppercase;
+    }
   }
 
   td {
@@ -57,12 +85,24 @@
     border-bottom: 1px solid var(--mat-sys-outline-variant, #ececec);
   }
 
+  tbody tr:hover {
+    background: var(--mat-sys-surface-container-low, #fafafa);
+  }
+
   .l {
-    text-align: left;
+    text-align: center;
   }
 
   .r {
-    text-align: right;
+    text-align: center;
+  }
+
+  // imagen y banda son identificadores: alinearlos a la izquierda. El id es
+  // largo y "centrado" se ve igual pegado a la izquierda (más el punto de
+  // estado). Estado y "desde" quedan centrados.
+  th:nth-child(-n + 2),
+  td:nth-child(-n + 2) {
+    text-align: left;
   }
 
   .muted {

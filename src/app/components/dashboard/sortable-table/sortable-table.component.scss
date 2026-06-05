@@ -23,6 +23,11 @@
   user-select: none;
 }
 
+// Encabezados de columna con la inicial en mayúscula (las etiquetas van en minúscula).
+.stable__th::first-letter {
+  text-transform: uppercase;
+}
+
 .stable__th--sortable {
   cursor: pointer;
 

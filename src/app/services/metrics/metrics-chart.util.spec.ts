@@ -4,6 +4,7 @@ import type { ThroughputBucket, TimingSeriesPoint } from '../../models/metrics/m
 import {
   buildLineChart,
   buildStageAreaChart,
+  buildStagePieChart,
   buildThroughputBarChart,
   buildTypeColorMap,
   pivot,
@@ -70,6 +71,30 @@ describe('buildLineChart', () => {
     expect(opts.chart.stacked).toBe(false);
     expect(opts.xaxis.categories).toHaveLength(2);
     expect(opts.series).toHaveLength(2);
+  });
+});
+
+describe('buildStagePieChart', () => {
+  const STAGES = { georef: 3, tiling: 4, upload: 2 };
+
+  it('renders a donut with one slice per stage (Spanish labels, no red when off)', () => {
+    const opts = buildStagePieChart(STAGES, 1.5, false);
+    expect(opts.chart.type).toBe('donut');
+    expect(opts.labels).toEqual(['Georref.', 'Teselado', 'Subida']);
+    expect(opts.series).toEqual([3, 4, 2]);
+    expect(opts.labels).not.toContain('Red');
+  });
+
+  it('appends a "Red" slice with the network seconds when includeRed and networkSecs > 0', () => {
+    const opts = buildStagePieChart(STAGES, 1.5, true);
+    expect(opts.labels.at(-1)).toBe('Red');
+    expect(opts.series.at(-1)).toBe(1.5);
+    expect(opts.colors).toHaveLength(opts.series.length);
+  });
+
+  it('omits the red slice when networkSecs is null or zero', () => {
+    expect(buildStagePieChart(STAGES, null, true).labels).not.toContain('Red');
+    expect(buildStagePieChart(STAGES, 0, true).labels).not.toContain('Red');
   });
 });
 
