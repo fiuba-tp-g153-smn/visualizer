@@ -5,11 +5,13 @@ import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
 import { STORAGE_KEYS } from '../../constants';
 import {
+  EcmwfTpLayerControls,
   EcmwfTpTileLayerConfig,
   LayerCategory,
   LayerConfig,
   LayerType,
   TilesetEntry,
+  WrfLayerControls,
 } from '../../models';
 
 describe('LayerControlService — weather stations no-data toggle', () => {
@@ -179,5 +181,147 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
     expect(tilesetsAfterReactivation?.length).toBeGreaterThan(0);
     // The seeded forecast is the most recent one, so its periods must surface.
     expect(tilesetsAfterReactivation?.map((t) => t.id)).toEqual(['P1', 'P2', 'P3']);
+  });
+});
+
+describe('LayerControlService — forecast secondary render controls', () => {
+  const ECMWF_LAYER_ID = 'ecmwf/total-precipitation';
+  const WRF_LAYER_ID = 'wrf/Precipitacion1h';
+  const ECMWF_FORECAST = '20260520T0000Z';
+  const WRF_FORECAST = '20260430_060000';
+
+  function buildConfigServiceStub() {
+    const configMap = new Map<string, LayerConfig>();
+    const configsSignal = signal<Map<string, LayerConfig>>(configMap);
+
+    const publish = () => configsSignal.set(new Map(configMap));
+
+    return {
+      configs: configsSignal,
+      getConfig: (id: string) => configMap.get(id),
+      hasConfig: (id: string) => configMap.has(id),
+      getAvailableTilesets: (id: string) => {
+        const c = configMap.get(id);
+        return c?.type === LayerType.TILE ? c.availableTilesets : undefined;
+      },
+      calculateTimeIndexForRange: () => 0,
+      updateEcmwfTpSelectedForecasts: (layerId: string, selected: string[]) => {
+        const config = configMap.get(layerId) as EcmwfTpTileLayerConfig | undefined;
+        if (!config || config.category !== LayerCategory.ECMWF_TP) return undefined;
+        const periodSet = new Set<string>();
+        for (const ts of selected) {
+          for (const p of config.periodsByForecast[ts] ?? []) periodSet.add(p);
+        }
+        const availableTilesets: TilesetEntry[] = [...periodSet]
+          .sort()
+          .map((id) => ({ id, time: new Date(0) }));
+        const next = { ...config, availableTilesets };
+        configMap.set(layerId, next);
+        publish();
+        return next;
+      },
+      updateWrfSelectedForecasts: (layerId: string) => {
+        const config = configMap.get(layerId);
+        return config?.type === LayerType.TILE && config.category === LayerCategory.WRF
+          ? config
+          : undefined;
+      },
+      seedConfig: (id: string, config: LayerConfig) => {
+        configMap.set(id, config);
+        publish();
+      },
+    };
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('stores ECMWF secondary render controls by forecast index and hydrates them back', () => {
+    const configStub = buildConfigServiceStub();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [{ provide: LayerConfigService, useValue: configStub }],
+    });
+
+    configStub.seedConfig(ECMWF_LAYER_ID, {
+      layerId: ECMWF_LAYER_ID,
+      type: LayerType.TILE,
+      category: LayerCategory.ECMWF_TP,
+      availableForecasts: [ECMWF_FORECAST],
+      periodsByForecast: { [ECMWF_FORECAST]: ['P1'] },
+      forecastsByPeriod: { P1: [ECMWF_FORECAST] },
+      availableTilesets: [{ id: 'P1', time: new Date(0) }],
+    } satisfies EcmwfTpTileLayerConfig);
+
+    const service = TestBed.inject(LayerControlService);
+    service.activateLayer(ECMWF_LAYER_ID);
+    service.setEcmwfTpForecastSecondaryRenderVisible(
+      ECMWF_LAYER_ID,
+      ECMWF_FORECAST,
+      'ecmwf-mslp-isobars',
+      false,
+    );
+    service.setEcmwfTpForecastSecondaryRenderOpacity(
+      ECMWF_LAYER_ID,
+      ECMWF_FORECAST,
+      'ecmwf-mslp-isobars',
+      0.35,
+    );
+    TestBed.flushEffects();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [{ provide: LayerConfigService, useValue: configStub }],
+    });
+
+    const reloaded = TestBed.inject(LayerControlService);
+    TestBed.flushEffects();
+    const controls = reloaded.getControls(ECMWF_LAYER_ID) as EcmwfTpLayerControls;
+
+    expect(controls.forecast.renderControls[ECMWF_FORECAST]).toEqual({
+      selectedRenderIds: [],
+      renderOpacity: { 'ecmwf-mslp-isobars': 0.35 },
+    });
+  });
+
+  it('initializes WRF forecast secondary render controls and persists raw forecast keys', () => {
+    const configStub = buildConfigServiceStub();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [{ provide: LayerConfigService, useValue: configStub }],
+    });
+
+    configStub.seedConfig(WRF_LAYER_ID, {
+      layerId: WRF_LAYER_ID,
+      type: LayerType.TILE,
+      category: LayerCategory.WRF,
+      availableForecasts: [WRF_FORECAST],
+      periodsByForecast: { [WRF_FORECAST]: ['F001'] },
+      forecastsByPeriod: { STEP_1: [WRF_FORECAST] },
+      availableTilesets: [{ id: 'STEP_1', time: new Date(0) }],
+      layersByStep: { [`${WRF_FORECAST}/F001`]: ['barbs', 'slp'] },
+    });
+
+    const service = TestBed.inject(LayerControlService);
+    service.activateLayer(WRF_LAYER_ID);
+    service.setWrfForecastSecondaryRenderVisible(
+      WRF_LAYER_ID,
+      WRF_FORECAST,
+      'wrf-Precipitacion1h-barbs',
+      false,
+    );
+    service.setWrfForecastSecondaryRenderOpacity(
+      WRF_LAYER_ID,
+      WRF_FORECAST,
+      'wrf-Precipitacion1h-slp',
+      0.6,
+    );
+
+    const controls = service.getControls(WRF_LAYER_ID) as WrfLayerControls;
+    expect(controls.forecast.renderControls[WRF_FORECAST]).toEqual({
+      selectedRenderIds: ['wrf-Precipitacion1h-slp'],
+      renderOpacity: { 'wrf-Precipitacion1h-slp': 0.6 },
+    });
   });
 });

@@ -274,6 +274,99 @@
       display: flex;
       flex-direction: column;
 
+      .forecast-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .forecast-run-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .forecast-run-checkbox {
+          flex-shrink: 0;
+
+          ::ng-deep {
+            .mdc-form-field {
+              font-size: 0.875rem;
+            }
+          }
+        }
+
+        .control-slider {
+          flex: 1;
+          min-width: 0;
+
+          &:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+          }
+        }
+
+        .control-value {
+          min-width: 40px;
+          text-align: center;
+          font-size: 0.875rem;
+          color: var(--mat-sys-on-surface-variant);
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+
+        .expand-btn {
+          color: var(--mat-sys-on-surface-variant);
+          flex-shrink: 0;
+
+          &:hover {
+            color: var(--mat-sys-primary);
+          }
+        }
+      }
+
+      .forecast-renders {
+        display: flex;
+        flex-direction: column;
+        padding-left: 16px;
+        border-left: 2px solid var(--mat-sys-outline-variant);
+        margin-left: 12px;
+        margin-bottom: 4px;
+
+        .forecast-render-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .forecast-render-checkbox {
+            flex-shrink: 0;
+
+            ::ng-deep {
+              .mdc-form-field {
+                font-size: 0.875rem;
+              }
+            }
+          }
+
+          .control-slider {
+            flex: 1;
+            min-width: 0;
+
+            &:disabled {
+              opacity: 0.4;
+              pointer-events: none;
+            }
+          }
+
+          .control-value {
+            min-width: 40px;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--mat-sys-on-surface-variant);
+            white-space: nowrap;
+            flex-shrink: 0;
+          }
+        }
+      }
+
       .forecast-item {
         display: flex;
         align-items: center;

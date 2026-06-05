@@ -20,7 +20,9 @@ import {
   VectorLayerControls,
   WrfLayerControls,
   WrfTileLayer,
-  WrfTileLayerConfig,
+  ForecastRenderControls,
+  ForecastRenderControlsByForecast,
+  PRIMARY_RENDER_ID,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -67,6 +69,7 @@ interface PersistedWeatherStationsSharedControlsState {
 interface PersistedEcmwfForecast {
   selectedForecastIndices: number[];
   forecastOpacityByIndex: Record<number, number>;
+  secondaryRenderControlsByIndex: Record<number, ForecastRenderControls>;
 }
 
 type PersistedEcmwfTpLayerControls = Omit<EcmwfTpLayerControls, 'forecast'> & {
@@ -103,16 +106,18 @@ export class LayerControlService {
   private readonly engineService = inject(PlaybackEngineService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
-  private readonly weatherStationsSharedState = signal<PersistedWeatherStationsSharedControlsState>({
-    opacity: 1,
-    zIndex: null,
-    scaleVisible: false,
-    temporalMode: WeatherStationsTemporalMode.LATEST,
-    maxPastHours: DEFAULT_WEATHER_STATIONS_MAX_PAST_HOURS,
-    imageCount: 6,
-    selectedTilesetId: null,
-    showStationsWithoutData: true,
-  });
+  private readonly weatherStationsSharedState = signal<PersistedWeatherStationsSharedControlsState>(
+    {
+      opacity: 1,
+      zIndex: null,
+      scaleVisible: false,
+      temporalMode: WeatherStationsTemporalMode.LATEST,
+      maxPastHours: DEFAULT_WEATHER_STATIONS_MAX_PAST_HOURS,
+      imageCount: 6,
+      selectedTilesetId: null,
+      showStationsWithoutData: true,
+    },
+  );
 
   /**
    * Transient buffer for ECMWF forecast indices loaded from localStorage. The
@@ -123,7 +128,11 @@ export class LayerControlService {
    */
   private readonly pendingEcmwfIndices = new Map<
     string,
-    { indices: number[]; opacityByIndex: Record<number, number> }
+    {
+      indices: number[];
+      opacityByIndex: Record<number, number>;
+      secondaryRenderControlsByIndex: Record<number, ForecastRenderControls>;
+    }
   >();
 
   constructor() {
@@ -172,8 +181,7 @@ export class LayerControlService {
               controls.category === LayerCategory.WRF) &&
             'forecast' in controls &&
             controls.forecast.selectedForecastTimestamps.length === 0 &&
-            (config.category === LayerCategory.ECMWF_TP ||
-              config.category === LayerCategory.WRF) &&
+            (config.category === LayerCategory.ECMWF_TP || config.category === LayerCategory.WRF) &&
             config.availableForecasts.length > 0
           ) {
             const firstForecast = config.availableForecasts[0];
@@ -256,11 +264,24 @@ export class LayerControlService {
               const ts = config.availableForecasts[Number(idxStr)];
               if (ts !== undefined) translatedOpacity[ts] = op;
             }
+            const translatedSecondary: ForecastRenderControlsByForecast = {};
+            for (const [idxStr, renderControls] of Object.entries(
+              pending.secondaryRenderControlsByIndex,
+            )) {
+              const ts = config.availableForecasts[Number(idxStr)];
+              if (ts !== undefined) {
+                translatedSecondary[ts] = {
+                  selectedRenderIds: [...renderControls.selectedRenderIds],
+                  renderOpacity: { ...renderControls.renderOpacity },
+                };
+              }
+            }
             this.updateControls(layer.id, (c) => {
               if (c.type !== LayerType.TILE || c.category !== LayerCategory.ECMWF_TP) return;
               const ec = c as EcmwfTpLayerControls;
               ec.forecast.selectedForecastTimestamps = translatedTs;
               ec.forecast.forecastOpacity = translatedOpacity;
+              ec.forecast.renderControls = translatedSecondary;
             });
             const refreshed = this.controls().get(layer.id);
             if (
@@ -272,6 +293,7 @@ export class LayerControlService {
           }
 
           const available = new Set(config.availableForecasts);
+          const validRenderIds = new Set(this.getForecastRenderIds(layer));
           const currentSelected = ecmwfControls.forecast.selectedForecastTimestamps;
           const validSelected = currentSelected.filter((ts) => available.has(ts));
 
@@ -292,11 +314,20 @@ export class LayerControlService {
 
           const opacityEntries = Object.entries(ecmwfControls.forecast.forecastOpacity);
           const hasStaleOpacity = opacityEntries.some(([ts]) => !available.has(ts));
+          const nextsecondaryRenderControls = this.pruneForecastsecondaryRenderControls(
+            ecmwfControls.forecast.renderControls,
+            available,
+            validRenderIds,
+          );
+          const hasStalesecondaryRenderControls = !this.forecastsecondaryRenderControlsEqual(
+            nextsecondaryRenderControls,
+            ecmwfControls.forecast.renderControls,
+          );
           const selectionMutated =
             effectiveSelected.length !== currentSelected.length ||
             effectiveSelected.some((ts, i) => ts !== currentSelected[i]);
 
-          if (selectionMutated || hasStaleOpacity) {
+          if (selectionMutated || hasStaleOpacity || hasStalesecondaryRenderControls) {
             this.updateControls(layer.id, (c) => {
               if (c.type !== LayerType.TILE || c.category !== LayerCategory.ECMWF_TP) return;
               const ec = c as EcmwfTpLayerControls;
@@ -307,6 +338,9 @@ export class LayerControlService {
                   if (available.has(ts)) pruned[ts] = op;
                 }
                 ec.forecast.forecastOpacity = pruned;
+              }
+              if (hasStalesecondaryRenderControls) {
+                ec.forecast.renderControls = nextsecondaryRenderControls;
               }
             });
           }
@@ -322,6 +356,84 @@ export class LayerControlService {
           // even when nothing was pruned — so the fetch's forecasts[0]-based
           // seed gets replaced by the actual selection-based union.
           this.layerConfigService.updateEcmwfTpSelectedForecasts(layer.id, effectiveSelected);
+        }
+      });
+    });
+
+    effect(() => {
+      const configs = this.layerConfigService.configs();
+
+      untracked(() => {
+        for (const layer of this.layersService.getAllLayers()) {
+          if (layer.type !== LayerType.TILE || layer.category !== LayerCategory.WRF) {
+            continue;
+          }
+
+          const config = configs.get(layer.id);
+          if (!config || config.type !== LayerType.TILE || config.category !== LayerCategory.WRF) {
+            continue;
+          }
+
+          const controls = this.controls().get(layer.id);
+          if (
+            !controls ||
+            controls.type !== LayerType.TILE ||
+            controls.category !== LayerCategory.WRF
+          ) {
+            continue;
+          }
+
+          const wrfControls = controls as WrfLayerControls;
+          const availableForecasts = new Set(config.availableForecasts);
+          const validSelected = wrfControls.forecast.selectedForecastTimestamps.filter((ts) =>
+            availableForecasts.has(ts),
+          );
+          const opacityEntries = Object.entries(wrfControls.forecast.forecastOpacity);
+          const hasStaleOpacity = opacityEntries.some(([ts]) => !availableForecasts.has(ts));
+          const validRenderIds = new Set(this.getForecastRenderIds(layer));
+          const nextsecondaryRenderControls = this.pruneForecastsecondaryRenderControls(
+            wrfControls.forecast.renderControls,
+            availableForecasts,
+            validRenderIds,
+          );
+          const hasStalesecondaryRenderControls = !this.forecastsecondaryRenderControlsEqual(
+            nextsecondaryRenderControls,
+            wrfControls.forecast.renderControls,
+          );
+          const selectionMutated =
+            validSelected.length !== wrfControls.forecast.selectedForecastTimestamps.length ||
+            validSelected.some(
+              (ts, index) => ts !== wrfControls.forecast.selectedForecastTimestamps[index],
+            );
+
+          if (!selectionMutated && !hasStaleOpacity && !hasStalesecondaryRenderControls) {
+            continue;
+          }
+
+          this.updateControls(layer.id, (c) => {
+            if (c.type !== LayerType.TILE || c.category !== LayerCategory.WRF) return;
+            const wrf = c as WrfLayerControls;
+            wrf.forecast.selectedForecastTimestamps = validSelected;
+            if (hasStaleOpacity) {
+              const pruned: Record<string, number> = {};
+              for (const [ts, op] of opacityEntries) {
+                if (availableForecasts.has(ts)) pruned[ts] = op;
+              }
+              wrf.forecast.forecastOpacity = pruned;
+            }
+            if (hasStalesecondaryRenderControls) {
+              wrf.forecast.renderControls = nextsecondaryRenderControls;
+            }
+          });
+
+          if (validSelected.length === 0 && wrfControls.visible) {
+            this.deactivateLayer(layer.id);
+            continue;
+          }
+
+          if (validSelected.length > 0) {
+            this.layerConfigService.updateWrfSelectedForecasts(layer.id, validSelected);
+          }
         }
       });
     });
@@ -855,8 +967,16 @@ export class LayerControlService {
       const index = current.indexOf(forecastTs);
       if (index === -1) {
         ecmwf.forecast.selectedForecastTimestamps = [...current, forecastTs];
+        const renderIds = this.getForecastRenderIds(
+          this.layersService.getLayerById(layerId) as Layer,
+        );
+        ecmwf.forecast.renderControls[forecastTs] = this.ensureForecastsecondaryRenderControls(
+          ecmwf.forecast.renderControls[forecastTs],
+          renderIds,
+        );
       } else {
         ecmwf.forecast.selectedForecastTimestamps = current.filter((ts) => ts !== forecastTs);
+        delete ecmwf.forecast.renderControls[forecastTs];
       }
     });
 
@@ -912,8 +1032,60 @@ export class LayerControlService {
     const clampedOpacity = Math.max(0, Math.min(1, opacity));
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.category === LayerCategory.ECMWF_TP) {
+        // Only set the forecast-level opacity. Per-render overrides (renderOpacity)
+        // are intentionally left untouched — the fallback chain in the render
+        // service (renderOpacity ?? forecastOpacity ?? controls.opacity) handles
+        // inheritance so that individual render overrides remain independent.
         (controls as EcmwfTpLayerControls).forecast.forecastOpacity[forecastTs] = clampedOpacity;
       }
+    });
+  }
+
+  setEcmwfTpForecastRenderVisible(
+    layerId: string,
+    forecastTs: string,
+    renderId: string,
+    visible: boolean,
+  ): void {
+    this.updateControls(layerId, (controls) => {
+      if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.ECMWF_TP) return;
+      const ecmwf = controls as EcmwfTpLayerControls;
+      const renderIds = this.getForecastRenderIds(
+        this.layersService.getLayerById(layerId) as Layer,
+      );
+      const forecastControls = this.ensureForecastsecondaryRenderControls(
+        ecmwf.forecast.renderControls[forecastTs],
+        renderIds,
+      );
+      forecastControls.selectedRenderIds = visible
+        ? [...new Set([...forecastControls.selectedRenderIds, renderId])]
+        : forecastControls.selectedRenderIds.filter((id) => id !== renderId);
+      ecmwf.forecast.renderControls[forecastTs] = forecastControls;
+    });
+  }
+
+  setEcmwfTpForecastRenderOpacity(
+    layerId: string,
+    forecastTs: string,
+    renderId: string,
+    opacity: number,
+  ): void {
+    const clampedOpacity = Math.max(0, Math.min(1, opacity));
+    this.updateControls(layerId, (controls) => {
+      if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.ECMWF_TP) return;
+      const ecmwf = controls as EcmwfTpLayerControls;
+      const renderIds = this.getForecastRenderIds(
+        this.layersService.getLayerById(layerId) as Layer,
+      );
+      const forecastControls = this.ensureForecastsecondaryRenderControls(
+        ecmwf.forecast.renderControls[forecastTs],
+        renderIds,
+      );
+      if (!forecastControls.selectedRenderIds.includes(renderId)) {
+        forecastControls.selectedRenderIds = [...forecastControls.selectedRenderIds, renderId];
+      }
+      forecastControls.renderOpacity[renderId] = clampedOpacity;
+      ecmwf.forecast.renderControls[forecastTs] = forecastControls;
     });
   }
 
@@ -929,8 +1101,16 @@ export class LayerControlService {
       const index = current.indexOf(initTag);
       if (index === -1) {
         wrf.forecast.selectedForecastTimestamps = [...current, initTag];
+        const renderIds = this.getForecastRenderIds(
+          this.layersService.getLayerById(layerId) as Layer,
+        );
+        wrf.forecast.renderControls[initTag] = this.ensureForecastsecondaryRenderControls(
+          wrf.forecast.renderControls[initTag],
+          renderIds,
+        );
       } else {
         wrf.forecast.selectedForecastTimestamps = current.filter((ts) => ts !== initTag);
+        delete wrf.forecast.renderControls[initTag];
       }
     });
 
@@ -964,7 +1144,11 @@ export class LayerControlService {
     // ya no está en las opciones del dropdown (p.ej. era 10 con 2 corridas y
     // al deseleccionar una la unión bajó a 7), lo ajusta al nuevo máximo para
     // que el selector quede válido sin un re-pick manual. Espejo de ECMWF.
-    if (newUnionCount > 0 && layer?.type === LayerType.TILE && layer.category === LayerCategory.WRF) {
+    if (
+      newUnionCount > 0 &&
+      layer?.type === LayerType.TILE &&
+      layer.category === LayerCategory.WRF
+    ) {
       const options = buildEcmwfTpFrameOptions(layer.availablePeriods ?? [1], newUnionCount);
       if (!options.includes(updatedControls.playback.imageCount)) {
         this.setImageCount(layerId, newUnionCount);
@@ -979,8 +1163,57 @@ export class LayerControlService {
     const clampedOpacity = Math.max(0, Math.min(1, opacity));
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.category === LayerCategory.WRF) {
+        // Only set the forecast-level opacity — same rationale as ECMWF.
         (controls as WrfLayerControls).forecast.forecastOpacity[initTag] = clampedOpacity;
       }
+    });
+  }
+
+  setWrfForecastRenderVisible(
+    layerId: string,
+    initTag: string,
+    renderId: string,
+    visible: boolean,
+  ): void {
+    this.updateControls(layerId, (controls) => {
+      if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.WRF) return;
+      const wrf = controls as WrfLayerControls;
+      const renderIds = this.getForecastRenderIds(
+        this.layersService.getLayerById(layerId) as Layer,
+      );
+      const forecastControls = this.ensureForecastsecondaryRenderControls(
+        wrf.forecast.renderControls[initTag],
+        renderIds,
+      );
+      forecastControls.selectedRenderIds = visible
+        ? [...new Set([...forecastControls.selectedRenderIds, renderId])]
+        : forecastControls.selectedRenderIds.filter((id) => id !== renderId);
+      wrf.forecast.renderControls[initTag] = forecastControls;
+    });
+  }
+
+  setWrfForecastRenderOpacity(
+    layerId: string,
+    initTag: string,
+    renderId: string,
+    opacity: number,
+  ): void {
+    const clampedOpacity = Math.max(0, Math.min(1, opacity));
+    this.updateControls(layerId, (controls) => {
+      if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.WRF) return;
+      const wrf = controls as WrfLayerControls;
+      const renderIds = this.getForecastRenderIds(
+        this.layersService.getLayerById(layerId) as Layer,
+      );
+      const forecastControls = this.ensureForecastsecondaryRenderControls(
+        wrf.forecast.renderControls[initTag],
+        renderIds,
+      );
+      if (!forecastControls.selectedRenderIds.includes(renderId)) {
+        forecastControls.selectedRenderIds = [...forecastControls.selectedRenderIds, renderId];
+      }
+      forecastControls.renderOpacity[renderId] = clampedOpacity;
+      wrf.forecast.renderControls[initTag] = forecastControls;
     });
   }
 
@@ -1011,7 +1244,9 @@ export class LayerControlService {
       });
     });
 
-    const activeWeatherStationLayerId = filteredIds.find((layerId) => this.isWeatherStationsLayer(layerId));
+    const activeWeatherStationLayerId = filteredIds.find((layerId) =>
+      this.isWeatherStationsLayer(layerId),
+    );
 
     if (activeWeatherStationLayerId) {
       const controls = this.getControls(activeWeatherStationLayerId);
@@ -1331,6 +1566,7 @@ export class LayerControlService {
               forecast: {
                 selectedForecastTimestamps: [],
                 forecastOpacity: {},
+                renderControls: {},
               },
             } as EcmwfTpLayerControls;
           case LayerCategory.WRF:
@@ -1341,6 +1577,7 @@ export class LayerControlService {
               forecast: {
                 selectedForecastTimestamps: [],
                 forecastOpacity: {},
+                renderControls: {},
               },
             } as WrfLayerControls;
           default:
@@ -1387,9 +1624,23 @@ export class LayerControlService {
       const idx = availableForecasts.indexOf(ts);
       if (idx >= 0) forecastOpacityByIndex[idx] = op;
     }
+    const secondaryRenderControlsByIndex: Record<number, ForecastRenderControls> = {};
+    for (const [ts, renderControls] of Object.entries(ecmwf.forecast.renderControls)) {
+      const idx = availableForecasts.indexOf(ts);
+      if (idx >= 0) {
+        secondaryRenderControlsByIndex[idx] = {
+          selectedRenderIds: [...renderControls.selectedRenderIds],
+          renderOpacity: { ...renderControls.renderOpacity },
+        };
+      }
+    }
     return {
       ...ecmwf,
-      forecast: { selectedForecastIndices, forecastOpacityByIndex },
+      forecast: {
+        selectedForecastIndices,
+        forecastOpacityByIndex,
+        secondaryRenderControlsByIndex,
+      },
     };
   }
 
@@ -1407,14 +1658,97 @@ export class LayerControlService {
     this.pendingEcmwfIndices.set(ecmwfPersisted.id, {
       indices: [...(ecmwfPersisted.forecast.selectedForecastIndices ?? [])],
       opacityByIndex: { ...(ecmwfPersisted.forecast.forecastOpacityByIndex ?? {}) },
+      secondaryRenderControlsByIndex: {
+        ...(ecmwfPersisted.forecast.secondaryRenderControlsByIndex ?? {}),
+      },
     });
     return {
       ...ecmwfPersisted,
       forecast: {
         selectedForecastTimestamps: [],
         forecastOpacity: {},
+        renderControls: {},
       },
     } as EcmwfTpLayerControls;
+  }
+
+  private getForecastRenderIds(layer: Layer): string[] {
+    if (layer.type !== LayerType.TILE) {
+      return [];
+    }
+
+    if (layer.category === LayerCategory.ECMWF_TP) {
+      const secondary = (layer as EcmwfTpTileLayer).secondaryRender;
+      // PRIMARY_RENDER_ID always first so the primary tile is always independently controllable.
+      return secondary ? [PRIMARY_RENDER_ID, secondary.id] : [PRIMARY_RENDER_ID];
+    }
+
+    if (layer.category === LayerCategory.WRF) {
+      const secondaryIds = ((layer as WrfTileLayer).secondaryRenders ?? []).map((r) => r.id);
+      return [PRIMARY_RENDER_ID, ...secondaryIds];
+    }
+
+    return [];
+  }
+
+  private pruneForecastsecondaryRenderControls(
+    controlsByForecast: ForecastRenderControlsByForecast,
+    validForecasts: ReadonlySet<string>,
+    validRenderIds: ReadonlySet<string>,
+  ): ForecastRenderControlsByForecast {
+    const next: ForecastRenderControlsByForecast = {};
+
+    for (const [forecastTs, renderControls] of Object.entries(controlsByForecast)) {
+      if (!validForecasts.has(forecastTs)) {
+        continue;
+      }
+
+      const nextSelectedSecondaryRenderIds = renderControls.selectedRenderIds.filter((renderId) =>
+        validRenderIds.has(renderId),
+      );
+      const nextSecondaryRenderOpacity: Record<string, number> = {};
+      for (const [renderId, opacity] of Object.entries(renderControls.renderOpacity)) {
+        if (validRenderIds.has(renderId)) {
+          nextSecondaryRenderOpacity[renderId] = opacity;
+        }
+      }
+
+      if (
+        nextSelectedSecondaryRenderIds.length > 0 ||
+        Object.keys(nextSecondaryRenderOpacity).length > 0
+      ) {
+        next[forecastTs] = {
+          selectedRenderIds: nextSelectedSecondaryRenderIds,
+          renderOpacity: nextSecondaryRenderOpacity,
+        };
+      }
+    }
+
+    return next;
+  }
+
+  private forecastsecondaryRenderControlsEqual(
+    left: ForecastRenderControlsByForecast,
+    right: ForecastRenderControlsByForecast,
+  ): boolean {
+    return JSON.stringify(left) === JSON.stringify(right);
+  }
+
+  private ensureForecastsecondaryRenderControls(
+    controls: ForecastRenderControls | undefined,
+    renderIds: readonly string[],
+  ): ForecastRenderControls {
+    if (controls) {
+      return {
+        selectedRenderIds: [...controls.selectedRenderIds],
+        renderOpacity: { ...controls.renderOpacity },
+      };
+    }
+
+    return {
+      selectedRenderIds: [...renderIds],
+      renderOpacity: {},
+    };
   }
 
   /**
