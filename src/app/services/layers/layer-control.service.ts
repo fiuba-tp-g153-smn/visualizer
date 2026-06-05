@@ -1081,9 +1081,6 @@ export class LayerControlService {
         ecmwf.forecast.renderControls[forecastTs],
         renderIds,
       );
-      if (!forecastControls.selectedRenderIds.includes(renderId)) {
-        forecastControls.selectedRenderIds = [...forecastControls.selectedRenderIds, renderId];
-      }
       forecastControls.renderOpacity[renderId] = clampedOpacity;
       ecmwf.forecast.renderControls[forecastTs] = forecastControls;
     });
@@ -1209,9 +1206,6 @@ export class LayerControlService {
         wrf.forecast.renderControls[initTag],
         renderIds,
       );
-      if (!forecastControls.selectedRenderIds.includes(renderId)) {
-        forecastControls.selectedRenderIds = [...forecastControls.selectedRenderIds, renderId];
-      }
       forecastControls.renderOpacity[renderId] = clampedOpacity;
       wrf.forecast.renderControls[initTag] = forecastControls;
     });
