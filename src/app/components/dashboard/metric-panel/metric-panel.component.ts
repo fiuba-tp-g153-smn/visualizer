@@ -15,7 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   template: `
     <section class="panel">
       <header class="panel__head">
-        <span class="panel__title">{{ title() }}</span>
+        <span class="panel__title">{{ heading() }}</span>
         @if (tip(); as tipText) {
           <mat-icon
             class="panel__info"
@@ -35,6 +35,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   styleUrl: './metric-panel.component.scss',
 })
 export class MetricPanelComponent {
-  readonly title = input.required<string>();
+  // Llamado `heading` (no `title`): `title` es un atributo HTML global y, al
+  // quedar en el host, el navegador lo muestra como tooltip nativo sobre todo
+  // el panel, pisando los tooltips útiles.
+  readonly heading = input.required<string>();
   readonly tip = input<string | null>(null);
 }

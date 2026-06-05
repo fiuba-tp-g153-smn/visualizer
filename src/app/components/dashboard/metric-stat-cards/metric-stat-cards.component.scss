@@ -14,9 +14,25 @@
 }
 
 .card__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card__label-text {
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+// Ícono "i" que dispara el tooltip explicativo de la tarjeta.
+.card__info {
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+  line-height: 13px;
+  cursor: help;
   color: var(--mat-sys-on-surface-variant, #5f6368);
 }
 
@@ -27,6 +43,10 @@
   margin-top: 5px;
   color: var(--mat-sys-on-surface, #1f1f1f);
   font-variant-numeric: tabular-nums;
+}
+
+.card__value--green {
+  color: var(--metric-success, #2e9b51);
 }
 
 .card__value--orange {

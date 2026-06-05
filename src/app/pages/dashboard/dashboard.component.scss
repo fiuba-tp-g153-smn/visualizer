@@ -94,6 +94,11 @@
   }
 }
 
+// Título del control: tiene tooltip explicativo al pasar el mouse.
+.dash__ctl-title {
+  cursor: help;
+}
+
 .dash__refresh {
   white-space: nowrap;
 }

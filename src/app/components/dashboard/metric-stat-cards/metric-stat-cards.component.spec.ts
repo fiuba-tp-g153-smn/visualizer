@@ -36,7 +36,8 @@ describe('MetricStatCardsComponent', () => {
     ]);
 
     const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
-    expect(byLabel.get('Trabajos')?.value).toBe('20');
+    expect(byLabel.get('Trabajos finalizados')?.value).toBe('20');
+    expect(byLabel.get('Éxitos')?.value).toBe('13');
     expect(byLabel.get('Tasa de éxito')?.value).toBe('65.0%'); // 13/20
     expect(byLabel.get('Fallos')?.value).toBe('2');
     expect(byLabel.get('Fallos')?.accent).toBe('orange');
