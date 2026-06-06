@@ -101,9 +101,14 @@ export interface LinearScaleConfig extends BaseScaleConfig {
   readonly colors: readonly string[];
 }
 
+export interface ThresholdStop {
+  readonly value: number;
+  readonly color: string;
+  readonly hardStop?: boolean;
+}
+
 export interface BoundedScaleConfig extends BaseScaleConfig {
-  readonly bounds: readonly number[];
-  readonly colors: readonly string[];
+  readonly stops: readonly ThresholdStop[];
 }
 
 export interface UniformBoundedScaleConfig extends BaseScaleConfig {
@@ -201,8 +206,7 @@ export function buildScaleFromLinearGradient(config: LinearScaleConfig): LayerSc
 
 export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale {
   const {
-    bounds,
-    colors,
+    stops,
     unit,
     labelCount,
     labelValues,
@@ -211,10 +215,20 @@ export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale
     scaleDisplayName,
     scaleRoutingKey,
   } = config;
-  const entries = bounds.map((value, i) => ({
-    value,
-    color: colors[i] ?? colors[colors.length - 1],
-  }));
+
+  if (stops.length === 0) {
+    throw new Error('buildScaleFromThresholds requires non-empty stops.');
+  }
+
+  const entries: ScaleEntry[] = [];
+  for (const stop of stops) {
+    entries.push({
+      value: stop.value,
+      color: stop.color,
+      ...(stop.hardStop ? { hardStop: true as const } : {}),
+    });
+  }
+
   const domain = entriesDomain(entries);
 
   return createLayerScale({
@@ -243,10 +257,19 @@ export function buildScaleFromUniformThresholds(config: UniformBoundedScaleConfi
         );
   const labelCount = config.labelCount ?? bounds.length;
 
+  const stops: ThresholdStop[] = [];
+  const fallbackColor = colors[colors.length - 1];
+  for (let i = 0; i < bounds.length; i++) {
+    stops.push({
+      value: bounds[i],
+      color: colors[i] ?? fallbackColor,
+    });
+  }
+
   return buildScaleFromThresholds({
     ...config,
     labelCount,
-    bounds,
+    stops,
   });
 }
 
