@@ -81,7 +81,7 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
   [ActiveLayerGroupId.BASE]: {
     id: ActiveLayerGroupId.BASE,
     name: 'Capas de Datos',
-    subtitle: '(Radar, modelos numéricos)',
+    subtitle: 'Radar, modelos numéricos',
     description:
       'Capas de datos científicos: radar meteorológico, salidas de modelos numéricos, imágenes satelitales, etc.',
     icon: 'satellite_alt',
@@ -90,7 +90,7 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
   [ActiveLayerGroupId.OVERLAY]: {
     id: ActiveLayerGroupId.OVERLAY,
     name: 'Capas de Referencia',
-    subtitle: '(IGN, cartografía)',
+    subtitle: 'IGN, cartografía',
     description:
       'Capas de referencia cartográfica del IGN. Siempre se muestran por encima de las capas de datos.',
     icon: 'terrain',
@@ -99,7 +99,7 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
   [ActiveLayerGroupId.POINTS]: {
     id: ActiveLayerGroupId.POINTS,
     name: 'Capas Puntuales',
-    subtitle: '(Estaciones, puntos de observación)',
+    subtitle: 'Estaciones, puntos de observación',
     description:
       'Capas puntuales interactivas. Se muestran por encima de las capas de referencia para mantener legibilidad.',
     icon: 'place',

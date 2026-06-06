@@ -51,7 +51,10 @@ export interface WeatherStationPopupData {
   updatedAt: string;
 }
 
-type PopupTab = 'current' | 'graph';
+enum PopupTab {
+  CURRENT = 'current',
+  GRAPH = 'graph',
+}
 
 /**
  * Wundermap-style station card: a header with id/lat/lon and two tabs — **Actual**
@@ -87,7 +90,9 @@ export class WeatherStationPopupComponent implements OnInit {
 
   private readonly series = signal<StationSeries | null>(null);
   readonly loading = signal<boolean>(true);
-  readonly tab = signal<PopupTab>('current');
+  readonly PopupTab = PopupTab;
+
+  readonly tab = signal<PopupTab>(PopupTab.CURRENT);
 
   /** Dew point of the latest reading, formatted (from the server-computed series). */
   readonly dewPointText = computed(() => {

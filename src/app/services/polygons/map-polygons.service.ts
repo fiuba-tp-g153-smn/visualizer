@@ -1,11 +1,8 @@
 /// <reference types="leaflet-editable" />
-// ^ Type-only reference: keeps the @types/leaflet-editable augmentations
-//   (L.Map.editTools, L.Layer.enableEdit/disableEdit, L.Editable) available
-//   under tsconfig `"types": []`. The plugin's JS is loaded on demand in
-//   ensureEditTools() — see the eager import we removed from here.
 import { Injectable, inject, effect, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
+import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
 import { Polygon } from '../../models/geo';
@@ -13,9 +10,7 @@ import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
 } from '../../models/polygon-context-menu-action.model';
-// Type-only: the component value is dynamically imported at the open site so
-// the confirm-dialog code stays out of the initial bundle.
-import type {
+import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../components/floating/confirm-dialog/confirm-dialog';
@@ -34,6 +29,7 @@ import {
 } from '../../utils/map-styles.utils';
 import { isSimplePolygon } from '../../utils/polygon-validation.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
+import { NotificationService } from '../notifications/notification.service';
 
 export interface PolygonContextMenuState {
   x: number;
@@ -65,6 +61,7 @@ export class MapPolygonsService {
   private polygonService = inject(PolygonService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private dialog = inject(MatDialog);
+  private notificationService = inject(NotificationService);
 
   private map: L.Map | null = null;
   private polygonLayers = new Map<string, L.Polygon>();
@@ -117,18 +114,11 @@ export class MapPolygonsService {
     });
   }
 
-  /** Guard so the plugin is imported and editTools wired up only once. */
+  /** Guard so editTools is wired up only once. */
   private editToolsReady = false;
 
-  /**
-   * Lazily loads the `leaflet-editable` plugin (~68 KB raw) on first draw/edit,
-   * then wires up `map.editTools` by hand. The plugin's own map init-hook only
-   * fires for maps created *after* it loads; ours already exists (created
-   * without `editable: true`), so we construct the editor manually here.
-   */
-  private async ensureEditTools(): Promise<void> {
+  private ensureEditTools(): void {
     if (this.editToolsReady || !this.map) return;
-    await import('leaflet-editable');
     if (!this.map.editTools) {
       this.map.editTools = new L.Editable(this.map, {});
     }
@@ -138,16 +128,13 @@ export class MapPolygonsService {
   /**
    * Handle drawing mode changes
    */
-  async handleDrawingModeChange(
-    mode: DrawingMode,
-    editingPolygonId: string | null,
-  ): Promise<void> {
+  handleDrawingModeChange(mode: DrawingMode, editingPolygonId: string | null): void {
     if (!this.map) return;
 
     // Drawing and editing both need leaflet-editable; load it (and wire up
     // editTools) on demand the first time either mode is entered.
     if (mode === DrawingMode.DRAW || mode === DrawingMode.EDIT) {
-      await this.ensureEditTools();
+      this.ensureEditTools();
       if (!this.map) return;
     }
 
@@ -306,13 +293,11 @@ export class MapPolygonsService {
 
     // Validate polygon is simple (no self-intersections)
     if (!isSimplePolygon(coordinates)) {
-      console.error('El polígono no puede tener intersecciones consigo mismo');
-      // Remove invalid polygon from map
       if (this.map && this.map.hasLayer(layer)) {
         this.map.removeLayer(layer);
       }
-      alert(
-        'Error: El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.',
+      this.notificationService.warning(
+        'El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.',
       );
       return;
     }
@@ -677,13 +662,9 @@ export class MapPolygonsService {
   /**
    * Confirm and delete polygon
    */
-  private async confirmAndDeletePolygon(polygonId: string): Promise<void> {
+  private confirmAndDeletePolygon(polygonId: string): void {
     const polygon = this.polygonService.getPolygonById(polygonId);
     const polygonName = polygon?.name || 'Sin nombre';
-
-    const { ConfirmDialogComponent } = await import(
-      '../../components/floating/confirm-dialog/confirm-dialog'
-    );
 
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
       ConfirmDialogComponent,
@@ -746,8 +727,6 @@ export class MapPolygonsService {
 
       // Validate polygon is simple (no self-intersections)
       if (!isSimplePolygon(coordinates)) {
-        console.error('El polígono no puede tener intersecciones consigo mismo');
-
         // Restore original coordinates
         if (this.originalCoordinates && this.originalCoordinates.length > 0) {
           const originalLatLngs = this.originalCoordinates.map((coord) =>
@@ -756,8 +735,8 @@ export class MapPolygonsService {
           layer.setLatLngs([originalLatLngs]);
         }
 
-        alert(
-          'Error: El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.',
+        this.notificationService.warning(
+          'El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.',
         );
 
         // Disable editing

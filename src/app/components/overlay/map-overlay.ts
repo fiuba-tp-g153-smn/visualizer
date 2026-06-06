@@ -16,7 +16,7 @@ import { PolygonEditDockComponent } from '../floating/polygon-edit-dock/polygon-
 import { MainMenuComponent } from './main-menu/main-menu';
 import { SidebarButtonsComponent } from './sidebar-buttons/sidebar-buttons';
 import { MapPolygonContextMenuComponent } from '../floating/polygon-context-menu/polygon-context-menu';
-import { MapPointValuesComponent } from './point-values/point-values';
+import { MapPointValuesComponent, PointValuesLayoutMode } from './point-values/point-values';
 import { MapScaleToolsComponent } from './scale-tools/scale-tools';
 import { MapZoomControlsComponent } from './zoom-controls/zoom-controls';
 import { MapAttributionComponent } from './map-attribution/map-attribution';
@@ -42,6 +42,8 @@ import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
   styleUrl: './map-overlay.scss',
 })
 export class MapOverlayComponent {
+  readonly PointValuesLayoutMode = PointValuesLayoutMode;
+
   private pointQueryViewerService = inject(PointQueryViewerService);
   private scaleToolsService = inject(ScaleToolsService);
   private polygonDrawingService = inject(PolygonDrawingService);

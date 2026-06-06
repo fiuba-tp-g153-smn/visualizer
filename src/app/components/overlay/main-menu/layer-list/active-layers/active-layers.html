@@ -32,7 +32,7 @@
           <div cdkDropList (cdkDropListDropped)="group.onDrop($event)" class="active-layers-list">
             @for (layer of group.layers; track layer.id; let isLast = $last) {
               <div cdkDrag class="active-layer-item">
-                <app-layer-item [layer]="layer" mode="active" />
+                <app-layer-item [layer]="layer" [mode]="LayerItemMode.ACTIVE" />
               </div>
               @if (!isLast) {
                 <mat-divider />

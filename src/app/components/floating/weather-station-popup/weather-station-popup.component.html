@@ -16,22 +16,22 @@
     <button
       type="button"
       class="ws-card__tab"
-      [class.ws-card__tab--active]="tab() === 'current'"
-      (click)="setTab('current')"
+      [class.ws-card__tab--active]="tab() === PopupTab.CURRENT"
+      (click)="setTab(PopupTab.CURRENT)"
     >
       Actual
     </button>
     <button
       type="button"
       class="ws-card__tab"
-      [class.ws-card__tab--active]="tab() === 'graph'"
-      (click)="setTab('graph')"
+      [class.ws-card__tab--active]="tab() === PopupTab.GRAPH"
+      (click)="setTab(PopupTab.GRAPH)"
     >
       Gráfico
     </button>
   </div>
 
-  @if (tab() === 'current') {
+  @if (tab() === PopupTab.CURRENT) {
     <div class="ws-card__current">
       <div class="ws-card__primary">
         <div class="ws-card__temp-block">

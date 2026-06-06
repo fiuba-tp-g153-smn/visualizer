@@ -29,6 +29,7 @@ import {
   WrfLayerControls,
   WrfTileLayer,
   WrfTileLayerConfig,
+  PRIMARY_RENDER_ID,
 } from '../../models';
 import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { NotificationService } from '../notifications/notification.service';
@@ -293,8 +294,8 @@ export class LayerRenderService {
     // Wind barbs are much larger than a badge, so they need extra spacing before
     // colliding; widen the density thresholds for the wind layer so crowded barbs
     // collapse to dots (the de-clutter) sooner when zooming out.
-    const declutterFactor =
-      stationLayer.variable === WeatherStationVariable.WIND_SPEED ? 4 : 1;
+    const declutterFactor = stationLayer.variable === WeatherStationVariable.WIND_SPEED ? 4 : 1;
+    const markerOpacity = Math.max(0, Math.min(1, opacity));
 
     for (const point of visiblePoints) {
       const observation = point.observation;
@@ -353,6 +354,7 @@ export class LayerRenderService {
           color,
           textColor,
           windLabel,
+          markerOpacity,
         );
         marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else if (level === WeatherStationRenderLevel.DOT) {
@@ -393,7 +395,13 @@ export class LayerRenderService {
         );
         const labelValue = Math.round(displayValue);
         const iconDiameter = badgeDiameterPx;
-        const icon = this.buildWeatherStationsBadgeIcon(labelValue, iconDiameter, color, textColor);
+        const icon = this.buildWeatherStationsBadgeIcon(
+          labelValue,
+          iconDiameter,
+          color,
+          textColor,
+          markerOpacity,
+        );
         marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       }
 
@@ -425,7 +433,7 @@ export class LayerRenderService {
         const popupData = this.buildWeatherStationsPopupData(observation);
         const { element, destroy } = this.createWeatherStationsPopupElement(popupData);
         const popup = L.popup({ pane: 'popupPane', className: 'weather-station-popup' })
-          .setLatLng(evt.latlng)
+          .setLatLng(marker.getLatLng())
           .setContent(element)
           .openOn(map);
 
@@ -472,11 +480,16 @@ export class LayerRenderService {
     diameterPx: number,
     backgroundColor: string,
     textColor: string,
+    iconOpacity: number,
   ): L.DivIcon {
-    const fontSizePx = WEATHER_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
+    const label = String(value);
+    const { fontSizePx, letterSpacingPx } = this.resolveWeatherStationsBadgeTypography(
+      label,
+      diameterPx,
+    );
     return L.divIcon({
       className: 'weather-station-divicon',
-      html: `<div class="weather-station-badge" style="--weather-badge-size:${diameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;">${value}</div>`,
+      html: `<div class="weather-station-badge" style="--weather-badge-size:${diameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;--weather-badge-letter-spacing:${letterSpacingPx}px;--weather-badge-opacity:${iconOpacity};">${label}</div>`,
       iconSize: [diameterPx, diameterPx],
       iconAnchor: [diameterPx / 2, diameterPx / 2],
     });
@@ -494,16 +507,43 @@ export class LayerRenderService {
     backgroundColor: string,
     textColor: string,
     label: string,
+    iconOpacity: number,
   ): L.DivIcon {
     const barb = windBarbSvg(speedKnots, deg, { size: sizePx, color: '#111827' });
-    const fontSizePx = WEATHER_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
-    const badge = `<div class="weather-station-badge" style="--weather-badge-size:${badgeDiameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);">${label}</div>`;
+    const { fontSizePx, letterSpacingPx } = this.resolveWeatherStationsBadgeTypography(
+      label,
+      badgeDiameterPx,
+    );
+    const badge = `<div class="weather-station-badge" style="--weather-badge-size:${badgeDiameterPx}px;--weather-badge-bg:${backgroundColor};--weather-badge-fg:${textColor};--weather-badge-font-size:${fontSizePx}px;--weather-badge-letter-spacing:${letterSpacingPx}px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);">${label}</div>`;
     return L.divIcon({
       className: 'weather-station-divicon',
-      html: `<div style="position:relative;width:${sizePx}px;height:${sizePx}px;">${barb}${badge}</div>`,
+      html: `<div style="position:relative;width:${sizePx}px;height:${sizePx}px;opacity:${iconOpacity};">${barb}${badge}</div>`,
       iconSize: [sizePx, sizePx],
       iconAnchor: [sizePx / 2, sizePx / 2],
     });
+  }
+
+  private resolveWeatherStationsBadgeTypography(
+    label: string,
+    diameterPx: number,
+  ): { fontSizePx: number; letterSpacingPx: number } {
+    const baseFontSizePx = WEATHER_STATION_RENDER_CONFIG.marker.badgeFontSizePx;
+    const digits = Math.max(1, label.length);
+
+    const byDigits =
+      digits <= 2
+        ? baseFontSizePx
+        : digits === 3
+          ? baseFontSizePx - 1
+          : digits === 4
+            ? baseFontSizePx - 2
+            : baseFontSizePx - 3;
+
+    const byDiameter = Math.round(diameterPx * 0.56 - Math.max(0, digits - 2) * 1.35);
+    const fontSizePx = Math.max(8, Math.min(baseFontSizePx, Math.min(byDigits, byDiameter)));
+    const letterSpacingPx = digits >= 4 ? -0.3 : 0;
+
+    return { fontSizePx, letterSpacingPx };
   }
 
   /**
@@ -878,47 +918,61 @@ export class LayerRenderService {
     // extra z-slot above its raster so the isobars can slot in just above the
     // TP tile without colliding with the next forecast (or the next layer up).
     const slotsPerForecast =
-      ecmwfLayer && ecmwfLayer.type === LayerType.TILE && (ecmwfLayer as EcmwfTpTileLayer).secondaryRender
+      ecmwfLayer &&
+      ecmwfLayer.type === LayerType.TILE &&
+      (ecmwfLayer as EcmwfTpTileLayer).secondaryRender
         ? 2
         : 1;
 
     selectedForecasts.forEach((forecastTs, index) => {
       const forecastZIndex = absoluteZIndex + index * slotsPerForecast;
       const forecastOpacity = controls.forecast.forecastOpacity[forecastTs];
-      const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
 
       // Only create a tile if this forecast has data for the current period
       const forecastsForPeriod = config.forecastsByPeriod[currentPeriodTs];
-      if (forecastsForPeriod && forecastsForPeriod.includes(forecastTs)) {
+
+      // Check if the primary render is selected for this forecast run.
+      const renderControls = controls.forecast.renderControls[forecastTs];
+      const isPrimaryVisible = renderControls
+        ? renderControls.selectedRenderIds.includes(PRIMARY_RENDER_ID)
+        : true;
+
+      // Fallback chain: renderOpacity['primary'] ?? forecastOpacity ?? layer opacity
+      const primaryOpacity =
+        renderControls?.renderOpacity[PRIMARY_RENDER_ID] ?? forecastOpacity ?? targetOpacity;
+
+      if (isPrimaryVisible && forecastsForPeriod && forecastsForPeriod.includes(forecastTs)) {
         const tileLayer = this.createEcmwfTpTileLayerForForecast(
           layerId,
           controls,
           forecastTs,
           currentPeriodTs,
         );
-        this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
+        this.applyLayerStyles(tileLayer, primaryOpacity, forecastZIndex);
         result.set(`${layerId}#${forecastTs}#${currentTimeIndex}`, tileLayer);
       }
 
-      // Pre-render next N frames at opacity=0
-      this.prerenderNextFrames(
-        result,
-        currentTimeIndex,
-        totalFrames,
-        controls.playback.imageCount,
-        forecastZIndex,
-        true,
-        (adjIndex) => {
-          const adjLayer = this.createEcmwfTpTileLayerForForecastAtTimeIndex(
-            layerId,
-            controls,
-            forecastTs,
-            adjIndex,
-          );
-          if (!adjLayer) return null;
-          return { layer: adjLayer, key: `${layerId}#${forecastTs}#${adjIndex}` };
-        },
-      );
+      // Pre-render next N frames at opacity=0 (only when primary is visible)
+      if (isPrimaryVisible) {
+        this.prerenderNextFrames(
+          result,
+          currentTimeIndex,
+          totalFrames,
+          controls.playback.imageCount,
+          forecastZIndex,
+          true,
+          (adjIndex) => {
+            const adjLayer = this.createEcmwfTpTileLayerForForecastAtTimeIndex(
+              layerId,
+              controls,
+              forecastTs,
+              adjIndex,
+            );
+            if (!adjLayer) return null;
+            return { layer: adjLayer, key: `${layerId}#${forecastTs}#${adjIndex}` };
+          },
+        );
+      }
     });
 
     return result;
@@ -1269,34 +1323,54 @@ export class LayerRenderService {
     const currentEntry = config.availableTilesets[currentTimeIndex];
     if (!currentEntry) return result;
     const forecastsForStep = config.forecastsByPeriod[currentEntry.id];
+    const wrfLayer = this.layersService.getLayerById(layerId);
+    const slotsPerForecast =
+      wrfLayer && wrfLayer.type === LayerType.TILE && wrfLayer.category === LayerCategory.WRF
+        ? 1 + ((wrfLayer as WrfTileLayer).secondaryRenders?.length ?? 0)
+        : 1;
 
     selectedForecasts.forEach((initTag, index) => {
-      const forecastZIndex = absoluteZIndex + index;
+      const forecastZIndex = absoluteZIndex + index * slotsPerForecast;
       const forecastOpacity = controls.forecast.forecastOpacity[initTag];
-      const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
 
       const fxxx = wrfFxxxForInitAndTime(initTag, currentEntry.time);
-      if (fxxx && forecastsForStep && forecastsForStep.includes(initTag)) {
+
+      // Check if the primary render is selected for this forecast run.
+      const renderControls = controls.forecast.renderControls[initTag];
+      const isPrimaryVisible = renderControls
+        ? renderControls.selectedRenderIds.includes(PRIMARY_RENDER_ID)
+        : true;
+
+      // Fallback chain: renderOpacity['primary'] ?? forecastOpacity ?? layer opacity
+      const primaryOpacity =
+        renderControls?.renderOpacity[PRIMARY_RENDER_ID] ?? forecastOpacity ?? targetOpacity;
+
+      if (isPrimaryVisible && fxxx && forecastsForStep && forecastsForStep.includes(initTag)) {
         const tileLayer = this.createWrfTileLayerForForecast(layerId, controls, initTag, fxxx);
-        this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
+        this.applyLayerStyles(tileLayer, primaryOpacity, forecastZIndex);
         result.set(`${layerId}#${initTag}#${currentTimeIndex}`, tileLayer);
       }
 
-      this.prerenderNextFrames(
-        result,
-        currentTimeIndex,
-        totalFrames,
-        controls.playback.imageCount,
-        forecastZIndex,
-        true,
-        (adjIndex) => {
-          const adjLayer = this.createWrfTileLayerForForecastAtTimeIndex(
-            layerId, controls, initTag, adjIndex,
-          );
-          if (!adjLayer) return null;
-          return { layer: adjLayer, key: `${layerId}#${initTag}#${adjIndex}` };
-        },
-      );
+      if (isPrimaryVisible) {
+        this.prerenderNextFrames(
+          result,
+          currentTimeIndex,
+          totalFrames,
+          controls.playback.imageCount,
+          forecastZIndex,
+          true,
+          (adjIndex) => {
+            const adjLayer = this.createWrfTileLayerForForecastAtTimeIndex(
+              layerId,
+              controls,
+              initTag,
+              adjIndex,
+            );
+            if (!adjLayer) return null;
+            return { layer: adjLayer, key: `${layerId}#${initTag}#${adjIndex}` };
+          },
+        );
+      }
     });
 
     return result;
