@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -51,7 +51,7 @@ import { ActiveAlertsComponent } from './active-alerts/active-alerts';
   templateUrl: './polygon-manager.html',
   styleUrl: './polygon-manager.scss',
 })
-export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
+export class PolygonManagerComponent implements MenuPanelComponent {
   private readonly polygonService = inject(PolygonService);
   private readonly drawingService = inject(PolygonDrawingService);
   private readonly dialog = inject(MatDialog);
@@ -64,10 +64,6 @@ export class PolygonManagerComponent implements MenuPanelComponent, OnDestroy {
   editingNameId: string | null = null;
 
   onPanelOpen(): void {}
-
-  ngOnDestroy(): void {
-    this.drawingService.stopDrawing();
-  }
 
   toggleDrawMode(): void {
     this.drawingService.toggleDrawMode(DrawingMode.DRAW);

@@ -102,22 +102,20 @@
 
   // Vertex markers while editing
   .leaflet-vertex-icon {
+    box-sizing: border-box;
     border-radius: 50%;
     background-color: var(--polygon-color, #3388ff);
     border: 2px solid white;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    width: 10px;
-    height: 10px;
   }
 
   // Middle markers (insertion points)
   .leaflet-middle-icon {
+    box-sizing: border-box;
     border-radius: 50%;
     background-color: var(--polygon-color, #3388ff);
     border: 2px solid white;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    width: 8px;
-    height: 8px;
     opacity: 0.6;
   }
 

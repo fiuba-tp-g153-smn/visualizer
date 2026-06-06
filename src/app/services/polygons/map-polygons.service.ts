@@ -72,6 +72,7 @@ export class MapPolygonsService {
   >(); // polygonId -> (departmentName -> layer)
   private currentDrawingPolygon: L.Polygon | null = null;
   private originalCoordinates: Array<[number, number]> | null = null;
+  private currentEditingPolygonId: string | null = null;
   readonly contextMenuState = signal<PolygonContextMenuState | null>(null);
 
   constructor() {
@@ -121,6 +122,10 @@ export class MapPolygonsService {
     if (this.editToolsReady || !this.map) return;
     if (!this.map.editTools) {
       this.map.editTools = new L.Editable(this.map, {});
+      (this.map.editTools as any).createVertexIcon = (options: L.DivIconOptions): L.DivIcon => {
+        const size = L.Browser.mobile && L.Browser.touch ? 20 : 12;
+        return L.divIcon({ ...options, iconSize: [size, size] });
+      };
     }
     this.editToolsReady = true;
   }
@@ -155,6 +160,22 @@ export class MapPolygonsService {
         layer.disableEdit();
       }
     });
+
+    // If a polygon was being edited and this transition isn't a save/cancel
+    // (those clear currentEditingPolygonId before calling stopDrawing), the edit
+    // is abandoned: revert to original coordinates and remove the edit style.
+    if (this.currentEditingPolygonId) {
+      if (this.originalCoordinates) {
+        this.recreatePolygonLayer(this.currentEditingPolygonId, this.originalCoordinates);
+      } else {
+        const abandonedLayer = this.polygonLayers.get(this.currentEditingPolygonId);
+        if (abandonedLayer) {
+          abandonedLayer.setStyle({ dashArray: '' });
+        }
+      }
+      this.currentEditingPolygonId = null;
+      this.originalCoordinates = null;
+    }
 
     // Enable the requested mode
     switch (mode) {
@@ -249,6 +270,7 @@ export class MapPolygonsService {
 
     // Save original coordinates before editing for potential cancellation
     this.originalCoordinates = latlngs.map((ll) => [ll.lat, ll.lng]);
+    this.currentEditingPolygonId = polygonId;
 
     // Apply dashed line style
     layer.setStyle({
@@ -348,8 +370,9 @@ export class MapPolygonsService {
     // Check if the polygon being edited was deleted
     if (editingPolygonId && !polygons.find((p) => p.id === editingPolygonId)) {
       // Polygon being edited was deleted, exit edit mode
-      this.polygonDrawingService.stopDrawing();
       this.originalCoordinates = null;
+      this.currentEditingPolygonId = null;
+      this.polygonDrawingService.stopDrawing();
     }
 
     // Process all polygons from service
@@ -568,19 +591,9 @@ export class MapPolygonsService {
   /**
    * Create a new polygon layer
    */
-  private createNewPolygonLayer(polygon: Polygon): void {
-    if (!this.map) return;
-
-    const latlngs: L.LatLngExpression[] = polygon.coordinates.map((coord: [number, number]) => [
-      coord[0],
-      coord[1],
-    ]);
-    const layer = L.polygon(latlngs, {
-      ...POLYGON_OPTIONS,
-      polygonId: polygon.id,
-    });
-
-    // Add context menu listener (right click)
+  private buildPolygonLayer(polygon: Polygon, coordinates: Array<[number, number]>): L.Polygon {
+    const latlngs: L.LatLngExpression[] = coordinates.map((coord) => [coord[0], coord[1]]);
+    const layer = L.polygon(latlngs, { ...POLYGON_OPTIONS, polygonId: polygon.id });
     layer.on(LEAFLET_EDITABLE_EVENTS.CONTEXT_MENU, (e: L.LeafletMouseEvent) => {
       if (e.originalEvent) {
         L.DomEvent.stopPropagation(e.originalEvent);
@@ -588,7 +601,29 @@ export class MapPolygonsService {
       }
       this.showPolygonContextMenu(polygon.id, e.containerPoint);
     });
+    return layer;
+  }
 
+  private createNewPolygonLayer(polygon: Polygon): void {
+    if (!this.map) return;
+    const layer = this.buildPolygonLayer(polygon, polygon.coordinates);
+    this.polygonLayers.set(polygon.id, layer);
+    layer.addTo(this.map);
+  }
+
+  private recreatePolygonLayer(polygonId: string, coordinates: Array<[number, number]>): void {
+    if (!this.map) return;
+
+    const existing = this.polygonLayers.get(polygonId);
+    if (existing) {
+      this.map.removeLayer(existing);
+      this.polygonLayers.delete(polygonId);
+    }
+
+    const polygon = this.polygonService.getPolygonById(polygonId);
+    if (!polygon) return;
+
+    const layer = this.buildPolygonLayer(polygon, coordinates);
     this.polygonLayers.set(polygon.id, layer);
     layer.addTo(this.map);
   }
@@ -751,6 +786,7 @@ export class MapPolygonsService {
 
         // Clear saved original coordinates
         this.originalCoordinates = null;
+        this.currentEditingPolygonId = null;
 
         // Clear CSS variable
         if (this.map) {
@@ -779,6 +815,7 @@ export class MapPolygonsService {
 
     // Clear saved original coordinates
     this.originalCoordinates = null;
+    this.currentEditingPolygonId = null;
 
     // Clear the polygon color CSS variable
     if (this.map) {
@@ -803,47 +840,14 @@ export class MapPolygonsService {
       layer.disableEdit();
     }
 
-    // Remove dashed line style
-    layer.setStyle({
-      dashArray: '',
-    });
-
-    // Remove the layer and recreate it with original coordinates to avoid breaking edit capabilities
     if (this.originalCoordinates) {
-      // Remove old layer
-      this.map.removeLayer(layer);
-      this.polygonLayers.delete(editingPolygonId);
-
-      // Get polygon data from service
-      const polygon = this.polygonService.getPolygonById(editingPolygonId);
-      if (polygon) {
-        // Create new layer with original coordinates
-        const latlngs: L.LatLngExpression[] = this.originalCoordinates.map((coord) => [
-          coord[0],
-          coord[1],
-        ]);
-        const newLayer = L.polygon(latlngs, {
-          ...POLYGON_OPTIONS,
-          polygonId: polygon.id,
-        });
-
-        // Add context menu listener
-        newLayer.on(LEAFLET_EDITABLE_EVENTS.CONTEXT_MENU, (e: L.LeafletMouseEvent) => {
-          if (e.originalEvent) {
-            L.DomEvent.stopPropagation(e.originalEvent);
-            L.DomEvent.preventDefault(e.originalEvent);
-          }
-          this.showPolygonContextMenu(polygon.id, e.containerPoint);
-        });
-
-        // Add to map
-        this.polygonLayers.set(polygon.id, newLayer);
-        newLayer.addTo(this.map);
-      }
+      this.recreatePolygonLayer(editingPolygonId, this.originalCoordinates);
+    } else {
+      layer.setStyle({ dashArray: '' });
     }
 
-    // Clear saved original coordinates
     this.originalCoordinates = null;
+    this.currentEditingPolygonId = null;
 
     // Clear the polygon color CSS variable
     if (this.map) {
