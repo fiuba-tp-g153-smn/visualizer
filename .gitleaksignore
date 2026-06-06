@@ -2,3 +2,5 @@
 # These are not secrets, just keys used for browser localStorage
 02251d76ef2b55bdae3b193d83f980f9eb448fcf:src/app/services/polygons/polygon.service.ts:generic-api-key:14
 42a07f9c4e92ec3246b7644acd698fa86a34ea0a:src/app/services/polygons/polygon.service.ts:generic-api-key:14
+f78d7d69af58e7a63cc35069efaaa48483565db8:src/app/services/polygons/polygon.service.ts:generic-api-key:14
+dc069ff00834d136c58dcf42d983747f4d74a33a:src/app/services/polygons/polygon.service.ts:generic-api-key:14
