@@ -16,9 +16,11 @@ ENV APP_HOST_PORT=$APP_HOST_PORT
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with cache mount
+# Install dependencies with cache mount, then stamp the lockfile used.
+# The stamp lets the dev-compose entrypoint skip reinstalling unless deps change.
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci \
+    && cp package-lock.json node_modules/.deps-installed
 
 # Copy source code
 COPY . .

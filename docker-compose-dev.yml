@@ -8,6 +8,18 @@ services:
       - "${DOCS_HOST_PORT}:3000"
     volumes:
       - ./docs-service:/app
+      - docs_node_modules:/app/node_modules
+    command:
+      - sh
+      - -c
+      - |
+        if cmp -s package-lock.json node_modules/.deps-installed 2>/dev/null; then
+          echo "✅ docs-service deps already current — skipping install"
+        else
+          echo "📦 docs-service deps changed — running npm ci..."
+          npm ci && cp package-lock.json node_modules/.deps-installed
+        fi
+        exec npm start -- --host 0.0.0.0 --port 3000
     environment:
       - NODE_ENV=development
     healthcheck:
@@ -40,6 +52,18 @@ services:
       - DOCS_URL=${DOCS_URL}
     volumes:
       - .:/app
+      - visualizer_node_modules:/app/node_modules
+    command:
+      - sh
+      - -c
+      - |
+        if cmp -s package-lock.json node_modules/.deps-installed 2>/dev/null; then
+          echo "✅ visualizer deps already current — skipping install"
+        else
+          echo "📦 visualizer deps changed — running npm ci..."
+          npm ci && cp package-lock.json node_modules/.deps-installed
+        fi
+        exec npm start -- --host 0.0.0.0
     restart: unless-stopped
     healthcheck:
       test:
@@ -52,3 +76,7 @@ services:
       retries: 5
       start_period: 10s
       start_interval: 1s
+
+volumes:
+  docs_node_modules:
+  visualizer_node_modules:
