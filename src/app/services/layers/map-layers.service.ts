@@ -35,10 +35,7 @@ const VECTOR_OVERLAY_PANE_PREFIX = 'data-vector-overlay-';
 
 /** Bounds aproximados del dominio WRF (Argentina + alrededores). Evita pedir
  *  tiles fuera del dominio Lambert cuando el viewport está en otra región. */
-const WRF_BARB_BOUNDS = L.latLngBounds(
-  L.latLng(-60.0, -110.0),
-  L.latLng(-15.0, -30.0),
-);
+const WRF_BARB_BOUNDS = L.latLngBounds(L.latLng(-60.0, -110.0), L.latLng(-15.0, -30.0));
 
 function isBarbTileRender(
   render: SecondaryVectorRender | BarbTileRender,
@@ -174,7 +171,7 @@ export class MapLayersService {
               layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
 
               const ecmwfLayer = layer as EcmwfTpTileLayer;
-              const slotsPerForecast = ecmwfLayer.secondaryRender ? 2 : 1;
+              const slotsPerForecast = this.getForecastSlotsPerForecast(ecmwfLayer);
               const slotsUsed = forecastCount * slotsPerForecast;
               if (slotsUsed > 1) {
                 zIndexOffset += slotsUsed - 1;
@@ -192,8 +189,10 @@ export class MapLayersService {
                 actualZIndex,
               );
               layers.forEach((layer, key) => desiredLayersOnMap.set(key, layer));
-              if (forecastCount > 1) {
-                zIndexOffset += forecastCount - 1;
+              const slotsPerForecast = this.getForecastSlotsPerForecast(layer as WrfTileLayer);
+              const slotsUsed = forecastCount * slotsPerForecast;
+              if (slotsUsed > 1) {
+                zIndexOffset += slotsUsed - 1;
               }
               break;
             }
@@ -251,7 +250,9 @@ export class MapLayersService {
 
     const nextWeatherStationLayers = this.getWeatherStationLayerEntries(this.onMapLayers);
 
-    if (this.shouldCloseWeatherStationPopup(previousWeatherStationLayers, nextWeatherStationLayers)) {
+    if (
+      this.shouldCloseWeatherStationPopup(previousWeatherStationLayers, nextWeatherStationLayers)
+    ) {
       this.map.closePopup();
     }
 
@@ -264,7 +265,9 @@ export class MapLayersService {
     return layer?.category === LayerCategory.WEATHER_STATIONS;
   }
 
-  private getWeatherStationLayerEntries(layers: ReadonlyMap<string, L.Layer>): Map<string, L.Layer> {
+  private getWeatherStationLayerEntries(
+    layers: ReadonlyMap<string, L.Layer>,
+  ): Map<string, L.Layer> {
     const entries = new Map<string, L.Layer>();
 
     for (const [layerId, layerRef] of layers) {
@@ -316,12 +319,7 @@ export class MapLayersService {
       if (!layer || layer.type !== LayerType.TILE) continue;
 
       if (layer.category === LayerCategory.ECMWF_TP) {
-        this.collectEcmwfOverlays(
-          layerId,
-          layer as EcmwfTpTileLayer,
-          layerActualZIndexes,
-          desired,
-        );
+        this.collectEcmwfOverlays(layerId, layer as EcmwfTpTileLayer, layerActualZIndexes, desired);
       } else if (layer.category === LayerCategory.WRF) {
         this.collectWrfOverlays(layerId, layer as WrfTileLayer, layerActualZIndexes, desired);
       }
@@ -384,9 +382,7 @@ export class MapLayersService {
     const controls = this.controlService.getControls(layerId) as EcmwfTpLayerControls;
     if (!controls.visible) return;
 
-    const config = this.layerConfigService.getConfig(layerId) as
-      | EcmwfTpTileLayerConfig
-      | undefined;
+    const config = this.layerConfigService.getConfig(layerId) as EcmwfTpTileLayerConfig | undefined;
     if (!config) return;
 
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
@@ -399,28 +395,36 @@ export class MapLayersService {
 
     const layerActualZIndex = layerActualZIndexes.get(layerId);
     if (layerActualZIndex === undefined) return;
+    const slotsPerForecast = this.getForecastSlotsPerForecast(ecmwfLayer);
 
     controls.forecast.selectedForecastTimestamps.forEach((forecastTs, forecastIndex) => {
       // Only render isobars if the forecast actually has data for the
       // current timestamp (mirrors the TP raster's check).
       if (!forecastsForCurrent.includes(forecastTs)) return;
 
+      const secondaryControls = controls.forecast.renderControls[forecastTs];
+      const isSecondaryVisible = secondaryControls
+        ? secondaryControls.selectedRenderIds.includes(secondary.id)
+        : true;
+      if (!isSecondaryVisible) return;
+
       // Match the tile renderer's opacity resolution so the isobars fade in
       // sync with their associated TP raster (per-forecast override, falling
       // back to the layer-wide opacity).
       const forecastOpacity = controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
+      const overlayOpacity = secondaryControls?.renderOpacity[secondary.id] ?? forecastOpacity;
 
       // Each forecast reserves 2 z-slots (TP raster + isobars). The raster sits
       // at `layerActualZIndex + forecastIndex * 2`, so the isobars for that
       // forecast slot in just above it.
-      const isobarZIndex = layerActualZIndex + forecastIndex * 2 + 1;
+      const isobarZIndex = layerActualZIndex + forecastIndex * slotsPerForecast + 1;
 
       this.requestOverlay(
         layerId,
         secondary,
         forecastTs,
         currentTimestampTs,
-        forecastOpacity,
+        overlayOpacity,
         isobarZIndex,
         desired,
       );
@@ -447,9 +451,7 @@ export class MapLayersService {
     const controls = this.controlService.getControls(layerId) as WrfLayerControls;
     if (!controls.visible) return;
 
-    const config = this.layerConfigService.getConfig(layerId) as
-      | WrfTileLayerConfig
-      | undefined;
+    const config = this.layerConfigService.getConfig(layerId) as WrfTileLayerConfig | undefined;
     if (!config) return;
 
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
@@ -463,6 +465,7 @@ export class MapLayersService {
 
     const layerActualZIndex = layerActualZIndexes.get(layerId);
     if (layerActualZIndex === undefined) return;
+    const slotsPerForecast = this.getForecastSlotsPerForecast(wrfLayer);
 
     controls.forecast.selectedForecastTimestamps.forEach((forecastTs, forecastIndex) => {
       // Only render overlays if the forecast actually has data for the current
@@ -476,11 +479,19 @@ export class MapLayersService {
       // Per-forecast opacity override, falling back to the layer-wide opacity.
       const forecastOpacity = controls.forecast.forecastOpacity[forecastTs] ?? controls.opacity;
 
-      // WRF reserves 1 z-slot per forecast (raster); its overlays stack just
-      // above that raster.
-      const overlayZIndex = layerActualZIndex + forecastIndex + 1;
+      for (const [renderIndex, render] of renders.entries()) {
+        const renderControls = controls.forecast.renderControls[forecastTs];
+        const isRenderVisible = renderControls
+          ? renderControls.selectedRenderIds.includes(render.id)
+          : true;
+        if (!isRenderVisible) {
+          continue;
+        }
 
-      for (const render of renders) {
+        const overlayOpacity = renderControls?.renderOpacity[render.id] ?? forecastOpacity;
+        const overlayZIndex =
+          layerActualZIndex + forecastIndex * slotsPerForecast + renderIndex + 1;
+
         // Barb (wind) fields ship as their own tiled GridLayer (arrows drawn
         // per tile) rather than a single GeoJSON overlay, so they take a
         // dedicated path.
@@ -491,6 +502,7 @@ export class MapLayersService {
             render,
             forecastTs,
             fxxx,
+            overlayOpacity,
             overlayZIndex,
             desired,
           );
@@ -501,7 +513,7 @@ export class MapLayersService {
           render,
           forecastTs,
           fxxx,
-          forecastOpacity,
+          overlayOpacity,
           overlayZIndex,
           desired,
         );
@@ -521,6 +533,7 @@ export class MapLayersService {
     render: BarbTileRender,
     initTag: string,
     fxxx: string,
+    opacity: number,
     zIndex: number,
     desired: Map<string, L.Layer>,
   ): void {
@@ -539,7 +552,16 @@ export class MapLayersService {
       });
       this.barbTileLayers.set(cacheKey, tile);
     }
+    tile.setOpacity(opacity);
     desired.set(cacheKey, tile);
+  }
+
+  private getForecastSlotsPerForecast(layer: EcmwfTpTileLayer | WrfTileLayer): number {
+    if (layer.category === LayerCategory.ECMWF_TP) {
+      return layer.secondaryRender ? 2 : 1;
+    }
+
+    return 1 + (layer.secondaryRenders?.length ?? 0);
   }
 
   /**

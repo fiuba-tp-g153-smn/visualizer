@@ -24,15 +24,20 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
 import {
+  BarbTileRender,
   EcmwfTpLayerControls,
+  EcmwfTpTileLayer,
   EcmwfTpTileLayerConfig,
   Layer,
   LayerCategory,
   LayerSelectionMode,
   LayerType,
+  SecondaryVectorRender,
   TilesetEntry,
   WrfLayerControls,
+  WrfTileLayer,
   WrfTileLayerConfig,
+  PRIMARY_RENDER_ID,
 } from '../../../../../models';
 import { LayersService } from '../../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../../services/layers/layer-control.service';
@@ -43,6 +48,7 @@ import {
   formatDateFull,
   formatDateTimeOnly,
   parseEcmwfTimestamp,
+  formatWrfInitTag,
 } from '../../../../../utils/tileset-timestamp';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
@@ -55,6 +61,24 @@ import {
  * Modo de visualización del componente
  */
 export type LayerItemMode = 'available' | 'active';
+
+interface ForecastSecondaryRenderItem {
+  id: string;
+  name: string;
+}
+
+interface ForecastControlGroup {
+  forecastTs: string;
+  displayLabel: string;
+  fullLabel: string;
+  secondaryRenders: ForecastSecondaryRenderItem[];
+}
+
+function isBarbTileRender(
+  render: SecondaryVectorRender | BarbTileRender,
+): render is BarbTileRender {
+  return 'kind' in render && render.kind === 'barb-tile';
+}
 
 /**
  * Componente reutilizable para mostrar y controlar una capa individual
@@ -90,6 +114,7 @@ export type LayerItemMode = 'available' | 'active';
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly LayerCategory = LayerCategory;
   readonly WeatherStationsTemporalMode = WeatherStationsTemporalMode;
+  readonly PRIMARY_RENDER_ID = PRIMARY_RENDER_ID;
 
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
@@ -131,6 +156,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isExpanded = signal(false);
   isElevationsExpanded = signal(false);
   isForecastsExpanded = signal(false);
+  private expandedForecastRuns = signal<Set<string>>(new Set());
   isWeatherStationsSettingsExpanded = signal(false);
   private weatherStationsPlaybackTimerId: number | null = null;
   private readonly weatherStationsPlaybackIsPlaying = signal(false);
@@ -584,7 +610,27 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Alterna la expansión de los controles de corridas ECMWF
    */
   toggleForecastsExpansion(): void {
-    this.isForecastsExpanded.set(!this.isForecastsExpanded());
+    const newExpanded = !this.isForecastsExpanded();
+    this.isForecastsExpanded.set(newExpanded);
+    if (newExpanded) {
+      this.expandedForecastRuns.set(new Set(this.selectedForecastTimestamps()));
+    }
+  }
+
+  toggleForecastRunExpansion(forecastTs: string): void {
+    this.expandedForecastRuns.update((prev) => {
+      const next = new Set(prev);
+      if (next.has(forecastTs)) {
+        next.delete(forecastTs);
+      } else {
+        next.add(forecastTs);
+      }
+      return next;
+    });
+  }
+
+  isForecastRunExpanded(forecastTs: string): boolean {
+    return this.expandedForecastRuns().has(forecastTs);
   }
 
   /**
@@ -653,30 +699,61 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   onOpacityChange(opacity: number): void {
     const activeLayer = this.getActiveLayer();
     if (activeLayer && activeLayer.controls.type === LayerType.TILE) {
-      // For radar layers, update ALL elevations
+      // For radar layers, update ALL elevations (global opacity = all elevations)
       if (activeLayer.controls.category === LayerCategory.RADAR) {
         const allElevationIds = this.availableElevations().map((elev) => elev.id);
-        allElevationIds.forEach((id) => {
+        allElevationIds.forEach((id: string) => {
           this.controlService.setElevationOpacity(this.layer.id, id, opacity);
         });
       }
-      // For ECMWF layers, update ALL forecasts
-      if (activeLayer.controls.category === LayerCategory.ECMWF_TP) {
-        const allForecasts = this.availableForecasts();
-        allForecasts.forEach((ts) => {
-          this.controlService.setEcmwfTpForecastOpacity(this.layer.id, ts, opacity);
+      // For WRF/ECMWF, cascade to all corridas and their renders (mirrors radar elevation
+      // model: moving the global slider explicitly pushes the value to all children,
+      // overwriting any individual per-forecast / per-render overrides).
+      if (activeLayer.controls.category === LayerCategory.WRF) {
+        const allForecastTs = this.selectedForecastTimestamps();
+        const secondaryRenders = this.getForecastRenders();
+        allForecastTs.forEach((forecastTs) => {
+          this.controlService.setWrfForecastOpacity(this.layer.id, forecastTs, opacity);
+          this.controlService.setWrfForecastRenderOpacity(
+            this.layer.id,
+            forecastTs,
+            PRIMARY_RENDER_ID,
+            opacity,
+          );
+          secondaryRenders.forEach((render) => {
+            this.controlService.setWrfForecastRenderOpacity(
+              this.layer.id,
+              forecastTs,
+              render.id,
+              opacity,
+            );
+          });
         });
       }
-      // For WRF layers, update ALL forecast init runs
-      if (activeLayer.controls.category === LayerCategory.WRF) {
-        const allForecasts = this.availableForecasts();
-        allForecasts.forEach((initTag) => {
-          this.controlService.setWrfForecastOpacity(this.layer.id, initTag, opacity);
+      if (activeLayer.controls.category === LayerCategory.ECMWF_TP) {
+        const allForecastTs = this.selectedForecastTimestamps();
+        const secondaryRenders = this.getForecastRenders();
+        allForecastTs.forEach((forecastTs) => {
+          this.controlService.setEcmwfTpForecastOpacity(this.layer.id, forecastTs, opacity);
+          this.controlService.setEcmwfTpForecastRenderOpacity(
+            this.layer.id,
+            forecastTs,
+            PRIMARY_RENDER_ID,
+            opacity,
+          );
+          secondaryRenders.forEach((render) => {
+            this.controlService.setEcmwfTpForecastRenderOpacity(
+              this.layer.id,
+              forecastTs,
+              render.id,
+              opacity,
+            );
+          });
         });
       }
     }
 
-    // Always update the layer's base opacity as well
+    // Always update the layer's base opacity
     this.controlService.setOpacity(this.layer.id, opacity);
 
     if (this.isWeatherStationsLayer()) {
@@ -826,6 +903,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Formats an ECMWF forecast run timestamp as "HH:MM" for the selector label.
    */
   formatForecastTime(forecastTs: string): string {
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      return formatWrfInitTag(forecastTs);
+    }
     const date = parseEcmwfTimestamp(forecastTs);
     return date ? formatDateTimeOnly(date) : forecastTs;
   }
@@ -834,9 +914,26 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Formats an ECMWF forecast run timestamp as "YYYY-MM-DD HH:MM" for its tooltip.
    */
   formatForecastFull(forecastTs: string): string {
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      return formatWrfInitTag(forecastTs);
+    }
     const date = parseEcmwfTimestamp(forecastTs);
     return date ? formatDateFull(date) : forecastTs;
   }
+
+  forecastControlGroups = computed((): ForecastControlGroup[] => {
+    const secondaryRenders = this.getForecastRenders().map((render) => ({
+      id: render.id,
+      name: this.getForecastRenderName(render),
+    }));
+
+    return this.availableForecasts().map((forecastTs) => ({
+      forecastTs,
+      displayLabel: this.formatForecastTime(forecastTs),
+      fullLabel: this.formatForecastFull(forecastTs),
+      secondaryRenders,
+    }));
+  });
 
   /**
    * Checks if the layer requires forecast control (ECMWF or WRF).
@@ -902,11 +999,23 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
    * Toggles a forecast run (activate/deactivate)
    */
   onForecastToggle(forecastTs: string): void {
+    const wasSelected = this.isForecastSelected(forecastTs);
+
     if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
       this.controlService.toggleWrfForecast(this.layer.id, forecastTs);
-      return;
+    } else {
+      this.controlService.toggleEcmwfTpForecast(this.layer.id, forecastTs);
     }
-    this.controlService.toggleEcmwfTpForecast(this.layer.id, forecastTs);
+
+    this.expandedForecastRuns.update((prev) => {
+      const next = new Set(prev);
+      if (wasSelected) {
+        next.delete(forecastTs);
+      } else if (this.isForecastsExpanded()) {
+        next.add(forecastTs);
+      }
+      return next;
+    });
   }
 
   /**
@@ -920,9 +1029,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       (activeItem.controls.category === LayerCategory.ECMWF_TP ||
         activeItem.controls.category === LayerCategory.WRF)
     ) {
-      const forecastControls = (
-        activeItem.controls as EcmwfTpLayerControls | WrfLayerControls
-      ).forecast;
+      const forecastControls = (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls)
+        .forecast;
       const forecastOpacity = forecastControls.forecastOpacity[forecastTs];
       return forecastOpacity !== undefined ? forecastOpacity : activeItem.controls.opacity;
     }
@@ -942,9 +1050,120 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   onForecastOpacityChange(forecastTs: string, opacity: number): void {
     if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
       this.controlService.setWrfForecastOpacity(this.layer.id, forecastTs, opacity);
+      // Cascade to primary and all secondary renders for this corrida (mirrors radar elevation
+      // model: moving the corrida slider explicitly pushes the value to all its renders).
+      this.controlService.setWrfForecastRenderOpacity(
+        this.layer.id,
+        forecastTs,
+        PRIMARY_RENDER_ID,
+        opacity,
+      );
+      this.getForecastRenders().forEach((render) => {
+        this.controlService.setWrfForecastRenderOpacity(
+          this.layer.id,
+          forecastTs,
+          render.id,
+          opacity,
+        );
+      });
       return;
     }
+    // Cascade to primary and all secondary renders for this run (mirrors WRF / radar model).
     this.controlService.setEcmwfTpForecastOpacity(this.layer.id, forecastTs, opacity);
+    this.controlService.setEcmwfTpForecastRenderOpacity(
+      this.layer.id,
+      forecastTs,
+      PRIMARY_RENDER_ID,
+      opacity,
+    );
+    this.getForecastRenders().forEach((render) => {
+      this.controlService.setEcmwfTpForecastRenderOpacity(
+        this.layer.id,
+        forecastTs,
+        render.id,
+        opacity,
+      );
+    });
+  }
+
+  /**
+   * Returns the opacity value if all renders of the corrida share the same opacity,
+   * or undefined if they diverge (drives the '-' label on the corrida row).
+   */
+  getForecastRunUniformOpacity(forecastTs: string): number | undefined {
+    const allRenderIds = [PRIMARY_RENDER_ID, ...this.getForecastRenders().map((r) => r.id)];
+    const opacities = allRenderIds.map((id) => this.getForecastRenderOpacity(forecastTs, id));
+    const first = opacities[0];
+    return opacities.every((o) => Math.abs(o - first) < 0.001) ? first : undefined;
+  }
+
+  isForecastRenderSelected(forecastTs: string, renderId: string): boolean {
+    return (
+      this.isForecastSelected(forecastTs) && this.getForecastRenderVisible(forecastTs, renderId)
+    );
+  }
+
+  onForecastRenderToggle(forecastTs: string, renderId: string): void {
+    const nextVisible = !this.getForecastRenderVisible(forecastTs, renderId);
+
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      this.controlService.setWrfForecastRenderVisible(
+        this.layer.id,
+        forecastTs,
+        renderId,
+        nextVisible,
+      );
+    } else {
+      this.controlService.setEcmwfTpForecastRenderVisible(
+        this.layer.id,
+        forecastTs,
+        renderId,
+        nextVisible,
+      );
+    }
+
+    if (!nextVisible && this.isForecastSelected(forecastTs)) {
+      const allRenderIds = [PRIMARY_RENDER_ID, ...this.getForecastRenders().map((r) => r.id)];
+      const allHidden = allRenderIds.every((id) => !this.getForecastRenderVisible(forecastTs, id));
+      if (allHidden) {
+        this.onForecastToggle(forecastTs);
+      }
+    }
+  }
+
+  getForecastRenderOpacity(forecastTs: string, renderId: string): number {
+    const activeItem = this.getActiveLayer();
+    if (!activeItem) return this.getForecastOpacity(forecastTs);
+
+    if (
+      activeItem.controls.type === LayerType.TILE &&
+      (activeItem.controls.category === LayerCategory.ECMWF_TP ||
+        activeItem.controls.category === LayerCategory.WRF)
+    ) {
+      const renderOpacity = (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls)
+        .forecast.renderControls[forecastTs]?.renderOpacity[renderId];
+      return renderOpacity !== undefined ? renderOpacity : this.getForecastOpacity(forecastTs);
+    }
+
+    return this.getForecastOpacity(forecastTs);
+  }
+
+  getForecastRenderOpacityPercent(forecastTs: string, renderId: string): number {
+    return Math.round(this.getForecastRenderOpacity(forecastTs, renderId) * 100);
+  }
+
+  onForecastRenderOpacityChange(forecastTs: string, renderId: string, opacity: number): void {
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      this.controlService.setWrfForecastRenderOpacity(this.layer.id, forecastTs, renderId, opacity);
+      return;
+    }
+
+    this.controlService.setEcmwfTpForecastRenderOpacity(
+      this.layer.id,
+      forecastTs,
+      renderId,
+      opacity,
+    );
   }
 
   // ==========================================================================
@@ -1007,6 +1226,22 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return this.layer.scale !== undefined;
   }
 
+  /**
+   * True when the layer has a primary tile visible for at least one selected forecast run.
+   * For non-forecast layers this is always true. When false, the scale button is disabled.
+   */
+  isPrimaryRenderActiveForAnyForecast = computed((): boolean => {
+    if (
+      this.layer.type !== LayerType.TILE ||
+      (this.layer.category !== LayerCategory.ECMWF_TP && this.layer.category !== LayerCategory.WRF)
+    ) {
+      return true;
+    }
+    const selected = this.selectedForecastTimestamps();
+    if (selected.length === 0) return false;
+    return selected.some((ts) => this.getForecastRenderVisible(ts, PRIMARY_RENDER_ID));
+  });
+
   isScaleSelected(): boolean {
     return this.scaleTools.enabled() && this.scaleTools.isLayerSelected(this.layer.id);
   }
@@ -1028,22 +1263,98 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return this.layer.category === LayerCategory.WEATHER_STATIONS;
   }
 
-  readonly weatherStationsTemporalMode = computed(() => this.controlService.getWeatherStationsTemporalMode());
+  private getForecastRenders(): readonly (SecondaryVectorRender | BarbTileRender)[] {
+    if (this.layer.type !== LayerType.TILE) {
+      return [];
+    }
+
+    if (this.layer.category === LayerCategory.ECMWF_TP) {
+      const secondary = (this.layer as EcmwfTpTileLayer).secondaryRender;
+      return secondary ? [secondary] : [];
+    }
+
+    if (this.layer.category === LayerCategory.WRF) {
+      return (this.layer as WrfTileLayer).secondaryRenders ?? [];
+    }
+
+    return [];
+  }
+
+  private getForecastRenderVisible(forecastTs: string, renderId: string): boolean {
+    const activeItem = this.getActiveLayer();
+    if (!activeItem) return true;
+
+    if (
+      activeItem.controls.type === LayerType.TILE &&
+      (activeItem.controls.category === LayerCategory.ECMWF_TP ||
+        activeItem.controls.category === LayerCategory.WRF)
+    ) {
+      return (
+        (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls).forecast.renderControls[
+          forecastTs
+        ]?.selectedRenderIds.includes(renderId) ?? true
+      );
+    }
+
+    return true;
+  }
+
+  private getForecastRenderName(render: SecondaryVectorRender | BarbTileRender): string {
+    if (render.pointQuery?.name) {
+      return render.pointQuery.name;
+    }
+
+    if (isBarbTileRender(render)) {
+      return 'Barbas';
+    }
+
+    const suffix = render.id.split('-').at(-1) ?? render.id;
+    switch (suffix) {
+      case 'mslp':
+      case 'slp':
+      case 'isobars':
+      case 'isobaras':
+        return 'Presión a nivel del mar';
+      case 'gust_threshold':
+        return 'Umbral de ráfagas';
+      case 'shear_850_500':
+        return 'Cortante 850-500 hPa';
+      case 'shear_850_700':
+        return 'Cortante 850-700 hPa';
+      case 'brn':
+        return 'Bulk Richardson Number';
+      case 'haildiammax':
+        return 'Diámetro máximo de granizo';
+      default:
+        return suffix.replace(/[_-]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+  }
+
+  readonly weatherStationsTemporalMode = computed(() =>
+    this.controlService.getWeatherStationsTemporalMode(),
+  );
 
   readonly isWeatherStationsSpecificTemporalMode = computed(
     () => this.weatherStationsTemporalMode() === WeatherStationsTemporalMode.SPECIFIC,
   );
 
-  readonly weatherStationsMaxPastHours = computed(() => this.controlService.getWeatherStationsMaxPastHours());
+  readonly weatherStationsMaxPastHours = computed(() =>
+    this.controlService.getWeatherStationsMaxPastHours(),
+  );
 
   // Bound to the "Mostrar estaciones sin datos" checkbox. When false, the
   // renderer drops stations whose `hasData` is false (last observation falls
   // outside the requested tolerance window).
-  readonly weatherStationsShowStationsWithoutData = this.controlService.weatherStationsShowStationsWithoutData;
+  readonly weatherStationsShowStationsWithoutData =
+    this.controlService.weatherStationsShowStationsWithoutData;
 
-  readonly weatherStationsImageCountOptions = computed(() => [...WEATHER_STATIONS_IMAGE_COUNT_OPTIONS]);
+  readonly weatherStationsImageCountOptions = computed(() => [
+    ...WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
+  ]);
 
-  readonly weatherStationsTilesetIds = computed(() => this.refreshService.getWeatherStationsAvailableTilesetIds());
+  readonly weatherStationsTilesetIds = computed(() =>
+    this.refreshService.getWeatherStationsAvailableTilesetIds(),
+  );
 
   readonly weatherStationsSelectedTilesetIndex = computed(() => {
     const tilesetIds = this.weatherStationsTilesetIds();
@@ -1168,9 +1479,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       .find((item) => item.layer.category === LayerCategory.WEATHER_STATIONS);
 
     if (activeWeatherStationLayer) {
-      this.controlService.captureWeatherStationsSharedFromControls(activeWeatherStationLayer.controls);
+      this.controlService.captureWeatherStationsSharedFromControls(
+        activeWeatherStationLayer.controls,
+      );
       this.controlService.setWeatherStationsScaleVisible(
-        this.scaleTools.enabled() && this.scaleTools.isLayerSelected(activeWeatherStationLayer.layer.id),
+        this.scaleTools.enabled() &&
+          this.scaleTools.isLayerSelected(activeWeatherStationLayer.layer.id),
       );
       return;
     }

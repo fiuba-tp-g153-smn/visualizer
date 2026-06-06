@@ -29,6 +29,7 @@ import {
   WrfLayerControls,
   WrfTileLayer,
   WrfTileLayerConfig,
+  PRIMARY_RENDER_ID,
 } from '../../models';
 import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { NotificationService } from '../notifications/notification.service';
@@ -926,40 +927,52 @@ export class LayerRenderService {
     selectedForecasts.forEach((forecastTs, index) => {
       const forecastZIndex = absoluteZIndex + index * slotsPerForecast;
       const forecastOpacity = controls.forecast.forecastOpacity[forecastTs];
-      const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
 
       // Only create a tile if this forecast has data for the current period
       const forecastsForPeriod = config.forecastsByPeriod[currentPeriodTs];
-      if (forecastsForPeriod && forecastsForPeriod.includes(forecastTs)) {
+
+      // Check if the primary render is selected for this forecast run.
+      const renderControls = controls.forecast.renderControls[forecastTs];
+      const isPrimaryVisible = renderControls
+        ? renderControls.selectedRenderIds.includes(PRIMARY_RENDER_ID)
+        : true;
+
+      // Fallback chain: renderOpacity['primary'] ?? forecastOpacity ?? layer opacity
+      const primaryOpacity =
+        renderControls?.renderOpacity[PRIMARY_RENDER_ID] ?? forecastOpacity ?? targetOpacity;
+
+      if (isPrimaryVisible && forecastsForPeriod && forecastsForPeriod.includes(forecastTs)) {
         const tileLayer = this.createEcmwfTpTileLayerForForecast(
           layerId,
           controls,
           forecastTs,
           currentPeriodTs,
         );
-        this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
+        this.applyLayerStyles(tileLayer, primaryOpacity, forecastZIndex);
         result.set(`${layerId}#${forecastTs}#${currentTimeIndex}`, tileLayer);
       }
 
-      // Pre-render next N frames at opacity=0
-      this.prerenderNextFrames(
-        result,
-        currentTimeIndex,
-        totalFrames,
-        controls.playback.imageCount,
-        forecastZIndex,
-        true,
-        (adjIndex) => {
-          const adjLayer = this.createEcmwfTpTileLayerForForecastAtTimeIndex(
-            layerId,
-            controls,
-            forecastTs,
-            adjIndex,
-          );
-          if (!adjLayer) return null;
-          return { layer: adjLayer, key: `${layerId}#${forecastTs}#${adjIndex}` };
-        },
-      );
+      // Pre-render next N frames at opacity=0 (only when primary is visible)
+      if (isPrimaryVisible) {
+        this.prerenderNextFrames(
+          result,
+          currentTimeIndex,
+          totalFrames,
+          controls.playback.imageCount,
+          forecastZIndex,
+          true,
+          (adjIndex) => {
+            const adjLayer = this.createEcmwfTpTileLayerForForecastAtTimeIndex(
+              layerId,
+              controls,
+              forecastTs,
+              adjIndex,
+            );
+            if (!adjLayer) return null;
+            return { layer: adjLayer, key: `${layerId}#${forecastTs}#${adjIndex}` };
+          },
+        );
+      }
     });
 
     return result;
@@ -1310,37 +1323,54 @@ export class LayerRenderService {
     const currentEntry = config.availableTilesets[currentTimeIndex];
     if (!currentEntry) return result;
     const forecastsForStep = config.forecastsByPeriod[currentEntry.id];
+    const wrfLayer = this.layersService.getLayerById(layerId);
+    const slotsPerForecast =
+      wrfLayer && wrfLayer.type === LayerType.TILE && wrfLayer.category === LayerCategory.WRF
+        ? 1 + ((wrfLayer as WrfTileLayer).secondaryRenders?.length ?? 0)
+        : 1;
 
     selectedForecasts.forEach((initTag, index) => {
-      const forecastZIndex = absoluteZIndex + index;
+      const forecastZIndex = absoluteZIndex + index * slotsPerForecast;
       const forecastOpacity = controls.forecast.forecastOpacity[initTag];
-      const opacity = forecastOpacity !== undefined ? forecastOpacity : targetOpacity;
 
       const fxxx = wrfFxxxForInitAndTime(initTag, currentEntry.time);
-      if (fxxx && forecastsForStep && forecastsForStep.includes(initTag)) {
+
+      // Check if the primary render is selected for this forecast run.
+      const renderControls = controls.forecast.renderControls[initTag];
+      const isPrimaryVisible = renderControls
+        ? renderControls.selectedRenderIds.includes(PRIMARY_RENDER_ID)
+        : true;
+
+      // Fallback chain: renderOpacity['primary'] ?? forecastOpacity ?? layer opacity
+      const primaryOpacity =
+        renderControls?.renderOpacity[PRIMARY_RENDER_ID] ?? forecastOpacity ?? targetOpacity;
+
+      if (isPrimaryVisible && fxxx && forecastsForStep && forecastsForStep.includes(initTag)) {
         const tileLayer = this.createWrfTileLayerForForecast(layerId, controls, initTag, fxxx);
-        this.applyLayerStyles(tileLayer, opacity, forecastZIndex);
+        this.applyLayerStyles(tileLayer, primaryOpacity, forecastZIndex);
         result.set(`${layerId}#${initTag}#${currentTimeIndex}`, tileLayer);
       }
 
-      this.prerenderNextFrames(
-        result,
-        currentTimeIndex,
-        totalFrames,
-        controls.playback.imageCount,
-        forecastZIndex,
-        true,
-        (adjIndex) => {
-          const adjLayer = this.createWrfTileLayerForForecastAtTimeIndex(
-            layerId,
-            controls,
-            initTag,
-            adjIndex,
-          );
-          if (!adjLayer) return null;
-          return { layer: adjLayer, key: `${layerId}#${initTag}#${adjIndex}` };
-        },
-      );
+      if (isPrimaryVisible) {
+        this.prerenderNextFrames(
+          result,
+          currentTimeIndex,
+          totalFrames,
+          controls.playback.imageCount,
+          forecastZIndex,
+          true,
+          (adjIndex) => {
+            const adjLayer = this.createWrfTileLayerForForecastAtTimeIndex(
+              layerId,
+              controls,
+              initTag,
+              adjIndex,
+            );
+            if (!adjLayer) return null;
+            return { layer: adjLayer, key: `${layerId}#${initTag}#${adjIndex}` };
+          },
+        );
+      }
     });
 
     return result;
