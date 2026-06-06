@@ -32,8 +32,12 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy source code
 COPY . .
 
-# Build the application (esbuild is fast, no cache needed)
-RUN npm run build
+# Build the application with a persistent Angular build cache.
+# This is the custom-webpack (Webpack) builder, which writes ~110MB to
+# .angular/cache. Persisting that cache across deploys turns a cold ~120s
+# production build into a warm ~40s one (~3x faster).
+RUN --mount=type=cache,target=/app/.angular \
+    npm run build
 
 ################################
 # Stage 2: Runtime
