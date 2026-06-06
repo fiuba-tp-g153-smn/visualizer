@@ -881,7 +881,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const selectedTimestamps = this.selectedForecastTimestamps();
     if (selectedTimestamps.length === 0) return activeLayer.controls.opacity;
 
-    const opacities = selectedTimestamps.map((ts) => this.getForecastOpacity(ts));
+    const uniformOpacities = selectedTimestamps.map((ts) => this.getForecastRunUniformOpacity(ts));
+    if (uniformOpacities.some((o) => o === undefined)) return undefined;
+    const opacities = uniformOpacities as number[];
     const firstOpacity = opacities[0];
     const allSame = opacities.every((o) => Math.abs(o - firstOpacity) < 0.001);
     return allSame ? firstOpacity : undefined;
