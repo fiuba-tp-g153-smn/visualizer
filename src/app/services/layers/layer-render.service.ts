@@ -432,7 +432,7 @@ export class LayerRenderService {
         const popupData = this.buildWeatherStationsPopupData(observation);
         const { element, destroy } = this.createWeatherStationsPopupElement(popupData);
         const popup = L.popup({ pane: 'popupPane', className: 'weather-station-popup' })
-          .setLatLng(evt.latlng)
+          .setLatLng(marker.getLatLng())
           .setContent(element)
           .openOn(map);
 
