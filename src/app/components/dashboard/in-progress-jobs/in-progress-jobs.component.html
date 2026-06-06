@@ -1,0 +1,28 @@
+<div class="ip__count">{{ jobs().length }} en proceso</div>
+
+@if (jobs().length) {
+  <div class="ip__scroll">
+    <table class="ip__table">
+      <thead>
+        <tr>
+          <th>imagen</th>
+          <th>banda</th>
+          <th>estado</th>
+          <th>desde</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (job of jobs(); track job.image_id + '|' + job.band_id) {
+          <tr>
+            <td class="l"><span class="ip__dot"></span>{{ job.image_id }}</td>
+            <td class="l muted">{{ job.band_id }}</td>
+            <td class="l muted">{{ job.status }}</td>
+            <td class="r muted">{{ since(job.updated_at) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <div class="ip__empty">No hay trabajos en proceso.</div>
+}

@@ -104,10 +104,17 @@
       </app-metric-panel>
 
       <app-metric-panel
-        heading="En vivo · cola y en proceso"
-        tip="Estado en tiempo real: profundidad de la cola de trabajo y de la cola de descartes (RabbitMQ), y los trabajos que se están procesando ahora mismo (rastreador de progreso). Muestra 'N/A' si RabbitMQ no responde."
+        heading="Colas · RabbitMQ"
+        tip="Profundidad de las colas de RabbitMQ: trabajos en espera (cola de trabajo) y mensajes en la cola de descartes (DLQ). 'N/A' si RabbitMQ no responde."
       >
-        <app-live-status-panel [live]="live()" />
+        <app-queue-depths [queues]="live()?.queues ?? null" />
+      </app-metric-panel>
+
+      <app-metric-panel
+        heading="Trabajos en proceso"
+        tip="Trabajos que los workers están procesando ahora mismo, según el rastreador de progreso (SQLite). Es independiente de RabbitMQ."
+      >
+        <app-in-progress-jobs [jobs]="live()?.in_progress ?? []" />
       </app-metric-panel>
 
       <app-metric-panel

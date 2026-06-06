@@ -2,38 +2,25 @@
   display: block;
 }
 
-.live__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+.ip__count {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  border-bottom: 1px solid var(--mat-sys-outline-variant, #ececec);
 }
 
-.live__stat {
-  padding: 12px 14px;
-  border-right: 1px solid var(--mat-sys-outline-variant, #ececec);
-}
-
-.live__k {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.ip__empty {
+  padding: 18px;
+  font-size: 12px;
   color: var(--mat-sys-on-surface-variant, #5f6368);
 }
 
-.live__v {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--mat-sys-on-surface, #1f1f1f);
-  font-variant-numeric: tabular-nums;
-}
-
-// Cap the pending-work list so it never blows up the page vertically.
-.live__scroll {
+// Cap the list height so it never blows up the page vertically.
+.ip__scroll {
   max-height: 240px;
   overflow-y: scroll; // barra de scroll siempre visible
-  border-top: 1px solid var(--mat-sys-outline-variant, #ececec);
 
-  // Barra de scroll clásica (no overlay) siempre visible, para que se note que
-  // la lista es desplazable. Firefox:
+  // Barra de scroll clásica (no overlay) siempre visible. Firefox:
   scrollbar-width: thin;
   scrollbar-color: var(--mat-sys-outline, #9aa0a6) var(--mat-sys-surface-container, #f3f3f5);
 
@@ -57,7 +44,7 @@
   }
 }
 
-.live__table {
+.ip__table {
   width: 100%;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
@@ -97,9 +84,7 @@
     text-align: center;
   }
 
-  // imagen y banda son identificadores: alinearlos a la izquierda. El id es
-  // largo y "centrado" se ve igual pegado a la izquierda (más el punto de
-  // estado). Estado y "desde" quedan centrados.
+  // imagen y banda son identificadores: alinearlos a la izquierda.
   th:nth-child(-n + 2),
   td:nth-child(-n + 2) {
     text-align: left;
@@ -110,7 +95,7 @@
   }
 }
 
-.dot {
+.ip__dot {
   display: inline-block;
   width: 7px;
   height: 7px;

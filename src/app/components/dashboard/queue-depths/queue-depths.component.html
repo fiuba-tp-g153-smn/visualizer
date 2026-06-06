@@ -1,0 +1,13 @@
+<div class="qd__stats">
+  @for (tile of tiles(); track tile.key) {
+    <div class="qd__stat">
+      <div class="qd__k">{{ tile.key }}</div>
+      <div class="qd__v">{{ tile.value }}</div>
+      <div class="qd__k">{{ tile.sub }}</div>
+    </div>
+  }
+</div>
+
+@if (offline()) {
+  <div class="qd__offline">Sin conexión con RabbitMQ — reintentando…</div>
+}

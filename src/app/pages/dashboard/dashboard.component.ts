@@ -16,7 +16,8 @@ import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
-import { LiveStatusPanelComponent } from '../../components/dashboard/live-status-panel/live-status-panel.component';
+import { InProgressJobsComponent } from '../../components/dashboard/in-progress-jobs/in-progress-jobs.component';
+import { QueueDepthsComponent } from '../../components/dashboard/queue-depths/queue-depths.component';
 import { JobTypeSummaryTableComponent } from '../../components/dashboard/job-type-summary-table/job-type-summary-table.component';
 import { MetricChartComponent } from '../../components/dashboard/metric-chart/metric-chart.component';
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
@@ -62,7 +63,8 @@ const JOBS_PAGE = 50;
     MatTooltipModule,
     MetricPanelComponent,
     MetricStatCardsComponent,
-    LiveStatusPanelComponent,
+    QueueDepthsComponent,
+    InProgressJobsComponent,
     TrendChartsComponent,
     MetricChartComponent,
     JobTypeSummaryTableComponent,
