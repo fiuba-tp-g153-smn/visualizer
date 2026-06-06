@@ -297,6 +297,7 @@ export function buildLineChart(
   unit: 'secs' | 'count',
   height: number = DEFAULT_HEIGHT,
   colorFor: (type: string) => string = typeColor,
+  utc = true,
 ): MetricsChartOptions {
   const data = pivot(rows, valueKey);
   const formatter = unit === 'secs' ? secsFormatter : countFormatter;
@@ -307,7 +308,7 @@ export function buildLineChart(
     })),
     chart: baseChart('line', false, height),
     colors: data.types.map(colorFor),
-    xaxis: categoryXAxis(data.buckets.map(fmtBucket)),
+    xaxis: categoryXAxis(data.buckets.map((bucket) => fmtBucket(bucket, utc))),
     yaxis: valueYAxis(formatter),
     stroke: { curve: 'straight', width: 2 },
     fill: { type: 'solid', opacity: 1 },
@@ -323,6 +324,7 @@ export function buildThroughputBarChart(
   rows: readonly ThroughputBucket[],
   height: number = DEFAULT_HEIGHT,
   colorFor: (type: string) => string = typeColor,
+  utc = true,
 ): MetricsChartOptions {
   const data = pivot(rows, 'count');
   return {
@@ -332,7 +334,7 @@ export function buildThroughputBarChart(
     })),
     chart: baseChart('bar', true, height),
     colors: data.types.map(colorFor),
-    xaxis: categoryXAxis(data.buckets.map(fmtBucket)),
+    xaxis: categoryXAxis(data.buckets.map((bucket) => fmtBucket(bucket, utc))),
     yaxis: valueYAxis(countFormatter),
     stroke: { width: 0 },
     fill: { type: 'solid', opacity: 1 },
@@ -348,6 +350,7 @@ export function buildStageAreaChart(
   series: readonly TimingSeriesPoint[],
   jobType: string,
   height: number = DEFAULT_HEIGHT,
+  utc = true,
 ): MetricsChartOptions {
   const rows = series.filter((row) => row.job_type === jobType);
   const buckets = [...new Set(rows.map((row) => row.bucket))].sort();
@@ -363,7 +366,7 @@ export function buildStageAreaChart(
     })),
     chart: baseChart('area', true, height),
     colors: stageNames.map(stageColor),
-    xaxis: categoryXAxis(buckets.map(fmtBucket)),
+    xaxis: categoryXAxis(buckets.map((bucket) => fmtBucket(bucket, utc))),
     yaxis: valueYAxis(secsFormatter),
     stroke: { curve: 'straight', width: 1 },
     fill: { type: 'solid', opacity: 0.35 },

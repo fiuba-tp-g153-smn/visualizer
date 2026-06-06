@@ -4,7 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 
 import type { RecentJob } from '../../../models/metrics/metrics.models';
-import { secs } from '../../../services/metrics/metrics-format.util';
+import { fmtInstant, secs } from '../../../services/metrics/metrics-format.util';
 import { outcomeLabel, prod } from '../../../services/metrics/metrics-labels.constants';
 import { StagePieChartComponent } from '../stage-pie-chart/stage-pie-chart.component';
 
@@ -47,8 +47,8 @@ export class JobDetailDialogComponent {
       { label: 'Banda', value: job.band_id ?? '—' },
       { label: 'Tipo', value: job.job_type },
       { label: 'Nodo', value: job.worker_host ?? '—' },
-      { label: 'Inicio', value: job.started_at },
-      { label: 'Fin', value: job.finished_at },
+      { label: 'Inicio', value: fmtInstant(job.started_at), title: job.started_at },
+      { label: 'Fin', value: fmtInstant(job.finished_at), title: job.finished_at },
       { label: 'Total', value: secs(job.total_s) },
       { label: 'Descarga', value: secs(job.download_s) },
       { label: 'Proceso', value: secs(job.process_s) },

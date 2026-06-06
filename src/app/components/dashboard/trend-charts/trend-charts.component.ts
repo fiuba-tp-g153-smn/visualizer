@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -10,6 +17,10 @@ import {
   buildTypeColorMap,
   type MetricsChartOptions,
 } from '../../../services/metrics/metrics-chart.util';
+import {
+  TIMEZONE_MODES,
+  TimezoneSettingsService,
+} from '../../../services/settings/timezone-settings.service';
 import { MetricChartComponent } from '../metric-chart/metric-chart.component';
 
 /**
@@ -28,6 +39,11 @@ import { MetricChartComponent } from '../metric-chart/metric-chart.component';
 export class TrendChartsComponent {
   readonly timing = input.required<readonly TimingSeriesPoint[]>();
   readonly throughput = input.required<readonly ThroughputBucket[]>();
+
+  private readonly timezone = inject(TimezoneSettingsService);
+
+  /** true = mostrar el eje en UTC; false = hora local del navegador. */
+  private readonly utc = computed<boolean>(() => this.timezone.mode() === TIMEZONE_MODES.UTC);
 
   private readonly selectedType = signal<string | null>(null);
 
@@ -57,16 +73,16 @@ export class TrendChartsComponent {
   );
 
   readonly evolutionChart = computed<MetricsChartOptions>(() =>
-    buildLineChart(this.timing(), 'avg_total_s', 'secs', undefined, this.colorFor()),
+    buildLineChart(this.timing(), 'avg_total_s', 'secs', undefined, this.colorFor(), this.utc()),
   );
   readonly throughputChart = computed<MetricsChartOptions>(() =>
-    buildThroughputBarChart(this.throughput(), undefined, this.colorFor()),
+    buildThroughputBarChart(this.throughput(), undefined, this.colorFor(), this.utc()),
   );
   readonly stageChart = computed<MetricsChartOptions>(() =>
-    buildStageAreaChart(this.timing(), this.effectiveType()),
+    buildStageAreaChart(this.timing(), this.effectiveType(), undefined, this.utc()),
   );
   readonly p95Chart = computed<MetricsChartOptions>(() =>
-    buildLineChart(this.timing(), 'p95_total_s', 'secs', undefined, this.colorFor()),
+    buildLineChart(this.timing(), 'p95_total_s', 'secs', undefined, this.colorFor(), this.utc()),
   );
 
   onStageTypeChange(event: Event): void {

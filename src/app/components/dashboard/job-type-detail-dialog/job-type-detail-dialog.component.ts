@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 
 import type { JobTypeSummary } from '../../../models/metrics/metrics.models';
-import { ago, pct, secs } from '../../../services/metrics/metrics-format.util';
+import { ago, fmtInstant, pct, secs } from '../../../services/metrics/metrics-format.util';
 import { prod } from '../../../services/metrics/metrics-labels.constants';
 import { outcomePillsCell, stageBarCell } from '../metrics-cells.util';
 import type { BarSegment } from '../sortable-table/sortable-table.models';
@@ -56,7 +56,7 @@ export class JobTypeDetailDialogComponent {
       { label: 'Máx', value: secs(summary.total_s.max) },
       { label: 'p95', value: secs(summary.total_s.p95) },
       { label: 'Descarga', value: secs(summary.download_s.avg) },
-      { label: 'Último', value: ago(summary.last_finished), title: summary.last_finished },
+      { label: 'Último', value: ago(summary.last_finished), title: fmtInstant(summary.last_finished) },
     ];
   });
 

@@ -44,6 +44,10 @@ import {
 } from '../../services/metrics/metrics-chart.util';
 import { OUTCOME_LABELS, prod } from '../../services/metrics/metrics-labels.constants';
 import { MetricsService } from '../../services/metrics/metrics.service';
+import {
+  TIMEZONE_MODES,
+  TimezoneSettingsService,
+} from '../../services/settings/timezone-settings.service';
 
 const JOBS_PAGE = 50;
 
@@ -85,6 +89,7 @@ export class DashboardComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
+  private readonly timezone = inject(TimezoneSettingsService);
 
   // Controles
   readonly windowHours = signal<WindowHours>(24);
@@ -149,7 +154,8 @@ export class DashboardComponent {
     // sus colores quedan únicos dentro del gráfico; la paridad exacta con el
     // panel de tendencias es best-effort (datasets y orden distintos).
     const colorFor = buildTypeColorMap(rows.map((row) => row.job_type));
-    return buildLineChart(rows, 'count', 'count', 260, colorFor);
+    const utc = this.timezone.mode() === TIMEZONE_MODES.UTC;
+    return buildLineChart(rows, 'count', 'count', 260, colorFor, utc);
   });
 
   private intervalId: ReturnType<typeof setInterval> | null = null;

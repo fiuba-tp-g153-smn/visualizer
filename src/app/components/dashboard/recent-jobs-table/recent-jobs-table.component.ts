@@ -10,8 +10,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 
 import type { RecentJob } from '../../../models/metrics/metrics.models';
-import { ago, secs } from '../../../services/metrics/metrics-format.util';
+import { ago, fmtInstant, secs } from '../../../services/metrics/metrics-format.util';
 import { outcomeLabel, prod } from '../../../services/metrics/metrics-labels.constants';
+import { TimezoneSettingsService } from '../../../services/settings/timezone-settings.service';
 import { JobDetailDialogComponent } from '../job-detail-dialog/job-detail-dialog.component';
 import { stageLegend } from '../metrics-cells.util';
 import { SortableTableComponent } from '../sortable-table/sortable-table.component';
@@ -37,7 +38,7 @@ function detailCell(job: RecentJob): Cell {
 const COLUMNS: ReadonlyArray<ColumnSpec<RecentJob>> = [
   {
     header: { key: 'finished', label: 'finalizado', align: 'center', sortable: true },
-    cell: (row) => textCell(ago(row.finished_at), { muted: true, title: row.finished_at }),
+    cell: (row) => textCell(ago(row.finished_at), { muted: true, title: fmtInstant(row.finished_at) }),
     sortValue: (row) => row.finished_at,
   },
   {
@@ -101,11 +102,16 @@ export class RecentJobsTableComponent {
   readonly loadMore = output<void>();
 
   private readonly dialog = inject(MatDialog);
+  private readonly timezone = inject(TimezoneSettingsService);
 
   readonly initialSort = INITIAL_SORT;
 
   // `keyOf` = id estable → la fila ordenada se puede mapear de vuelta al trabajo.
-  readonly table = computed(() => buildTable(COLUMNS, this.jobs(), (job) => job.id));
+  // Se lee `timezone.mode()` para reconstruir el tooltip de fecha al cambiar el toggle.
+  readonly table = computed(() => {
+    void this.timezone.mode();
+    return buildTable(COLUMNS, this.jobs(), (job) => job.id);
+  });
 
   private readonly byId = computed(() => new Map(this.jobs().map((job) => [job.id, job])));
 
