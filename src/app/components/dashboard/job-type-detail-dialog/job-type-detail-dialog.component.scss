@@ -1,0 +1,107 @@
+// El diálogo se monta en el overlay del CDK (fuera del :host del dashboard), así
+// que NO hereda las variables --metric-*; los colores de estado van explícitos.
+:host {
+  display: block;
+}
+
+.jtd__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jtd__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jtd__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.jtd__pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.jtd__pill--success {
+  color: #2e9b51;
+  background: #e6f4ec;
+}
+
+.jtd__pill--error {
+  color: #e8702a;
+  background: #fdeee5;
+}
+
+.jtd__pill--dlq {
+  color: #fff;
+  background: #d23b4e;
+}
+
+.jtd__pill--requeued {
+  color: #b5892a;
+  background: #f7efdc;
+}
+
+.jtd__pill--skipped {
+  color: #6b7280;
+  background: #eceef0;
+}
+
+// Dos pares etiqueta/valor por fila (4 filas en vez de 8): el detalle entra sin
+// scroll en pantallas normales. Cada par es "max-content 1fr".
+.jtd__grid {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+
+  dt {
+    align-self: center;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface, #1f1f1f);
+    word-break: break-word;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.jtd__subtitle {
+  margin: 10px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+// Barra apilada del desglose por etapa (mismos colores que la celda de la tabla).
+.jtd__bar {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #eceef0;
+}
+
+.jtd__seg {
+  height: 100%;
+}
+
+.jtd__legend {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}

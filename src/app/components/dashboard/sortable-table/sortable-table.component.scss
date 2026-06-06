@@ -1,0 +1,150 @@
+:host {
+  display: block;
+}
+
+.stable {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.stable__th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: center; // todos los nombres de columna centrados (requerido)
+  padding: 8px 11px;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  background: var(--mat-sys-surface-container, #f3f3f5);
+  border-bottom: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  user-select: none;
+}
+
+// Encabezados de columna con la inicial en mayúscula (las etiquetas van en minúscula).
+.stable__th::first-letter {
+  text-transform: uppercase;
+}
+
+.stable__th--sortable {
+  cursor: pointer;
+
+  &:hover {
+    color: var(--mat-sys-on-surface, #1f1f1f);
+  }
+}
+
+.stable__th--active {
+  color: var(--metric-info, #0090d0);
+}
+
+.stable__caret {
+  color: var(--metric-info, #0090d0);
+  font-size: 10px;
+}
+
+.stable__td {
+  padding: 7px 11px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface, #1f1f1f);
+  border-bottom: 1px solid var(--mat-sys-outline-variant, #ececec);
+
+  tr:last-child & {
+    border-bottom: 0;
+  }
+}
+
+.stable tbody tr:hover {
+  background: var(--mat-sys-surface-container-low, #fafafa);
+}
+
+.stable__row--clickable {
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 10px;
+
+  & + .pill {
+    margin-left: 4px;
+  }
+}
+
+.pill--success {
+  color: var(--metric-success, #2e9b51);
+  background: var(--metric-success-bg, #e6f4ec);
+}
+
+.pill--error {
+  color: var(--metric-error, #e8702a);
+  background: var(--metric-error-bg, #fdeee5);
+}
+
+.pill--dlq {
+  color: #fff;
+  background: var(--metric-dlq, #d23b4e);
+}
+
+.pill--requeued {
+  color: var(--metric-requeued, #b5892a);
+  background: var(--metric-requeued-bg, #f7efdc);
+}
+
+.pill--skipped {
+  color: var(--metric-skipped, #6b7280);
+  background: var(--metric-skipped-bg, #eceef0);
+}
+
+.bar {
+  display: flex;
+  height: 10px;
+  width: 200px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #f0f0f2;
+  border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  margin: 0 auto;
+}
+
+.bar__seg {
+  height: 100%;
+}
+
+.bar__legend {
+  font-size: 10px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  margin-top: 3px;
+  max-width: 260px;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.err {
+  color: var(--metric-dlq, #d23b4e);
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.empty {
+  padding: 18px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+  font-size: 12px;
+}
