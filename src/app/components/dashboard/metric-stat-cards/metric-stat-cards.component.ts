@@ -89,16 +89,16 @@ export class MetricStatCardsComponent {
         accent: 'green',
       },
       {
-        label: 'Tasa de éxito',
-        value: totals.total ? pct(successRate) : '—',
-        tooltip: rateText,
-        accent: '',
-      },
-      {
         label: 'Fallos',
         value: String(failures),
         tooltip: `Trabajos que fallaron con una excepción: errores (${totals.error}) + descartes DLQ (${totals.dlq}). El DLQ es un subconjunto de Fallos.`,
         accent: failures > 0 ? 'orange' : '',
+      },
+      {
+        label: 'Tasa de éxito',
+        value: totals.total ? pct(successRate) : '—',
+        tooltip: rateText,
+        accent: '',
       },
       {
         label: 'Descartes (DLQ)',

@@ -124,3 +124,57 @@ body {
 .nav-tip .mdc-tooltip__surface {
   margin-top: 12px;
 }
+
+// Tooltip custom de los gráficos de throughput (barras y línea de 10 min): una
+// fila por tipo + un total acumulado destacado. Es global porque ApexCharts lo
+// renderiza en su propio overlay, fuera del :host del dashboard.
+.apx-tip {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #1f1f1f;
+}
+
+.apx-tip__title {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5f6368;
+}
+
+.apx-tip__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.6;
+}
+
+.apx-tip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.apx-tip__name {
+  margin-right: 12px;
+}
+
+.apx-tip__val {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.apx-tip__total {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #e0e0e0;
+  font-weight: 700;
+}
+
+// Diálogo "Rendimiento por tipo de trabajo": deja crecer el contenido para que
+// no aparezca un scroll innecesario (Material limita el contenido a 65vh por
+// defecto). Es global porque el diálogo vive en el overlay del CDK.
+.jtd-dialog .mat-mdc-dialog-content {
+  max-height: 90vh;
+}

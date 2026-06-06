@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { NgApexchartsModule } from 'ng-apexcharts';
 
 import type { StageTimings } from '../../../models/metrics/metrics.models';
@@ -10,15 +10,25 @@ import {
 
 /**
  * Torta (donut) reutilizable del desglose por etapa de un trabajo o tipo.
- * Opcionalmente incluye la porción "Red" (tiempo de descarga) vía un checkbox.
+ * Opcionalmente incluye la porción "Descarga" (tiempo de descarga) vía un toggle.
  * Presentacional: recibe los tiempos por `input` y arma las opciones de ApexCharts.
  */
 @Component({
   selector: 'app-stage-pie-chart',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgApexchartsModule, MatCheckboxModule],
+  imports: [NgApexchartsModule, MatSlideToggleModule],
   template: `
+    @if ((networkSecs() ?? 0) > 0) {
+      <mat-slide-toggle
+        class="spc__toggle"
+        [checked]="includeRed()"
+        (change)="includeRed.set($event.checked)"
+      >
+        {{ includeRed() ? 'Incluir descarga' : 'Solo procesamiento' }}
+      </mat-slide-toggle>
+    }
+
     @if (options().series.length) {
       <apx-chart
         [series]="options().series"
@@ -34,16 +44,6 @@ import {
     } @else {
       <div class="spc__empty">Sin desglose disponible.</div>
     }
-
-    @if ((networkSecs() ?? 0) > 0) {
-      <mat-checkbox
-        class="spc__toggle"
-        [checked]="includeRed()"
-        (change)="includeRed.set($event.checked)"
-      >
-        Incluir red
-      </mat-checkbox>
-    }
   `,
   styles: `
     :host {
@@ -52,7 +52,7 @@ import {
 
     .spc__toggle {
       display: block;
-      margin-top: 8px;
+      margin-bottom: 8px;
       font-size: 12px;
     }
 
@@ -67,10 +67,18 @@ import {
 export class StagePieChartComponent {
   readonly stages = input.required<StageTimings>();
   readonly networkSecs = input<number | null>(null);
+  readonly height = input<number>(280);
+  readonly legendPosition = input<'bottom' | 'right'>('bottom');
 
-  readonly includeRed = signal(false);
+  readonly includeRed = signal(true);
 
   readonly options = computed<StagePieOptions>(() =>
-    buildStagePieChart(this.stages(), this.networkSecs(), this.includeRed()),
+    buildStagePieChart(
+      this.stages(),
+      this.networkSecs(),
+      this.includeRed(),
+      this.height(),
+      this.legendPosition(),
+    ),
   );
 }

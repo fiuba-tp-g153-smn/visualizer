@@ -23,7 +23,7 @@ import { MetricChartComponent } from '../../components/dashboard/metric-chart/me
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
 import { MetricStatCardsComponent } from '../../components/dashboard/metric-stat-cards/metric-stat-cards.component';
 import { RecentJobsTableComponent } from '../../components/dashboard/recent-jobs-table/recent-jobs-table.component';
-import { StagePieDialogComponent } from '../../components/dashboard/stage-pie-chart/stage-pie-dialog.component';
+import { JobTypeDetailDialogComponent } from '../../components/dashboard/job-type-detail-dialog/job-type-detail-dialog.component';
 import { TrendChartsComponent } from '../../components/dashboard/trend-charts/trend-charts.component';
 import type {
   Bucket,
@@ -198,19 +198,16 @@ export class DashboardComponent {
     void this.loadJobs(true);
   }
 
-  /** Drill-down desde el resumen: abre la torta del desglose de ese tipo. */
+  /** Drill-down desde el resumen: abre el detalle completo de ese tipo. */
   onSummaryTypeClick(jobType: string): void {
     const entry = this.summary().find((item) => item.job_type === jobType);
     if (!entry) {
       return;
     }
-    this.dialog.open(StagePieDialogComponent, {
-      data: {
-        title: prod(entry.product_label ?? entry.job_type),
-        stages: entry.stages,
-        networkSecs: entry.download_s.avg,
-      },
-      width: '460px',
+    this.dialog.open(JobTypeDetailDialogComponent, {
+      data: entry,
+      width: '600px',
+      panelClass: 'jtd-dialog',
       autoFocus: false,
     });
   }

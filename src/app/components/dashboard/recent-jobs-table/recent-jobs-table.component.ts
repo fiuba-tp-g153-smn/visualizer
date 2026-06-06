@@ -67,7 +67,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<RecentJob>> = [
     sortValue: (row) => row.total_s,
   },
   {
-    header: { key: 'net', label: 'red', align: 'center', sortable: true },
+    header: { key: 'net', label: 'descarga', align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.download_s)),
     sortValue: (row) => row.download_s,
   },
