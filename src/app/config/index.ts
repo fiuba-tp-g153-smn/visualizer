@@ -36,10 +36,12 @@ export { TOOLTIP_DELAYS, ACTION_DELAYS } from './timing.config';
 // Map configuration (initial position, zoom levels, prerender)
 export { MAP_CONFIG, MAP_Z_INDEX } from './map.config';
 
-// Base map client-side configuration (preview coords, DTOs, attribution helper)
+// Base map client-side configuration (preview coords, DTOs, attribution helper, direct sources)
 export {
+  BASEMAP_DIRECT_SOURCES,
   BASE_MAP_PREVIEW_CONFIG,
   formatAttribution,
+  type DirectTileSource,
   type BaseMapProviderDto,
   type BaseMapProvidersResponse,
 } from './base-maps.config';

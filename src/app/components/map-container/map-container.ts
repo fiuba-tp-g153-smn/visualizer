@@ -210,9 +210,15 @@ export class MapContainer implements OnInit, OnDestroy {
   private changeBaseMap(baseMap: BaseMap): void {
     if (!this.map) return;
 
-    // Reconciliation of optimistic base map vs actual: tiles are identical so
-    // refresh maxNativeZoom in place to avoid flicker when /basemap/providers resolves.
-    if (this.currentTileLayer && baseMap.url === this.currentBaseMapUrl) {
+    // Effective tile URL: direct upstream (IGN, ArcGIS, …) when available,
+    // falling back to the data-service proxy otherwise.
+    const tileUrl = baseMap.directUrl ?? baseMap.url;
+
+    // Reconciliation of the optimistic base map (same provider, possibly refined
+    // metadata once /basemap/providers resolves): the tiles are identical, so
+    // refresh maxNativeZoom in place instead of tearing the layer down — avoids
+    // a flicker. A real base-map switch (different URL) falls through to rebuild.
+    if (this.currentTileLayer && tileUrl === this.currentBaseMapUrl) {
       this.currentTileLayer.options.maxNativeZoom = baseMap.maxNativeZoom;
       return;
     }
@@ -221,8 +227,8 @@ export class MapContainer implements OnInit, OnDestroy {
       this.map.removeLayer(this.currentTileLayer);
     }
 
-    this.currentBaseMapUrl = baseMap.url;
-    this.currentTileLayer = L.tileLayer(baseMap.url, {
+    this.currentBaseMapUrl = tileUrl;
+    this.currentTileLayer = L.tileLayer(tileUrl, {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
       zIndex: MAP_Z_INDEX.BASE_MAP,
@@ -235,16 +241,24 @@ export class MapContainer implements OnInit, OnDestroy {
       updateWhenIdle: window.matchMedia?.('(pointer: coarse)').matches ?? false,
       // Avoid subpixel cracks while zooming animated tiles in some browsers.
       updateWhenZooming: false,
+      // TMS providers (argenmap family) store tiles with Y=0 at bottom;
+      // Leaflet flips Y automatically when this is true.
+      tms: baseMap.isTms,
     }).addTo(this.map);
 
-    // Tripwire: backend is supposed to return a transparent PNG on miss, never a 404.
-    // If `tileerror` ever fires for the basemap layer, a backend regression is the prime suspect.
-    if (!environment.production) {
-      this.currentTileLayer.on('tileerror', (e) => {
-        console.warn(
-          '[basemap] unexpected tileerror — backend should serve transparent PNG on miss',
-          e,
-        );
+    // When a direct upstream tile fails, swap to the data-service fallback URL.
+    // The data-service handles TMS Y-flip internally, so coords (XYZ) map directly.
+    // `fallbackUsed` guards against retriggering tileerror on the fallback itself.
+    if (baseMap.directUrl) {
+      this.currentTileLayer.on('tileerror', (e: L.TileErrorEvent) => {
+        const tile = e.tile as HTMLImageElement;
+        if (tile.dataset['fallbackUsed']) return;
+        tile.dataset['fallbackUsed'] = '1';
+        const { x, y, z } = e.coords;
+        tile.src = baseMap.url
+          .replace('{z}', String(z))
+          .replace('{x}', String(x))
+          .replace('{y}', String(y));
       });
     }
   }
