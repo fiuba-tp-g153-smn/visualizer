@@ -13,7 +13,6 @@ import {
   WRF_AGUAPRECIPITABLE_SCALE,
   WRF_CAMPO900_SCALE,
   WRF_CAPE_BRN_SCALE,
-  WRF_COLMAX_SCALE,
   WRF_CORTANTE_SCALE,
   WRF_GRANIZO_SCALE,
   WRF_JETCAPASBAJAS_SCALE,
@@ -38,6 +37,7 @@ import {
   slpLabelFor,
   slpStyleFor,
 } from './wrf-overlay-styles';
+import { SHARED_DBZH_SCALE } from '../shared-scales.config';
 
 const WRF_DEFAULTS = {
   type: LayerType.TILE,
@@ -127,7 +127,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       productId: 'Colmax',
       name: 'Reflectividad máxima columna',
       description: 'Reflectividad máxima en la columna (dBZ) — WRF-ARG4K',
-      scale: WRF_COLMAX_SCALE,
+      scale: SHARED_DBZH_SCALE,
     },
     {
       ...WRF_DEFAULTS,
@@ -171,8 +171,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/MUCAPE',
       productId: 'MUCAPE',
       name: 'MUCAPE',
-      description:
-        'CAPE máximo (J/kg) — WRF-ARG4K',
+      description: 'CAPE máximo (J/kg) — WRF-ARG4K',
       scale: WRF_MUCAPE_SCALE,
       secondaryRenders: [
         contourRender('MUCAPE', 'shear_850_500', {

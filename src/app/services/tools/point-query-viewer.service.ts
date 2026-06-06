@@ -50,10 +50,7 @@ import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
 } from '../../config';
-import {
-  buildWrfPointQueryUrl,
-  buildWrfSecondaryPointQueryUrl,
-} from '../../config/backend.config';
+import { buildWrfPointQueryUrl, buildWrfSecondaryPointQueryUrl } from '../../config/backend.config';
 import {
   formatDateFull,
   parseEcmwfTimestamp,
@@ -105,6 +102,7 @@ interface PointQueryViewerEntry {
 interface PersistedPointQueryViewerState {
   enabled: boolean;
   selectedLayerIdsOrdered: string[];
+  manuallyDeselectedLayerIds?: string[];
   showMarker: boolean;
   panelMode?: PointQueryPanelMode;
 }
@@ -139,6 +137,8 @@ export class PointQueryViewerService {
   private readonly subscriptions = new Subscription();
   private readonly queryTriggerSubject = new Subject<MouseCoordinates>();
   private initialized = false;
+  private restoredSelectionFromStorage = false;
+  private hasSyncedDisplayItems = false;
 
   readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
@@ -307,7 +307,7 @@ export class PointQueryViewerService {
   }
 
   constructor() {
-    this.loadStateFromStorage();
+    this.restoredSelectionFromStorage = this.loadStateFromStorage();
     this.loadResultsFromStorage();
 
     effect(() => {
@@ -325,6 +325,8 @@ export class PointQueryViewerService {
       // Auto-select newly activated layers, but keep the tool itself disabled by default.
       const allItems = this.displayItems();
       const allLayerIds = new Set(allItems.map((item) => item.layerId));
+      const isInitialSync = !this.hasSyncedDisplayItems;
+      const shouldAutoSelectNewLayers = !(isInitialSync && this.restoredSelectionFromStorage);
 
       // Keep manual deselections only for currently available sources.
       const currentManuallyDeselected = this.manuallyDeselectedLayerIds();
@@ -337,12 +339,14 @@ export class PointQueryViewerService {
 
       const currentSelection = this.selectedLayerIdsOrdered();
       const filteredSelection = currentSelection.filter((layerId) => allLayerIds.has(layerId));
-      const newLayerIds = allItems
-        .map((item) => item.layerId)
-        .filter(
-          (layerId) =>
-            !currentSelection.includes(layerId) && !filteredManuallyDeselected.has(layerId),
-        );
+      const newLayerIds = shouldAutoSelectNewLayers
+        ? allItems
+            .map((item) => item.layerId)
+            .filter(
+              (layerId) =>
+                !currentSelection.includes(layerId) && !filteredManuallyDeselected.has(layerId),
+            )
+        : [];
 
       const updatedSelection = [...filteredSelection, ...newLayerIds];
 
@@ -382,6 +386,11 @@ export class PointQueryViewerService {
         if (loadingChanged) {
           this.loadingLayerIds.set(nextLoading);
         }
+      }
+
+      if (isInitialSync) {
+        this.restoredSelectionFromStorage = false;
+        this.hasSyncedDisplayItems = true;
       }
     });
 
@@ -1175,15 +1184,15 @@ export class PointQueryViewerService {
     );
   }
 
-  private loadStateFromStorage(): void {
+  private loadStateFromStorage(): boolean {
     if (typeof localStorage === 'undefined') {
-      return;
+      return false;
     }
 
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.POINT_QUERY_VIEWER);
       if (!raw) {
-        return;
+        return false;
       }
 
       const parsed = JSON.parse(raw) as PersistedPointQueryViewerState;
@@ -1193,10 +1202,13 @@ export class PointQueryViewerService {
 
       this.enabled.set(parsed.enabled ?? false);
       this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
+      this.manuallyDeselectedLayerIds.set(new Set(parsed.manuallyDeselectedLayerIds ?? []));
       this.showMarker.set(showMarker);
       this.panelMode.set(showMarker ? panelMode : POINT_QUERY_PANEL_MODES.FIXED);
+      return true;
     } catch (error) {
       console.warn('Failed to load point query viewer state from localStorage:', error);
+      return false;
     }
   }
 
@@ -1208,6 +1220,7 @@ export class PointQueryViewerService {
     const payload: PersistedPointQueryViewerState = {
       enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
+      manuallyDeselectedLayerIds: [...this.manuallyDeselectedLayerIds()],
       showMarker: this.showMarker(),
       panelMode: this.panelMode(),
     };
