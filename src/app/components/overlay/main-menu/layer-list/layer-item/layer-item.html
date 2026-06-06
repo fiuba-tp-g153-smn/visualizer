@@ -1,12 +1,12 @@
 <div
   class="layer-item-container"
-  [class.mode-available]="mode === 'available'"
-  [class.mode-active]="mode === 'active'"
+  [class.mode-available]="mode === LayerItemMode.AVAILABLE"
+  [class.mode-active]="mode === LayerItemMode.ACTIVE"
 >
   <!-- Modo: Available (checkbox + info button) -->
-  @if (mode === 'available') {
+  @if (mode === LayerItemMode.AVAILABLE) {
     <div class="layer-header">
-      @if (selectionMode === 'single') {
+      @if (selectionMode === LayerSelectionMode.SINGLE) {
         <mat-radio-button
           [name]="radioGroupName"
           [checked]="isActive()"
@@ -57,7 +57,7 @@
   }
 
   <!-- Modo: Active (drag handle + name + close button + toggles) -->
-  @if (mode === 'active') {
+  @if (mode === LayerItemMode.ACTIVE) {
     <div class="layer-header">
       @if (showDragHandle) {
         <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>

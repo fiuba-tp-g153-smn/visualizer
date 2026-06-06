@@ -58,7 +58,7 @@
         <app-map-point-values
           [visible]="true"
           [entries]="floatingViewerEntries()"
-          [layoutMode]="'fixed'"
+          [layoutMode]="PointValuesLayoutMode.FIXED"
           (close)="closeFloatingViewer($event)"
         />
       }
@@ -75,7 +75,7 @@
     <app-map-point-values
       [visible]="true"
       [entries]="floatingViewerEntries()"
-      [layoutMode]="'near-marker'"
+      [layoutMode]="PointValuesLayoutMode.NEAR_MARKER"
       (close)="closeFloatingViewer($event)"
     />
   </div>
