@@ -226,13 +226,14 @@ export class PointQueryViewerService {
           }
 
           if (
+            secondaryRender?.pointQuery &&
             secondaryRender?.buildPointQueryUrl &&
             this.isForecastRenderVisible(ecmwfControls, forecastTs, secondaryRender.id)
           ) {
             entries.push({
               layerId: buildSecondaryLayerId(primaryLayerId),
               sourceKind: 'secondary',
-              layerName: `${modelName} - Presion a nivel del mar - corrida ${forecastLabel}`,
+              layerName: `${modelName} - ${secondaryRender.pointQuery.name} - corrida ${forecastLabel}`,
               forecastTs,
               secondaryRenderId: secondaryRender.id,
               layer: ecmwfLayer,
@@ -729,10 +730,14 @@ export class PointQueryViewerService {
 
     const ecmwfLayer = layer as EcmwfTpTileLayer;
     const secondary = ecmwfLayer.secondaryRender;
-    if (!secondary?.buildPointQueryUrl) return null;
+    if (!secondary?.pointQuery || !secondary?.buildPointQueryUrl) return null;
+
+    const secondaryLayerId = buildSecondaryLayerId(layer.id);
+    const secondaryLayerName = secondary.pointQuery.name;
+    const mslpScaleRange: ScaleRangeInfo = secondary.pointQuery.scaleRange;
 
     if (!this.isWithinLayerBounds(layer, lat, lon)) {
-      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+      return of(this.buildNoData(secondaryLayerId, secondaryLayerName));
     }
 
     const ecmwfControls = controls as EcmwfTpLayerControls;
@@ -740,7 +745,7 @@ export class PointQueryViewerService {
       | EcmwfTpTileLayerConfig
       | undefined;
     if (!config || config.availableTilesets.length === 0) {
-      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+      return of(this.buildNoData(secondaryLayerId, secondaryLayerName));
     }
 
     const isForecast = layer.isForecast;
@@ -765,13 +770,10 @@ export class PointQueryViewerService {
         : undefined
       : selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
     if (!resolvedForecastTs) {
-      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+      return of(this.buildNoData(secondaryLayerId, secondaryLayerName));
     }
 
     const url = secondary.buildPointQueryUrl(resolvedForecastTs, timestampTs, lat, lon);
-    const secondaryLayerId = buildSecondaryLayerId(layer.id);
-    const secondaryLayerName = 'Presion a nivel del mar';
-    const mslpScaleRange: ScaleRangeInfo = { min: 950, max: 1050, totalSteps: 100 };
 
     return this.http.get<PointQueryValueDto>(url).pipe(
       map(
