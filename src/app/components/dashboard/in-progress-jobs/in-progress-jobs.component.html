@@ -1,4 +1,7 @@
-<div class="ip__count">{{ jobs().length }} en proceso</div>
+<div class="ip__stat">
+  <div class="ip__k">en proceso</div>
+  <div class="ip__v">{{ jobs().length }}</div>
+</div>
 
 @if (jobs().length) {
   <div class="ip__scroll">

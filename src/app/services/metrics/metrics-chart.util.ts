@@ -58,7 +58,7 @@ export interface StagePieOptions {
 const GRID_COLOR = '#e3e3e6';
 const LABEL_COLOR = '#5f6368';
 const DEFAULT_HEIGHT = 240;
-// Color de la porción "red" (tiempo de descarga), distinto de toda etapa.
+// Color de la porción "Descarga" (tiempo de descarga), distinto de toda etapa.
 const NETWORK_COLOR = '#90a4ae';
 
 /**
@@ -256,6 +256,63 @@ function baseTooltip(formatter: ValueFormatter): ApexTooltip {
   return { theme: 'light', shared: true, intersect: false, y: { formatter } };
 }
 
+/** Contexto que ApexCharts pasa a un tooltip `custom` (tipado para evitar `any`). */
+interface CustomTooltipContext {
+  readonly series: ReadonlyArray<ReadonlyArray<number | null>>;
+  readonly dataPointIndex: number;
+  readonly w: {
+    readonly globals: {
+      readonly seriesNames: readonly string[];
+      readonly colors: readonly string[];
+      readonly labels: ReadonlyArray<string | number>;
+    };
+  };
+}
+
+/** Arma el HTML del tooltip de conteos: una fila por tipo + un total acumulado. */
+function renderCountTooltip(context: CustomTooltipContext): string {
+  const { series, dataPointIndex, w } = context;
+  const { seriesNames, colors, labels } = w.globals;
+
+  let total = 0;
+  const rows: string[] = [];
+  for (let i = 0; i < series.length; i++) {
+    const value = series[i]?.[dataPointIndex];
+    const count = typeof value === 'number' ? value : 0;
+    total += count;
+    if (count > 0) {
+      rows.push(
+        `<div class="apx-tip__row">` +
+          `<span class="apx-tip__dot" style="background:${colors[i]}"></span>` +
+          `<span class="apx-tip__name">${seriesNames[i]}</span>` +
+          `<span class="apx-tip__val">${Math.round(count)}</span>` +
+          `</div>`,
+      );
+    }
+  }
+
+  const label = labels?.[dataPointIndex];
+  const title = label == null ? '' : `<div class="apx-tip__title">${label}</div>`;
+  const totalRow =
+    `<div class="apx-tip__row apx-tip__total">` +
+    `<span class="apx-tip__name">Total</span>` +
+    `<span class="apx-tip__val">${Math.round(total)}</span>` +
+    `</div>`;
+  return `<div class="apx-tip">${title}${rows.join('')}${totalRow}</div>`;
+}
+
+/**
+ * Tooltip de conteos con total acumulado: muestra el conteo de cada tipo (con
+ * valor > 0) y, destacado al pie, la suma de todos los tipos en ese intervalo.
+ */
+function totalCountTooltip(): ApexTooltip {
+  return {
+    shared: true,
+    intersect: false,
+    custom: (context: CustomTooltipContext) => renderCountTooltip(context),
+  };
+}
+
 // ── Chart builders ────────────────────────────────────────────────────────────
 
 /** Líneas por tipo de trabajo: tiempos (`secs`) o conteos (`count`). */
@@ -282,7 +339,9 @@ export function buildLineChart(
     dataLabels: { enabled: false },
     legend: baseLegend(),
     grid: baseGrid(),
-    tooltip: baseTooltip(formatter),
+    // Solo los gráficos de conteo (throughput) muestran el total acumulado; en
+    // los de segundos (evolución/p95) un "total" no tendría sentido.
+    tooltip: unit === 'count' ? totalCountTooltip() : baseTooltip(formatter),
     plotOptions: {},
   };
 }
@@ -308,7 +367,7 @@ export function buildThroughputBarChart(
     dataLabels: { enabled: false },
     legend: baseLegend(),
     grid: baseGrid(),
-    tooltip: baseTooltip(countFormatter),
+    tooltip: totalCountTooltip(),
     plotOptions: { bar: { columnWidth: '70%', borderRadius: 2 } },
   };
 }
@@ -347,12 +406,14 @@ export function buildStageAreaChart(
 
 /**
  * Torta (donut) del desglose por etapa de un trabajo o tipo. Cuando `includeRed`
- * y hay tiempo de red (`networkSecs`), agrega una porción "Red" (descarga).
+ * y hay tiempo de descarga (`networkSecs`), agrega una porción "Descarga".
  */
 export function buildStagePieChart(
   stages: StageTimings,
   networkSecs: number | null,
   includeRed: boolean,
+  height: number = 280,
+  legendPosition: 'bottom' | 'right' = 'bottom',
 ): StagePieOptions {
   const labels: string[] = [];
   const series: number[] = [];
@@ -363,7 +424,7 @@ export function buildStagePieChart(
     colors.push(stageColor(name));
   }
   if (includeRed && networkSecs != null && networkSecs > 0) {
-    labels.push('Red');
+    labels.push('Descarga');
     series.push(networkSecs);
     colors.push(NETWORK_COLOR);
   }
@@ -371,13 +432,13 @@ export function buildStagePieChart(
     series,
     chart: {
       type: 'donut',
-      height: 280,
+      height,
       animations: { enabled: false },
       fontFamily: 'inherit',
     },
     labels,
     colors,
-    legend: baseLegend(),
+    legend: { ...baseLegend(), position: legendPosition },
     dataLabels: {
       enabled: true,
       formatter: (value: string | number | number[]) => `${Math.round(Number(value))}%`,

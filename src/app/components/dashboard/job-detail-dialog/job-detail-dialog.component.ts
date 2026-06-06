@@ -50,7 +50,7 @@ export class JobDetailDialogComponent {
       { label: 'Inicio', value: job.started_at },
       { label: 'Fin', value: job.finished_at },
       { label: 'Total', value: secs(job.total_s) },
-      { label: 'Red (descarga)', value: secs(job.download_s) },
+      { label: 'Descarga', value: secs(job.download_s) },
       { label: 'Proceso', value: secs(job.process_s) },
       { label: 'Reintentos', value: String(job.retry_count) },
     ];

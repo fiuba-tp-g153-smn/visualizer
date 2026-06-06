@@ -105,7 +105,7 @@
 
       <app-metric-panel
         heading="Colas · RabbitMQ"
-        tip="Profundidad de las colas de RabbitMQ: trabajos en espera (cola de trabajo) y mensajes en la cola de descartes (DLQ). 'N/A' si RabbitMQ no responde."
+        tip="Cuántos trabajos están esperando para procesarse (cola de trabajo) y cuántos cayeron en la cola de descartes (DLQ) tras agotar los reintentos. 'N/A' si RabbitMQ no responde."
       >
         <app-queue-depths [queues]="live()?.queues ?? null" />
       </app-metric-panel>
@@ -147,8 +147,8 @@
       </app-metric-panel>
 
       <app-metric-panel
-        heading="Por tipo de trabajo · tiempos y resultados"
-        tip="Estadísticas agregadas por tipo de trabajo: conteos por resultado, % de error y distribución de tiempos (prom/mín/máx/p95). Los tiempos se calculan solo sobre trabajos exitosos. Clic en una columna para ordenar; clic en una fila para ver el desglose por etapa."
+        heading="Rendimiento por tipo de trabajo"
+        tip="Por cada tipo de trabajo: cuántos se procesaron, cuántos fallaron (% error) y cuánto tardaron (prom/mín/máx/p95, solo sobre los exitosos), con el desglose por etapa. Clic en una columna para ordenar; clic en una fila para ver el detalle completo."
       >
         <div class="dash__scroll-x">
           <app-job-type-summary-table

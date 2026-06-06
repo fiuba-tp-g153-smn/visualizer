@@ -1,0 +1,48 @@
+<h1 mat-dialog-title class="jtd__title">
+  <span class="jtd__name" [title]="summary.job_type">{{ title() }}</span>
+</h1>
+
+<mat-dialog-content>
+  @if (outcomes().length) {
+    <div class="jtd__pills">
+      @for (pill of outcomes(); track pill.outcome) {
+        <span class="jtd__pill" [class]="'jtd__pill--' + pill.outcome"
+          >{{ pill.label }} · {{ pill.count }}</span
+        >
+      }
+    </div>
+  }
+
+  <dl class="jtd__grid">
+    @for (row of rows(); track row.label) {
+      <dt>{{ row.label }}</dt>
+      <dd [title]="row.title ?? ''">{{ row.value }}</dd>
+    }
+  </dl>
+
+  <h2 class="jtd__subtitle">Desglose por etapa</h2>
+  @if (segments().length) {
+    <div class="jtd__bar">
+      @for (seg of segments(); track $index) {
+        <span
+          class="jtd__seg"
+          [style.width.%]="seg.widthPct"
+          [style.background]="seg.color"
+          [title]="seg.title"
+        ></span>
+      }
+    </div>
+    <div class="jtd__legend">{{ legend() }}</div>
+  }
+
+  <app-stage-pie-chart
+    [stages]="summary.stages"
+    [networkSecs]="summary.download_s.avg"
+    [height]="220"
+    [legendPosition]="'right'"
+  />
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

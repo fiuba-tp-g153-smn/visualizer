@@ -57,7 +57,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<JobTypeSummary>> = [
     sortValue: (row) => row.total_s.p95,
   },
   {
-    header: { key: 'net', label: 'red', align: 'center', sortable: true },
+    header: { key: 'net', label: 'descarga', align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.download_s.avg)),
     sortValue: (row) => row.download_s.avg,
   },

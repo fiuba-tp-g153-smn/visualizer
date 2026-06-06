@@ -77,24 +77,24 @@ describe('buildLineChart', () => {
 describe('buildStagePieChart', () => {
   const STAGES = { georef: 3, tiling: 4, upload: 2 };
 
-  it('renders a donut with one slice per stage (Spanish labels, no red when off)', () => {
+  it('renders a donut with one slice per stage (Spanish labels, no descarga when off)', () => {
     const opts = buildStagePieChart(STAGES, 1.5, false);
     expect(opts.chart.type).toBe('donut');
     expect(opts.labels).toEqual(['Georref.', 'Teselado', 'Subida']);
     expect(opts.series).toEqual([3, 4, 2]);
-    expect(opts.labels).not.toContain('Red');
+    expect(opts.labels).not.toContain('Descarga');
   });
 
-  it('appends a "Red" slice with the network seconds when includeRed and networkSecs > 0', () => {
+  it('appends a "Descarga" slice with the network seconds when includeRed and networkSecs > 0', () => {
     const opts = buildStagePieChart(STAGES, 1.5, true);
-    expect(opts.labels.at(-1)).toBe('Red');
+    expect(opts.labels.at(-1)).toBe('Descarga');
     expect(opts.series.at(-1)).toBe(1.5);
     expect(opts.colors).toHaveLength(opts.series.length);
   });
 
-  it('omits the red slice when networkSecs is null or zero', () => {
-    expect(buildStagePieChart(STAGES, null, true).labels).not.toContain('Red');
-    expect(buildStagePieChart(STAGES, 0, true).labels).not.toContain('Red');
+  it('omits the descarga slice when networkSecs is null or zero', () => {
+    expect(buildStagePieChart(STAGES, null, true).labels).not.toContain('Descarga');
+    expect(buildStagePieChart(STAGES, 0, true).labels).not.toContain('Descarga');
   });
 });
 
