@@ -3,7 +3,6 @@
   [class.mode-available]="mode === LayerItemMode.AVAILABLE"
   [class.mode-active]="mode === LayerItemMode.ACTIVE"
 >
-  <!-- Modo: Available (checkbox + info button) -->
   @if (mode === LayerItemMode.AVAILABLE) {
     <div class="layer-header">
       @if (selectionMode === LayerSelectionMode.SINGLE) {
@@ -56,7 +55,6 @@
     </div>
   }
 
-  <!-- Modo: Active (drag handle + name + close button + toggles) -->
   @if (mode === LayerItemMode.ACTIVE) {
     <div class="layer-header">
       @if (showDragHandle) {
@@ -66,7 +64,6 @@
         layerFullName()
       }}</span>
 
-      <!-- Botones de control (derecha) -->
       <div class="header-actions">
         @if (hasScale() && isPrimaryRenderActiveForAnyForecast()) {
           <button
@@ -103,10 +100,8 @@
     </div>
   }
 
-  <!-- Contenido colapsable (Opacidad + Período) -->
   @if (isActive() && isExpanded()) {
     <div class="layer-content">
-      <!-- Control de Opacidad -->
       <div class="opacity-control">
         <span class="control-label">Opacidad</span>
         <mat-slider
@@ -128,14 +123,12 @@
         </span>
       </div>
 
-      <!-- Control de elevación (solo para RADAR) -->
       @if (hasElevationControl()) {
         <div class="elevation-control">
           <div class="elevation-header">
             <span class="control-label">Elevaciones</span>
 
             @if (!isElevationsExpanded()) {
-              <!-- Collapsed view: checkboxes -->
               <div class="elevation-checkboxes">
                 @for (elevation of availableElevations(); track elevation.id) {
                   <mat-checkbox
@@ -159,10 +152,8 @@
             </button>
           </div>
 
-          <!-- Expanded view: individual opacity controls -->
           @if (isElevationsExpanded()) {
             <div class="elevation-expanded-controls">
-              <!-- Individual elevation controls -->
               @for (elevation of availableElevations(); track elevation.id) {
                 <div class="elevation-item">
                   <mat-checkbox
@@ -195,14 +186,12 @@
         </div>
       }
 
-      <!-- Forecast run controls (only ECMWF) -->
       @if (hasForecastControl()) {
         <div class="forecast-control">
           <div class="forecast-header">
             <span class="control-label">Corridas</span>
 
             @if (!isForecastsExpanded()) {
-              <!-- Collapsed view: checkboxes -->
               <div class="forecast-checkboxes">
                 @for (forecast of availableForecasts(); track forecast) {
                   <mat-checkbox
@@ -227,12 +216,10 @@
             </button>
           </div>
 
-          <!-- Expanded view: one row per run, with nested expander for renders -->
           @if (isForecastsExpanded()) {
             <div class="forecast-expanded-controls">
               @for (group of forecastControlGroups(); track group.forecastTs) {
                 <div class="forecast-group">
-                  <!-- Run row: toggle corrida + opacity de corrida + expander renders -->
                   <div class="forecast-run-row">
                     <mat-checkbox
                       [checked]="isForecastSelected(group.forecastTs)"
@@ -283,10 +270,8 @@
                     }
                   </div>
 
-                  <!-- Per-render rows (visible cuando la corrida tiene el sub-expander abierto) -->
                   @if (isForecastRunExpanded(group.forecastTs)) {
                     <div class="forecast-renders">
-                      <!-- Fila del tile primario -->
                       <div class="forecast-render-row">
                         <mat-checkbox
                           [checked]="isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)"
@@ -327,7 +312,6 @@
                         >
                       </div>
 
-                      <!-- Filas de renders secundarios -->
                       @for (render of group.secondaryRenders; track render.id) {
                         <div class="forecast-render-row">
                           <mat-checkbox
@@ -374,11 +358,9 @@
         </div>
       }
 
-      <!-- Control de Período -->
       @if (needsTimeControl()) {
         <div class="layer-controls" [class.synced-mode]="isSynced()">
           <div class="time-control">
-            <!-- Contenido condicional según estado -->
             @if (layer.category === LayerCategory.WEATHER_STATIONS) {
               <div class="weather-stations-temporal-control">
                 <div class="weather-stations-mode-control">
@@ -491,7 +473,6 @@
               </div>
 
               @if (hasTimeControl()) {
-                <!-- Slider de tiempo con play -->
                 <div class="time-slider-container">
                   <span class="time-min" [matTooltip]="getTimeLabel(minTimeIndex())">{{
                     getTimeOnly(minTimeIndex())
@@ -534,11 +515,9 @@
                   </button>
                 </div>
 
-                <!-- Tiempo actual + Controles -->
                 <div class="time-controls-row">
                   <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
 
-                  <!-- Selector de últimas imágenes -->
                   <div class="images-count-control">
                     <mat-form-field appearance="fill" class="images-count-select">
                       <mat-select
@@ -554,7 +533,6 @@
                     </mat-form-field>
                   </div>
 
-                  <!-- Velocidad -->
                   <div class="speed-control">
                     <input
                       type="number"

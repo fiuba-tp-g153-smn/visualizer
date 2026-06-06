@@ -32,7 +32,7 @@
 // Cap the list height so it never blows up the page vertically.
 .ip__scroll {
   max-height: 240px;
-  overflow-y: scroll; // barra de scroll siempre visible
+  overflow-y: scroll;
 
   // Barra de scroll clásica (no overlay) siempre visible. Firefox:
   scrollbar-width: thin;

@@ -5,9 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { NotificationService } from '../../../services/notifications/notification.service';
 import { NotificationType } from '../../../models';
 
-/**
- * Componente para mostrar notificaciones tipo toast
- */
 @Component({
   selector: 'app-notification-panel',
   standalone: true,
@@ -18,8 +15,6 @@ import { NotificationType } from '../../../models';
 export class NotificationPanelComponent {
   readonly notificationService = inject(NotificationService);
   readonly NotificationType = NotificationType;
-
-  constructor() {}
 
   getIcon(type: NotificationType): string {
     switch (type) {

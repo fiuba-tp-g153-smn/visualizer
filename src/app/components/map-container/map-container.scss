@@ -1,4 +1,3 @@
-// Reset específico para Leaflet
 @use '../../../_layer-order' as layerOrder;
 
 :host {
@@ -14,7 +13,6 @@
   position: relative;
 }
 
-// Leaflet scale control styling
 ::ng-deep .custom-leaflet-scale {
   background: #fff;
   border-radius: 8px;
@@ -75,7 +73,6 @@
   }
 }
 
-// Department tooltip styling
 ::ng-deep .department-tooltip {
   background-color: rgba(0, 0, 0, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -90,9 +87,8 @@
   z-index: layerOrder.$z-map-tooltip;
 }
 
-// Leaflet Editable customizations
 ::ng-deep {
-  // Use regular cursor over map instead of Leaflet grab/grabbing cursors.
+  // Use regular cursor over map instead of Leaflet grab/grabbing cursors
   .leaflet-container,
   .leaflet-grab,
   .leaflet-dragging .leaflet-grab,
@@ -100,7 +96,6 @@
     cursor: default;
   }
 
-  // Vertex markers while editing
   .leaflet-vertex-icon {
     box-sizing: border-box;
     border-radius: 50%;
@@ -109,7 +104,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
-  // Middle markers (insertion points)
   .leaflet-middle-icon {
     box-sizing: border-box;
     border-radius: 50%;
@@ -138,7 +132,6 @@
     stroke-dasharray: 8, 8;
   }
 
-  // Hide default Leaflet marker icons
   .leaflet-marker-pane .leaflet-marker-icon {
     &[src*='marker-icon'] {
       display: none;

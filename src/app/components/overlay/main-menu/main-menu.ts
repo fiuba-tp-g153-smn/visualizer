@@ -19,8 +19,6 @@ export class MainMenuComponent {
 
   readonly activeSection = computed(() => this.sidebarMenuService.getActiveSection());
 
-  // Componente del panel activo, resuelto perezosamente al abrir la sección.
-  // Es null mientras el chunk se descarga (o cuando no hay panel abierto).
   readonly activeComponent = this.sidebarMenuService.activeComponent;
 
   closePanel(): void {

@@ -21,7 +21,6 @@ export class UnitsSettingsService {
   readonly windSpeedUnit = signal<WindSpeedUnit>(WIND_SPEED_UNITS.KNOTS);
   readonly decimalPrecision = signal<DecimalPrecision>(2);
 
-  // Computed formatter que se actualiza cuando cambia la precisión
   readonly numberFormatter = computed(() => {
     return new Intl.NumberFormat('es-AR', {
       minimumFractionDigits: this.decimalPrecision(),

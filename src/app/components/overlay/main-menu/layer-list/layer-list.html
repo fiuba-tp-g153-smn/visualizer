@@ -7,7 +7,6 @@
     </div>
   } @else {
     <mat-tab-group class="layer-tabs" animationDuration="0ms">
-      <!-- Tab: Capas Disponibles -->
       <mat-tab>
         <ng-template mat-tab-label>
           <div class="tab-label-container">
@@ -20,7 +19,6 @@
         </div>
       </mat-tab>
 
-      <!-- Tab: Capas Activas -->
       <mat-tab>
         <ng-template mat-tab-label>
           <div class="tab-label-container">
@@ -36,7 +34,6 @@
         </div>
       </mat-tab>
 
-      <!-- Tab: Sincronización Temporal -->
       <mat-tab>
         <ng-template mat-tab-label>
           <div class="tab-label-container" [class.sync-playing]="syncIsPlaying()">

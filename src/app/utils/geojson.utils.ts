@@ -1,6 +1,3 @@
-/**
- * Tipos de geometrías GeoJSON soportadas
- */
 export enum GeoJSONGeometryType {
   POINT = 'Point',
   LINE_STRING = 'LineString',
@@ -11,38 +8,23 @@ export enum GeoJSONGeometryType {
   GEOMETRY_COLLECTION = 'GeometryCollection',
 }
 
-/**
- * Tipos de objetos GeoJSON
- */
 export enum GeoJSONType {
   FEATURE = 'Feature',
   FEATURE_COLLECTION = 'FeatureCollection',
 }
 
-/**
- * Índices para acceder a anillos de polígonos
- */
 export const POLYGON_RING_INDEX = {
   OUTER: 0,
 } as const;
 
-/**
- * Índices para coordenadas [lat, lng] o [lng, lat]
- */
 export const COORDINATE_INDEX = {
   FIRST: 0,
   SECOND: 1,
 } as const;
 
-/**
- * Convierte coordenadas de polígono a formato GeoJSON
- * Las coordenadas de Leaflet vienen como [lat, lng], pero GeoJSON usa [lng, lat]
- */
 export function coordinatesToGeoJSON(coordinates: Array<[number, number]>): GeoJSON.Polygon {
-  // Convertir de [lat, lng] a [lng, lat]
   const geoJsonCoords = coordinates.map(([lat, lng]) => [lng, lat]);
 
-  // Cerrar el anillo si no está cerrado
   const first = geoJsonCoords[COORDINATE_INDEX.FIRST];
   const last = geoJsonCoords[geoJsonCoords.length - 1];
 
@@ -59,9 +41,6 @@ export function coordinatesToGeoJSON(coordinates: Array<[number, number]>): GeoJ
   };
 }
 
-/**
- * Extrae la geometría de un GeoJSON (FeatureCollection, Feature o Geometry)
- */
 export function extractGeometry(
   geoJson: GeoJSON.FeatureCollection | GeoJSON.Feature | GeoJSON.Geometry,
 ): GeoJSON.Geometry | null {
@@ -77,9 +56,6 @@ export function extractGeometry(
   }
 }
 
-/**
- * Extrae las coordenadas principales de una geometría (Polygon o MultiPolygon)
- */
 export function extractCoordinates(geometry: GeoJSON.Geometry): GeoJSON.Position[] {
   switch (geometry.type) {
     case GeoJSONGeometryType.POLYGON:
@@ -87,7 +63,6 @@ export function extractCoordinates(geometry: GeoJSON.Geometry): GeoJSON.Position
 
     case GeoJSONGeometryType.MULTI_POLYGON: {
       const polygons = (geometry as GeoJSON.MultiPolygon).coordinates;
-      // Retornar el polígono más grande por número de coordenadas
       return polygons.reduce(
         (largest, current) =>
           current[POLYGON_RING_INDEX.OUTER].length > largest.length
@@ -103,9 +78,6 @@ export function extractCoordinates(geometry: GeoJSON.Geometry): GeoJSON.Position
   }
 }
 
-/**
- * Convierte GeoJSON a coordenadas de Leaflet [lat, lng][]
- */
 export function geoJSONToCoordinates(
   geoJson: GeoJSON.FeatureCollection | GeoJSON.Feature | GeoJSON.Geometry,
 ): Array<[number, number]> {
@@ -113,7 +85,5 @@ export function geoJSONToCoordinates(
   if (!geometry) return [];
 
   const coords = extractCoordinates(geometry);
-
-  // Convertir de [lng, lat] a [lat, lng]
   return coords.map(([lng, lat]) => [lat, lng] as [number, number]);
 }

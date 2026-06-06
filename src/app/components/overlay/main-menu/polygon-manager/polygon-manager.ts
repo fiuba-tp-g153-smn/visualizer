@@ -27,10 +27,6 @@ import { PhenomenonSelectionDialogComponent } from '../../../floating/phenomenon
 import { formatDateTimeLocalized } from '../../../../utils/tileset-timestamp';
 import { ActiveAlertsComponent } from './active-alerts/active-alerts';
 
-/**
- * Panel para gestionar polígonos en el mapa
- * Permite crear, editar, eliminar y controlar la visibilidad de polígonos
- */
 @Component({
   selector: 'app-polygon-manager',
   standalone: true,
@@ -155,9 +151,6 @@ export class PolygonManagerComponent implements MenuPanelComponent {
     return formatDateTimeLocalized(new Date(date));
   }
 
-  /**
-   * Calcula el área aproximada de un polígono en km² usando la fórmula de Shoelace esférica
-   */
   getPolygonArea(polygon: Polygon): number {
     const coords = polygon.coordinates;
     if (coords.length < 3) return 0;

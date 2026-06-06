@@ -1,6 +1,5 @@
 <div class="polygon-manager">
   <mat-tab-group class="polygon-tabs" animationDuration="0ms">
-    <!-- Tab: Generar -->
     <mat-tab>
       <ng-template mat-tab-label>
         <div class="tab-label-container">
@@ -9,7 +8,6 @@
         </div>
       </ng-template>
       <div class="tab-content">
-        <!-- Drawing controls - always visible -->
         <div class="drawing-controls">
           <div class="control-buttons">
             <button
@@ -40,7 +38,6 @@
             </button>
           </div>
 
-          <!-- Simplification level slider -->
           <div class="simplification-slider-container">
             <div class="slider-header">
               <span class="slider-label">Nivel de simplificación</span>
@@ -67,7 +64,6 @@
 
         <mat-divider />
 
-        <!-- Empty state -->
         @if (polygonCount() === 0) {
           <div class="empty-state-container">
             <mat-icon class="empty-icon">polyline</mat-icon>
@@ -76,15 +72,12 @@
             <p>Click en el mapa para crear puntos, doble-click para finalizar.</p>
           </div>
         } @else {
-          <!-- Polygon list -->
           <div class="polygon-list-container">
             <mat-list class="polygon-list">
               @for (polygon of polygons(); track polygon.id) {
                 <mat-list-item class="polygon-item" [class.hidden]="!polygon.visible">
                   <div class="polygon-card">
-                    <!-- Header -->
                     <div class="polygon-header">
-                      <!-- Name -->
                       <div class="polygon-name-section">
                         <mat-form-field
                           appearance="outline"
@@ -107,7 +100,6 @@
                         </mat-form-field>
                       </div>
 
-                      <!-- Actions -->
                       <div class="polygon-actions">
                         <button
                           mat-icon-button
@@ -161,7 +153,6 @@
                       </div>
                     </div>
 
-                    <!-- Details -->
                     <div class="polygon-details">
                       <div class="detail-item">
                         <mat-icon class="detail-icon">straighten</mat-icon>
@@ -227,7 +218,6 @@
                         }
                       </div>
 
-                      <!-- Generar alerta -->
                       @if (!hasAlerts(polygon)) {
                         <button
                           mat-flat-button
@@ -250,7 +240,6 @@
                         </button>
                       }
 
-                      <!-- Alertas generadas -->
                       @if (hasAlerts(polygon)) {
                         <div class="detail-item">
                           <mat-icon class="detail-icon" color="warn">warning</mat-icon>
@@ -310,7 +299,6 @@
       </div>
     </mat-tab>
 
-    <!-- Tab: Activos -->
     <mat-tab>
       <ng-template mat-tab-label>
         <div class="tab-label-container">

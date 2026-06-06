@@ -58,8 +58,6 @@ export class GeneralSettingsComponent implements MenuPanelComponent {
   });
 
   onPanelOpen(): void {
-    // Touch the keyChanges signal so the computed re-evaluates when the
-    // panel is re-opened (covers a key set/cleared in another tab).
     this.apiKeyService.keyChanges();
   }
 

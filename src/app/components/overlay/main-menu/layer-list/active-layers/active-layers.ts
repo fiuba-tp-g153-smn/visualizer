@@ -12,11 +12,6 @@ import { ActiveLayerGroupId, Layer } from '../../../../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../../config/layers';
 import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
 
-/**
- * Componente de capas activas
- * Muestra las capas activadas organizadas por grupos de z-index
- * con controles de orden y opacidad
- */
 @Component({
   selector: 'app-active-layers',
   standalone: true,
@@ -42,9 +37,6 @@ export class ActiveLayersComponent {
     Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS).map((def) => [def.id, signal(true)]),
   );
 
-  /**
-   * Obtiene capas activas organizadas en grupos de z-index con metadata
-   */
   activeLayerGroups = computed(() => {
     return Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS)
       .sort((a, b) => b.zIndexRange.min - a.zIndexRange.min)

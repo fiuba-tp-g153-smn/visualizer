@@ -58,7 +58,6 @@ export class MapContainer implements OnInit, OnDestroy {
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      // Effect: change base map
       effect(() => {
         const baseMap = this.baseMapService.currentBaseMap();
         if (this.map && baseMap) {
@@ -66,7 +65,6 @@ export class MapContainer implements OnInit, OnDestroy {
         }
       });
 
-      // Effect: synchronize satellite/radar layers
       effect(() => {
         const layers = this.controlService.activeLayers();
         const layerIds = layers.map((item) => item.layer.id);
@@ -90,7 +88,6 @@ export class MapContainer implements OnInit, OnDestroy {
         }
       });
 
-      // Effect: synchronize zoom when currentZoom signal changes
       effect(() => {
         const targetZoom = this.mapInfoService.currentZoom();
         if (this.map) {
@@ -101,7 +98,6 @@ export class MapContainer implements OnInit, OnDestroy {
         }
       });
 
-      // Effect: synchronize visible polygons
       effect(() => {
         const polygons = this.polygonService.allPolygons();
         const editingId = this.editingPolygonId();
@@ -110,7 +106,6 @@ export class MapContainer implements OnInit, OnDestroy {
         }
       });
 
-      // Effect: handle drawing mode changes
       effect(() => {
         const mode = this.polygonDrawingService.drawingMode();
         const editingPolygonId = this.polygonDrawingService.editingPolygonId();
@@ -156,16 +151,13 @@ export class MapContainer implements OnInit, OnDestroy {
       // is wired up the first time the user enters draw/edit mode.
     });
 
-    // Initialize services with the map instance
     this.layersService.initialize(this.map);
     this.polygonsService.initialize(this.map);
     this.activeAlertsMapService.initialize(this.map);
     this.mapInfoService.initialize(this.map);
 
-    // Prevent UI elements from propagating events to the map
     this.preventUIEventPropagation();
 
-    // Update zoom signal from map events (user scrolling or programmatic changes)
     this.map.on('zoom', () => {
       const mapZoom = this.map?.getZoom();
       if (mapZoom !== undefined) {
@@ -180,8 +172,6 @@ export class MapContainer implements OnInit, OnDestroy {
       }
     });
 
-    // Initialize base map layer if providers have already loaded; otherwise
-    // the effect above will install it as soon as the API call resolves.
     const initialBaseMap = this.baseMapService.getCurrentBaseMap();
     if (initialBaseMap) {
       this.changeBaseMap(initialBaseMap);
@@ -194,11 +184,7 @@ export class MapContainer implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Prevent UI elements from propagating events to the map and cancel drawing on button clicks
-   */
   private preventUIEventPropagation(): void {
-    // Apply L.DomEvent.disableClickPropagation to main UI containers
     const applyEventBlocking = (selector: string) => {
       const element = document.querySelector(selector) as HTMLElement;
       if (element && !(element as any)._leaflet_disable_events) {
@@ -208,30 +194,24 @@ export class MapContainer implements OnInit, OnDestroy {
       }
     };
 
-    // Check periodically for UI elements and apply event blocking
     const checkAndApply = () => {
       applyEventBlocking('.main-menu-wrapper');
       applyEventBlocking('.zoom-controls');
       applyEventBlocking('.scale-tools-container');
     };
 
-    // Initial check
     setTimeout(checkAndApply, 100);
 
-    // Periodic check for dynamically added elements
     const intervalId = setInterval(checkAndApply, 1000);
 
-    // Store interval ID for cleanup
     (this as any)._eventBlockingInterval = intervalId;
   }
 
   private changeBaseMap(baseMap: BaseMap): void {
     if (!this.map) return;
 
-    // Reconciliation of the optimistic base map (same provider, possibly refined
-    // metadata once /basemap/providers resolves): the tiles are identical, so
-    // refresh maxNativeZoom in place instead of tearing the layer down — avoids
-    // a flicker. A real base-map switch (different URL) falls through to rebuild.
+    // Reconciliation of optimistic base map vs actual: tiles are identical so
+    // refresh maxNativeZoom in place to avoid flicker when /basemap/providers resolves.
     if (this.currentTileLayer && baseMap.url === this.currentBaseMapUrl) {
       this.currentTileLayer.options.maxNativeZoom = baseMap.maxNativeZoom;
       return;

@@ -13,25 +13,16 @@ import { ActiveAlertResponse, DepartmentsResponse } from '../../models/geo';
 import { Phenomenon } from '../../models/phenomenon.model';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
 
-/**
- * Constantes para parámetros HTTP
- */
 const HTTP_PARAMS = {
   SIMPLIFICATION_LEVEL: 'simplification_level',
 } as const;
 
-/**
- * Departamento tal como viene del backend (con properties)
- */
 interface DepartmentBackendResponse {
   properties: Record<string, any>;
   geometry: GeoJSON.Geometry;
   intersection: GeoJSON.Geometry;
 }
 
-/**
- * Respuesta del endpoint de generación de alertas
- */
 export interface GenerateAlertsResponse {
   alert_id: number;
   timestamp: string;
@@ -42,29 +33,16 @@ export interface GenerateAlertsResponse {
   affected_departments_count: number;
 }
 
-/**
- * Servicio para interactuar con el backend de alertas (alert-service)
- * Proporciona funcionalidades de recorte de polígonos y consulta de departamentos
- */
 @Injectable({
   providedIn: 'root',
 })
 export class AlertsService {
   private readonly http = inject(HttpClient);
 
-  /**
-   * Crea los parámetros HTTP comunes para las requests
-   */
   private buildParams(simplificationLevel: number): HttpParams {
     return new HttpParams().set(HTTP_PARAMS.SIMPLIFICATION_LEVEL, simplificationLevel.toString());
   }
 
-  /**
-   * Recorta un polígono con los límites de Argentina
-   * @param coordinates - Coordenadas del polígono [lat, lng][]
-   * @param simplificationLevel - Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
-   * @returns Observable con las coordenadas del polígono recortado
-   */
   intersectCountry(
     coordinates: Array<[number, number]>,
     simplificationLevel: number = 0,
@@ -78,12 +56,6 @@ export class AlertsService {
       .pipe(map((response) => geoJSONToCoordinates(response)));
   }
 
-  /**
-   * Obtiene los departamentos que intersectan con un polígono
-   * @param coordinates - Coordenadas del polígono [lat, lng][]
-   * @param simplificationLevel - Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
-   * @returns Observable con la lista de departamentos
-   */
   intersectDepartments(
     coordinates: Array<[number, number]>,
     simplificationLevel: number = 0,
@@ -111,12 +83,6 @@ export class AlertsService {
       );
   }
 
-  /**
-   * Genera alertas meteorológicas para un polígono
-   * @param coordinates - Coordenadas del polígono [lat, lng][]
-   * @param phenomenonCode - Código del fenómeno meteorológico
-   * @returns Observable con las URLs de las alertas generadas
-   */
   generateAlerts(
     coordinates: Array<[number, number]>,
     phenomenonCode: number,
@@ -127,20 +93,11 @@ export class AlertsService {
     return this.http.post<GenerateAlertsResponse>(url, geoJson);
   }
 
-  /**
-   * Obtiene todos los fenómenos meteorológicos disponibles
-   * @returns Observable con la lista de fenómenos
-   */
   getPhenomena(): Observable<Phenomenon[]> {
     const url = buildPhenomenaUrl();
     return this.http.get<Phenomenon[]>(url);
   }
 
-  /**
-   * Obtiene los avisos activos. Con `sinceId` solo devuelve los de id mayor.
-   * @param sinceId - Devuelve solo avisos con alert_id mayor a este valor
-   * @returns Observable con la lista de avisos activos
-   */
   getAlerts(sinceId?: number): Observable<ActiveAlertResponse[]> {
     const url = buildAlertsUrl();
     let params = new HttpParams();

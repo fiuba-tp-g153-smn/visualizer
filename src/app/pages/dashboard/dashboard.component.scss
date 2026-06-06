@@ -53,15 +53,15 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--mat-sys-outline, #9aa0a6); // desconocido / conectando
+  background: var(--mat-sys-outline, #9aa0a6);
 }
 
 .dash__status--up {
-  background: var(--metric-success, #2e9b51); // operativo
+  background: var(--metric-success, #2e9b51);
 }
 
 .dash__status--down {
-  background: var(--metric-dlq, #d23b4e); // caído
+  background: var(--metric-dlq, #d23b4e);
 }
 
 .dash__title {

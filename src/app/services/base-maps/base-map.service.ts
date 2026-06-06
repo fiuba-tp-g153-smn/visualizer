@@ -67,13 +67,6 @@ export class BaseMapService {
     this.loadProviders().subscribe();
   }
 
-  /**
-   * Synchronously builds a base map to render before the provider list loads.
-   * Uses the previously-selected id (exact for returning visitors, and their
-   * tiles are already cached) or the configured default. Tile URL is fully
-   * deterministic; metadata is accurate for the default and a safe placeholder
-   * otherwise — reconciled in `loadProviders`.
-   */
   private buildOptimisticBaseMap(): BaseMap {
     const id = this.readStoredBaseMapId() ?? MAP_CONFIG.defaultBaseMapId;
     const isDefault = id === MAP_CONFIG.defaultBaseMapId;
@@ -93,10 +86,6 @@ export class BaseMapService {
     };
   }
 
-  /**
-   * Fetches `/basemap/providers` and resolves the current selection from the
-   * returned list. Idempotent — safe to call again to refresh.
-   */
   loadProviders(): Observable<ReadonlyArray<BaseMap>> {
     this._loadState.set('loading');
     return this.http.get<BaseMapProvidersResponse>(buildBasemapProvidersUrl()).pipe(
@@ -115,17 +104,10 @@ export class BaseMapService {
     );
   }
 
-  /**
-   * Returns the loaded base maps. Empty until `loadProviders` resolves.
-   */
   getAvailableBaseMaps(): ReadonlyArray<BaseMap> {
     return this._providers();
   }
 
-  /**
-   * Selects a base map by id. No-op (with a warning) if the id is not in the
-   * loaded provider list — never call the tile endpoint for an unknown id.
-   */
   setBaseMap(baseMapId: string): void {
     const baseMap = this._providers().find((p) => p.id === baseMapId);
     if (!baseMap) {

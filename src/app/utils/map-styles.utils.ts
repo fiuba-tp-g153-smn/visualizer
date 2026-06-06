@@ -2,9 +2,6 @@ import * as L from 'leaflet';
 import { POLYGON_STYLE, LINE_GUIDE_STYLE, DEPARTMENT_STYLE } from '../config/map-polygons.config';
 import { POLYGON_COLOR } from '../config/polygon.config';
 
-/**
- * Opciones de estilo para polígonos
- */
 export const POLYGON_OPTIONS: L.PolylineOptions = {
   className: 'map-polygon',
   color: POLYGON_COLOR,
@@ -14,9 +11,6 @@ export const POLYGON_OPTIONS: L.PolylineOptions = {
   fillOpacity: POLYGON_STYLE.FILL_OPACITY,
 };
 
-/**
- * Opciones de estilo para líneas guía
- */
 export const LINE_GUIDE_OPTIONS: L.PolylineOptions = {
   color: POLYGON_COLOR,
   weight: LINE_GUIDE_STYLE.WEIGHT,
@@ -24,9 +18,6 @@ export const LINE_GUIDE_OPTIONS: L.PolylineOptions = {
   dashArray: LINE_GUIDE_STYLE.DASH_ARRAY,
 };
 
-/**
- * Genera las opciones de estilo para departamentos
- */
 export function createDepartmentStyle(color: string): L.PathOptions {
   return {
     color,
@@ -38,9 +29,6 @@ export function createDepartmentStyle(color: string): L.PathOptions {
   };
 }
 
-/**
- * Aclara un color hexadecimal por un porcentaje dado
- */
 export function lightenColor(hex: string, percent: number): string {
   const color = hex.replace('#', '');
 

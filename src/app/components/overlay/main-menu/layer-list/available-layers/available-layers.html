@@ -1,11 +1,9 @@
 <div class="available-layers">
-  <!-- Buscador -->
   <div class="search-container">
     <mat-icon>search</mat-icon>
     <input type="text" placeholder="Buscar capas" [(ngModel)]="searchText" />
   </div>
 
-  <!-- No hay resultados -->
   @if (hasSearch() && filteredGroups().length === 0) {
     <div class="empty-state">
       <mat-icon>search_off</mat-icon>
@@ -14,7 +12,6 @@
     </div>
   }
 
-  <!-- Lista de grupos -->
   <mat-accordion class="layers-accordion" displayMode="flat" multi>
     @for (group of filteredGroups(); track group.id; let isLast = $last) {
       <mat-expansion-panel
@@ -34,7 +31,6 @@
           </mat-panel-description>
         </mat-expansion-panel-header>
 
-        <!-- Subgrupos -->
         <mat-accordion displayMode="flat" multi>
           @for (subgroup of group.subgroups; track subgroup.id; let isLastSub = $last) {
             <mat-expansion-panel
@@ -56,7 +52,6 @@
                 </mat-panel-description>
               </mat-expansion-panel-header>
 
-              <!-- Lista de capas -->
               <div class="layer-list-container">
                 @for (layer of subgroup.layers; track layer.id; let isLastLayer = $last) {
                   <app-layer-item

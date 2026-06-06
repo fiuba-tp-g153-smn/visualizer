@@ -8,7 +8,6 @@
     <span matListItemTitle>{{ polygonVisible ? 'Ocultar' : 'Mostrar' }}</span>
   </mat-list-item>
 
-  <!-- Departamentos -->
   @if (!hasDepartments) {
     <mat-list-item
       (click)="!isLoadingDepartments && onToggleDepartments()"
@@ -37,7 +36,6 @@
     }
   }
 
-  <!-- Cortar polígono -->
   @if (!canUndoCut) {
     <mat-list-item
       (click)="!isLoadingCut && !hasAlerts && onCut()"

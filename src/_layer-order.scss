@@ -1,26 +1,20 @@
-// Z-index management
 // Layer hierarchy: map (0) → map-features (100-499) → ui (500-2999) → overlays (3000-9999) → loader (10000+)
 
-// Map and base layers
 $z-map-base: 0;
 $z-map-tooltip: 10;
 
-// Map features and data layers (GOES, RADAR, IGN_WMS)
 $z-map-features-base: 100;
 $z-map-features-range-end: 499;
 
-// UI Components
 $z-ui-base: 500;
-$z-ui-controls: 600; // zoom controls, edit controls
-$z-ui-panels: 700; // point-value-panel, etc
-$z-main-menu: 1000; // main sidebar menu
+$z-ui-controls: 600;
+$z-ui-panels: 700;
+$z-main-menu: 1000;
 $z-ui-range-end: 2999;
 
-// Overlays, Modals, Notifications
 $z-overlay-base: 3000;
 $z-notification: 5000;
 $z-modal-backdrop: 8500;
 $z-overlay-range-end: 9999;
 
-// App Loader (always on top)
 $z-loader: 10000;

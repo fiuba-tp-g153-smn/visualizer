@@ -91,7 +91,6 @@ export class MapOverlayComponent {
     };
   });
 
-  // Map info signals
   readonly showZoom = this.mapInfoService.showZoom;
   readonly currentZoom = this.mapInfoService.currentZoom;
   readonly canZoomIn = this.mapInfoService.canZoomIn;
@@ -106,12 +105,10 @@ export class MapOverlayComponent {
 
   readonly showAttribution = this.mapInfoService.showAttribution;
 
-  // Computed: any bottom control is visible
   readonly hasBottomControls = computed(
     () => this.showZoom() || this.showScale() || this.showCoordinates() || this.showAttribution(),
   );
 
-  // Computed: any right column control is visible (scale/coords/attribution)
   readonly hasInfoControls = computed(
     () => this.showScale() || this.showCoordinates() || this.showAttribution(),
   );

@@ -37,7 +37,6 @@ export class MapPointValuesComponent {
       const left: MapPointValueEntry[] = [];
       const right: MapPointValueEntry[] = [];
 
-      // Alternate entries by rows, starting bottom-right, then bottom-left.
       this.entries().forEach((entry, index) => {
         if (index % 2 === 0) {
           right.push(entry);

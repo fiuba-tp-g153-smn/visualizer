@@ -21,12 +21,6 @@ import type {
 import { fmtBucket, secs } from './metrics-format.util';
 import { stageLabel } from './metrics-labels.constants';
 
-/**
- * Constructores de opciones de ApexCharts para el panel de rendimiento.
- * Recrean los gráficos del dashboard original (líneas, barras apiladas y áreas
- * apiladas) con un tema claro. Los colores son concretos (no variables CSS)
- * porque ApexCharts los escribe como atributos SVG, no como estilos.
- */
 export interface MetricsChartOptions {
   series: ApexAxisChartSeries;
   chart: ApexChart;
@@ -42,7 +36,6 @@ export interface MetricsChartOptions {
   plotOptions: ApexPlotOptions;
 }
 
-/** Opciones para el gráfico de torta (donut) del desglose por etapa. */
 export interface StagePieOptions {
   series: ApexNonAxisChartSeries;
   chart: ApexChart;
@@ -58,14 +51,8 @@ export interface StagePieOptions {
 const GRID_COLOR = '#e3e3e6';
 const LABEL_COLOR = '#5f6368';
 const DEFAULT_HEIGHT = 240;
-// Color de la porción "Descarga" (tiempo de descarga), distinto de toda etapa.
 const NETWORK_COLOR = '#90a4ae';
 
-/**
- * Paleta estable y legible sobre fondo claro (la primaria de la app primero).
- * Ampliada a 30 tonos bien separados para que `buildTypeColorMap` asigne color
- * por índice sin colisiones aun con muchos tipos de trabajo (~15-25).
- */
 const TYPE_PALETTE: readonly string[] = [
   '#0090d0',
   '#2e9b51',
@@ -126,17 +113,14 @@ function hashString(value: string): number {
   return Math.abs(hash);
 }
 
-/** Color estable y determinista para un tipo de trabajo (igual en todo gráfico). */
 export function typeColor(jobType: string): string {
   return TYPE_PALETTE[hashString(jobType) % TYPE_PALETTE.length];
 }
 
-/** Color de una etapa del pipeline (gris por defecto si es desconocida). */
 export function stageColor(stage: string): string {
   return STAGE_COLORS[stage] ?? '#8e8e8e';
 }
 
-/** Oscurece un hex de forma determinista (mezcla hacia negro; `amount` en [0,1]). */
 function shade(hex: string, amount: number): string {
   const match = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
   if (!match) {
@@ -150,13 +134,6 @@ function shade(hex: string, amount: number): string {
   return `#${byte(match[1])}${byte(match[2])}${byte(match[3])}`;
 }
 
-/**
- * Mapa de color estable por tipo de trabajo a partir del conjunto de tipos del
- * dataset. Asigna por índice del conjunto único y ordenado → sin colisiones
- * dentro de la paleta; al agotarla repite el tono base pero oscurecido por
- * "vuelta", de modo que aun así queda distinto. Como todos los gráficos de un
- * mismo render comparten este mapa, un tipo conserva su color entre ellos.
- */
 export function buildTypeColorMap(types: readonly string[]): (type: string) => string {
   const unique = [...new Set(types)].sort();
   const map = new Map<string, string>();
@@ -176,7 +153,6 @@ export interface PivotResult {
   at(bucket: string, type: string): number | null;
 }
 
-/** Reordena filas planas (bucket, job_type, valor) en series por tipo. */
 export function pivot(
   rows: ReadonlyArray<{ bucket: string; job_type: string }>,
   valueKey: string,
@@ -315,7 +291,6 @@ function totalCountTooltip(): ApexTooltip {
 
 // ── Chart builders ────────────────────────────────────────────────────────────
 
-/** Líneas por tipo de trabajo: tiempos (`secs`) o conteos (`count`). */
 export function buildLineChart(
   rows: ReadonlyArray<{ bucket: string; job_type: string }>,
   valueKey: string,
@@ -339,14 +314,11 @@ export function buildLineChart(
     dataLabels: { enabled: false },
     legend: baseLegend(),
     grid: baseGrid(),
-    // Solo los gráficos de conteo (throughput) muestran el total acumulado; en
-    // los de segundos (evolución/p95) un "total" no tendría sentido.
     tooltip: unit === 'count' ? totalCountTooltip() : baseTooltip(formatter),
     plotOptions: {},
   };
 }
 
-/** Barras apiladas: trabajos finalizados por intervalo y tipo. */
 export function buildThroughputBarChart(
   rows: readonly ThroughputBucket[],
   height: number = DEFAULT_HEIGHT,
@@ -372,7 +344,6 @@ export function buildThroughputBarChart(
   };
 }
 
-/** Áreas apiladas: segundos promedio por etapa para un tipo de trabajo. */
 export function buildStageAreaChart(
   series: readonly TimingSeriesPoint[],
   jobType: string,
@@ -404,10 +375,6 @@ export function buildStageAreaChart(
   };
 }
 
-/**
- * Torta (donut) del desglose por etapa de un trabajo o tipo. Cuando `includeRed`
- * y hay tiempo de descarga (`networkSecs`), agrega una porción "Descarga".
- */
 export function buildStagePieChart(
   stages: StageTimings,
   networkSecs: number | null,

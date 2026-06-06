@@ -10,10 +10,6 @@ import { AvailableLayersComponent } from './available-layers/available-layers';
 import { ActiveLayersComponent } from './active-layers/active-layers';
 import { SyncPlaybackComponent } from './sync-playback/sync-playback';
 
-/**
- * Contenedor de listas de capas con pestañas
- * Componente inteligente que coordina las capas disponibles y activas
- */
 @Component({
   selector: 'app-layer-list',
   standalone: true,

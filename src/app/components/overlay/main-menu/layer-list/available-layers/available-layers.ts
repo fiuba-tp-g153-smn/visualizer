@@ -12,10 +12,6 @@ import { LayerGroup, LayerSelectionMode, LayerSubgroup } from '../../../../../mo
 import { WEATHER_STATIONS_SUBGROUP } from '../../../../../config/layers/weather-stations/config';
 import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
 
-/**
- * Componente de capas disponibles para activar
- * Muestra la lista de capas organizadas por grupos y subgrupos con búsqueda
- */
 @Component({
   selector: 'app-available-layers',
   standalone: true,
@@ -59,9 +55,6 @@ export class AvailableLayersComponent {
 
   hasSearch = computed(() => this.searchText().trim().length > 0);
 
-  /**
-   * Normaliza texto removiendo tildes y convirtiendo a minúsculas
-   */
   private normalizeText(text: string): string {
     return text
       .toLowerCase()
@@ -115,9 +108,6 @@ export class AvailableLayersComponent {
       .filter((group) => group.subgroups.length > 0);
   });
 
-  /**
-   * Cuenta cuántas capas activas tiene un grupo
-   */
   getActiveLayersCountInGroup(group: LayerGroup): number {
     let count = 0;
     for (const subgroup of group.subgroups) {
@@ -129,9 +119,6 @@ export class AvailableLayersComponent {
     return count;
   }
 
-  /**
-   * Cuenta cuántas capas activas tiene un subgrupo
-   */
   getActiveLayersCountInSubgroup(subgroup: LayerSubgroup): number {
     return subgroup.layers.filter((layer) => {
       const controls = this.controlService.getControls(layer.id);

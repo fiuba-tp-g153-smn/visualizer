@@ -33,11 +33,6 @@ enum DetailSection {
   OBSERVACIONES = 'observaciones',
 }
 
-/**
- * Full-screen view of a station's last 48 h: one time-aligned chart per variable
- * (shared hover crosshair via ApexCharts' `chart.group`). Opened as a full-screen
- * `MatDialog`. Consumes the single bundled series — reused from the popover.
- */
 @Component({
   selector: 'app-weather-station-history-charts',
   standalone: true,
@@ -73,7 +68,6 @@ export class WeatherStationHistoryChartsComponent {
   readonly loading = signal<boolean>(!this.data.series);
   readonly error = signal<boolean>(false);
 
-  /** Rebuilds when the series, unit settings, or timezone mode change. */
   readonly charts = computed(() => {
     const current = this.series();
     if (!current) {
@@ -86,13 +80,11 @@ export class WeatherStationHistoryChartsComponent {
     });
   });
 
-  /** Per-variable high/low/average over the window. */
   readonly summary = computed(() => {
     const current = this.series();
     return current ? buildSeriesSummary(current, this.unitsSettings) : [];
   });
 
-  /** One formatted row per observation (recomputes on unit/timezone change). */
   readonly observations = computed(() => {
     const current = this.series();
     void this.timezone.mode(); // formatDateTimeLocalized reads the global mode

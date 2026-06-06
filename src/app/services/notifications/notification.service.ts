@@ -1,16 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 import { NotificationType, Notification } from '../../models';
 
-/**
- * Servicio para gestionar notificaciones en la UI
- */
 @Injectable({
   providedIn: 'root',
 })
 export class NotificationService {
   private readonly _notifications = signal<Notification[]>([]);
 
-  /** Notificaciones activas (readonly) */
   public readonly notifications = this._notifications.asReadonly();
 
   /**
@@ -47,7 +43,6 @@ export class NotificationService {
       notification,
     ]);
 
-    // Auto-cerrar si está configurado
     if (notification.autoClose) {
       setTimeout(() => {
         this.dismiss(notification.id);
@@ -56,23 +51,14 @@ export class NotificationService {
     return id;
   }
 
-  /**
-   * Cierra una notificación
-   */
   dismiss(id: string): void {
     this._notifications.update((notifications) => notifications.filter((n) => n.id !== id));
   }
 
-  /**
-   * Cierra todas las notificaciones
-   */
   dismissAll(): void {
     this._notifications.set([]);
   }
 
-  /**
-   * Atajos para tipos comunes de notificaciones
-   */
   error(message: string, layerId?: string): string {
     return this.show(NotificationType.ERROR, message, {
       layerId,

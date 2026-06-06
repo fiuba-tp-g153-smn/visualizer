@@ -25,19 +25,12 @@ export class ActiveAlertsService {
   private readonly hoveredDepartmentSignal = signal<string | null>(null);
   private readonly hiddenIdsSignal = signal<ReadonlySet<number>>(new Set());
 
-  /** Whether active alerts should be shown/fetched. */
   readonly showActive = this.showActiveSignal.asReadonly();
-  /** Current list of active alerts. */
   readonly activeAlerts = this.activeAlertsSignal.asReadonly();
-  /** Whether a refresh request is in flight. */
   readonly loading = this.loadingSignal.asReadonly();
-  /** Departments (with geometry) of the alert whose menu is currently open. */
   readonly shownDepartments = this.shownDepartmentsSignal.asReadonly();
-  /** The alert whose departments are currently shown (drives their color). */
   readonly shownDepartmentsAlert = this.shownDepartmentsAlertSignal.asReadonly();
-  /** Name of the department currently hovered in the open list. */
   readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
-  /** IDs of alerts the user has hidden from the map. */
   readonly hiddenIds = this.hiddenIdsSignal.asReadonly();
 
   /** Monotonic cursor: highest alert id ever seen, independent of pruning. */
@@ -48,10 +41,6 @@ export class ActiveAlertsService {
     this.destroyRef.onDestroy(() => this.stopAutoRefresh());
   }
 
-  /**
-   * Enables or disables showing active alerts. Enabling triggers a full fetch
-   * and starts auto-refresh; disabling clears state and stops polling.
-   */
   setShowActive(on: boolean): void {
     if (on === this.showActiveSignal()) return;
     this.showActiveSignal.set(on);
@@ -69,7 +58,6 @@ export class ActiveAlertsService {
     }
   }
 
-  /** Toggles whether an alert is hidden from the map. */
   toggleHidden(alertId: number): void {
     const next = new Set(this.hiddenIdsSignal());
     if (next.has(alertId)) {
@@ -80,10 +68,6 @@ export class ActiveAlertsService {
     this.hiddenIdsSignal.set(next);
   }
 
-  /**
-   * Loads (with geometry) and shows the affected departments of an alert on the
-   * map, by intersecting its polygon against the departments layer.
-   */
   async showDepartments(alert: ActiveAlert): Promise<void> {
     this.shownDepartmentsAlertSignal.set(alert);
     try {
@@ -100,24 +84,20 @@ export class ActiveAlertsService {
     }
   }
 
-  /** Hides the affected departments from the map. */
   hideDepartments(): void {
     this.shownDepartmentsSignal.set([]);
     this.shownDepartmentsAlertSignal.set(null);
     this.hoveredDepartmentSignal.set(null);
   }
 
-  /** Marks a department (by name) as hovered to highlight it on the map. */
   setHoveredDepartment(name: string): void {
     this.hoveredDepartmentSignal.set(name);
   }
 
-  /** Clears the hovered department highlight. */
   clearHoveredDepartment(): void {
     this.hoveredDepartmentSignal.set(null);
   }
 
-  /** Manual/automatic refresh: fetch new alerts since the cursor and prune expired. */
   async refresh(): Promise<void> {
     if (!this.showActiveSignal()) return;
     await this.fetch(this.lastSeenMaxId);

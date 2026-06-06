@@ -26,7 +26,6 @@ html {
   );
 }
 
-/* Estilos globales de Leaflet */
 @import 'leaflet/dist/leaflet.css';
 
 /* 
@@ -57,12 +56,10 @@ html,
 body {
   margin: 0;
   padding: 0;
-  // height: 100%;
   overflow: hidden;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
 }
 
-/* Query marker for point value queries */
 .query-marker {
   background: transparent;
 

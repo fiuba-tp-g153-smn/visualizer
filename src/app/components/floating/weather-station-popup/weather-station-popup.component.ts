@@ -56,11 +56,6 @@ enum PopupTab {
   GRAPH = 'graph',
 }
 
-/**
- * Wundermap-style station card: a header with id/lat/lon and two tabs — **Actual**
- * (current values + wind compass) and **Gráfico** (Temperatura + Punto de rocío).
- * The 48 h series is fetched once and feeds both the dew-point value and the chart.
- */
 @Component({
   selector: 'app-weather-station-popup',
   standalone: true,
@@ -88,13 +83,12 @@ export class WeatherStationPopupComponent implements OnInit {
     );
   });
 
-  private readonly series = signal<StationSeries | null>(null);
+  readonly series = signal<StationSeries | null>(null);
   readonly loading = signal<boolean>(true);
   readonly PopupTab = PopupTab;
 
   readonly tab = signal<PopupTab>(PopupTab.CURRENT);
 
-  /** Dew point of the latest reading, formatted (from the server-computed series). */
   readonly dewPointText = computed(() => {
     const latest = this.series()?.latest;
     if (!latest || latest.dewPoint === null) {
@@ -109,7 +103,6 @@ export class WeatherStationPopupComponent implements OnInit {
     return `${value.toFixed(1)} ${unit}`.trim();
   });
 
-  /** Chart for the variable selected on the map (null until the series loads). */
   readonly chart = computed(() => {
     const current = this.series();
     if (!current) {

@@ -1,12 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 
-/**
- * Compact compass dial for a station's wind: an arrow pointing toward the
- * direction the wind comes *from* (meteorological bearing), with the speed in the
- * center. Mirrors Wundermap's wind widget. No arrow when the bearing is unknown
- * (calm / missing).
- */
 @Component({
   selector: 'app-wind-compass',
   standalone: true,
@@ -15,10 +9,8 @@ import { Component, Input } from '@angular/core';
   styleUrl: './wind-compass.component.scss',
 })
 export class WindCompassComponent {
-  /** Formatted speed number (e.g. "2"), unit shown separately. */
   @Input() speed = '—';
   @Input() unit = '';
-  /** Meteorological bearing the wind comes from (0 = N, clockwise), or null. */
   @Input() deg: number | null = null;
   @Input() direction: string | null = null;
 
@@ -26,7 +18,6 @@ export class WindCompassComponent {
     return this.direction === 'Calma';
   }
 
-  /** No arrow for calm winds (or missing bearing). */
   get hasDirection(): boolean {
     return !this.isCalm && this.deg !== null && Number.isFinite(this.deg);
   }

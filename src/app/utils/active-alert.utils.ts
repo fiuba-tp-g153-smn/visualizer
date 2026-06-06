@@ -17,10 +17,6 @@ export const ACTIVE_ALERT_EXPIRY_COLORS = {
 const GREEN_THRESHOLD_MS = 30 * 60_000; // more than 30 min remaining
 const YELLOW_THRESHOLD_MS = 10 * 60_000; // 10 min or less remaining → red
 
-/**
- * Returns the color for an active alert based on how long is left until it
- * expires: green (> 30 min), yellow (11–30 min) or red (≤ 10 min).
- */
 export function activeAlertColorForExpiry(endDatetime: Date, now: number = Date.now()): string {
   const remainingMs = endDatetime.getTime() - now;
   if (remainingMs > GREEN_THRESHOLD_MS) return ACTIVE_ALERT_EXPIRY_COLORS.GREEN;
@@ -28,10 +24,6 @@ export function activeAlertColorForExpiry(endDatetime: Date, now: number = Date.
   return ACTIVE_ALERT_EXPIRY_COLORS.RED;
 }
 
-/**
- * Formats the time left until an active alert expires, e.g. "2h 15min", "45min",
- * "<1min", or "Vencido" when it has already expired.
- */
 export function formatActiveAlertRemaining(endDatetime: Date, now: number = Date.now()): string {
   const remainingMs = endDatetime.getTime() - now;
   if (remainingMs <= 0) return 'Vencido';
@@ -45,10 +37,6 @@ export function formatActiveAlertRemaining(endDatetime: Date, now: number = Date
   return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}min`;
 }
 
-/**
- * Parses the backend polygon string `"[lat,lon],[lat,lon],..."` (2-decimal,
- * latitude first) into Leaflet `[lat, lng]` pairs. Invalid pairs are skipped.
- */
 export function parseActiveAlertPolygon(polygon: string): Array<[number, number]> {
   const coordinates: Array<[number, number]> = [];
   const pairRegex = /\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g;
@@ -64,11 +52,6 @@ export function parseActiveAlertPolygon(polygon: string): Array<[number, number]
   return coordinates;
 }
 
-/**
- * Parses the backend `area` HTML (e.g. `"<b>PROV:</b> Dep1 - Dep2.<br /><br />..."`)
- * into affected departments with their province, sorted alphabetically by name.
- * Returns `[]` when there are none.
- */
 export function parseAffectedDepartments(areaHtml: string): ActiveAlertDepartment[] {
   if (!areaHtml || areaHtml.includes(NO_DEPARTMENTS_MARKER)) {
     return [];
@@ -100,9 +83,6 @@ export function parseAffectedDepartments(areaHtml: string): ActiveAlertDepartmen
   return departments.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/**
- * Maps a raw backend alert into the frontend `ActiveAlert` domain model.
- */
 export function toActiveAlert(res: ActiveAlertResponse): ActiveAlert {
   return {
     alertId: res.alert_id,

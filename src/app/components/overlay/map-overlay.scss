@@ -14,15 +14,11 @@ $gap: 12px;
   box-sizing: border-box;
 }
 
-// El panel flotante near-marker se posiciona por debajo del layout principal
-// (menú, escalas) aunque venga después en el DOM.
 .near-marker-point-values {
   position: absolute;
   pointer-events: auto;
   z-index: layerOrder.$z-ui-panels;
 }
-
-// ── Main layout ────────────────────────────────────────────────────────────
 
 .overlay-layout {
   // position + z-index crean un stacking context propio por encima de
@@ -44,16 +40,12 @@ $gap: 12px;
   box-sizing: border-box;
 }
 
-// ── Left group (buttons + panel) ───────────────────────────────────────────
-
 .col-left {
   display: flex;
   flex-direction: row;
   align-items: stretch;
   gap: $gap;
 }
-
-// ── Col 1: Sidebar buttons + Zoom ─────────────────────────────────────────
 
 .col-buttons {
   flex-shrink: 0;
@@ -81,8 +73,6 @@ app-polygon-edit-dock {
   z-index: layerOrder.$z-main-menu;
 }
 
-// ── Col 2: Side panel + Info controls ─────────────────────────────────────
-
 .col-panel {
   flex-shrink: 0;
   display: flex;
@@ -105,8 +95,6 @@ app-main-menu {
   pointer-events: auto;
   overflow: visible;
 }
-
-// ── Col 3: Scale tools + Fixed point values ────────────────────────────────
 
 .col-side {
   flex-shrink: 0;

@@ -1,15 +1,8 @@
-/**
- * Código de fenómeno meteorológico
- */
 export interface PhenomenonCode {
   code: number;
   description: string;
 }
 
-/**
- * Códigos de fenómenos meteorológicos disponibles para alertas
- * Basado en el diccionario FENOMENOS del backend (alerts-service)
- */
 export const PHENOMENON_CODES: ReadonlyArray<PhenomenonCode> = [
   { code: 1, description: 'Tormentas fuertes con ráfagas' },
   { code: 2, description: 'Tormentas fuertes con ocasional caída de granizo' },

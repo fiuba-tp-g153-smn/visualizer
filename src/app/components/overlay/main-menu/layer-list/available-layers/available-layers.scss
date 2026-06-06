@@ -10,7 +10,6 @@
   overflow: hidden;
 }
 
-// Search - Fixed at top
 .search-container {
   flex-shrink: 0;
   display: flex;
@@ -39,7 +38,6 @@
   }
 }
 
-// Accordion - Scrollable content
 .layers-accordion {
   flex: 1;
   overflow-y: auto;
@@ -106,7 +104,6 @@
   }
 }
 
-// Active indicator dot
 .active-dot {
   width: 8px;
   height: 8px;
@@ -119,7 +116,6 @@
   padding: 0;
 }
 
-// Empty State
 .empty-state {
   display: flex;
   flex-direction: column;

@@ -559,10 +559,6 @@ export class LayerControlService {
   // Public Computed Signals
   // ============================================================================
 
-  /**
-   * Computed signal containing all currently active (visible) layers,
-   * sorted by zIndex in descending order (highest on top).
-   */
   readonly activeLayers = computed(() => {
     const allLayers = this.layersService.getAllLayers();
     return allLayers
@@ -578,27 +574,16 @@ export class LayerControlService {
   // Public Getters
   // ============================================================================
 
-  /**
-   * Gets active layers filtered by their z-index group.
-   */
   getActiveLayersForGroup(groupId: ActiveLayerGroupId): ActiveLayerEntry[] {
     return this.activeLayers().filter(({ layer }) => layer.zIndexGroup === groupId);
   }
 
-  /**
-   * Gets the controls for a specific layer.
-   * @throws Error if controls not found (all layers should have initialized controls)
-   */
   getControls(layerId: string): LayerControls {
     const controls = this.controls().get(layerId);
     if (!controls) throw new Error(`Controls for layer '${layerId}' not found`);
     return controls;
   }
 
-  /**
-   * Calculates the absolute z-index for a layer based on its group and relative position.
-   * @throws Error if layer not found
-   */
   getAbsoluteZIndex(layerId: string, controls: LayerControls): number {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer) throw new Error(`Layer '${layerId}' not found`);
@@ -606,18 +591,12 @@ export class LayerControlService {
     return baseOffset + controls.zIndex;
   }
 
-  /**
-   * Checks if a layer is currently playing back.
-   */
   isPlaying(layerId: string): boolean {
     const controls = this.getControls(layerId);
     if (controls.type !== LayerType.TILE) return false;
     return controls.playback?.isPlaying ?? false;
   }
 
-  /**
-   * Gets the selected elevations for a radar layer.
-   */
   getSelectedElevationsForLayer(layerId: string): RadarElevation[] {
     const controls = this.getControls(layerId);
     if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.RADAR) {
@@ -637,9 +616,6 @@ export class LayerControlService {
   // Public Actions - Layer Visibility
   // ============================================================================
 
-  /**
-   * Toggles a layer's visibility on/off.
-   */
   toggleLayer(layerId: string): void {
     if (this.isActive(layerId)) {
       this.deactivateLayer(layerId);
@@ -648,11 +624,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Activates (makes visible) a layer and assigns it a z-index.
-   * If the layer has config and timeIndex is undefined, sets it to the latest period.
-   * For radar layers, sets default elevations if none are selected.
-   */
   activateLayer(layerId: string): void {
     if (this.isActive(layerId)) return;
 
@@ -663,11 +634,8 @@ export class LayerControlService {
       controls.visible = true;
       controls.zIndex = this.getNextZIndex(layer.zIndexGroup);
 
-      // Initialize layer-specific defaults
       switch (controls.type) {
         case LayerType.TILE:
-          // Set default cursor if timeIndex is undefined and config exists.
-          // Forecast layers start at the first frame; historical at the last.
           if (controls.playback.timeIndex === undefined) {
             const availablePeriods = this.getAvailablePeriodsForLayer(layerId);
             if (availablePeriods && availablePeriods.length > 0) {
@@ -679,10 +647,8 @@ export class LayerControlService {
             }
           }
 
-          // Handle category-specific initialization
           switch (controls.category) {
             case LayerCategory.RADAR:
-              // Set default elevations if none are selected
               if (
                 controls.elevation.selectedElevationIds.length === 0 &&
                 layer.type === LayerType.TILE &&
@@ -699,10 +665,8 @@ export class LayerControlService {
               }
               break;
             case LayerCategory.GOES_19:
-              // No special initialization needed for GOES layers
               break;
             case LayerCategory.ECMWF_TP: {
-              // Set default forecasts if none are selected and config is available
               const ecmwfControls = controls as EcmwfTpLayerControls;
               if (ecmwfControls.forecast.selectedForecastTimestamps.length === 0) {
                 const ecmwfConfig = this.layerConfigService.getConfig(layerId);
@@ -743,18 +707,13 @@ export class LayerControlService {
           }
           break;
         case LayerType.VECTOR:
-          // No special initialization needed for vector layers
           break;
         case LayerType.WMS:
-          // No special initialization needed for WMS layers
           break;
       }
     });
   }
 
-  /**
-   * Deactivates (hides) a layer and stops playback if running.
-   */
   deactivateLayer(layerId: string): void {
     if (!this.isActive(layerId)) return;
 
@@ -767,9 +726,6 @@ export class LayerControlService {
     });
   }
 
-  /**
-   * Deactivates all active layers and activates only the specified layer.
-   */
   replaceAllWithLayer(layerId: string): void {
     this.activeLayers().forEach(({ layer }) => {
       if (layer.id !== layerId) {
@@ -784,9 +740,6 @@ export class LayerControlService {
   // Public Actions - Layer Properties
   // ============================================================================
 
-  /**
-   * Sets the opacity for a layer (0-1).
-   */
   setOpacity(layerId: string, opacity: number): void {
     const clampedOpacity = Math.max(0, Math.min(1, opacity));
     this.updateControls(layerId, (controls) => {
@@ -798,9 +751,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Sets the z-index for a layer.
-   */
   setZIndex(layerId: string, zIndex: number): void {
     const normalizedZIndex = Math.max(0, Math.round(zIndex));
 
@@ -813,9 +763,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Sets the active time index for tile layers with time series data.
-   */
   setTimeIndex(layerId: string, timeIndex: number): void {
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.playback) {
@@ -824,10 +771,6 @@ export class LayerControlService {
     });
   }
 
-  /**
-   * Toggles an elevation for radar layers (adds if not present, removes if present).
-   * If all elevations are removed, the layer is automatically deactivated.
-   */
   toggleElevation(layerId: string, elevationId: string): void {
     this.updateControls(layerId, (controls) => {
       switch (controls.type) {
@@ -838,10 +781,8 @@ export class LayerControlService {
               const index = currentSelected.indexOf(elevationId);
 
               if (index === -1) {
-                // Add elevation if not present
                 controls.elevation.selectedElevationIds = [...currentSelected, elevationId];
               } else {
-                // Remove elevation if present
                 controls.elevation.selectedElevationIds = currentSelected.filter(
                   (id) => id !== elevationId,
                 );
@@ -856,7 +797,6 @@ export class LayerControlService {
       }
     });
 
-    // Deactivate the layer if no elevations are selected
     const updatedControls = this.getControls(layerId);
     if (
       updatedControls.type === LayerType.TILE &&
@@ -867,10 +807,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Sets the selected elevations for radar layers.
-   * If no elevations are provided, the layer is automatically deactivated.
-   */
   setSelectedElevations(layerId: string, elevationIds: string[]): void {
     this.updateControls(layerId, (controls) => {
       switch (controls.type) {
@@ -888,15 +824,11 @@ export class LayerControlService {
       }
     });
 
-    // Deactivate the layer if no elevations are selected
     if (elevationIds.length === 0) {
       this.deactivateLayer(layerId);
     }
   }
 
-  /**
-   * Sets the opacity for a specific elevation in a radar layer.
-   */
   setElevationOpacity(layerId: string, elevationId: string, opacity: number): void {
     const clampedOpacity = Math.max(0, Math.min(1, opacity));
     this.updateControls(layerId, (controls) => {
@@ -906,10 +838,6 @@ export class LayerControlService {
     });
   }
 
-  /**
-   * Sets the number of most recent images to display in playback mode.
-   * Automatically adjusts timeIndex to the start of the selected range.
-   */
   setImageCount(layerId: string, count: number): void {
     const wasPlaying = this.isPlaying(layerId);
     const controls = this.getControls(layerId);
@@ -929,7 +857,6 @@ export class LayerControlService {
       }
     });
 
-    // Calculate and set the optimal timeIndex for the new range
     if (controls && controls.type === LayerType.TILE) {
       const newTimeIndex = this.layerConfigService.calculateTimeIndexForRange(layerId, count);
       if (newTimeIndex !== undefined) {
@@ -937,17 +864,13 @@ export class LayerControlService {
       }
     }
 
-    // Handle playback state
     if (count === 1) {
-      // Stop playback if it was playing (can't play with 1 image)
       if (wasPlaying) {
         this.stopPlayback(layerId);
       }
     } else {
-      // If playing, stop and restart to apply new range
       if (wasPlaying) {
         this.stopPlayback(layerId);
-        // Use setTimeout to ensure control update completes
         setTimeout(() => {
           this.startPlayback(layerId);
         }, 0);
@@ -955,10 +878,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Toggles a forecast run on/off for ECMWF layers (adds if not present, removes if present).
-   * If all forecasts are removed, the layer is automatically deactivated.
-   */
   toggleEcmwfTpForecast(layerId: string, forecastTs: string): void {
     this.updateControls(layerId, (controls) => {
       if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.ECMWF_TP) return;
@@ -980,17 +899,12 @@ export class LayerControlService {
       }
     });
 
-    // Update config availableTilesets based on new selection. The returned
-    // config reflects the new union synchronously; calling getConfig() right
-    // after would still see the previous availableTilesets because the signal
-    // write is deferred via queueMicrotask.
     const updatedControls = this.getControls(layerId) as EcmwfTpLayerControls;
     const newConfig = this.layerConfigService.updateEcmwfTpSelectedForecasts(
       layerId,
       updatedControls.forecast.selectedForecastTimestamps,
     );
 
-    // Deactivate if no forecasts selected
     if (updatedControls.forecast.selectedForecastTimestamps.length === 0) {
       this.deactivateLayer(layerId);
       return;
@@ -1000,7 +914,6 @@ export class LayerControlService {
     const newUnionCount = newConfig.availableTilesets.length;
     const layer = this.layersService.getLayerById(layerId);
 
-    // Clamp timeIndex if the union shrank — reset to the layer's default cursor.
     if (
       updatedControls.playback.timeIndex !== undefined &&
       updatedControls.playback.timeIndex >= newUnionCount
@@ -1009,10 +922,6 @@ export class LayerControlService {
       this.setTimeIndex(layerId, getDefaultCursorIndex(newUnionCount, isForecast));
     }
 
-    // Reconcile imageCount with the new union size: if the current value is
-    // no longer in the dropdown's options (e.g. it was the per-forecast cap of
-    // 47 and the union just grew to 51, or vice versa), snap it to the new
-    // max so the selector stays valid without a manual user re-pick.
     if (
       newUnionCount > 0 &&
       layer?.type === LayerType.TILE &&
@@ -1025,17 +934,10 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Sets the opacity for a specific forecast run in an ECMWF layer.
-   */
   setEcmwfTpForecastOpacity(layerId: string, forecastTs: string, opacity: number): void {
     const clampedOpacity = Math.max(0, Math.min(1, opacity));
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.category === LayerCategory.ECMWF_TP) {
-        // Only set the forecast-level opacity. Per-render overrides (renderOpacity)
-        // are intentionally left untouched — the fallback chain in the render
-        // service (renderOpacity ?? forecastOpacity ?? controls.opacity) handles
-        // inheritance so that individual render overrides remain independent.
         (controls as EcmwfTpLayerControls).forecast.forecastOpacity[forecastTs] = clampedOpacity;
       }
     });
@@ -1086,10 +988,6 @@ export class LayerControlService {
     });
   }
 
-  /**
-   * Activa/desactiva un init_tag (corrida) en una capa WRF.
-   * Si todas las corridas quedan deseleccionadas la capa se desactiva.
-   */
   toggleWrfForecast(layerId: string, initTag: string): void {
     this.updateControls(layerId, (controls) => {
       if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.WRF) return;
@@ -1111,8 +1009,6 @@ export class LayerControlService {
       }
     });
 
-    // Devuelve la nueva unión sincrónicamente; getConfig() justo después vería
-    // la anterior (write diferido vía queueMicrotask).
     const updatedControls = this.getControls(layerId) as WrfLayerControls;
     const newConfig = this.layerConfigService.updateWrfSelectedForecasts(
       layerId,
@@ -1128,7 +1024,6 @@ export class LayerControlService {
     const newUnionCount = newConfig.availableTilesets.length;
     const layer = this.layersService.getLayerById(layerId);
 
-    // Clamp timeIndex si la unión se achicó — reset al cursor por defecto.
     if (
       updatedControls.playback.timeIndex !== undefined &&
       updatedControls.playback.timeIndex >= newUnionCount
@@ -1137,10 +1032,6 @@ export class LayerControlService {
       this.setTimeIndex(layerId, getDefaultCursorIndex(newUnionCount, isForecast));
     }
 
-    // Reconcilia imageCount con el nuevo tamaño de unión: si el valor actual
-    // ya no está en las opciones del dropdown (p.ej. era 10 con 2 corridas y
-    // al deseleccionar una la unión bajó a 7), lo ajusta al nuevo máximo para
-    // que el selector quede válido sin un re-pick manual. Espejo de ECMWF.
     if (
       newUnionCount > 0 &&
       layer?.type === LayerType.TILE &&
@@ -1153,14 +1044,10 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Opacidad por corrida (init_tag) en una capa WRF.
-   */
   setWrfForecastOpacity(layerId: string, initTag: string, opacity: number): void {
     const clampedOpacity = Math.max(0, Math.min(1, opacity));
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE && controls.category === LayerCategory.WRF) {
-        // Only set the forecast-level opacity — same rationale as ECMWF.
         (controls as WrfLayerControls).forecast.forecastOpacity[initTag] = clampedOpacity;
       }
     });
@@ -1211,22 +1098,16 @@ export class LayerControlService {
     });
   }
 
-  /**
-   * Reorders layers within a group after drag and drop.
-   * Receives the complete layer order for the group and recalculates z-indices.
-   */
   setActiveGroupLayersOrder(
     activeLayerGroupId: ActiveLayerGroupId,
     orderedLayerIds: string[],
   ): void {
-    // First deactivate layers in the group not specified in the new order
     this.getActiveLayersForGroup(activeLayerGroupId).forEach(({ layer }) => {
       if (!orderedLayerIds.includes(layer.id)) {
         this.deactivateLayer(layer.id);
       }
     });
 
-    // Filter to only active layers and assign new z-indices according to order
     const filteredIds = orderedLayerIds.filter((id) => this.isActive(id));
     const maxIndex = filteredIds.length - 1;
 
@@ -1254,9 +1135,6 @@ export class LayerControlService {
   // Public Actions - Playback
   // ============================================================================
 
-  /**
-   * Sets the playback speed for tile layers (0.4-10 seconds per frame).
-   */
   setPlaySpeed(layerId: string, speed: number): void {
     const clampedSpeed = Math.max(0.4, Math.min(10, speed));
 
@@ -1271,9 +1149,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Toggles playback on/off for tile layers.
-   */
   togglePlayback(layerId: string): void {
     if (this.isPlaying(layerId)) {
       this.stopPlayback(layerId);
@@ -1282,9 +1157,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Starts automatic playback for a tile layer, cycling through available time periods.
-   */
   startPlayback(layerId: string): void {
     if (!this.isActive(layerId)) return;
 
@@ -1328,9 +1200,6 @@ export class LayerControlService {
     });
   }
 
-  /**
-   * Stops automatic playback for a tile layer.
-   */
   stopPlayback(layerId: string): void {
     if (!this.isActive(layerId)) return;
     if (!this.isPlaying(layerId)) return;
@@ -1348,19 +1217,11 @@ export class LayerControlService {
   // Private Helpers
   // ============================================================================
 
-  /**
-   * Checks if a layer is currently active (visible).
-   */
   private isActive(layerId: string): boolean {
     const controls = this.getControls(layerId);
     return controls?.visible ?? false;
   }
 
-  /**
-   * Gets the available time periods for a layer based on its type and configuration.
-   * Returns undefined if config not yet loaded.
-   * @throws Error if layer not found or unsupported layer type
-   */
   private getAvailablePeriodsForLayer(layerId: string): TilesetEntry[] | undefined {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer) throw new Error(`Layer '${layerId}' not found`);
@@ -1381,9 +1242,6 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Gets the next available z-index for a layer in its group.
-   */
   private getNextZIndex(activeLayerGroup: ActiveLayerGroupId): number {
     const activeLayersInGroup = this.activeLayers().filter(
       ({ layer }) => layer.zIndexGroup === activeLayerGroup,
@@ -1400,10 +1258,6 @@ export class LayerControlService {
     return maxZIndexInGroup + 1;
   }
 
-  /**
-   * Updates a layer's controls using an update function.
-   * Creates a new immutable copy of the controls map to trigger reactive updates.
-   */
   private updateControls(layerId: string, updateFn: (controls: LayerControls) => void): void {
     this.controls.update((controlsMap) => {
       const newMap = new Map(controlsMap);
@@ -1421,16 +1275,12 @@ export class LayerControlService {
   // Private Initialization & Persistence
   // ============================================================================
 
-  /**
-   * Initializes layer controls from saved state or defaults.
-   */
   private initializeControls(): void {
     const savedState = this.loadControls();
 
     const stateMap = new Map(savedState ? savedState.map((s) => [s.id, s]) : []);
     const controlsMap = new Map<string, LayerControls>();
 
-    // Find max zIndex from saved visible layers to avoid conflicts
     const maxSavedZIndex = savedState
       ? Math.max(-1, ...savedState.filter((c) => c.visible).map((c) => c.zIndex ?? 0))
       : -1;
@@ -1441,9 +1291,6 @@ export class LayerControlService {
       const savedControls = stateMap.get(layer.id);
 
       if (savedControls) {
-        // Restore saved state, but ensure isPlaying is false and zIndex is defined.
-        // For ECMWF, also buffer the persisted forecast indices for later
-        // hydration in the reconciliation effect (config not yet available).
         controls = {
           ...this.fromPersistedControls(savedControls),
           zIndex: savedControls.zIndex ?? 0,
@@ -1454,13 +1301,10 @@ export class LayerControlService {
             isPlaying: false,
           };
 
-          // Validate timeIndex against current config if available (config might not be loaded yet)
           if (controls.playback.timeIndex !== undefined) {
             try {
               const availablePeriods = this.getAvailablePeriodsForLayer(layer.id);
               if (availablePeriods && availablePeriods.length > 0) {
-                // Clamp timeIndex to valid range. Out-of-range values reset to
-                // the layer's default cursor (first frame for forecasts, last otherwise).
                 const maxIndex = availablePeriods.length - 1;
                 const isForecast = layer.type === LayerType.TILE && layer.isForecast;
                 const defaultIndex = getDefaultCursorIndex(availablePeriods.length, isForecast);
@@ -1471,7 +1315,6 @@ export class LayerControlService {
                 }
               }
             } catch {
-              // Config not loaded yet, will be validated when config arrives
             }
           }
         }
@@ -1491,9 +1334,6 @@ export class LayerControlService {
     this.controls.set(controlsMap);
   }
 
-  /**
-   * Creates default base controls for a layer.
-   */
   private createDefaultBaseControls(layer: Layer): BaseLayerControls {
     return {
       id: layer.id,
@@ -1503,9 +1343,6 @@ export class LayerControlService {
     };
   }
 
-  /**
-   * Creates appropriate controls for a layer based on its type and category.
-   */
   private createControlsForLayer(layer: Layer): LayerControls {
     const baseControls = this.createDefaultBaseControls(layer);
 
@@ -1538,7 +1375,6 @@ export class LayerControlService {
               category: layer.category!,
             } as GoesLayerControls;
           case LayerCategory.RADAR:
-            // Find elevation(s) marked as default
             const radarLayer = layer as RadarTileLayer;
             const defaultElevations = radarLayer.availableElevations
               .filter((elev) => elev.activeByDefault)
@@ -1582,21 +1418,11 @@ export class LayerControlService {
     }
   }
 
-  /**
-   * Saves active layer controls to localStorage. ECMWF forecast selection
-   * (timestamps at runtime) is translated to indices into `availableForecasts`
-   * so that "the latest run" stays "the latest run" across sessions, even
-   * when the underlying timestamps have rolled forward.
-   */
   private saveControls(): void {
     const state = this.activeLayers().map(({ controls }) => this.toPersistedControls(controls));
     localStorage.setItem(STORAGE_KEYS.ACTIVE_LAYERS, JSON.stringify(state));
   }
 
-  /**
-   * Converts runtime LayerControls to its persisted shape. Only ECMWF needs
-   * translation; other categories serialize as-is.
-   */
   private toPersistedControls(controls: LayerControls): PersistedLayerControls {
     if (controls.type !== LayerType.TILE || controls.category !== LayerCategory.ECMWF_TP) {
       return controls;
@@ -1605,8 +1431,6 @@ export class LayerControlService {
     const config = this.layerConfigService.getConfig(ecmwf.id) as
       | EcmwfTpTileLayerConfig
       | undefined;
-    // Defensive: if config isn't available (shouldn't happen for an active
-    // layer being persisted), drop the selection rather than write stale data.
     const availableForecasts = config?.availableForecasts ?? [];
     const selectedForecastIndices: number[] = [];
     for (const ts of ecmwf.forecast.selectedForecastTimestamps) {
@@ -1638,12 +1462,6 @@ export class LayerControlService {
     };
   }
 
-  /**
-   * Converts persisted LayerControls back to its runtime shape. For ECMWF,
-   * stashes the persisted forecast indices into `pendingEcmwfIndices` and
-   * returns controls with empty runtime forecast state — the reconciliation
-   * effect translates indices to timestamps once the config arrives.
-   */
   private fromPersistedControls(persisted: PersistedLayerControls): LayerControls {
     if (persisted.type !== LayerType.TILE || persisted.category !== LayerCategory.ECMWF_TP) {
       return persisted as LayerControls;
@@ -1745,12 +1563,6 @@ export class LayerControlService {
     };
   }
 
-  /**
-   * Loads layer controls from localStorage. The persisted shape for ECMWF
-   * layers carries forecast selection as indices rather than timestamps —
-   * `initializeControls` is responsible for buffering those into
-   * `pendingEcmwfIndices` and producing a valid runtime `LayerControls`.
-   */
   private loadControls(): PersistedLayerControls[] | undefined {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_LAYERS);
@@ -1765,6 +1577,7 @@ export class LayerControlService {
   }
 
   private loadWeatherStationsSharedState(): void {
+
     if (typeof localStorage === 'undefined') {
       return;
     }
@@ -1809,7 +1622,6 @@ export class LayerControlService {
             : this.weatherStationsSharedState().showStationsWithoutData,
       });
     } catch {
-      // Ignore malformed persisted state.
     }
   }
 

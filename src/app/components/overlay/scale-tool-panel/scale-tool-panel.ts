@@ -137,7 +137,7 @@ export class ScaleToolPanelComponent {
 
   get continuousLabelSizerText(): string {
     return this.continuousLabelEntries.reduce(
-      (longest, entry) => (entry.text.length > longest.length ? entry.text : longest),
+      (longest, entry) => entry.text.length > longest.length ? entry.text : longest,
       '',
     );
   }

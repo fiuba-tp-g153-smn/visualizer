@@ -80,17 +80,6 @@ function isBarbTileRender(
   return 'kind' in render && render.kind === 'barb-tile';
 }
 
-/**
- * Componente reutilizable para mostrar y controlar una capa individual
- *
- * Este componente abstrae toda la lógica de una capa incluyendo:
- * - Control de opacidad
- * - Control de tiempo (con play/pause)
- * - Carga de configuración de canales
- * - Activación/desactivación
- *
- * Se utiliza tanto en la pestaña "Disponibles" como "Activas"
- */
 @Component({
   selector: 'app-layer-item',
   standalone: true,
@@ -125,33 +114,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly syncService = inject(SyncPlaybackService);
   private readonly scaleTools = inject(ScaleToolsService);
 
-  /**
-   * Capa a renderizar (requerido)
-   */
   @Input({ required: true }) layer!: Layer;
 
-  /**
-   * Modo de visualización: 'available' muestra checkbox, 'active' muestra drag handle
-   */
   @Input() mode: LayerItemMode = LayerItemMode.AVAILABLE;
 
-  /**
-   * Selection behavior for available-mode controls.
-   * - MULTIPLE: checkbox behavior
-   * - SINGLE: radio-like behavior (exclusive within subgroup)
-   */
   @Input() selectionMode: LayerSelectionMode = LayerSelectionMode.MULTIPLE;
 
-  /**
-   * Stable name used by Material radios to group options per subgroup.
-   */
   @Input() radioGroupName = '';
 
-  // Propiedades derivadas del modo
   readonly showClose = true;
   readonly showDragHandle = true;
 
-  // Estado local
   readonly isLoadingConfig = computed(() =>
     this.refreshService.loadingLayerIds().has(this.layer.id),
   );
@@ -195,13 +168,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   });
 
-  /**
-   * Returns the available period-count options from the layer configuration.
-   *
-   * For ECMWF, the cap follows the actual union of periods across the selected
-   * forecast runs — selecting multiple runs can produce a union larger than the
-   * per-run maximum (e.g. 47), and the dropdown must offer that total.
-   */
   lastImagesOptions = computed(() => {
     if (this.isWeatherStationsLayer()) {
       return this.weatherStationsImageCountOptions();
@@ -210,9 +176,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     switch (this.layer.type) {
       case LayerType.TILE: {
         const staticOptions = this.layer.availablePeriods ?? [1];
-        // ECMWF y WRF: reemplazan el preset máximo por el tamaño de la unión
-        // de corridas para poder animar todos los frames (incl. el último que
-        // el cap estático dejaría afuera).
         if (
           this.layer.category === LayerCategory.ECMWF_TP ||
           this.layer.category === LayerCategory.WRF
@@ -249,10 +212,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return this.controlService.activeLayers().find((item) => item.layer.id === this.layer.id);
   });
 
-  /**
-   * Obtiene la opacidad actual de la capa activa
-   * Para capas de radar, retorna la opacidad común de todas las elevaciones si es la misma, sino retorna undefined
-   */
   currentOpacity = computed(() => {
     const activeLayer = this.getActiveLayer();
     if (!activeLayer) return;
@@ -274,27 +233,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return activeLayer.controls.opacity;
   });
 
-  /**
-   * Obtiene la opacidad actual como porcentaje entero (0-100)
-   * Retorna undefined si las elevaciones tienen diferentes opacidades
-   */
   currentOpacityPercent = computed(() => {
     const opacity = this.currentOpacity();
     if (opacity === undefined) return undefined;
     return Math.round(opacity * 100);
   });
 
-  /**
-   * Obtiene la opacidad base de la capa (usada como fallback cuando las elevaciones tienen diferentes opacidades)
-   */
   baseLayerOpacity = computed(() => {
     const activeLayer = this.getActiveLayer();
     return activeLayer?.controls.opacity ?? 1;
   });
 
-  /**
-   * Indica si la capa está activa (visible en el mapa)
-   */
   isActive = computed(() => {
     return this.getActiveLayer() !== undefined;
   });
@@ -311,9 +260,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return tilesets && tilesets.length > 0;
   });
 
-  /**
-   * Verifica si la capa requiere control de tiempo pero no hay períodos disponibles
-   */
   hasNoPeriodsAvailable = computed(() => {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       return this.weatherStationsTilesetIds().length === 0;
@@ -333,9 +279,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return !tilesets || tilesets.length === 0;
   });
 
-  /**
-   * Verifica si la capa necesita control de período (TILE layers)
-   */
   needsTimeControl = computed(() => {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       return true;
@@ -357,9 +300,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   });
 
-  /**
-   * Verifica si la capa necesita control de elevación (solo RADAR)
-   */
   hasElevationControl = computed(() => {
     switch (this.layer.type) {
       case LayerType.TILE:
@@ -377,9 +317,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   });
 
-  /**
-   * Obtiene las elevaciones disponibles
-   */
   availableElevations = computed(() => {
     switch (this.layer.type) {
       case LayerType.TILE:
@@ -394,16 +331,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   });
 
-  /**
-   * Obtiene los índices de elevación como opciones para el selector
-   */
   elevationIndexOptions = computed(() => {
     return this.availableElevations().map((_, i) => i);
   });
 
-  /**
-   * Obtiene los IDs de las elevaciones seleccionadas
-   */
   selectedElevationIds = computed(() => {
     const activeItem = this.getActiveLayer();
 
@@ -420,9 +351,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   });
 
-  /**
-   * Obtiene el índice máximo de tiempo
-   */
   maxTimeIndex = computed(() => {
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || tilesets.length === 0) return 0;
@@ -440,9 +368,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   layerShortName = computed(() => this.layersService.getLayerShortName(this.layer));
   layerFullName = computed(() => this.layersService.getLayerFullName(this.layer));
 
-  /**
-   * Obtiene el índice mínimo para el slider (limitado por el selector de últimas imágenes)
-   */
   minTimeIndex = computed(() => {
     const tilesets = this.getAvailableTilesetsForLayer();
     if (!tilesets || tilesets.length === 0) return 0;
@@ -456,9 +381,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return computeWindowStart(tilesets.length, imageCount, isForecast);
   });
 
-  /**
-   * Índice de tiempo actual - lee directamente del servicio
-   */
   currentTimeIndex = computed(() => {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       return this.weatherStationsSelectedTilesetIndex();
@@ -494,26 +416,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnInit(): void {
-    // Layer refresh service will handle config fetching for active layers
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // Layer refresh service will handle config fetching
   }
 
   ngOnDestroy(): void {
     if (this.isWeatherStationsLayer()) {
       this.stopWeatherStationsPlayback();
     }
-
-    // Don't stop playback on destroy - let it continue in the background
-    // The layer service will manage playback lifecycle independently
   }
 
-  /**
-   * Obtiene los tilesets disponibles según la categoría de la capa.
-   * Para GOES_19 y RADAR: devuelve todos los tilesets.
-   */
   private getAvailableTilesetsForLayer(): TilesetEntry[] | undefined {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       const entries: TilesetEntry[] = [];
@@ -553,18 +466,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.refreshService.manualRefresh(this.layer.id).subscribe({
       next: () => {},
       error: (err: Error) => {
-        console.error(`❌ [LayerItem] Error refrescando config de ${this.layer.id}:`, err);
+        console.error(`[LayerItem] Error refrescando config de ${this.layer.id}:`, err);
       },
     });
   }
 
-  // ==========================================================================
-  // Activación/Desactivación
-  // ==========================================================================
-
-  /**
-   * Alterna el estado de activación de la capa
-   */
   async toggleActive(checked: boolean): Promise<void> {
     if (checked) {
       await this.activateLayer();
@@ -594,23 +500,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.deactivateLayer();
   }
 
-  /**
-   * Alterna la expansión del card completo (opacidad + período)
-   */
   toggleExpansion(): void {
     this.isExpanded.set(!this.isExpanded());
   }
 
-  /**
-   * Alterna la expansión de los controles de elevación
-   */
   toggleElevationsExpansion(): void {
     this.isElevationsExpanded.set(!this.isElevationsExpanded());
   }
 
-  /**
-   * Alterna la expansión de los controles de corridas ECMWF
-   */
   toggleForecastsExpansion(): void {
     const newExpanded = !this.isForecastsExpanded();
     this.isForecastsExpanded.set(newExpanded);
@@ -635,16 +532,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return this.expandedForecastRuns().has(forecastTs);
   }
 
-  /**
-   * Alterna la expansión de la configuración específica de estaciones meteorológicas
-   */
   toggleWeatherStationsSettingsExpansion(): void {
     this.isWeatherStationsSettingsExpanded.set(!this.isWeatherStationsSettingsExpanded());
   }
 
-  /**
-   * Activa la capa
-   */
   private async activateLayer(): Promise<void> {
     if (this.isWeatherStationsLayer()) {
       this.captureCurrentWeatherStationsSharedState();
@@ -693,10 +584,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.controlService.stopPlayback(this.layer.id);
     this.controlService.deactivateLayer(this.layer.id);
   }
-
-  // ==========================================================================
-  // Control de Opacidad
-  // ==========================================================================
 
   onOpacityChange(opacity: number): void {
     const activeLayer = this.getActiveLayer();
@@ -763,23 +650,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  /**
-   * Formatea el valor de opacidad para el slider (convierte 0-1 a porcentaje entero)
-   */
   formatOpacity = (value: number): string => {
     return `${Math.round(value * 100)}%`;
   };
 
-  /**
-   * Formatea el índice de tiempo para el slider (muestra HH:MM)
-   */
   formatTimeIndex = (value: number): string => {
     return this.getTimeOnly(value);
   };
-
-  // ==========================================================================
-  // Control de Tiempo
-  // ==========================================================================
 
   onTimeIndexChange(timeIndex: number): void {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
@@ -800,27 +677,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.controlService.setTimeIndex(this.layer.id, timeIndex);
   }
 
-  // ==========================================================================
-  // Control de Elevación (RADAR)
-  // ==========================================================================
-
-  /**
-   * Verifica si una elevación está seleccionada
-   */
   isElevationSelected(elevationId: string): boolean {
     return this.selectedElevationIds().includes(elevationId);
   }
 
-  /**
-   * Maneja el toggle de una elevación (activar/desactivar)
-   */
   onElevationToggle(elevationId: string): void {
     this.controlService.toggleElevation(this.layer.id, elevationId);
   }
 
-  /**
-   * Obtiene la opacidad de una elevación específica
-   */
   getElevationOpacity(elevationId: string): number {
     const activeItem = this.getActiveLayer();
     if (!activeItem) return 1;
@@ -836,24 +700,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return activeItem.controls.opacity;
   }
 
-  /**
-   * Obtiene el porcentaje de opacidad de una elevación específica
-   */
   getElevationOpacityPercent(elevationId: string): number {
     return Math.round(this.getElevationOpacity(elevationId) * 100);
   }
 
-  /**
-   * Establece la opacidad de una elevación específica
-   */
   onElevationOpacityChange(elevationId: string, opacity: number): void {
     this.controlService.setElevationOpacity(this.layer.id, elevationId, opacity);
   }
 
-  /**
-   * Obtiene la opacidad global de todas las elevaciones seleccionadas
-   * Retorna undefined si hay diferentes opacidades
-   */
   globalElevationOpacity = computed(() => {
     const activeLayer = this.getActiveLayer();
     if (!activeLayer) return undefined;
@@ -870,10 +724,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return allSame ? firstOpacity : undefined;
   });
 
-  /**
-   * Obtiene la opacidad global de todas las corridas seleccionadas.
-   * Retorna undefined si hay diferentes opacidades.
-   */
   globalForecastOpacity = computed(() => {
     const activeLayer = this.getActiveLayer();
     if (!activeLayer) return undefined;
@@ -939,9 +789,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }));
   });
 
-  /**
-   * Checks if the layer requires forecast control (ECMWF or WRF).
-   */
   hasForecastControl = computed(() => {
     if (this.layer.type !== LayerType.TILE) return false;
     if (
@@ -957,9 +804,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return (config?.availableForecasts?.length ?? 0) > 0;
   });
 
-  /**
-   * Available forecast runs (ECMWF / WRF layers).
-   */
   availableForecasts = computed((): string[] => {
     if (this.layer.type !== LayerType.TILE) return [];
     if (
@@ -975,9 +819,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return config?.availableForecasts ?? [];
   });
 
-  /**
-   * IDs of selected forecasts (ECMWF) or init_tags (WRF).
-   */
   selectedForecastTimestamps = computed((): string[] => {
     const activeItem = this.getActiveLayer();
     if (!activeItem) return [];
@@ -992,16 +833,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return [];
   });
 
-  /**
-   * Checks if a forecast run is selected
-   */
   isForecastSelected(forecastTs: string): boolean {
     return this.selectedForecastTimestamps().includes(forecastTs);
   }
 
-  /**
-   * Toggles a forecast run (activate/deactivate)
-   */
   onForecastToggle(forecastTs: string): void {
     const wasSelected = this.isForecastSelected(forecastTs);
 
@@ -1022,9 +857,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  /**
-   * Gets the opacity of a specific forecast run
-   */
   getForecastOpacity(forecastTs: string): number {
     const activeItem = this.getActiveLayer();
     if (!activeItem) return 1;
@@ -1041,16 +873,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return activeItem.controls.opacity;
   }
 
-  /**
-   * Gets the opacity percentage of a specific forecast run
-   */
   getForecastOpacityPercent(forecastTs: string): number {
     return Math.round(this.getForecastOpacity(forecastTs) * 100);
   }
 
-  /**
-   * Sets the opacity of a specific forecast run
-   */
   onForecastOpacityChange(forecastTs: string, opacity: number): void {
     if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
       this.controlService.setWrfForecastOpacity(this.layer.id, forecastTs, opacity);
@@ -1090,10 +916,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  /**
-   * Returns the opacity value if all renders of the corrida share the same opacity,
-   * or undefined if they diverge (drives the '-' label on the corrida row).
-   */
   getForecastRunUniformOpacity(forecastTs: string): number | undefined {
     const allRenderIds = [PRIMARY_RENDER_ID, ...this.getForecastRenders().map((r) => r.id)];
     const opacities = allRenderIds.map((id) => this.getForecastRenderOpacity(forecastTs, id));
@@ -1170,10 +992,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     );
   }
 
-  // ==========================================================================
-  // Control de Reproducción
-  // ==========================================================================
-
   togglePlayback(): void {
     if (this.isWeatherStationsLayer()) {
       if (this.isPlaying()) {
@@ -1222,18 +1040,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (this.isPlaying()) this.controlService.stopPlayback(this.layer.id);
   }
 
-  // ==========================================================================
-  // Control de Escalas
-  // ==========================================================================
-
   hasScale(): boolean {
     return this.layer.scale !== undefined;
   }
 
-  /**
-   * True when the layer has a primary tile visible for at least one selected forecast run.
-   * For non-forecast layers this is always true. When false, the scale button is disabled.
-   */
   isPrimaryRenderActiveForAnyForecast = computed((): boolean => {
     if (
       this.layer.type !== LayerType.TILE ||

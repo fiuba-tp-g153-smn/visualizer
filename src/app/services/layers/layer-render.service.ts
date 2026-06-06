@@ -102,15 +102,6 @@ export class LayerRenderService {
   // Public Methods - Layer Creation
   // ============================================================================
 
-  /**
-   * Creates a Leaflet TileLayer for the given layer ID and controls.
-   * Uses a pool to reuse layer instances when only visual properties (opacity) change.
-   *
-   * @param layerId - The layer identifier
-   * @param controls - Current layer control state (opacity, timeIndex, elevation, etc.)
-   * @returns A configured Leaflet TileLayer
-   * @throws Error if layer not found or unsupported type
-   */
   createTileLayer(layerId: string, controls: LayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
 
@@ -118,16 +109,11 @@ export class LayerRenderService {
       throw new Error(`Layer '${layerId}' not found`);
     }
 
-    // Generate a unique key for the pool based on layer data (not visual properties)
     const poolKey = this.generatePoolKey(layerId, controls);
 
-    // Check if we already have a layer instance in the pool
     if (this.layerPool.has(poolKey)) {
-      // Return cached layer as-is; caller (map-viewer) manages opacity
       return this.layerPool.get(poolKey)!;
     }
-
-    // Create new layer if not in pool
     let tileLayer: L.TileLayer;
     switch (layer.type) {
       case LayerType.TILE:
@@ -140,7 +126,6 @@ export class LayerRenderService {
         throw new Error(`Unsupported layer type for layer ${layerId}`);
     }
 
-    // Store in pool for future reuse
     this.layerPool.set(poolKey, tileLayer);
     return tileLayer;
   }
@@ -196,9 +181,6 @@ export class LayerRenderService {
 
     const visiblePoints: VisiblePoint[] = [];
     for (const observation of snapshot.observations) {
-      // `hasData === false` ⇔ the station's last observation falls outside the
-      // requested tolerance window. Default-true fallback keeps LATEST mode
-      // (where the field is irrelevant) rendering normally.
       const isStale = observation.hasData === false;
       if (isStale && !showStationsWithoutData) {
         continue;
@@ -245,8 +227,6 @@ export class LayerRenderService {
       Math.round(markerRadius * WEATHER_STATION_RENDER_CONFIG.marker.badgeDiameterFactor),
     );
     const circleDiameterPx = circleRadiusPx * 2;
-    // Minimized wind stations render a direction triangle instead of a dot; size it
-    // well above the dot (~3.5–8.4px) yet below the barb so it stays de-cluttered.
     const windDirSizePx = Math.max(20, Math.round(markerRadius * 2.3));
 
     const cellSize = Math.max(WEATHER_STATION_RENDER_CONFIG.minDistancePx, circleDiameterPx);
@@ -286,14 +266,9 @@ export class LayerRenderService {
       }
     }
 
-    // Neutral gray for stations whose observation is outside the requested
-    // tolerance window. Soft and desaturated — visible but clearly inactive.
     const STALE_COLOR = '#9ca3af';
     const STALE_TOOLTIP = 'Sin datos en el período solicitado';
 
-    // Wind barbs are much larger than a badge, so they need extra spacing before
-    // colliding; widen the density thresholds for the wind layer so crowded barbs
-    // collapse to dots (the de-clutter) sooner when zooming out.
     const declutterFactor = stationLayer.variable === WeatherStationVariable.WIND_SPEED ? 4 : 1;
     const markerOpacity = Math.max(0, Math.min(1, opacity));
 
@@ -322,27 +297,18 @@ export class LayerRenderService {
             ? WeatherStationRenderLevel.CIRCLE
             : WeatherStationRenderLevel.BADGE;
 
-      // Cancel Leaflet's latitude-based marker stacking so all station sizes
-      // share the same effective z-index inside the pane.
       const sharedZIndexOffset = -Math.round(point.px.y);
 
-      // When the wind variable is selected, draw a standard wind barb instead of
-      // the value badge (except at the densest DOT level, to avoid overlap).
       const isWindBarb =
         stationLayer.variable === WeatherStationVariable.WIND_SPEED &&
         level !== WeatherStationRenderLevel.DOT;
 
       let marker: L.Marker;
       if (isWindBarb) {
-        // The barb glyph is always in knots (meteorological standard); the badge
-        // number tracks the user's display unit (km/h ↔ kt toggle) via the same
-        // helper the popover uses, so the on-map value matches the popover.
         const knots = convertKilometersPerHourToKnots(observation.weather.wind.speed ?? 0);
         const { value: windValue } = this.resolveWeatherStationsWindSpeedDisplay(
           observation.weather.wind.speed,
         );
-        // Any null here is a calm station (no-data was filtered out above); show 0
-        // to match the popover's calm reading.
         const windLabel =
           windValue === null || Number.isNaN(windValue) ? '0' : String(Math.round(windValue));
         const textColor = this.resolveWeatherStationsContrastingTextColor(color);
@@ -358,9 +324,6 @@ export class LayerRenderService {
         );
         marker = this.createWeatherStationsIconMarker(point.latLng, icon, sharedZIndexOffset);
       } else if (level === WeatherStationRenderLevel.DOT) {
-        // Wind layer: a minimized station shows its direction as a (speed-coloured)
-        // triangle, matching the popover's wind-compass arrow. Calm / unknown bearing
-        // has no honest direction, so it stays a plain dot (as do all other layers).
         const deg = observation.weather.wind.deg;
         const hasBearing =
           stationLayer.variable === WeatherStationVariable.WIND_SPEED &&
@@ -414,9 +377,6 @@ export class LayerRenderService {
         if (button !== 0) {
           return;
         }
-        // Re-fire on the map so PointQueryViewerService.handleMapClick (wired
-        // via map.on('click', ...) in map-container.ts) still triggers for
-        // points that land on a station marker.
         map.fire('click', {
           latlng: evt.latlng,
           layerPoint: evt.layerPoint,
@@ -495,10 +455,6 @@ export class LayerRenderService {
     });
   }
 
-  /**
-   * Wind marker = the solid value badge (its prior aesthetic, here carrying the
-   * temperature) with a black wind barb behind it, overflowing to the outside.
-   */
   private buildWeatherStationsWindBarbIcon(
     speedKnots: number,
     deg: number | null,
@@ -546,11 +502,6 @@ export class LayerRenderService {
     return { fontSizePx, letterSpacingPx };
   }
 
-  /**
-   * Minimized wind marker = a speed-coloured triangle pointing in the wind
-   * direction (same convention as the popover's wind-compass arrow), used at the
-   * dense DOT level instead of a directionless dot.
-   */
   private buildWeatherStationsWindDirIcon(deg: number, sizePx: number, color: string): L.DivIcon {
     return L.divIcon({
       className: 'weather-station-divicon',
@@ -611,21 +562,11 @@ export class LayerRenderService {
     return `rgba(${red}, ${green}, ${blue}, ${normalizedAlpha})`;
   }
 
-  /**
-   * Creates a Leaflet TileLayer for a radar layer with a specific elevation.
-   * This is used when multiple elevations are selected.
-   *
-   * @param layerId - The radar layer identifier
-   * @param controls - Current layer control state
-   * @param elevationId - The specific elevation ID to create a layer for
-   * @returns A configured Leaflet TileLayer for that elevation
-   */
   createRadarTileLayerForElevation(
     layerId: string,
     controls: RadarLayerControls,
     elevationId: string,
   ): L.TileLayer {
-    // Generate pool key including the specific elevation
     const config = this.layerConfigService.getConfig(layerId) as RadarTileLayerConfig | undefined;
     if (!config) {
       throw new Error(`Configuration not loaded for radar layer '${layerId}'`);
@@ -650,23 +591,15 @@ export class LayerRenderService {
     const tilesetId = tilesets[timeIndex].id;
     const poolKey = `${layerId}-${elevationId}-${tilesetId}`;
 
-    // Check pool
     if (this.layerPool.has(poolKey)) {
-      // Return cached layer as-is; caller (map-viewer) manages opacity
       return this.layerPool.get(poolKey)!;
     }
 
-    // Create new layer
     const tileLayer = this.createRadarTileLayer(layerId, controls, elevationId);
     this.layerPool.set(poolKey, tileLayer);
     return tileLayer;
   }
 
-  /**
-   * Returns the number of available tilesets for a TILE layer (GOES or Radar).
-   * Used by map-viewer to determine valid prefetch index bounds.
-   * @throws Error if configuration not loaded
-   */
   getAvailableTilesetsCount(layerId: string): number {
     const config = this.layerConfigService.getConfig(layerId) as
       | GoesTileLayerConfig
@@ -678,10 +611,6 @@ export class LayerRenderService {
     return config.availableTilesets.length;
   }
 
-  /**
-   * Creates or retrieves a GOES tile layer for a specific timeIndex, ignoring opacity.
-   * Used for pre-fetching adjacent frames without affecting the displayed opacity.
-   */
   createTileLayerForTimeIndex(
     layerId: string,
     controls: GoesLayerControls,
@@ -694,10 +623,6 @@ export class LayerRenderService {
     return this.createTileLayer(layerId, overrideControls);
   }
 
-  /**
-   * Creates or retrieves a radar tile layer for a specific elevation and timeIndex, ignoring opacity.
-   * Used for pre-fetching adjacent frames without affecting the displayed opacity.
-   */
   createRadarTileLayerForElevationAtTimeIndex(
     layerId: string,
     controls: RadarLayerControls,
@@ -711,16 +636,6 @@ export class LayerRenderService {
     return this.createRadarTileLayerForElevation(layerId, overrideControls, elevationId);
   }
 
-  /**
-   * Creates GOES layers for playback including current frame and prerendered next frames.
-   * Returns a map of composite keys to layers with opacity already set.
-   *
-   * @param layerId - The GOES layer identifier
-   * @param controls - Current layer control state
-   * @param targetOpacity - Target opacity for the current visible frame (0-1)
-   * @param absoluteZIndex - Z-index to apply to all layers
-   * @returns Map of composite keys (layerId#timeIndex) to layer objects
-   */
   createGoesLayersForPlayback(
     layerId: string,
     controls: GoesLayerControls,
@@ -731,12 +646,10 @@ export class LayerRenderService {
     const currentTimeIndex = controls.playback.timeIndex ?? 0;
     const totalFrames = this.getAvailableTilesetsCount(layerId);
 
-    // Current visible frame
     const tileLayer = this.createTileLayer(layerId, controls);
     this.applyLayerStyles(tileLayer, targetOpacity, absoluteZIndex);
     result.set(`${layerId}#${currentTimeIndex}`, tileLayer);
 
-    // Pre-render next N frames at opacity=0
     const goesLayer = this.layersService.getLayerById(layerId);
     const goesIsForecast = goesLayer?.type === LayerType.TILE && goesLayer.isForecast;
     this.prerenderNextFrames(
@@ -755,18 +668,6 @@ export class LayerRenderService {
     return result;
   }
 
-  /**
-   * Creates radar layers for playback including current frame and prerendered next frames.
-   * Returns a map of composite keys to layers with opacity already set.
-   * One layer per selected elevation, each with its own opacity if configured.
-   * Z-indices are allocated incrementally based on elevation zIndexPreference (higher preference = higher z-index).
-   *
-   * @param layerId - The radar layer identifier
-   * @param controls - Current layer control state
-   * @param targetOpacity - Target opacity for the current visible frames (0-1) (used as fallback if no elevation-specific opacity)
-   * @param absoluteZIndex - Base z-index for the layer (elevations will use absoluteZIndex, absoluteZIndex+1, etc.)
-   * @returns Map of composite keys (layerId#elevationId#timeIndex) to layer objects
-   */
   createRadarLayersForPlayback(
     layerId: string,
     controls: RadarLayerControls,
@@ -786,7 +687,6 @@ export class LayerRenderService {
 
     const radarLayer = layer as RadarTileLayer;
 
-    // Build a map of elevationId -> zIndexPreference for selected elevations
     const selectedElevationsWithPreference = selectedElevationIds
       .map((elevationId) => {
         const elevation = radarLayer.availableElevations.find((e) => e.id === elevationId);
@@ -795,10 +695,8 @@ export class LayerRenderService {
         }
         return { elevationId, zIndexPreference: elevation.zIndexPreference };
       })
-      .sort((a, b) => a.zIndexPreference - b.zIndexPreference); // Sort by preference (lower first)
+      .sort((a, b) => a.zIndexPreference - b.zIndexPreference);
 
-    // Allocate z-indices incrementally: baseZIndex, baseZIndex+1, baseZIndex+2, etc.
-    // The map-layers service ensures proper separation between layers by tracking cumulative offsets
     selectedElevationsWithPreference.forEach((item, index) => {
       const elevationZIndex = absoluteZIndex + index;
       const elevationId = item.elevationId;
@@ -807,12 +705,10 @@ export class LayerRenderService {
       const elevationOpacity = controls.elevation.elevationOpacity[elevationId];
       const opacity = elevationOpacity !== undefined ? elevationOpacity : targetOpacity;
 
-      // Current visible frame for this elevation
       const tileLayer = this.createRadarTileLayerForElevation(layerId, controls, elevationId);
       this.applyLayerStyles(tileLayer, opacity, elevationZIndex);
       result.set(`${layerId}#${elevationId}#${currentTimeIndex}`, tileLayer);
 
-      // Pre-render next N frames at opacity=0 for this elevation
       this.prerenderNextFrames(
         result,
         currentTimeIndex,
@@ -835,9 +731,6 @@ export class LayerRenderService {
     return result;
   }
 
-  /**
-   * Creates a Leaflet TileLayer for an ECMWF layer with a specific forecast run.
-   */
   createEcmwfTpTileLayerForForecast(
     layerId: string,
     controls: EcmwfTpLayerControls,
@@ -866,10 +759,6 @@ export class LayerRenderService {
     return tileLayer;
   }
 
-  /**
-   * Creates an ECMWF tile layer for a specific forecast at a given timeIndex.
-   * Used for pre-fetching adjacent frames.
-   */
   createEcmwfTpTileLayerForForecastAtTimeIndex(
     layerId: string,
     controls: EcmwfTpLayerControls,
@@ -890,11 +779,6 @@ export class LayerRenderService {
     return this.createEcmwfTpTileLayerForForecast(layerId, controls, forecastTs, periodTs);
   }
 
-  /**
-   * Creates ECMWF layers for playback — one set per selected forecast run.
-   * Each forecast gets its own tile layer(s) with per-forecast opacity and
-   * z-index stacking.
-   */
   createEcmwfTpLayersForPlayback(
     layerId: string,
     controls: EcmwfTpLayerControls,
@@ -914,9 +798,6 @@ export class LayerRenderService {
     const currentPeriodTs = currentPeriodEntry.id;
 
     const ecmwfLayer = this.layersService.getLayerById(layerId);
-    // When the layer renders secondary isobars, each forecast reserves an
-    // extra z-slot above its raster so the isobars can slot in just above the
-    // TP tile without colliding with the next forecast (or the next layer up).
     const slotsPerForecast =
       ecmwfLayer &&
       ecmwfLayer.type === LayerType.TILE &&
@@ -937,7 +818,6 @@ export class LayerRenderService {
         ? renderControls.selectedRenderIds.includes(PRIMARY_RENDER_ID)
         : true;
 
-      // Fallback chain: renderOpacity['primary'] ?? forecastOpacity ?? layer opacity
       const primaryOpacity =
         renderControls?.renderOpacity[PRIMARY_RENDER_ID] ?? forecastOpacity ?? targetOpacity;
 
@@ -952,7 +832,6 @@ export class LayerRenderService {
         result.set(`${layerId}#${forecastTs}#${currentTimeIndex}`, tileLayer);
       }
 
-      // Pre-render next N frames at opacity=0 (only when primary is visible)
       if (isPrimaryVisible) {
         this.prerenderNextFrames(
           result,
@@ -1376,18 +1255,11 @@ export class LayerRenderService {
     return result;
   }
 
-  /**
-   * Applies opacity and z-index styles to a tile layer.
-   */
   private applyLayerStyles(layer: L.TileLayer, opacity: number, zIndex: number): void {
     layer.setOpacity(opacity);
     layer.setZIndex(zIndex);
   }
 
-  /**
-   * Pre-renders next N frames at opacity=0 for smooth playback transitions.
-   * Uses modular arithmetic to wrap around the animation window.
-   */
   private prerenderNextFrames(
     result: Map<string, L.TileLayer>,
     currentTimeIndex: number,
@@ -1414,10 +1286,6 @@ export class LayerRenderService {
     }
   }
 
-  /**
-   * Cleans old layers from the pool that are not in use.
-   * @param activeKeys Set of keys (layerId-tilesetId) that MUST be kept
-   */
   prunePool(activeKeys: Set<string>): void {
     for (const [key] of this.layerPool) {
       if (!activeKeys.has(key)) {
@@ -1430,11 +1298,6 @@ export class LayerRenderService {
   // Private Methods - Tile Layer Factory
   // ============================================================================
 
-  /**
-   * Generates a unique pool key for a layer based on its data (not visual properties).
-   * The key should change only when the actual tile data changes, not when visual
-   * properties like opacity change.
-   */
   private generatePoolKey(layerId: string, controls: LayerControls): string {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer) return layerId;
@@ -1542,10 +1405,6 @@ export class LayerRenderService {
     }
   }
 
-  /**
-   * Creates a data tile layer (GOES, Radar, etc.) based on category.
-   * Note: For radar layers with multiple elevations, use createRadarTileLayerForElevation instead.
-   */
   private createDataTileLayer(layerId: string, controls: TileLayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer || layer.type !== LayerType.TILE) {
@@ -1573,13 +1432,6 @@ export class LayerRenderService {
     }
   }
 
-  /**
-   * Creates a WMS layer based on category.
-   *
-   * Returns the parent `L.TileLayer` type because some categories (IGN
-   * layers backed up by the data-service) render as plain XYZ tiles
-   * instead of going through `L.TileLayer.WMS`.
-   */
   private createWmsLayer(layerId: string, controls: WmsLayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
     if (!layer || layer.type !== LayerType.WMS) {
@@ -1603,12 +1455,6 @@ export class LayerRenderService {
   // Private Methods - GOES Layer Creation
   // ============================================================================
 
-  /**
-   * Creates a tile layer for GOES-19 satellite imagery.
-   * Reads configuration from LayerConfigService to get available tilesets.
-   *
-   * Returns a placeholder layer if configuration is not yet loaded.
-   */
   private createGoesTileLayer(layerId: string, controls: GoesLayerControls): L.TileLayer {
     const layer = this.layersService.getLayerById(layerId);
 
@@ -1626,9 +1472,6 @@ export class LayerRenderService {
     return tileLayer;
   }
 
-  /**
-   * Formats a forecast timestamp for display in error messages.
-   */
   private formatForecastLabel(forecastTs: string): string {
     if (forecastTs.length >= 13) {
       return `${forecastTs.substring(0, 4)}-${forecastTs.substring(4, 6)}-${forecastTs.substring(6, 8)} ${forecastTs.substring(9, 11)}:${forecastTs.substring(11, 13)}`;
@@ -1640,13 +1483,6 @@ export class LayerRenderService {
   // Private Methods - Radar Layer Creation
   // ============================================================================
 
-  /**
-   * Creates a tile layer for radar imagery with a specific elevation.
-   * Reads configuration from LayerConfigService to get available tilesets (shared across elevations).
-   * Uses the elevation-specific opacity if available, otherwise uses the layer's global opacity.
-   *
-   * @throws Error if layer not found or not a TILE layer
-   */
   private createRadarTileLayer(
     layerId: string,
     controls: RadarLayerControls,
@@ -1660,7 +1496,6 @@ export class LayerRenderService {
 
     const radarLayer = layer as RadarTileLayer;
 
-    // Find the elevation object by ID
     const elevation = radarLayer.availableElevations.find((e) => e.id === elevationId);
     if (!elevation) {
       throw new Error(`Elevation '${elevationId}' not found for layer '${layerId}'`);
@@ -1670,7 +1505,6 @@ export class LayerRenderService {
     const pathToTileset = `${layerId}/${elevation.id}/${tilesetId}`;
     const tileUrl = buildTileUrl(pathToTileset);
 
-    // Use elevation-specific opacity if available, otherwise use layer's global opacity
     const elevationOpacity = controls.elevation.elevationOpacity[elevationId];
     const opacity = elevationOpacity !== undefined ? elevationOpacity : controls.opacity;
 
@@ -1683,10 +1517,6 @@ export class LayerRenderService {
   // Private Methods - WMS Layer Creation
   // ============================================================================
 
-  /**
-   * Creates a WMS tile layer for IGN (Instituto Geográfico Nacional) layers.
-   * Uses configured WMS workspace or defaults to main IGN endpoint.
-   */
   private createIgnWmsLayer(layer: WmsLayer, controls: WmsLayerControls): L.TileLayer.WMS {
     const url = layer.wmsWorkspace
       ? IGN_WMS_WORKSPACE_URLS[layer.wmsWorkspace] || IGN_WMS_BASE_CONFIG.defaultUrl
@@ -1705,14 +1535,6 @@ export class LayerRenderService {
     return wmsLayer;
   }
 
-  /**
-   * Creates a plain XYZ TileLayer pointing at the data-service basemap
-   * endpoint for IGN layers that are pre-scraped and cached server-side.
-   *
-   * The data-service does prod-first internally (upstream WMS → Redis →
-   * S3), so the frontend doesn't need a manual WMS fallback — every miss
-   * is already absorbed by the cache chain or relayed live.
-   */
   private createIgnCachedTileLayer(layer: WmsLayer, controls: WmsLayerControls): L.TileLayer {
     const tileUrl = buildBasemapTileUrl(layer.id);
     const tileLayer = L.tileLayer(tileUrl, {
@@ -1730,13 +1552,6 @@ export class LayerRenderService {
   // Private Methods - Utilities
   // ============================================================================
 
-  /**
-   * Gets the tilesetId for the current playback state and handles fetching config if not available.
-   *
-  /**
-   * Gets the tileset ID for a tile layer at a specific time index.
-   * @throws Error if config not loaded or invalid time index
-   */
   private getTilesetId(layerId: string, layer: TileLayer, timeIndex: number | undefined): string {
     const config = this.layerConfigService.getConfig(layerId) as
       | RadarTileLayerConfig
@@ -1754,13 +1569,11 @@ export class LayerRenderService {
       throw new Error(`Configuration not loaded for ${categoryName} layer '${layerId}'`);
     }
 
-    // Get the tileset ID for the current time index
     const tilesets = config.availableTilesets;
     if (!tilesets || tilesets.length === 0) {
       throw new Error(`No tilesets available for layer '${layerId}'`);
     }
 
-    // If timeIndex is undefined, fall back to the layer's default cursor.
     const resolvedTimeIndex = timeIndex ?? getDefaultCursorIndex(tilesets.length, layer.isForecast);
 
     if (resolvedTimeIndex >= tilesets.length || resolvedTimeIndex < 0) {
@@ -1772,15 +1585,6 @@ export class LayerRenderService {
     return tilesets[resolvedTimeIndex].id;
   }
 
-  /**
-   * Builds a Leaflet TileLayer with common options and layer-specific configuration.
-   *
-   * @param tileUrl - The URL template for tiles
-   * @param layer - The layer configuration
-   * @param opacity - Optional opacity override (0-1)
-   * @param extraOptions - Additional Leaflet tile layer options
-   * @returns Configured Leaflet TileLayer
-   */
   private buildTileLayer(
     tileUrl: string,
     layer: TileLayer,
@@ -1798,10 +1602,6 @@ export class LayerRenderService {
     });
   }
 
-  /**
-   * Creates base tile layer options using global map configuration.
-   * These options are common to all tile layers.
-   */
   private createBaseTileLayerOptions(opacity?: number): L.TileLayerOptions {
     return {
       minZoom: MAP_CONFIG.minZoom,
@@ -1811,27 +1611,16 @@ export class LayerRenderService {
     };
   }
 
-  /**
-   * Attaches error and success handlers to a tile layer for monitoring.
-   * Tracks errors and shows user notifications after repeated failures.
-   * @param tileLayer - The Leaflet tile layer to attach handlers to
-   * @param layerId - The base layer ID
-   * @param elevationId - Optional elevation ID for radar layers (used for error tracking)
-   * @param elevationName - Optional elevation name for display in error messages
-   */
   private attachErrorHandlers(
     tileLayer: L.TileLayer,
     layerId: string,
     elevationId?: string,
     elevationName?: string,
   ): void {
-    // Use base layerId for display name lookup
     const baseLayerName = this.layersService.getLayerDisplayName(layerId);
 
-    // Construct display name with elevation info if provided
     const layerName = elevationName ? `${baseLayerName} (${elevationName})` : baseLayerName;
 
-    // Use composite key for error tracking when elevation is provided
     const trackingKey = elevationId ? `${layerId}#${elevationId}` : layerId;
 
     let errorCount = 0;
@@ -1844,12 +1633,7 @@ export class LayerRenderService {
         `(${errorCount}/${this.MAX_ERRORS_BEFORE_NOTIFY})`,
       );
 
-      // After several consecutive errors, surface the issue.
       if (errorCount >= this.MAX_ERRORS_BEFORE_NOTIFY) {
-        // Ask the health service to probe /health. If the data-service
-        // itself is down, this raises a single global banner so we can
-        // skip the per-layer toast and avoid notification spam across
-        // every active layer.
         this.healthService.reportFailure();
 
         if (!this.healthService.isAvailable()) {
@@ -1859,7 +1643,6 @@ export class LayerRenderService {
 
         const currentErrors = this.errorTracker.get(trackingKey) || 0;
 
-        // Only notify once to avoid spam
         if (currentErrors === 0) {
           this.notificationService.error(
             `La capa "${layerName}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
@@ -1868,19 +1651,17 @@ export class LayerRenderService {
         }
 
         this.errorTracker.set(trackingKey, currentErrors + 1);
-        errorCount = 0; // Reset for next batch
+        errorCount = 0;
       }
     });
 
-    // If tiles start loading successfully, reset error tracking
     tileLayer.on('tileload', () => {
       if (errorCount > 0) {
         errorCount = Math.max(0, errorCount - 1);
       }
 
-      // If there were previous errors, clear them and log recovery
       if (this.errorTracker.has(trackingKey)) {
-        console.info(`✅ Layer ${layerName} recovered`);
+        console.info(`Layer ${layerName} recovered`);
         this.errorTracker.delete(trackingKey);
       }
     });

@@ -10,10 +10,6 @@ import { AlertsService } from '../../../services/polygons/alerts.service';
 import { Phenomenon } from '../../../models/phenomenon.model';
 import { PHENOMENON_CODES } from '../../../constants';
 
-/**
- * Diálogo para seleccionar el código de fenómeno meteorológico
- * antes de generar una alerta
- */
 @Component({
   selector: 'app-phenomenon-selection-dialog',
   standalone: true,
@@ -49,14 +45,12 @@ export class PhenomenonSelectionDialogComponent implements OnInit {
 
     this.alertsService.getPhenomena().subscribe({
       next: (phenomena) => {
-        // Filtrar fenómenos sin descripción (como el código 50)
         const validPhenomena = phenomena.filter((p) => p.description !== null);
         this.phenomenonCodes.set(validPhenomena);
         this.loading.set(false);
       },
       error: (err) => {
         console.error('Error loading phenomena from backend, using fallback:', err);
-        // Usar constantes locales como fallback
         const fallbackPhenomena: Phenomenon[] = PHENOMENON_CODES.map((p) => ({
           code: p.code,
           description: p.description,

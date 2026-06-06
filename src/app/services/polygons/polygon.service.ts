@@ -6,10 +6,6 @@ import { environment } from '../../../environments/environment';
 import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
 import { STORAGE_KEYS } from '../../constants';
 
-/**
- * Servicio para gestionar polígonos en el mapa
- * Proporciona funcionalidades de CRUD y persistencia en localStorage
- */
 @Injectable({
   providedIn: 'root',
 })
@@ -17,70 +13,40 @@ export class PolygonService {
   private readonly polygons = signal<Polygon[]>([]);
   private readonly alertsService = inject(AlertsService);
 
-  /**
-   * Loading states for polygon operations
-   */
   private readonly loadingCut = signal<Set<string>>(new Set());
   private readonly loadingDepartments = signal<Set<string>>(new Set());
   private readonly loadingAlerts = signal<Set<string>>(new Set());
 
-  /**
-   * Track which department is currently being hovered
-   */
   private readonly hoveredDepartmentSignal = signal<{
     polygonId: string;
     departmentName: string;
   } | null>(null);
   readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
 
-  /**
-   * Nivel de simplificación geométrica (0-10, 0 = sin simplificación, 10 = máxima simplificación)
-   */
   readonly simplificationLevel = signal<number>(5);
 
-  /**
-   * Lista de polígonos como signal readonly
-   */
   readonly allPolygons = this.polygons.asReadonly();
 
-  /**
-   * Polígonos visibles
-   */
   readonly visiblePolygons = computed(() => {
     return this.polygons().filter((p) => p.visible);
   });
 
-  /**
-   * Contador de polígonos totales
-   */
   readonly polygonCount = computed(() => {
     return this.polygons().length;
   });
 
-  /**
-   * Check if a polygon is being cut
-   */
   isPolygonBeingCut(id: string): boolean {
     return this.loadingCut().has(id);
   }
 
-  /**
-   * Check if departments are being loaded for a polygon
-   */
   isDepartmentsLoading(id: string): boolean {
     return this.loadingDepartments().has(id);
   }
 
-  /**
-   * Check if alerts are being generated for a polygon
-   */
   isAlertsLoading(id: string): boolean {
     return this.loadingAlerts().has(id);
   }
 
-  /**
-   * Check if a polygon has alerts generated
-   */
   hasAlerts(id: string): boolean {
     const polygon = this.getPolygonById(id);
     return !!(polygon?.alerts?.gifAreaUrl || polygon?.alerts?.gifGralUrl);
@@ -91,16 +57,10 @@ export class PolygonService {
     this.loadSimplificationLevelFromStorage();
   }
 
-  /**
-   * Obtiene un polígono por su ID
-   */
   getPolygonById(id: string): Polygon | undefined {
     return this.polygons().find((p) => p.id === id);
   }
 
-  /**
-   * Crea un nuevo polígono
-   */
   createPolygon(dto: CreatePolygonDto): Polygon {
     const now = new Date();
     const polygon: Polygon = {
@@ -118,9 +78,6 @@ export class PolygonService {
     return polygon;
   }
 
-  /**
-   * Actualiza un polígono existente
-   */
   updatePolygon(id: string, dto: UpdatePolygonDto): boolean {
     const index = this.polygons().findIndex((p) => p.id === id);
     if (index === -1) return false;
@@ -157,9 +114,6 @@ export class PolygonService {
     return true;
   }
 
-  /**
-   * Elimina un polígono
-   */
   deletePolygon(id: string): boolean {
     const initialLength = this.polygons().length;
     this.polygons.update((polygons) => polygons.filter((p) => p.id !== id));
@@ -172,9 +126,6 @@ export class PolygonService {
     return false;
   }
 
-  /**
-   * Toggle de visibilidad de un polígono
-   */
   toggleVisibility(id: string): boolean {
     const polygon = this.getPolygonById(id);
     if (!polygon) return false;
@@ -182,17 +133,11 @@ export class PolygonService {
     return this.updatePolygon(id, { visible: !polygon.visible });
   }
 
-  /**
-   * Elimina todos los polígonos
-   */
   deleteAll(): void {
     this.polygons.set([]);
     this.saveToStorage();
   }
 
-  /**
-   * Oculta todos los polígonos
-   */
   hideAll(): void {
     this.polygons.update((polygons) =>
       polygons.map((p) => ({ ...p, visible: false, updatedAt: new Date() })),
@@ -200,9 +145,6 @@ export class PolygonService {
     this.saveToStorage();
   }
 
-  /**
-   * Muestra todos los polígonos
-   */
   showAll(): void {
     this.polygons.update((polygons) =>
       polygons.map((p) => ({ ...p, visible: true, updatedAt: new Date() })),
@@ -210,23 +152,14 @@ export class PolygonService {
     this.saveToStorage();
   }
 
-  /**
-   * Genera un ID único
-   */
   private generateId(): string {
     return `polygon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 
-  /**
-   * Genera un nombre por defecto
-   */
   private generateDefaultName(): string {
     return 'Polígono sin nombrar';
   }
 
-  /**
-   * Establece el nivel de simplificación geométrica
-   */
   setSimplificationLevel(level: number): void {
     // Asegurarse de que el valor esté entre 0 y 10
     const clampedLevel = Math.max(0, Math.min(10, Math.round(level)));
@@ -234,14 +167,10 @@ export class PolygonService {
     this.saveSimplificationLevelToStorage(clampedLevel);
   }
 
-  /**
-   * Corta un polígono con los límites de Argentina
-   */
   async cutPolygon(id: string): Promise<boolean> {
     const polygon = this.getPolygonById(id);
     if (!polygon) return false;
 
-    // Set loading state
     this.loadingCut.update((set) => {
       const newSet = new Set(set);
       newSet.add(id);
@@ -271,7 +200,6 @@ export class PolygonService {
       console.error('[PolygonService] Error al recortar polígono:', error);
       return false;
     } finally {
-      // Clear loading state
       this.loadingCut.update((set) => {
         const newSet = new Set(set);
         newSet.delete(id);
@@ -280,9 +208,6 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Restaura el polígono a sus coordenadas originales
-   */
   undoCut(id: string): boolean {
     const polygon = this.getPolygonById(id);
     if (!polygon || !polygon.originalCoordinates) return false;
@@ -293,14 +218,10 @@ export class PolygonService {
     });
   }
 
-  /**
-   * Carga los departamentos que intersectan con un polígono
-   */
   async loadDepartments(id: string): Promise<boolean> {
     const polygon = this.getPolygonById(id);
     if (!polygon) return false;
 
-    // Set loading state
     this.loadingDepartments.update((set) => {
       const newSet = new Set(set);
       newSet.add(id);
@@ -325,7 +246,6 @@ export class PolygonService {
       console.error('Error al cargar departamentos:', error);
       return false;
     } finally {
-      // Clear loading state
       this.loadingDepartments.update((set) => {
         const newSet = new Set(set);
         newSet.delete(id);
@@ -334,16 +254,10 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Genera alertas meteorológicas para un polígono
-   * @param id - ID del polígono
-   * @param phenomenonCode - Código del fenómeno meteorológico
-   */
   async generateAlerts(id: string, phenomenonCode: number): Promise<boolean> {
     const polygon = this.getPolygonById(id);
     if (!polygon) return false;
 
-    // Set loading state
     this.loadingAlerts.update((set) => {
       const newSet = new Set(set);
       newSet.add(id);
@@ -375,7 +289,6 @@ export class PolygonService {
       console.error('Error al generar alertas:', error);
       return false;
     } finally {
-      // Clear loading state
       this.loadingAlerts.update((set) => {
         const newSet = new Set(set);
         newSet.delete(id);
@@ -384,9 +297,6 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Alterna la visibilidad de los departamentos de un polígono
-   */
   toggleDepartmentsVisibility(id: string): boolean {
     const polygon = this.getPolygonById(id);
     if (!polygon) return false;
@@ -396,9 +306,6 @@ export class PolygonService {
     });
   }
 
-  /**
-   * Oculta los departamentos de un polígono
-   */
   hideDepartments(id: string): boolean {
     const polygon = this.getPolygonById(id);
     if (!polygon) return false;
@@ -408,9 +315,6 @@ export class PolygonService {
     });
   }
 
-  /**
-   * Guarda los polígonos en localStorage
-   */
   private saveToStorage(): void {
     try {
       const data = JSON.stringify(this.polygons());
@@ -420,15 +324,11 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Carga los polígonos desde localStorage
-   */
   private loadFromStorage(): void {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.POLYGONS);
       if (data) {
         const parsed = JSON.parse(data) as Polygon[];
-        // Convertir las fechas de string a Date
         const polygons = parsed.map((p) => ({
           ...p,
           createdAt: new Date(p.createdAt),
@@ -442,9 +342,6 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Guarda el nivel de simplificación en localStorage
-   */
   private saveSimplificationLevelToStorage(level: number): void {
     try {
       localStorage.setItem(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL, level.toString());
@@ -453,9 +350,6 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Carga el nivel de simplificación desde localStorage
-   */
   private loadSimplificationLevelFromStorage(): void {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL);
@@ -471,16 +365,10 @@ export class PolygonService {
     }
   }
 
-  /**
-   * Set which department is currently being hovered
-   */
   setHoveredDepartment(polygonId: string, departmentName: string): void {
     this.hoveredDepartmentSignal.set({ polygonId, departmentName });
   }
 
-  /**
-   * Clear the hovered department
-   */
   clearHoveredDepartment(): void {
     this.hoveredDepartmentSignal.set(null);
   }

@@ -17,16 +17,6 @@ import {
 } from '../../../../../utils/tileset-timestamp';
 import { Layer, LayerCategory, RadarTileLayer } from '../../../../../models';
 
-/**
- * Tab de sincronización de reproducción entre múltiples capas.
- *
- * Permite seleccionar varias capas activas con períodos temporales y reproducirlas
- * de forma sincronizada usando un índice de frame compartido.
- *
- * Alineación temporal: anchor = capa con timestamp más viejo; las demás buscan
- * el tileset más cercano dentro de ±5 min. Si no encajan, el anchor avanza un
- * paso hasta encontrar alineación o bloquear la sync.
- */
 @Component({
   selector: 'app-sync-playback',
   standalone: true,
@@ -56,10 +46,6 @@ export class SyncPlaybackComponent {
   readonly effectiveFrameCount = this.syncService.effectiveFrameCount;
   readonly isAligned = this.syncService.isAligned;
 
-  /**
-   * True when effectiveFrameCount differs from the user-selected frameCount.
-   * Used to show a visual indicator that fewer frames are actually being used.
-   */
   readonly hasReducedFrameCount = computed(() => {
     const selected = this.state().frameCount;
     const effective = this.effectiveFrameCount();
@@ -134,10 +120,6 @@ export class SyncPlaybackComponent {
     return this.layersService.getLayerFullName(layer);
   }
 
-  /**
-   * Returns the actual available tileset count for a layer.
-   * Used in the warning tooltip to show "tiene X imágenes disponibles".
-   */
   getActualTilesetCount(layerId: string): number {
     return this.syncService.getActualTilesetCount(layerId);
   }

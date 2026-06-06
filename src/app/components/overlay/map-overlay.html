@@ -1,6 +1,5 @@
 <div class="overlay-layout">
   <div class="col-left">
-    <!-- Col 1: Sidebar buttons + Zoom controls -->
     <div class="col-buttons">
       <app-sidebar-buttons />
       @if (showZoom()) {
@@ -15,7 +14,6 @@
       }
     </div>
 
-    <!-- Col 2: Side panel + Info controls -->
     <div class="col-panel">
       <app-main-menu />
       @if (hasInfoControls()) {
@@ -44,7 +42,6 @@
     </div>
   </div>
 
-  <!-- Col 3: Scale tools + Fixed point values -->
   @if (isScaleToolsEnabled() || isFixedViewerVisible()) {
     <div class="col-side">
       @if (isScaleToolsEnabled()) {

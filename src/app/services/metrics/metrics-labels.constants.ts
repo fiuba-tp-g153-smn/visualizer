@@ -1,9 +1,3 @@
-/**
- * Mapas de visualización en español. El valor crudo del API se conserva para
- * color/clase/agrupación; estas etiquetas son solo para mostrar.
- */
-
-/** Resultado del trabajo → etiqueta. */
 export const OUTCOME_LABELS: Readonly<Record<string, string>> = {
   success: 'Éxito',
   error: 'Error',
@@ -12,7 +6,6 @@ export const OUTCOME_LABELS: Readonly<Record<string, string>> = {
   skipped: 'Omitido',
 };
 
-/** Etapa del pipeline → etiqueta corta. */
 export const STAGE_LABELS: Readonly<Record<string, string>> = {
   read: 'Lectura',
   load: 'Carga',
@@ -32,11 +25,6 @@ export const STAGE_LABELS: Readonly<Record<string, string>> = {
   upload: 'Subida',
 };
 
-/**
- * Términos de producto (vienen en inglés desde `describe_job`) → español.
- * Se aplican como reemplazo de subcadena best-effort; las etiquetas WRF ya
- * vienen en español y pasan sin cambios.
- */
 export const PRODUCT_TERMS: Readonly<Record<string, string>> = {
   'Cloud Tops': 'Tope de nubes',
   'Water Vapor': 'Vapor de agua',
@@ -53,7 +41,6 @@ export const PRODUCT_TERMS: Readonly<Record<string, string>> = {
   Reflectivity: 'Reflectividad',
 };
 
-/** Traduce los términos conocidos dentro de un `product_label`. */
 export function prod(label: string | null | undefined): string {
   let text = label ?? '';
   for (const [en, es] of Object.entries(PRODUCT_TERMS)) {
@@ -62,12 +49,10 @@ export function prod(label: string | null | undefined): string {
   return text;
 }
 
-/** Etiqueta de etapa (o la clave cruda si es desconocida). */
 export function stageLabel(stage: string): string {
   return STAGE_LABELS[stage] ?? stage;
 }
 
-/** Etiqueta de resultado (o el valor crudo si es desconocido). */
 export function outcomeLabel(outcome: string): string {
   return OUTCOME_LABELS[outcome] ?? outcome;
 }
