@@ -1,11 +1,8 @@
 /// <reference types="leaflet-editable" />
-// ^ Type-only reference: keeps the @types/leaflet-editable augmentations
-//   (L.Map.editTools, L.Layer.enableEdit/disableEdit, L.Editable) available
-//   under tsconfig `"types": []`. The plugin's JS is loaded on demand in
-//   ensureEditTools() — see the eager import we removed from here.
 import { Injectable, inject, effect, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
+import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
 import { Polygon } from '../../models/geo';
@@ -117,18 +114,11 @@ export class MapPolygonsService {
     });
   }
 
-  /** Guard so the plugin is imported and editTools wired up only once. */
+  /** Guard so editTools is wired up only once. */
   private editToolsReady = false;
 
-  /**
-   * Lazily loads the `leaflet-editable` plugin (~68 KB raw) on first draw/edit,
-   * then wires up `map.editTools` by hand. The plugin's own map init-hook only
-   * fires for maps created *after* it loads; ours already exists (created
-   * without `editable: true`), so we construct the editor manually here.
-   */
-  private async ensureEditTools(): Promise<void> {
+  private ensureEditTools(): void {
     if (this.editToolsReady || !this.map) return;
-    await import('leaflet-editable');
     if (!this.map.editTools) {
       this.map.editTools = new L.Editable(this.map, {});
     }
@@ -138,16 +128,13 @@ export class MapPolygonsService {
   /**
    * Handle drawing mode changes
    */
-  async handleDrawingModeChange(
-    mode: DrawingMode,
-    editingPolygonId: string | null,
-  ): Promise<void> {
+  handleDrawingModeChange(mode: DrawingMode, editingPolygonId: string | null): void {
     if (!this.map) return;
 
     // Drawing and editing both need leaflet-editable; load it (and wire up
     // editTools) on demand the first time either mode is entered.
     if (mode === DrawingMode.DRAW || mode === DrawingMode.EDIT) {
-      await this.ensureEditTools();
+      this.ensureEditTools();
       if (!this.map) return;
     }
 
