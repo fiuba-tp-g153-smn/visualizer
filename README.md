@@ -64,7 +64,6 @@ npm test           # Run unit tests (Vitest)
 | `DATA_SERVICE_BASE_URL`   | Tile and product config API                  | `http://localhost:6006` |
 | `ALERTS_SERVICE_BASE_URL` | Polygon alerts backend                       | `http://localhost:6007` |
 | `SMN_API_PROMPT_FOR_TOKEN` | Prompt for token when enabling SMN stations layer | `true`            |
-| `TILE_FORMAT`             | Tile image format (`webp` \| `png`)          | `webp`                  |
 | `APP_HOST_PORT`           | Host port for the app in production          | `6010`                  |
 | `DOCS_HOST_PORT`          | Host port for the docs service               | `6011`                  |
 | `DOCS_URL`                | URL the Angular app loads docs from (iframe) | `http://localhost:6011` |

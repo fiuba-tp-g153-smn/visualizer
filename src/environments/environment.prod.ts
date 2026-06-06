@@ -12,9 +12,6 @@ export const environment = {
   weatherStations: {
     apiKey: $ENV.WEATHER_STATIONS_API_KEY,
   },
-  tiles: {
-    format: $ENV.TILE_FORMAT,
-  },
   ui: {
     disabledLayers: [] as string[],
   },

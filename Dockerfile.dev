@@ -7,12 +7,10 @@ WORKDIR /app
 
 # Build arguments for environment variables
 ARG BACKEND_BASE_URL
-ARG TILE_FORMAT
 ARG APP_HOST_PORT
 
 # Set environment variables for build
 ENV BACKEND_BASE_URL=$BACKEND_BASE_URL
-ENV TILE_FORMAT=$TILE_FORMAT
 ENV APP_HOST_PORT=$APP_HOST_PORT
 
 # Copy package files

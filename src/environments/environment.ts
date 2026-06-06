@@ -9,7 +9,6 @@ const envFallback = {
   ALERTS_SERVICE_BASE_URL: 'http://localhost:8080',
   WEATHER_STATIONS_API_KEY: '',
   SMN_API_PROMPT_FOR_TOKEN: 'true',
-  TILE_FORMAT: 'webp',
   DOCS_URL: '',
   METRICS_SERVICE_BASE_URL: 'http://localhost:6020',
 };
@@ -33,9 +32,6 @@ export const environment = {
     apiKey: envDefined
       ? $ENV.WEATHER_STATIONS_API_KEY || envFallback.WEATHER_STATIONS_API_KEY
       : envFallback.WEATHER_STATIONS_API_KEY,
-  },
-  tiles: {
-    format: envDefined ? $ENV.TILE_FORMAT || 'webp' : envFallback.TILE_FORMAT,
   },
   ui: {
     disabledLayers: [] as string[],

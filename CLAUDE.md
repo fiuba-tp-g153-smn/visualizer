@@ -51,7 +51,6 @@ Env vars injected at build time via custom webpack `DefinePlugin` (`custom-webpa
 Key vars (see `.env.example`):
 - `DATA_SERVICE_BASE_URL` — tile/config API (default: `https://data.mapasmn.com`)
 - `ALERTS_SERVICE_BASE_URL` — alerts backend (default: `http://localhost:8080`)
-- `TILE_FORMAT` — `webp` | `png`
 - `DOCS_URL` — external Docusaurus docs
 
 ## Code Standards

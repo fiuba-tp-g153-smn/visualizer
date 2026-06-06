@@ -1,9 +1,7 @@
 import { environment } from '../../environments/environment';
 
-/**
- * Configuración del servicio de datos basada en variables de entorno
- */
 const DATA_SERVICE_BASE_URL = environment.dataService.baseUrl;
+const TILE_FORMAT = 'webp' as const;
 
 /**
  * Construye URL de configuración de canal para un producto específico
@@ -20,8 +18,7 @@ export function buildConfigUrl(pathToProduct: string): string {
  * @returns URL template para Leaflet con formato desde environment
  */
 export function buildTileUrl(pathToProduct: string): string {
-  const format = environment.tiles.format;
-  return `${DATA_SERVICE_BASE_URL}/products/${pathToProduct}/{z}/{x}/{y}.${format}`;
+  return `${DATA_SERVICE_BASE_URL}/products/${pathToProduct}/{z}/{x}/{y}.${TILE_FORMAT}`;
 }
 
 /**
@@ -73,13 +70,8 @@ export function buildEcmwfMslpPointQueryUrl(
 /**
  * Construye la URL de un tile WRF para Leaflet (con placeholders {z}/{x}/{y}).
  */
-export function buildWrfTileUrl(
-  productId: string,
-  initTag: string,
-  fxxx: string,
-): string {
-  const format = environment.tiles.format;
-  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/{z}/{x}/{y}.${format}`;
+export function buildWrfTileUrl(productId: string, initTag: string, fxxx: string): string {
+  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/{z}/{x}/{y}.${TILE_FORMAT}`;
 }
 
 /**
