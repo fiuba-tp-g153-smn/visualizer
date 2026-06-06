@@ -8,6 +8,8 @@ import {
   inject,
   signal,
   computed,
+  effect,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -451,6 +453,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const max = this.maxTimeIndex();
     return Math.min(Math.max(currentIndex, min), max);
   });
+
+  constructor() {
+    // Stop weather stations playback when this layer is deactivated externally
+    // (e.g. when a sibling layer is activated with single-selection mode).
+    // The timer is local to the component, so it can't be stopped via the service.
+    effect(() => {
+      if (!this.isActive()) {
+        untracked(() => this.stopWeatherStationsPlayback());
+      }
+    });
+  }
 
   ngOnInit(): void {
     // Layer refresh service will handle config fetching for active layers
