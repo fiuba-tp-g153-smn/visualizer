@@ -32,7 +32,7 @@ interface StatCard {
               [matTooltip]="card.tooltip"
               matTooltipClass="stat-tip"
               matTooltipPosition="above"
-              >info_outline</mat-icon
+              >info</mat-icon
             >
           </div>
           <div

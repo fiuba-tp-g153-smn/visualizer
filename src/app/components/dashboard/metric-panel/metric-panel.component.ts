@@ -22,7 +22,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
             [matTooltip]="tipText"
             matTooltipPosition="right"
             matTooltipClass="panel__tooltip"
-            >info_outline</mat-icon
+            >info</mat-icon
           >
         }
         <span class="panel__actions"><ng-content select="[panelActions]"></ng-content></span>

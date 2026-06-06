@@ -84,7 +84,7 @@
   <main class="dash__body">
     @if (errorMsg(); as err) {
       <div class="dash__error" role="alert">
-        <mat-icon>error_outline</mat-icon>
+        <mat-icon>error</mat-icon>
         <span>No se pudieron actualizar las métricas: {{ err }}</span>
         <button mat-button (click)="refreshNow()" [disabled]="loading()">Reintentar</button>
       </div>
