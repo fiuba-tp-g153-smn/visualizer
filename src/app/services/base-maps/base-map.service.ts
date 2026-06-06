@@ -133,7 +133,6 @@ export class BaseMapService {
       return;
     }
     this._currentBaseMap.set(baseMap);
-    console.log('🗺️ Base map changed to:', baseMap.name);
   }
 
   getCurrentBaseMap(): BaseMap | null {
