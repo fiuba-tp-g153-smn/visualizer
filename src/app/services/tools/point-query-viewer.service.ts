@@ -38,6 +38,7 @@ import {
   WrfTileLayer,
   WrfTileLayerConfig,
 } from '../../models';
+import { PRIMARY_RENDER_ID } from '../../models/layers/controls.models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayerConfigService } from '../layers/layer-config.service';
@@ -85,6 +86,7 @@ type DisplaySourceItem = {
   sourceKind: DisplaySourceKind;
   elevationId?: string;
   forecastTs?: string;
+  secondaryRenderId?: string;
   layerName: string;
   layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer | WrfTileLayer;
   controls: TileLayerControls;
@@ -210,23 +212,29 @@ export class PointQueryViewerService {
           const forecastDate = parseEcmwfTimestamp(forecastTs);
           const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
 
-          const entries: DisplaySourceItem[] = [
-            {
+          const entries: DisplaySourceItem[] = [];
+
+          if (this.isForecastRenderVisible(ecmwfControls, forecastTs, PRIMARY_RENDER_ID)) {
+            entries.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
               layerName: `${baseName} - corrida ${forecastLabel}`,
               forecastTs,
               layer: ecmwfLayer,
               controls: ecmwfControls,
-            },
-          ];
+            });
+          }
 
-          if (secondaryRender?.buildPointQueryUrl) {
+          if (
+            secondaryRender?.buildPointQueryUrl &&
+            this.isForecastRenderVisible(ecmwfControls, forecastTs, secondaryRender.id)
+          ) {
             entries.push({
               layerId: buildSecondaryLayerId(primaryLayerId),
               sourceKind: 'secondary',
               layerName: `${modelName} - Presion a nivel del mar - corrida ${forecastLabel}`,
               forecastTs,
+              secondaryRenderId: secondaryRender.id,
               layer: ecmwfLayer,
               controls: ecmwfControls,
             });
@@ -244,32 +252,39 @@ export class PointQueryViewerService {
         const selectedForecasts = wrfControls.forecast.selectedForecastTimestamps;
         const baseName = this.layersService.getLayerFullName(wrfLayer);
 
-        // Renders secundarios consultables (viento + contornos con pointQuery).
-        const queryableSecondaries = (wrfLayer.secondaryRenders ?? [])
-          .map((r) => r.pointQuery)
-          .filter((pq): pq is WrfSecondaryPointQuery => pq !== undefined);
-
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
           const forecastLabel = formatWrfInitTag(forecastTs);
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
 
-          const items: DisplaySourceItem[] = [
-            {
+          const items: DisplaySourceItem[] = [];
+
+          if (this.isForecastRenderVisible(wrfControls, forecastTs, PRIMARY_RENDER_ID)) {
+            items.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
               layerName: `${baseName} - corrida ${forecastLabel}`,
               forecastTs,
               layer: wrfLayer,
               controls: wrfControls,
-            },
-          ];
+            });
+          }
 
-          for (const secondary of queryableSecondaries) {
+          for (const render of wrfLayer.secondaryRenders ?? []) {
+            if (!render.pointQuery) {
+              continue;
+            }
+
+            if (!this.isForecastRenderVisible(wrfControls, forecastTs, render.id)) {
+              continue;
+            }
+
+            const secondary = render.pointQuery;
             items.push({
               layerId: `${primaryLayerId}#secondary:${secondary.variable}`,
               sourceKind: 'secondary',
               layerName: `${secondary.name} - corrida ${forecastLabel}`,
               forecastTs,
+              secondaryRenderId: render.id,
               layer: wrfLayer,
               controls: wrfControls,
               secondary,
@@ -304,6 +319,16 @@ export class PointQueryViewerService {
     if (layer.type !== LayerType.TILE) return undefined;
     if (layer.category !== LayerCategory.ECMWF_TP) return undefined;
     return (layer as EcmwfTpTileLayer).secondaryRender;
+  }
+
+  private isForecastRenderVisible(
+    controls: EcmwfTpLayerControls | WrfLayerControls,
+    forecastTs: string,
+    renderId: string,
+  ): boolean {
+    return (
+      controls.forecast.renderControls[forecastTs]?.selectedRenderIds.includes(renderId) ?? true
+    );
   }
 
   constructor() {

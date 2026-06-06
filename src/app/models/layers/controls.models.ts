@@ -61,9 +61,24 @@ export interface WmsLayerControls extends BaseLayerControls {
 }
 
 export interface EcmwfTpForecastControls {
+  // Radar-like level 1: explicit selected run IDs + per-run opacity overrides.
   selectedForecastTimestamps: string[]; // IDs of selected forecast runs
   forecastOpacity: Record<string, number>; // Opacity per forecast run (0-1), undefined uses the layer's global opacity
+  // Level 2 nested by run: selected secondary renders + per-render opacity overrides.
+  renderControls: ForecastRenderControlsByForecast;
 }
+
+/** Stable ID reserved for the primary raster tile render of a forecast run. */
+export const PRIMARY_RENDER_ID = 'primary' as const;
+
+export interface ForecastRenderControls {
+  // Mirrors radar elevation selection model for secondary renders.
+  selectedRenderIds: string[];
+  // Most specific opacity override (layer -> forecast -> secondary render).
+  renderOpacity: Record<string, number>;
+}
+
+export type ForecastRenderControlsByForecast = Record<string, ForecastRenderControls>;
 
 export interface EcmwfTpLayerControls extends TileLayerControls {
   category: LayerCategory.ECMWF_TP;
@@ -79,6 +94,7 @@ export interface EcmwfTpLayerControls extends TileLayerControls {
 export interface WrfForecastControls {
   selectedForecastTimestamps: string[];
   forecastOpacity: Record<string, number>;
+  renderControls: ForecastRenderControlsByForecast;
 }
 
 export interface WrfLayerControls extends TileLayerControls {

@@ -31,7 +31,7 @@
       }
       <div class="header-actions">
         @if (isActive()) {
-          @if (hasScale()) {
+          @if (hasScale() && isPrimaryRenderActiveForAnyForecast()) {
             <button
               mat-icon-button
               (click)="toggleScale()"
@@ -68,7 +68,7 @@
 
       <!-- Botones de control (derecha) -->
       <div class="header-actions">
-        @if (hasScale()) {
+        @if (hasScale() && isPrimaryRenderActiveForAnyForecast()) {
           <button
             mat-icon-button
             (click)="toggleScale()"
@@ -227,35 +227,146 @@
             </button>
           </div>
 
-          <!-- Expanded view: individual opacity controls -->
+          <!-- Expanded view: one row per run, with nested expander for renders -->
           @if (isForecastsExpanded()) {
             <div class="forecast-expanded-controls">
-              @for (forecast of availableForecasts(); track forecast) {
-                <div class="forecast-item">
-                  <mat-checkbox
-                    [checked]="isForecastSelected(forecast)"
-                    (change)="onForecastToggle(forecast)"
-                    [matTooltip]="formatForecastFull(forecast)"
-                    class="forecast-item-checkbox"
-                  >
-                    <span class="forecast-ts">{{ formatForecastTime(forecast) }}</span>
-                  </mat-checkbox>
-                  <mat-slider
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    discrete
-                    class="control-slider"
-                    [displayWith]="formatOpacity"
-                    [disabled]="!isForecastSelected(forecast)"
-                  >
-                    <input
-                      matSliderThumb
-                      [value]="getForecastOpacity(forecast)"
-                      (input)="onForecastOpacityChange(forecast, +$any($event.target).value)"
-                    />
-                  </mat-slider>
-                  <span class="control-value">{{ getForecastOpacityPercent(forecast) }}%</span>
+              @for (group of forecastControlGroups(); track group.forecastTs) {
+                <div class="forecast-group">
+                  <!-- Run row: toggle corrida + opacity de corrida + expander renders -->
+                  <div class="forecast-run-row">
+                    <mat-checkbox
+                      [checked]="isForecastSelected(group.forecastTs)"
+                      (change)="onForecastToggle(group.forecastTs)"
+                      class="forecast-run-checkbox"
+                    >
+                      <span class="forecast-ts" [matTooltip]="group.fullLabel">{{
+                        group.displayLabel
+                      }}</span>
+                    </mat-checkbox>
+                    <mat-slider
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      discrete
+                      class="control-slider"
+                      [displayWith]="formatOpacity"
+                      [disabled]="!isForecastSelected(group.forecastTs)"
+                    >
+                      <input
+                        matSliderThumb
+                        [value]="getForecastOpacity(group.forecastTs)"
+                        (input)="
+                          onForecastOpacityChange(group.forecastTs, +$any($event.target).value)
+                        "
+                      />
+                    </mat-slider>
+                    <span class="control-value">{{
+                      getForecastRunUniformOpacity(group.forecastTs) !== undefined
+                        ? getForecastOpacityPercent(group.forecastTs) + '%'
+                        : '-'
+                    }}</span>
+                    @if (group.secondaryRenders.length > 0) {
+                      <button
+                        mat-icon-button
+                        (click)="toggleForecastRunExpansion(group.forecastTs)"
+                        [matTooltip]="
+                          isForecastRunExpanded(group.forecastTs)
+                            ? 'Contraer capas'
+                            : 'Expandir capas'
+                        "
+                        class="expand-btn"
+                      >
+                        <mat-icon>{{
+                          isForecastRunExpanded(group.forecastTs) ? 'expand_less' : 'expand_more'
+                        }}</mat-icon>
+                      </button>
+                    }
+                  </div>
+
+                  <!-- Per-render rows (visible cuando la corrida tiene el sub-expander abierto) -->
+                  @if (isForecastRunExpanded(group.forecastTs)) {
+                    <div class="forecast-renders">
+                      <!-- Fila del tile primario -->
+                      <div class="forecast-render-row">
+                        <mat-checkbox
+                          [checked]="isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)"
+                          (change)="onForecastRenderToggle(group.forecastTs, PRIMARY_RENDER_ID)"
+                          [disabled]="!isForecastSelected(group.forecastTs)"
+                          [matTooltip]="layerShortName()"
+                          class="forecast-render-checkbox"
+                        >
+                          <span class="forecast-render-name">{{ layerShortName() }}</span>
+                        </mat-checkbox>
+                        <mat-slider
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          discrete
+                          class="control-slider"
+                          [displayWith]="formatOpacity"
+                          [disabled]="
+                            !isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)
+                          "
+                        >
+                          <input
+                            matSliderThumb
+                            [value]="getForecastRenderOpacity(group.forecastTs, PRIMARY_RENDER_ID)"
+                            (input)="
+                              onForecastRenderOpacityChange(
+                                group.forecastTs,
+                                PRIMARY_RENDER_ID,
+                                +$any($event.target).value
+                              )
+                            "
+                          />
+                        </mat-slider>
+                        <span class="control-value"
+                          >{{
+                            getForecastRenderOpacityPercent(group.forecastTs, PRIMARY_RENDER_ID)
+                          }}%</span
+                        >
+                      </div>
+
+                      <!-- Filas de renders secundarios -->
+                      @for (render of group.secondaryRenders; track render.id) {
+                        <div class="forecast-render-row">
+                          <mat-checkbox
+                            [checked]="isForecastRenderSelected(group.forecastTs, render.id)"
+                            (change)="onForecastRenderToggle(group.forecastTs, render.id)"
+                            [disabled]="!isForecastSelected(group.forecastTs)"
+                            [matTooltip]="render.name"
+                            class="forecast-render-checkbox"
+                          >
+                            <span class="forecast-render-name">{{ render.name }}</span>
+                          </mat-checkbox>
+                          <mat-slider
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            discrete
+                            class="control-slider"
+                            [displayWith]="formatOpacity"
+                            [disabled]="!isForecastRenderSelected(group.forecastTs, render.id)"
+                          >
+                            <input
+                              matSliderThumb
+                              [value]="getForecastRenderOpacity(group.forecastTs, render.id)"
+                              (input)="
+                                onForecastRenderOpacityChange(
+                                  group.forecastTs,
+                                  render.id,
+                                  +$any($event.target).value
+                                )
+                              "
+                            />
+                          </mat-slider>
+                          <span class="control-value">
+                            {{ getForecastRenderOpacityPercent(group.forecastTs, render.id) }}%
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -281,7 +392,9 @@
                       <mat-radio-button [value]="WeatherStationsTemporalMode.LATEST" color="primary"
                         >Más reciente</mat-radio-button
                       >
-                      <mat-radio-button [value]="WeatherStationsTemporalMode.SPECIFIC" color="primary"
+                      <mat-radio-button
+                        [value]="WeatherStationsTemporalMode.SPECIFIC"
+                        color="primary"
                         >Específico</mat-radio-button
                       >
                     </mat-radio-group>
@@ -314,7 +427,9 @@
                           <input
                             type="number"
                             [value]="weatherStationsMaxPastHours()"
-                            (change)="onWeatherStationsMaxPastHoursChange(+$any($event.target).value)"
+                            (change)="
+                              onWeatherStationsMaxPastHoursChange(+$any($event.target).value)
+                            "
                             min="0"
                             max="24"
                             step="1"
@@ -342,7 +457,10 @@
               </div>
             }
 
-            @if (layer.category !== LayerCategory.WEATHER_STATIONS || isWeatherStationsSpecificTemporalMode()) {
+            @if (
+              layer.category !== LayerCategory.WEATHER_STATIONS ||
+              isWeatherStationsSpecificTemporalMode()
+            ) {
               <div class="time-control-header">
                 <span class="control-label">
                   Período
