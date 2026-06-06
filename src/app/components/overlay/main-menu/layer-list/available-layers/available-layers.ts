@@ -10,7 +10,7 @@ import { LayerControlService } from '../../../../../services/layers/layer-contro
 import { WeatherStationsApiKeyService } from '../../../../../services/weather-stations/weather-stations-api-key.service';
 import { LayerGroup, LayerSelectionMode, LayerSubgroup } from '../../../../../models';
 import { WEATHER_STATIONS_SUBGROUP } from '../../../../../config/layers/weather-stations/config';
-import { LayerItemComponent } from '../layer-item/layer-item';
+import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
 
 /**
  * Componente de capas disponibles para activar
@@ -32,6 +32,7 @@ import { LayerItemComponent } from '../layer-item/layer-item';
   styleUrl: './available-layers.scss',
 })
 export class AvailableLayersComponent {
+  readonly LayerItemMode = LayerItemMode;
   readonly LayerSelectionMode = LayerSelectionMode;
 
   private readonly layersService = inject(LayersService);

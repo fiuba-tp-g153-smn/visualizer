@@ -61,7 +61,7 @@
                 @for (layer of subgroup.layers; track layer.id; let isLastLayer = $last) {
                   <app-layer-item
                     [layer]="layer"
-                    mode="available"
+                    [mode]="LayerItemMode.AVAILABLE"
                     [selectionMode]="subgroup.selectionMode ?? LayerSelectionMode.MULTIPLE"
                     [radioGroupName]="subgroup.id"
                   />

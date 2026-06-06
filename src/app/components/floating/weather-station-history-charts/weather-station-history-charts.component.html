@@ -19,24 +19,24 @@
     <button
       type="button"
       class="ws-history__nav-btn"
-      [class.ws-history__nav-btn--active]="section() === 'graficos'"
-      (click)="setSection('graficos')"
+      [class.ws-history__nav-btn--active]="section() === DetailSection.GRAFICOS"
+      (click)="setSection(DetailSection.GRAFICOS)"
     >
       Gráficos
     </button>
     <button
       type="button"
       class="ws-history__nav-btn"
-      [class.ws-history__nav-btn--active]="section() === 'resumen'"
-      (click)="setSection('resumen')"
+      [class.ws-history__nav-btn--active]="section() === DetailSection.RESUMEN"
+      (click)="setSection(DetailSection.RESUMEN)"
     >
       Resumen
     </button>
     <button
       type="button"
       class="ws-history__nav-btn"
-      [class.ws-history__nav-btn--active]="section() === 'observaciones'"
-      (click)="setSection('observaciones')"
+      [class.ws-history__nav-btn--active]="section() === DetailSection.OBSERVACIONES"
+      (click)="setSection(DetailSection.OBSERVACIONES)"
     >
       Observaciones
     </button>
@@ -52,7 +52,7 @@
       <div class="ws-history__state">No se pudo cargar el histórico de la estación.</div>
     } @else if (!hasPoints()) {
       <div class="ws-history__state">Sin datos en las últimas 48 horas.</div>
-    } @else if (section() === 'graficos') {
+    } @else if (section() === DetailSection.GRAFICOS) {
       <div class="ws-history__charts">
         @for (vm of charts(); track vm.variable.id) {
           <article class="ws-history__chart">
@@ -82,7 +82,7 @@
           </article>
         }
       </div>
-    } @else if (section() === 'resumen') {
+    } @else if (section() === DetailSection.RESUMEN) {
       <div class="ws-history__summary">
         @for (group of summary(); track group.title) {
           <div class="ws-history__summary-group">

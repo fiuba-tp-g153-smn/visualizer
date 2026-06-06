@@ -57,10 +57,10 @@ import {
   WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
 } from '../../../../../config/layers/weather-stations/controls.constants';
 
-/**
- * Modo de visualización del componente
- */
-export type LayerItemMode = 'available' | 'active';
+export enum LayerItemMode {
+  AVAILABLE = 'available',
+  ACTIVE = 'active',
+}
 
 interface ForecastSecondaryRenderItem {
   id: string;
@@ -112,7 +112,9 @@ function isBarbTileRender(
   styleUrl: './layer-item.scss',
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
+  readonly LayerItemMode = LayerItemMode;
   readonly LayerCategory = LayerCategory;
+  readonly LayerSelectionMode = LayerSelectionMode;
   readonly WeatherStationsTemporalMode = WeatherStationsTemporalMode;
   readonly PRIMARY_RENDER_ID = PRIMARY_RENDER_ID;
 
@@ -131,7 +133,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   /**
    * Modo de visualización: 'available' muestra checkbox, 'active' muestra drag handle
    */
-  @Input() mode: LayerItemMode = 'available';
+  @Input() mode: LayerItemMode = LayerItemMode.AVAILABLE;
 
   /**
    * Selection behavior for available-mode controls.
