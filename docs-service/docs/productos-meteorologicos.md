@@ -17,7 +17,7 @@ Hay dos tipos de capas: **Capas de Datos** y **Capas de Referencia**. Las primer
 
 ## Capas de Datos
 
-### A. Satélite (GOES-19) ABI (Advanced Baseline Imager) {#a-satelite-goes-19-abi-advanced-baseline-imager}
+### A. Satélite (GOES-19) ABI (Advanced Baseline Imager) {/* #a-satelite-goes-19-abi-advanced-baseline-imager */}
 
 Imágenes provenientes de los satélites geoestacionarios GOES-19.
 

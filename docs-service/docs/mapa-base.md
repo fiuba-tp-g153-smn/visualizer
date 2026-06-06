@@ -32,7 +32,7 @@ Permite conmutar el fondo cartográfico sin afectar las capas operativas superpu
 - **Recomendación para Referencia**: Utilice _Argenmap_ cuando necesite información geográfica detallada.
 - **Recomendación para Meteorología**: Utilice _Satellite_ o _Google Satellite_ para resaltar datos de nubes o precipitación con colores brillantes.
 
-## Navegación en el Mapa {#navegacion-en-el-mapa}
+## Navegación en el Mapa {/* #navegacion-en-el-mapa */}
 
 - **Zoom**: Rueda del mouse ó controles de la UI (+/-).
 - **Desplazamiento**: Arrastrar mapa (Click izquierdo + Drag) o usar las flechas del teclado.

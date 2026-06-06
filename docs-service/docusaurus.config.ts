@@ -8,6 +8,7 @@ const config: Config = {
   favicon: 'img/favicon.ico',
   future: {
     v4: true,
+    faster: true,
   },
 
   url: 'https://visualizer.example.com',

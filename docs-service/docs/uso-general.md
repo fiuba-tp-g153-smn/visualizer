@@ -52,7 +52,7 @@ Se puede seleccionar el mapa base que se desea utilizar, por defecto se muestra 
   />
 </div>
 
-### Capas Meteorológicas {#capas-meteorologicas}
+### Capas Meteorológicas {/* #capas-meteorologicas */}
 
 Una vez seleccionado el desplegable de capas del mapa se observan las fuentes de datos disponibles:
 
@@ -113,7 +113,7 @@ Desplegando las configuraciones de una capa recién activada (por ejemplo el Can
   />
 </div>
 
-### Animación de Capas {#animacion-de-capas}
+### Animación de Capas {/* #animacion-de-capas */}
 
 Haciendo click en el ícono de animación se despliegan las configuraciones de animación de imágenes para poder ver la evolución de la capa seleccionada:
 
@@ -141,7 +141,7 @@ Donde:
   </video>
 </div>
 
-## Navegación del mapa {#navegacion-del-mapa}
+## Navegación del mapa {/* #navegacion-del-mapa */}
 
 - **Zoom**: Rueda del mouse ó controles de la UI (+/-).
 - **Desplazamiento**: Arrastrar mapa (Click izquierdo + Drag) o usar las flechas del teclado.
