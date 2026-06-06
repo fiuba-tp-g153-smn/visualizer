@@ -6,6 +6,7 @@ import { POLYGON_COLOR } from '../config/polygon.config';
  * Opciones de estilo para polígonos
  */
 export const POLYGON_OPTIONS: L.PolylineOptions = {
+  className: 'map-polygon',
   color: POLYGON_COLOR,
   weight: POLYGON_STYLE.WEIGHT,
   opacity: POLYGON_STYLE.OPACITY,
