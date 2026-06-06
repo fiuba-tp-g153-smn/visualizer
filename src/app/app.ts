@@ -1,7 +1,6 @@
 import { ApplicationRef, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { first } from 'rxjs';
-import { environment } from '../environments/environment';
 import { NotificationPanelComponent } from './components/floating/notification-panel/notification-panel';
 import { TimezoneSettingsService } from './services/settings/timezone-settings.service';
 
@@ -17,7 +16,6 @@ export class App {
 
   ngOnInit() {
     this.timezoneSettings.mode();
-    console.log('Environment values:', environment);
     this.removeSplashWhenStable();
   }
 
