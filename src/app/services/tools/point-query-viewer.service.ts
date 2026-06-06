@@ -38,6 +38,7 @@ import {
   WrfTileLayer,
   WrfTileLayerConfig,
 } from '../../models';
+import { PRIMARY_RENDER_ID } from '../../models/layers/controls.models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayerConfigService } from '../layers/layer-config.service';
@@ -50,10 +51,7 @@ import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
 } from '../../config';
-import {
-  buildWrfPointQueryUrl,
-  buildWrfSecondaryPointQueryUrl,
-} from '../../config/backend.config';
+import { buildWrfPointQueryUrl, buildWrfSecondaryPointQueryUrl } from '../../config/backend.config';
 import {
   formatDateFull,
   parseEcmwfTimestamp,
@@ -88,6 +86,7 @@ type DisplaySourceItem = {
   sourceKind: DisplaySourceKind;
   elevationId?: string;
   forecastTs?: string;
+  secondaryRenderId?: string;
   layerName: string;
   layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer | WrfTileLayer;
   controls: TileLayerControls;
@@ -105,6 +104,7 @@ interface PointQueryViewerEntry {
 interface PersistedPointQueryViewerState {
   enabled: boolean;
   selectedLayerIdsOrdered: string[];
+  manuallyDeselectedLayerIds?: string[];
   showMarker: boolean;
   panelMode?: PointQueryPanelMode;
 }
@@ -139,6 +139,8 @@ export class PointQueryViewerService {
   private readonly subscriptions = new Subscription();
   private readonly queryTriggerSubject = new Subject<MouseCoordinates>();
   private initialized = false;
+  private restoredSelectionFromStorage = false;
+  private hasSyncedDisplayItems = false;
 
   readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
@@ -210,23 +212,30 @@ export class PointQueryViewerService {
           const forecastDate = parseEcmwfTimestamp(forecastTs);
           const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
 
-          const entries: DisplaySourceItem[] = [
-            {
+          const entries: DisplaySourceItem[] = [];
+
+          if (this.isForecastRenderVisible(ecmwfControls, forecastTs, PRIMARY_RENDER_ID)) {
+            entries.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
               layerName: `${baseName} - corrida ${forecastLabel}`,
               forecastTs,
               layer: ecmwfLayer,
               controls: ecmwfControls,
-            },
-          ];
+            });
+          }
 
-          if (secondaryRender?.buildPointQueryUrl) {
+          if (
+            secondaryRender?.pointQuery &&
+            secondaryRender?.buildPointQueryUrl &&
+            this.isForecastRenderVisible(ecmwfControls, forecastTs, secondaryRender.id)
+          ) {
             entries.push({
               layerId: buildSecondaryLayerId(primaryLayerId),
               sourceKind: 'secondary',
-              layerName: `${modelName} - Presion a nivel del mar - corrida ${forecastLabel}`,
+              layerName: `${modelName} - ${secondaryRender.pointQuery.name} - corrida ${forecastLabel}`,
               forecastTs,
+              secondaryRenderId: secondaryRender.id,
               layer: ecmwfLayer,
               controls: ecmwfControls,
             });
@@ -244,32 +253,39 @@ export class PointQueryViewerService {
         const selectedForecasts = wrfControls.forecast.selectedForecastTimestamps;
         const baseName = this.layersService.getLayerFullName(wrfLayer);
 
-        // Renders secundarios consultables (viento + contornos con pointQuery).
-        const queryableSecondaries = (wrfLayer.secondaryRenders ?? [])
-          .map((r) => r.pointQuery)
-          .filter((pq): pq is WrfSecondaryPointQuery => pq !== undefined);
-
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
           const forecastLabel = formatWrfInitTag(forecastTs);
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
 
-          const items: DisplaySourceItem[] = [
-            {
+          const items: DisplaySourceItem[] = [];
+
+          if (this.isForecastRenderVisible(wrfControls, forecastTs, PRIMARY_RENDER_ID)) {
+            items.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
               layerName: `${baseName} - corrida ${forecastLabel}`,
               forecastTs,
               layer: wrfLayer,
               controls: wrfControls,
-            },
-          ];
+            });
+          }
 
-          for (const secondary of queryableSecondaries) {
+          for (const render of wrfLayer.secondaryRenders ?? []) {
+            if (!render.pointQuery) {
+              continue;
+            }
+
+            if (!this.isForecastRenderVisible(wrfControls, forecastTs, render.id)) {
+              continue;
+            }
+
+            const secondary = render.pointQuery;
             items.push({
               layerId: `${primaryLayerId}#secondary:${secondary.variable}`,
               sourceKind: 'secondary',
               layerName: `${secondary.name} - corrida ${forecastLabel}`,
               forecastTs,
+              secondaryRenderId: render.id,
               layer: wrfLayer,
               controls: wrfControls,
               secondary,
@@ -306,8 +322,18 @@ export class PointQueryViewerService {
     return (layer as EcmwfTpTileLayer).secondaryRender;
   }
 
+  private isForecastRenderVisible(
+    controls: EcmwfTpLayerControls | WrfLayerControls,
+    forecastTs: string,
+    renderId: string,
+  ): boolean {
+    return (
+      controls.forecast.renderControls[forecastTs]?.selectedRenderIds.includes(renderId) ?? true
+    );
+  }
+
   constructor() {
-    this.loadStateFromStorage();
+    this.restoredSelectionFromStorage = this.loadStateFromStorage();
     this.loadResultsFromStorage();
 
     effect(() => {
@@ -325,6 +351,8 @@ export class PointQueryViewerService {
       // Auto-select newly activated layers, but keep the tool itself disabled by default.
       const allItems = this.displayItems();
       const allLayerIds = new Set(allItems.map((item) => item.layerId));
+      const isInitialSync = !this.hasSyncedDisplayItems;
+      const shouldAutoSelectNewLayers = !(isInitialSync && this.restoredSelectionFromStorage);
 
       // Keep manual deselections only for currently available sources.
       const currentManuallyDeselected = this.manuallyDeselectedLayerIds();
@@ -337,12 +365,14 @@ export class PointQueryViewerService {
 
       const currentSelection = this.selectedLayerIdsOrdered();
       const filteredSelection = currentSelection.filter((layerId) => allLayerIds.has(layerId));
-      const newLayerIds = allItems
-        .map((item) => item.layerId)
-        .filter(
-          (layerId) =>
-            !currentSelection.includes(layerId) && !filteredManuallyDeselected.has(layerId),
-        );
+      const newLayerIds = shouldAutoSelectNewLayers
+        ? allItems
+            .map((item) => item.layerId)
+            .filter(
+              (layerId) =>
+                !currentSelection.includes(layerId) && !filteredManuallyDeselected.has(layerId),
+            )
+        : [];
 
       const updatedSelection = [...filteredSelection, ...newLayerIds];
 
@@ -382,6 +412,11 @@ export class PointQueryViewerService {
         if (loadingChanged) {
           this.loadingLayerIds.set(nextLoading);
         }
+      }
+
+      if (isInitialSync) {
+        this.restoredSelectionFromStorage = false;
+        this.hasSyncedDisplayItems = true;
       }
     });
 
@@ -695,10 +730,14 @@ export class PointQueryViewerService {
 
     const ecmwfLayer = layer as EcmwfTpTileLayer;
     const secondary = ecmwfLayer.secondaryRender;
-    if (!secondary?.buildPointQueryUrl) return null;
+    if (!secondary?.pointQuery || !secondary?.buildPointQueryUrl) return null;
+
+    const secondaryLayerId = buildSecondaryLayerId(layer.id);
+    const secondaryLayerName = secondary.pointQuery.name;
+    const mslpScaleRange: ScaleRangeInfo = secondary.pointQuery.scaleRange;
 
     if (!this.isWithinLayerBounds(layer, lat, lon)) {
-      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+      return of(this.buildNoData(secondaryLayerId, secondaryLayerName));
     }
 
     const ecmwfControls = controls as EcmwfTpLayerControls;
@@ -706,7 +745,7 @@ export class PointQueryViewerService {
       | EcmwfTpTileLayerConfig
       | undefined;
     if (!config || config.availableTilesets.length === 0) {
-      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+      return of(this.buildNoData(secondaryLayerId, secondaryLayerName));
     }
 
     const isForecast = layer.isForecast;
@@ -731,13 +770,10 @@ export class PointQueryViewerService {
         : undefined
       : selectedForecasts.find((ts) => forecastsForPeriod?.includes(ts));
     if (!resolvedForecastTs) {
-      return of(this.buildNoData(buildSecondaryLayerId(layer.id), 'Presion a nivel del mar'));
+      return of(this.buildNoData(secondaryLayerId, secondaryLayerName));
     }
 
     const url = secondary.buildPointQueryUrl(resolvedForecastTs, timestampTs, lat, lon);
-    const secondaryLayerId = buildSecondaryLayerId(layer.id);
-    const secondaryLayerName = 'Presion a nivel del mar';
-    const mslpScaleRange: ScaleRangeInfo = { min: 950, max: 1050, totalSteps: 100 };
 
     return this.http.get<PointQueryValueDto>(url).pipe(
       map(
@@ -1175,15 +1211,15 @@ export class PointQueryViewerService {
     );
   }
 
-  private loadStateFromStorage(): void {
+  private loadStateFromStorage(): boolean {
     if (typeof localStorage === 'undefined') {
-      return;
+      return false;
     }
 
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.POINT_QUERY_VIEWER);
       if (!raw) {
-        return;
+        return false;
       }
 
       const parsed = JSON.parse(raw) as PersistedPointQueryViewerState;
@@ -1193,10 +1229,13 @@ export class PointQueryViewerService {
 
       this.enabled.set(parsed.enabled ?? false);
       this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
+      this.manuallyDeselectedLayerIds.set(new Set(parsed.manuallyDeselectedLayerIds ?? []));
       this.showMarker.set(showMarker);
       this.panelMode.set(showMarker ? panelMode : POINT_QUERY_PANEL_MODES.FIXED);
+      return true;
     } catch (error) {
       console.warn('Failed to load point query viewer state from localStorage:', error);
+      return false;
     }
   }
 
@@ -1208,6 +1247,7 @@ export class PointQueryViewerService {
     const payload: PersistedPointQueryViewerState = {
       enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
+      manuallyDeselectedLayerIds: [...this.manuallyDeselectedLayerIds()],
       showMarker: this.showMarker(),
       panelMode: this.panelMode(),
     };

@@ -6,8 +6,8 @@ import {
   LayerType,
   RadarTileLayer,
 } from '../../../models';
+import { SHARED_DBZH_SCALE } from '../shared-scales.config';
 import {
-  RADAR_DBZH_SCALE,
   RADAR_VRAD_SCALE,
   RADAR_RHOHV_SCALE,
   RADAR_ZDR_SCALE,
@@ -60,7 +60,7 @@ const MIN_ZOOM = 4;
 const MAX_ZOOM = 9;
 
 const RADAR_SCALES: Record<RadarProduct, LayerScale> = {
-  [RadarProduct.DBZH]: RADAR_DBZH_SCALE,
+  [RadarProduct.DBZH]: SHARED_DBZH_SCALE,
   [RadarProduct.KDP]: RADAR_KDP_SCALE,
   [RadarProduct.VRAD]: RADAR_VRAD_SCALE,
   [RadarProduct.RHOHV]: RADAR_RHOHV_SCALE,

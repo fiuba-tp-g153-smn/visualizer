@@ -1,6 +1,16 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 
-import { Layer, LayerControls, LayerScale, ScaleType } from '../../models';
+import {
+  EcmwfTpLayerControls,
+  Layer,
+  LayerCategory,
+  LayerControls,
+  LayerScale,
+  LayerType,
+  ScaleType,
+  WrfLayerControls,
+} from '../../models';
+import { PRIMARY_RENDER_ID } from '../../models/layers/controls.models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayersService } from '../layers/layers.service';
@@ -40,6 +50,7 @@ export class ScaleToolsService {
   private readonly controlService = inject(LayerControlService);
   private readonly layersService = inject(LayersService);
   private previousDisplayLayerIds = new Set<string>();
+  private restoredSelectionFromStorage = false;
 
   readonly enabled = signal<boolean>(false);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
@@ -50,6 +61,7 @@ export class ScaleToolsService {
     return this.controlService
       .activeLayers()
       .filter((entry): entry is ActiveLayerEntryWithScale => this.hasValidScale(entry.layer))
+      .filter(({ layer, controls }) => this.isPrimaryRenderActive(layer, controls))
       .flatMap(({ layer }) => {
         const scaleGroupKey = this.getScaleGroupKeyForLayer(layer);
         if (seenScaleGroupKeys.has(scaleGroupKey)) {
@@ -98,7 +110,7 @@ export class ScaleToolsService {
   });
 
   constructor() {
-    this.loadStateFromStorage();
+    this.restoredSelectionFromStorage = this.loadStateFromStorage();
 
     effect(() => {
       this.saveStateToStorage();
@@ -110,15 +122,19 @@ export class ScaleToolsService {
 
       untracked(() => {
         const currentSelection = this.selectedLayerIdsOrdered();
+        const isInitialSync = this.previousDisplayLayerIds.size === 0;
+        const shouldAutoSelectNewLayers = !(isInitialSync && this.restoredSelectionFromStorage);
 
         // Remove deactivated layers from selection
         const filteredSelection = currentSelection.filter((layerId) => activeLayerIds.has(layerId));
         const normalizedSelection = this.uniqueCanonicalLayerIds(filteredSelection);
 
         // Auto-select only truly newly activated layers.
-        const newLayerIds = Array.from(activeLayerIds).filter(
-          (layerId) => !this.previousDisplayLayerIds.has(layerId),
-        );
+        const newLayerIds = shouldAutoSelectNewLayers
+          ? Array.from(activeLayerIds).filter(
+              (layerId) => !this.previousDisplayLayerIds.has(layerId),
+            )
+          : [];
         const newCanonicalIds = this.uniqueCanonicalLayerIds(newLayerIds);
 
         const updatedSelection = [...normalizedSelection];
@@ -141,6 +157,10 @@ export class ScaleToolsService {
         }
 
         this.previousDisplayLayerIds = activeLayerIds;
+
+        if (isInitialSync) {
+          this.restoredSelectionFromStorage = false;
+        }
       });
     });
   }
@@ -217,6 +237,29 @@ export class ScaleToolsService {
     this.selectedLayerIdsOrdered.set([]);
   }
 
+  /**
+   * Returns false for WRF/ECMWF layers where no selected forecast run has the
+   * primary tile visible (e.g. only secondary renders like isobars are shown).
+   */
+  private isPrimaryRenderActive(layer: Layer, controls: LayerControls): boolean {
+    if (layer.type !== LayerType.TILE) return true;
+    if (
+      layer.category !== LayerCategory.ECMWF_TP &&
+      layer.category !== LayerCategory.WRF
+    ) {
+      return true;
+    }
+
+    const forecastControls = (controls as EcmwfTpLayerControls | WrfLayerControls).forecast;
+    const selected = forecastControls.selectedForecastTimestamps;
+    if (selected.length === 0) return false;
+
+    return selected.some((ts) => {
+      const renderControl = forecastControls.renderControls[ts];
+      return renderControl ? renderControl.selectedRenderIds.includes(PRIMARY_RENDER_ID) : true;
+    });
+  }
+
   private hasValidScale(layer: Layer): layer is LayerWithScale {
     if (!layer.scale) {
       return false;
@@ -232,24 +275,26 @@ export class ScaleToolsService {
     }
   }
 
-  private loadStateFromStorage(): void {
+  private loadStateFromStorage(): boolean {
     if (typeof localStorage === 'undefined') {
-      return;
+      return false;
     }
 
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.SCALE_TOOLS);
       if (!raw) {
-        return;
+        return false;
       }
 
       const parsed = JSON.parse(raw) as PersistedScaleToolsState;
 
       this.enabled.set(parsed.enabled ?? false);
       this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
+      return true;
     } catch {
       this.enabled.set(false);
       this.selectedLayerIdsOrdered.set([]);
+      return false;
     }
   }
 

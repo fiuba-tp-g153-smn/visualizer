@@ -27,7 +27,11 @@ export interface WeatherStationHistoryChartsData {
   series?: StationSeries | null;
 }
 
-type DetailSection = 'graficos' | 'resumen' | 'observaciones';
+enum DetailSection {
+  GRAFICOS = 'graficos',
+  RESUMEN = 'resumen',
+  OBSERVACIONES = 'observaciones',
+}
 
 /**
  * Full-screen view of a station's last 48 h: one time-aligned chart per variable
@@ -61,7 +65,9 @@ export class WeatherStationHistoryChartsComponent {
   readonly latText = this.data.lat === null ? '—' : this.data.lat.toFixed(2);
   readonly lonText = this.data.lon === null ? '—' : this.data.lon.toFixed(2);
 
-  readonly section = signal<DetailSection>('graficos');
+  readonly DetailSection = DetailSection;
+
+  readonly section = signal<DetailSection>(DetailSection.GRAFICOS);
 
   private readonly series = signal<StationSeries | null>(this.data.series ?? null);
   readonly loading = signal<boolean>(!this.data.series);

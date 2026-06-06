@@ -10,7 +10,7 @@ import { LayersService } from '../../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../../services/layers/layer-control.service';
 import { ActiveLayerGroupId, Layer } from '../../../../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../../config/layers';
-import { LayerItemComponent } from '../layer-item/layer-item';
+import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
 
 /**
  * Componente de capas activas
@@ -34,9 +34,9 @@ import { LayerItemComponent } from '../layer-item/layer-item';
   styleUrl: './active-layers.scss',
 })
 export class ActiveLayersComponent {
-  private readonly layersService = inject(LayersService);
-  private readonly controlService = inject(LayerControlService);
+  readonly LayerItemMode = LayerItemMode;
 
+  private readonly controlService = inject(LayerControlService);
 
   private groupExpansionState = new Map<ActiveLayerGroupId, ReturnType<typeof signal<boolean>>>(
     Object.values(ACTIVE_LAYER_GROUP_DEFINITIONS).map((def) => [def.id, signal(true)]),

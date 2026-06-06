@@ -115,7 +115,7 @@ export class MapContainer implements OnInit, OnDestroy {
         const mode = this.polygonDrawingService.drawingMode();
         const editingPolygonId = this.polygonDrawingService.editingPolygonId();
         if (this.map) {
-          void this.polygonsService.handleDrawingModeChange(mode, editingPolygonId);
+          this.polygonsService.handleDrawingModeChange(mode, editingPolygonId);
         }
       });
     }
