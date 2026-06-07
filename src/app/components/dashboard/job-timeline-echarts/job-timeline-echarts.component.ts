@@ -22,8 +22,11 @@ import type { RecentJob } from '../../../models/metrics/metrics.models';
 import {
   buildEchartsOption,
   type EchartsTimelineDatum,
+  PLOT_BOTTOM_RESERVE,
 } from '../../../services/metrics/echarts-timeline.util';
 import {
+  fmtDate,
+  fmtTime,
   legendItems,
   ROW_HEIGHT,
   type TimelineColorBy,
@@ -89,6 +92,16 @@ type Range = [number, number];
       <div #chart class="jt__chart"></div>
       <div #band class="jt__band" hidden></div>
     </div>
+    @if (hasData()) {
+      <div class="jt__ends">
+        <span
+          ><strong>{{ extentStart().date }}</strong> {{ extentStart().time }}</span
+        >
+        <span
+          ><strong>{{ extentEnd().date }}</strong> {{ extentEnd().time }}</span
+        >
+      </div>
+    }
   `,
   styles: `
     :host {
@@ -142,6 +155,13 @@ type Range = [number, number];
       pointer-events: none;
       z-index: 2;
     }
+    .jt__ends {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 16px 0 12px;
+      font-size: 11px;
+      color: var(--mat-sys-on-surface-variant, #5f6368);
+    }
     .jt__empty {
       padding: 24px;
       text-align: center;
@@ -170,6 +190,12 @@ export class JobTimelineEchartsComponent {
 
   readonly hasData = computed<boolean>(() => this.jobs().length > 0);
   readonly legend = computed(() => legendItems(this.jobs(), this.colorBy()));
+
+  // Fecha/hora de los extremos del rango completo (extremos de la pista del slider);
+  // ECharts no expone etiquetas ahí, así que se renderizan en una fila DOM aparte,
+  // con la fecha en negrita (`<strong>`) y la hora normal. Vacíos = sin datos.
+  readonly extentStart = signal<{ date: string; time: string }>({ date: '', time: '' });
+  readonly extentEnd = signal<{ date: string; time: string }>({ date: '', time: '' });
 
   readonly canBack = signal(false);
 
@@ -241,6 +267,8 @@ export class JobTimelineEchartsComponent {
       this.resetZoomState();
       this.extent = [0, 0];
       this.viewWindow = null;
+      this.extentStart.set({ date: '', time: '' });
+      this.extentEnd.set({ date: '', time: '' });
       return;
     }
     const { option, lanes, extent } = buildEchartsOption(this.jobs(), {
@@ -249,6 +277,9 @@ export class JobTimelineEchartsComponent {
       maxSpanMs: this.maxSpanMs(),
     });
     this.extent = extent;
+    const utc = this.utc();
+    this.extentStart.set({ date: fmtDate(extent[0], utc), time: fmtTime(extent[0], utc) });
+    this.extentEnd.set({ date: fmtDate(extent[1], utc), time: fmtTime(extent[1], utc) });
     this.chartEl().nativeElement.style.height = `${Math.max(200, lanes * ROW_HEIGHT + 80)}px`;
     chart.resize();
     chart.setOption(option as unknown as Parameters<echarts.ECharts['setOption']>[0], true);
@@ -304,6 +335,14 @@ export class JobTimelineEchartsComponent {
 
   onDown(event: PointerEvent): void {
     if (!this.chart || !this.hasData() || event.button !== 0) {
+      return;
+    }
+    // No iniciar la banda sobre la franja inferior (eje X + slider): ahí el
+    // arrastre debe mover/zoomear el slider de ECharts de forma nativa. Se usa el
+    // rect del propio chart (no el del wrap) para que coincida con `grid.bottom`.
+    const chartRect = this.chartEl().nativeElement.getBoundingClientRect();
+    const offsetY = event.clientY - chartRect.top;
+    if (offsetY > chartRect.height - PLOT_BOTTOM_RESERVE) {
       return;
     }
     const rect = this.wrapEl().nativeElement.getBoundingClientRect();

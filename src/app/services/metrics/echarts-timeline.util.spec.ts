@@ -79,6 +79,24 @@ describe('buildEchartsOption', () => {
     expect(o.option.dataZoom.every((dz) => dz['filterMode'] === 'weakFilter')).toBe(true);
   });
 
+  it('shows persistent datetime labels on the slider handles', () => {
+    const o = buildEchartsOption([job({})], { utc: true, colorBy: 'outcome' });
+    const slider = o.option.dataZoom[1] as Record<string, unknown>;
+    expect((slider['handleLabel'] as { show: boolean }).show).toBe(true);
+    expect(typeof slider['labelFormatter']).toBe('function');
+  });
+
+  it('formats day-boundary axis ticks as bold DD/MM', () => {
+    const o = buildEchartsOption([job({})], { utc: true, colorBy: 'outcome' });
+    const axisLabel = (
+      o.option.xAxis as {
+        axisLabel: { formatter: Record<string, string>; rich: Record<string, unknown> };
+      }
+    ).axisLabel;
+    expect(axisLabel.formatter.day).toBe('{boldDate|{dd}/{MM}}');
+    expect(axisLabel.rich['boldDate']).toBeDefined();
+  });
+
   it('reflects the utc flag via useUTC', () => {
     expect(buildEchartsOption([job({})], { utc: true, colorBy: 'outcome' }).option.useUTC).toBe(true);
     expect(buildEchartsOption([job({})], { utc: false, colorBy: 'outcome' }).option.useUTC).toBe(

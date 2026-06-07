@@ -89,6 +89,35 @@ function workerLabel(job: RecentJob): string {
 
 const pad = (value: number): string => String(value).padStart(2, '0');
 
+/**
+ * Día y mes (epoch ms) como `DD/MM` (sin año), en UTC o en hora local del
+ * navegador según `utc` (`getUTC*` vs `get*`). Se muestra en negrita para
+ * distinguir la fecha de una hora "suelta" (`HH:mm`).
+ */
+export function fmtDate(ms: number, utc: boolean): string {
+  const d = new Date(ms);
+  const day = utc ? d.getUTCDate() : d.getDate();
+  const mo = (utc ? d.getUTCMonth() : d.getMonth()) + 1;
+  return `${pad(day)}/${pad(mo)}`;
+}
+
+/** Hora y minuto (epoch ms) como `HH:mm`, en UTC o local según `utc`. */
+export function fmtTime(ms: number, utc: boolean): string {
+  const d = new Date(ms);
+  const h = utc ? d.getUTCHours() : d.getHours();
+  const m = utc ? d.getUTCMinutes() : d.getMinutes();
+  return `${pad(h)}:${pad(m)}`;
+}
+
+/**
+ * Instante compacto `DD/MM HH:mm`, en UTC o local según `utc`. Refleja el estilo
+ * del eje (`{dd}/{MM} {HH}:{mm}`); se usa en el `labelFormatter` del slider, donde
+ * la etiqueta es texto plano y no admite negrita parcial.
+ */
+export function fmtDateTime(ms: number, utc: boolean): string {
+  return `${fmtDate(ms, utc)} ${fmtTime(ms, utc)}`;
+}
+
 function clock(iso: string, utc: boolean): string {
   const d = new Date(iso);
   const h = utc ? d.getUTCHours() : d.getHours();

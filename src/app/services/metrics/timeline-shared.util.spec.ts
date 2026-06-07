@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import type { RecentJob } from '../../models/metrics/metrics.models';
 import { outcomeColor } from './metrics-labels.constants';
-import { colorOf, legendItems, packIntoLanes } from './timeline-shared.util';
+import { colorOf, fmtDate, fmtDateTime, legendItems, packIntoLanes } from './timeline-shared.util';
+
+const pad = (n: number): string => String(n).padStart(2, '0');
 
 function job(over: Partial<RecentJob>): RecentJob {
   return {
@@ -75,6 +77,23 @@ describe('colorOf', () => {
     const typeColorFor = (t: string) => (t === 'a' ? '#111111' : '#222222');
     expect(colorOf(job({ outcome: 'dlq' }), 'outcome', typeColorFor)).toBe(outcomeColor('dlq'));
     expect(colorOf(job({ job_type: 'a' }), 'type', typeColorFor)).toBe('#111111');
+  });
+});
+
+describe('fmtDate / fmtDateTime', () => {
+  const ms = Date.parse('2026-06-08T09:05:00Z');
+
+  it('formats date as DD/MM and datetime as DD/MM HH:mm in UTC', () => {
+    expect(fmtDate(ms, true)).toBe('08/06');
+    expect(fmtDateTime(ms, true)).toBe('08/06 09:05');
+  });
+
+  it('formats in local time when utc=false (TZ-agnostic)', () => {
+    const d = new Date(ms);
+    const date = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    expect(fmtDate(ms, false)).toBe(date);
+    expect(fmtDateTime(ms, false)).toBe(`${date} ${time}`);
   });
 });
 

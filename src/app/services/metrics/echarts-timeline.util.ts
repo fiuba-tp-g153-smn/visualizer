@@ -1,6 +1,20 @@
 import type { RecentJob } from '../../models/metrics/metrics.models';
 import { buildTypeColorMap, LABEL_COLOR } from './metrics-chart.util';
-import { colorOf, packIntoLanes, type TimelineColorBy, tooltipHtml } from './timeline-shared.util';
+import {
+  colorOf,
+  fmtDateTime,
+  packIntoLanes,
+  type TimelineColorBy,
+  tooltipHtml,
+} from './timeline-shared.util';
+
+/**
+ * Reserva inferior del grid (px): aloja el eje X y el slider de zoom (con sus
+ * etiquetas de handle). El componente la usa como guarda Y para no iniciar la
+ * banda de selección sobre el slider —el arrastre del slider queda para ECharts—,
+ * así que debe mantenerse en sync con `grid.bottom`.
+ */
+export const PLOT_BOTTOM_RESERVE = 40;
 
 /** Un dato del gráfico: `value`=[carril, inicioMs, finMs] + metadatos. */
 export interface EchartsTimelineDatum {
@@ -74,7 +88,11 @@ export function buildEchartsOption(
   const maxSpan = opts.maxSpanMs ?? null;
   const windowed = maxSpan != null && rows.length > 0;
   const zoomBounds: Record<string, number> = windowed
-    ? { maxValueSpan: maxSpan, startValue: Math.max(extentMin, extentMax - maxSpan), endValue: extentMax }
+    ? {
+        maxValueSpan: maxSpan,
+        startValue: Math.max(extentMin, extentMax - maxSpan),
+        endValue: extentMax,
+      }
     : {};
 
   const renderItem = (params: RenderParams, api: RenderApi): unknown => {
@@ -97,10 +115,25 @@ export function buildEchartsOption(
     option: {
       useUTC: opts.utc,
       animation: false,
-      grid: { left: 12, right: 16, top: 8, bottom: 34, containLabel: true },
+      grid: { left: 12, right: 16, top: 8, bottom: PLOT_BOTTOM_RESERVE, containLabel: true },
       xAxis: {
         type: 'time',
-        axisLabel: { color: LABEL_COLOR, fontSize: 11, hideOverlap: true },
+        axisLabel: {
+          color: LABEL_COLOR,
+          fontSize: 11,
+          hideOverlap: true,
+          // En el borde de día mostrar la fecha `DD/MM` en negrita (estilo rich
+          // `boldDate`) para distinguirla de una hora suelta; los demás niveles
+          // conservan su formato. ECharts normaliza este objeto, resuelve los
+          // tokens `{dd}`/`{MM}` y luego aplica el rich text; respeta `useUTC`.
+          formatter: {
+            day: '{boldDate|{dd}/{MM}}',
+            hour: '{HH}:{mm}',
+            minute: '{HH}:{mm}',
+            second: '{HH}:{mm}:{ss}',
+          },
+          rich: { boldDate: { fontWeight: 'bold', color: LABEL_COLOR, fontSize: 11 } },
+        },
         splitLine: { show: true, lineStyle: { color: '#eceef0' } },
       },
       yAxis: {
@@ -123,7 +156,17 @@ export function buildEchartsOption(
           cursorGrabbing: false,
           ...zoomBounds,
         },
-        { type: 'slider', xAxisIndex: 0, filterMode: 'weakFilter', height: 18, bottom: 6, ...zoomBounds },
+        {
+          type: 'slider',
+          xAxisIndex: 0,
+          filterMode: 'weakFilter',
+          height: 18,
+          bottom: 6,
+          // Etiquetas de fecha/hora en los handles (ventana actual), persistentes.
+          handleLabel: { show: true },
+          labelFormatter: (value: number) => fmtDateTime(value, opts.utc),
+          ...zoomBounds,
+        },
       ],
       tooltip: {
         trigger: 'item',
