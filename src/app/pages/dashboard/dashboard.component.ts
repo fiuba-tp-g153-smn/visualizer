@@ -157,6 +157,10 @@ export class DashboardComponent {
   readonly loading = signal<boolean>(false);
   readonly hasLoaded = signal<boolean>(false);
   readonly firstLoad = computed<boolean>(() => this.loading() && !this.hasLoaded());
+  // Recarga "en primer plano" (cambio de ventana por el usuario): atenúa los
+  // paneles y muestra un spinner encima mientras llegan los datos. NO se activa
+  // en el auto-refresco de fondo, que mantiene la vista intacta.
+  readonly reloading = signal<boolean>(false);
 
   /** Conectividad con el servicio de métricas: true=operativo, false=caído, null=conectando. */
   readonly online = computed<boolean | null>(() => {
@@ -199,7 +203,9 @@ export class DashboardComponent {
 
   onWindowChange(event: Event): void {
     this.windowHours.set(this.numberValue(event) as WindowHours);
-    void this.refresh();
+    // Recarga en primer plano: el rango "todo" puede tardar, así que se muestra
+    // el spinner sobre los paneles atenuados.
+    void this.refresh(false, true);
   }
 
   onBucketChange(event: Event): void {
@@ -313,11 +319,14 @@ export class DashboardComponent {
   // `includeTimeline` solo se activa en la carga inicial, el refresco manual y al
   // cambiar el rango: el auto-refresco NO recarga la línea de tiempo para no
   // resetear el zoom/pan que el usuario haya hecho.
-  private async refresh(includeTimeline = false): Promise<void> {
+  private async refresh(includeTimeline = false, foreground = false): Promise<void> {
     if (this.loading()) {
       return; // evita refrescos solapados disparados por el intervalo
     }
     this.loading.set(true);
+    if (foreground) {
+      this.reloading.set(true);
+    }
     try {
       this.summary.set(await firstValueFrom(this.metrics.getSummary(this.windowHours())));
       const tasks = [this.loadJobs(true), this.loadCharts(), this.loadLive(), this.loadTp10()];
@@ -333,6 +342,7 @@ export class DashboardComponent {
       this.errorMsg.set(this.describeError(error));
     } finally {
       this.loading.set(false);
+      this.reloading.set(false);
     }
   }
 

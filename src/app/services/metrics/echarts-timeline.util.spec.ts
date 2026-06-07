@@ -30,7 +30,7 @@ function job(over: Partial<RecentJob>): RecentJob {
 }
 
 const data = (o: ReturnType<typeof buildEchartsOption>): EchartsTimelineDatum[] =>
-  o.option.series[0].data as EchartsTimelineDatum[];
+  o.option.series[0]['data'] as EchartsTimelineDatum[];
 
 describe('buildEchartsOption', () => {
   it('emits one datum per job with value [lane, startMs, endMs]', () => {
@@ -93,7 +93,7 @@ describe('buildEchartsOption', () => {
         axisLabel: { formatter: Record<string, string>; rich: Record<string, unknown> };
       }
     ).axisLabel;
-    expect(axisLabel.formatter.day).toBe('{boldDate|{dd}/{MM}}');
+    expect(axisLabel.formatter['day']).toBe('{boldDate|{dd}/{MM}}');
     expect(axisLabel.rich['boldDate']).toBeDefined();
   });
 

@@ -176,6 +176,35 @@
   }
 }
 
+// Recarga en primer plano (cambio de ventana): atenúa los paneles ya cargados y
+// bloquea su interacción mientras llega el dato nuevo.
+.dash__content--busy {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+// Spinner sobre los paneles atenuados. Va fijo al viewport (el :host es
+// position:fixed inset:0, que no crea bloque contenedor para 'fixed') y es
+// hermano del contenido atenuado, así que su opacidad no le afecta.
+.dash__overlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 28px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface, #ffffff);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
 // Spinner centrado de la primera carga (cuando aún no hay datos que mostrar).
 .dash__loading {
   display: flex;
