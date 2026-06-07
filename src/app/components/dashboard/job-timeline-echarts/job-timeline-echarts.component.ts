@@ -12,6 +12,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { animate, style, transition, trigger } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -54,35 +55,50 @@ type Range = [number, number];
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [MatSlideToggleModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  // Al alternar el color (resultado ↔ tipo) cambia la cantidad de chips de la
+  // leyenda y su alto salta; se anima sólo el alto de la **leyenda** (`!` = alto
+  // previo al cambio, `*` = alto automático nuevo) para que la caja crezca/encoja
+  // suave. La fila de controles queda fija aparte, así los botones no se recortan.
+  // Sólo entre los dos estados reales: no dispara en el primer render.
+  animations: [
+    trigger('legendResize', [
+      transition('outcome <=> type', [
+        style({ height: '!', overflow: 'hidden' }),
+        animate('150ms ease-out', style({ height: '*' })),
+      ]),
+    ]),
+  ],
   template: `
     <div class="jt__head">
-      <mat-slide-toggle
-        class="jt__toggle"
-        [checked]="colorBy() === 'type'"
-        (change)="colorBy.set($event.checked ? 'type' : 'outcome')"
-      >
-        {{ colorBy() === 'type' ? 'Color: tipo' : 'Color: resultado' }}
-      </mat-slide-toggle>
-      <div class="jt__legend">
+      <div class="jt__controls">
+        <mat-slide-toggle
+          class="jt__toggle"
+          [checked]="colorBy() === 'type'"
+          (change)="colorBy.set($event.checked ? 'type' : 'outcome')"
+        >
+          {{ colorBy() === 'type' ? 'Color: tipo' : 'Color: resultado' }}
+        </mat-slide-toggle>
+        <span class="jt__spacer"></span>
+        <button
+          mat-icon-button
+          type="button"
+          matTooltip="Volver al zoom anterior"
+          [disabled]="!canBack()"
+          (click)="zoomBack()"
+        >
+          <mat-icon>undo</mat-icon>
+        </button>
+        <button mat-icon-button type="button" matTooltip="Ver todo" (click)="zoomAll()">
+          <mat-icon>zoom_out_map</mat-icon>
+        </button>
+      </div>
+      <div class="jt__legend" [@legendResize]="colorBy()">
         @for (item of legend(); track item.label) {
           <span class="jt__legend-item">
             <span class="jt__dot" [style.background]="item.color"></span>{{ item.label }}
           </span>
         }
       </div>
-      <span class="jt__spacer"></span>
-      <button
-        mat-icon-button
-        type="button"
-        matTooltip="Volver al zoom anterior"
-        [disabled]="!canBack()"
-        (click)="zoomBack()"
-      >
-        <mat-icon>undo</mat-icon>
-      </button>
-      <button mat-icon-button type="button" matTooltip="Ver todo" (click)="zoomAll()">
-        <mat-icon>zoom_out_map</mat-icon>
-      </button>
     </div>
 
     @if (!hasData()) {
@@ -109,10 +125,18 @@ type Range = [number, number];
     }
     .jt__head {
       display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px;
+      /* Alinea los controles con el contenido del gráfico (grid left:12/right:16)
+         para que no queden pegados a los bordes. */
+      padding: 0 16px 0 12px;
+    }
+    .jt__controls {
+      display: flex;
       align-items: center;
       gap: 16px;
       flex-wrap: wrap;
-      margin-bottom: 8px;
     }
     .jt__toggle {
       font-size: 12px;
