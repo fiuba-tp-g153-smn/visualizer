@@ -112,3 +112,5 @@ export type Bucket = 'hour' | 'day';
 export type RefreshSeconds = 0 | 10 | 30 | 60;
 /** Rango de la vista de throughput de 10 min (en horas). */
 export type TenMinWindowHours = 1 | 3 | 6 | 12;
+/** Rango de la línea de tiempo de unidades (en horas; 0 = todo el histórico). */
+export type TimelineWindowHours = 0 | 6 | 12 | 24 | 48 | 72 | 168;

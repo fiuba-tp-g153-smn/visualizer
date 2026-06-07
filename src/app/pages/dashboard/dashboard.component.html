@@ -159,6 +159,31 @@
       </app-metric-panel>
 
       <app-metric-panel
+        heading="Línea de tiempo de trabajos"
+        tip="Cada unidad como una barra desde que un worker la toma (inicio) hasta que termina (fin). Las filas solo evitan que las barras se solapen (no son los workers); su cantidad es la concurrencia máxima. Arrastrá sobre el gráfico para seleccionar un rango y acercar; rueda para zoom; el slider inferior afina el rango. Botones arriba a la derecha: volver al zoom anterior y ver todo. Color por resultado o por tipo (toggle); clic en una barra para ver el detalle; el worker está en el tooltip. Las horas siguen el huso configurado."
+      >
+        <label panelActions class="dash__ctl"
+          >rango
+          <select [value]="timelineWindowHours()" (change)="onTimelineWindowChange($event)">
+            <option value="6">6h</option>
+            <option value="12">12h</option>
+            <option value="24">24h</option>
+            <option value="48">2d</option>
+            <option value="72">3d</option>
+            <option value="168">7d</option>
+            <option value="0">todo</option>
+          </select>
+        </label>
+        <app-job-timeline-echarts
+          [jobs]="timelineJobs()"
+          (jobClick)="onTimelineJobClick($event)"
+        />
+        @if (timelineTruncated()) {
+          <div class="dash__note">Mostrando las 1000 unidades más recientes del rango.</div>
+        }
+      </app-metric-panel>
+
+      <app-metric-panel
         heading="Trabajos recientes"
         tip="Últimos trabajos finalizados (todos los resultados), del más nuevo al más viejo. Clic en las columnas para ordenar; clic en una fila para ver el detalle; 'cargar más' trae las siguientes 50 filas."
       >

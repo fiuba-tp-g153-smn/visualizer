@@ -49,7 +49,7 @@ export interface StagePieOptions {
 }
 
 const GRID_COLOR = '#e3e3e6';
-const LABEL_COLOR = '#5f6368';
+export const LABEL_COLOR = '#5f6368';
 const DEFAULT_HEIGHT = 240;
 const NETWORK_COLOR = '#90a4ae';
 

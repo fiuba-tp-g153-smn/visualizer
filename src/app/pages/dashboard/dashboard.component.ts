@@ -23,7 +23,9 @@ import { MetricChartComponent } from '../../components/dashboard/metric-chart/me
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
 import { MetricStatCardsComponent } from '../../components/dashboard/metric-stat-cards/metric-stat-cards.component';
 import { RecentJobsTableComponent } from '../../components/dashboard/recent-jobs-table/recent-jobs-table.component';
+import { JobDetailDialogComponent } from '../../components/dashboard/job-detail-dialog/job-detail-dialog.component';
 import { JobTypeDetailDialogComponent } from '../../components/dashboard/job-type-detail-dialog/job-type-detail-dialog.component';
+import { JobTimelineEchartsComponent } from '../../components/dashboard/job-timeline-echarts/job-timeline-echarts.component';
 import { TrendChartsComponent } from '../../components/dashboard/trend-charts/trend-charts.component';
 import type {
   Bucket,
@@ -34,6 +36,7 @@ import type {
   RefreshSeconds,
   TenMinWindowHours,
   ThroughputBucket,
+  TimelineWindowHours,
   TimingSeriesPoint,
   WindowHours,
 } from '../../models/metrics/metrics.models';
@@ -50,6 +53,8 @@ import {
 } from '../../services/settings/timezone-settings.service';
 
 const JOBS_PAGE = 50;
+/** Tope de filas que sirve /api/jobs; la línea de tiempo pide hasta este máximo. */
+const TIMELINE_LIMIT = 1000;
 
 /**
  * Página del panel de rendimiento (ruta `/dashboard`). Es el único dueño del
@@ -73,6 +78,7 @@ const JOBS_PAGE = 50;
     MetricChartComponent,
     JobTypeSummaryTableComponent,
     RecentJobsTableComponent,
+    JobTimelineEchartsComponent,
   ],
   // Tooltips instantáneos solo en el dashboard (no afecta al resto de la app).
   providers: [
@@ -124,6 +130,12 @@ export class DashboardComponent {
   readonly throughput = signal<readonly ThroughputBucket[]>([]);
   private readonly tp10 = signal<readonly ThroughputBucket[]>([]);
 
+  // Línea de tiempo de unidades: ventana propia y trabajos del rango.
+  readonly timelineWindowHours = signal<TimelineWindowHours>(24);
+  readonly timelineJobs = signal<readonly RecentJob[]>([]);
+  /** El backend topa en 1000 filas; avisa cuando el rango fue truncado. */
+  readonly timelineTruncated = computed<boolean>(() => this.timelineJobs().length >= TIMELINE_LIMIT);
+
   readonly updatedAt = signal<string>('—');
   readonly errorMsg = signal<string | null>(null);
 
@@ -170,7 +182,7 @@ export class DashboardComponent {
       }
     });
     this.destroyRef.onDestroy(() => this.clearTimer());
-    void this.refresh();
+    void this.refresh(true);
   }
 
   // ── Manejadores de controles ────────────────────────────────────────────
@@ -192,6 +204,16 @@ export class DashboardComponent {
   onTpWindowChange(event: Event): void {
     this.tpWindowHours.set(this.numberValue(event) as TenMinWindowHours);
     void this.loadTp10();
+  }
+
+  onTimelineWindowChange(event: Event): void {
+    this.timelineWindowHours.set(this.numberValue(event) as TimelineWindowHours);
+    void this.loadTimeline();
+  }
+
+  /** Click en una barra de la línea de tiempo: abre el detalle de ese trabajo. */
+  onTimelineJobClick(job: RecentJob): void {
+    this.dialog.open(JobDetailDialogComponent, { data: job, width: '560px', autoFocus: false });
   }
 
   onOutcomeFilterChange(event: Event): void {
@@ -223,7 +245,7 @@ export class DashboardComponent {
   }
 
   refreshNow(): void {
-    void this.refresh();
+    void this.refresh(true);
   }
 
   goBack(): void {
@@ -232,14 +254,21 @@ export class DashboardComponent {
 
   // ── Carga de datos ────────────────────────────────────────────────────────
 
-  private async refresh(): Promise<void> {
+  // `includeTimeline` solo se activa en la carga inicial, el refresco manual y al
+  // cambiar el rango: el auto-refresco NO recarga la línea de tiempo para no
+  // resetear el zoom/pan que el usuario haya hecho.
+  private async refresh(includeTimeline = false): Promise<void> {
     if (this.loading()) {
       return; // evita refrescos solapados disparados por el intervalo
     }
     this.loading.set(true);
     try {
       this.summary.set(await firstValueFrom(this.metrics.getSummary(this.windowHours())));
-      await Promise.all([this.loadJobs(true), this.loadCharts(), this.loadLive(), this.loadTp10()]);
+      const tasks = [this.loadJobs(true), this.loadCharts(), this.loadLive(), this.loadTp10()];
+      if (includeTimeline) {
+        tasks.push(this.loadTimeline());
+      }
+      await Promise.all(tasks);
       this.updatedAt.set(new Date().toLocaleTimeString());
       this.errorMsg.set(null);
       this.hasLoaded.set(true);
@@ -287,6 +316,18 @@ export class DashboardComponent {
 
   private async loadTp10(): Promise<void> {
     this.tp10.set(await firstValueFrom(this.metrics.getThroughput('10min', this.tpWindowHours())));
+  }
+
+  private async loadTimeline(): Promise<void> {
+    this.timelineJobs.set(
+      await firstValueFrom(
+        this.metrics.getJobs({
+          limit: TIMELINE_LIMIT,
+          offset: 0,
+          hours: this.timelineWindowHours(),
+        }),
+      ),
+    );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

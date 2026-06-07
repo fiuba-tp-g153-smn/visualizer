@@ -24,6 +24,8 @@ export interface JobsQuery {
   readonly offset: number;
   readonly type?: string;
   readonly outcome?: JobOutcome;
+  /** Lookback window in hours; omitted = all time (for the timeline section). */
+  readonly hours?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -42,6 +44,9 @@ export class MetricsService {
     }
     if (query.outcome) {
       params = params.set('outcome', query.outcome);
+    }
+    if (query.hours != null) {
+      params = params.set('hours', query.hours);
     }
     return this.http.get<RecentJob[]>(buildJobsUrl(), { params });
   }
