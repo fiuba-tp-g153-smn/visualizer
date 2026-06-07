@@ -91,4 +91,41 @@ describe('buildEchartsOption', () => {
     expect(data(o)).toHaveLength(0);
     expect(o.lanes).toBe(0);
   });
+
+  it('reports the data extent [minStart, maxEnd]', () => {
+    const o = buildEchartsOption(
+      [
+        job({ id: 1, started_at: '2026-06-01T00:00:00Z', finished_at: '2026-06-01T00:01:00Z' }),
+        job({ id: 2, started_at: '2026-06-10T00:00:00Z', finished_at: '2026-06-10T00:02:00Z' }),
+      ],
+      { utc: true, colorBy: 'outcome' },
+    );
+    expect(o.extent).toEqual([
+      Date.parse('2026-06-01T00:00:00Z'),
+      Date.parse('2026-06-10T00:02:00Z'),
+    ]);
+  });
+
+  it('caps the view to maxSpanMs and starts at the most recent span', () => {
+    const week = 7 * 24 * 3600 * 1000;
+    const o = buildEchartsOption(
+      [
+        job({ id: 1, started_at: '2026-06-01T00:00:00Z', finished_at: '2026-06-01T00:01:00Z' }),
+        job({ id: 2, started_at: '2026-06-10T00:00:00Z', finished_at: '2026-06-10T00:01:00Z' }),
+      ],
+      { utc: true, colorBy: 'outcome', maxSpanMs: week },
+    );
+    const end = Date.parse('2026-06-10T00:01:00Z');
+    const inside = o.option.dataZoom[0] as Record<string, number>;
+    expect(inside['maxValueSpan']).toBe(week);
+    expect(inside['endValue']).toBe(end);
+    expect(inside['startValue']).toBe(end - week);
+  });
+
+  it('omits maxValueSpan / window bounds when maxSpanMs is not set', () => {
+    const inside = buildEchartsOption([job({})], { utc: true, colorBy: 'outcome' }).option
+      .dataZoom[0] as Record<string, unknown>;
+    expect(inside['maxValueSpan']).toBeUndefined();
+    expect(inside['startValue']).toBeUndefined();
+  });
 });

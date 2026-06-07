@@ -26,6 +26,10 @@ export interface JobsQuery {
   readonly outcome?: JobOutcome;
   /** Lookback window in hours; omitted = all time (for the timeline section). */
   readonly hours?: number;
+  /** ISO8601 lower bound (finished_at >= since); overrides `hours`. */
+  readonly since?: string;
+  /** ISO8601 upper bound (finished_at < before); for the timeline's lazy windows. */
+  readonly before?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -47,6 +51,12 @@ export class MetricsService {
     }
     if (query.hours != null) {
       params = params.set('hours', query.hours);
+    }
+    if (query.since) {
+      params = params.set('since', query.since);
+    }
+    if (query.before) {
+      params = params.set('before', query.before);
     }
     return this.http.get<RecentJob[]>(buildJobsUrl(), { params });
   }

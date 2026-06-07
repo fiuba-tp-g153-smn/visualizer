@@ -36,6 +36,7 @@ import type {
   RefreshSeconds,
   TenMinWindowHours,
   ThroughputBucket,
+  TimelineRange,
   TimelineWindowHours,
   TimingSeriesPoint,
   WindowHours,
@@ -53,8 +54,7 @@ import {
 } from '../../services/settings/timezone-settings.service';
 
 const JOBS_PAGE = 50;
-/** Tope de filas que sirve /api/jobs; la línea de tiempo pide hasta este máximo. */
-const TIMELINE_LIMIT = 1000;
+const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
 
 /**
  * Página del panel de rendimiento (ruta `/dashboard`). Es el único dueño del
@@ -130,11 +130,21 @@ export class DashboardComponent {
   readonly throughput = signal<readonly ThroughputBucket[]>([]);
   private readonly tp10 = signal<readonly ThroughputBucket[]>([]);
 
-  // Línea de tiempo de unidades: ventana propia y trabajos del rango.
-  readonly timelineWindowHours = signal<TimelineWindowHours>(24);
+  // Línea de tiempo de unidades. Rangos fijos (6h…7d) cargan todo el rango de una
+  // (`limit: 0`); 'all' es perezoso: arranca en la última semana y carga semanas
+  // anteriores al desplazarte, con la vista acotada a 7 días.
+  readonly timelineRange = signal<TimelineRange>(24);
   readonly timelineJobs = signal<readonly RecentJob[]>([]);
-  /** El backend topa en 1000 filas; avisa cuando el rango fue truncado. */
-  readonly timelineTruncated = computed<boolean>(() => this.timelineJobs().length >= TIMELINE_LIMIT);
+  /** Tope de la ventana visible en modo 'all' (7 días); null en rangos fijos. */
+  readonly timelineMaxSpanMs = computed<number | null>(() =>
+    this.timelineRange() === 'all' ? SEVEN_DAYS_MS : null,
+  );
+  /** Cambia en cada carga fresca (cambio de rango); el componente preserva la vista en appends. */
+  readonly timelineReloadKey = signal(0);
+  // Estado del modo perezoso 'all'.
+  private timelineOldestMs: number | null = null;
+  private timelineReachedStart = false;
+  private timelineLoadingOlder = false;
 
   readonly updatedAt = signal<string>('—');
   readonly errorMsg = signal<string | null>(null);
@@ -207,13 +217,59 @@ export class DashboardComponent {
   }
 
   onTimelineWindowChange(event: Event): void {
-    this.timelineWindowHours.set(this.numberValue(event) as TimelineWindowHours);
+    const value = this.stringValue(event);
+    this.timelineRange.set(value === 'all' ? 'all' : (Number(value) as TimelineWindowHours));
     void this.loadTimeline();
   }
 
   /** Click en una barra de la línea de tiempo: abre el detalle de ese trabajo. */
   onTimelineJobClick(job: RecentJob): void {
     this.dialog.open(JobDetailDialogComponent, { data: job, width: '560px', autoFocus: false });
+  }
+
+  /** Modo 'all': el componente pide datos más viejos al desplazarse al borde. */
+  async onTimelineLoadOlder(): Promise<void> {
+    if (
+      this.timelineRange() !== 'all' ||
+      this.timelineReachedStart ||
+      this.timelineLoadingOlder ||
+      this.timelineOldestMs == null
+    ) {
+      return;
+    }
+    this.timelineLoadingOlder = true;
+    try {
+      const oldest = this.timelineOldestMs;
+      const older = await firstValueFrom(
+        this.metrics.getJobs({
+          limit: 0,
+          offset: 0,
+          since: new Date(oldest - SEVEN_DAYS_MS).toISOString(),
+          before: new Date(oldest).toISOString(),
+        }),
+      );
+      if (!older.length) {
+        this.timelineReachedStart = true;
+        return;
+      }
+      // Merge sin duplicar (por id); el componente preserva la vista (mismo reloadKey).
+      const byId = new Map(this.timelineJobs().map((job) => [job.id, job]));
+      for (const job of older) {
+        byId.set(job.id, job);
+      }
+      const merged = [...byId.values()];
+      const newOldest = this.oldestFinishedMs(merged, oldest);
+      if (newOldest >= oldest) {
+        // El chunk no trajo nada más viejo que el borde (solo el límite ya cargado):
+        // llegamos al comienzo. Evita re-pedir el mismo tramo en bucle.
+        this.timelineReachedStart = true;
+        return;
+      }
+      this.timelineJobs.set(merged);
+      this.timelineOldestMs = newOldest;
+    } finally {
+      this.timelineLoadingOlder = false;
+    }
   }
 
   onOutcomeFilterChange(event: Event): void {
@@ -318,16 +374,38 @@ export class DashboardComponent {
     this.tp10.set(await firstValueFrom(this.metrics.getThroughput('10min', this.tpWindowHours())));
   }
 
+  // Carga "fresca" de la línea de tiempo (cambio de rango / inicial / refresco
+  // manual). Bumpea `timelineReloadKey` para que el componente reencuadre.
   private async loadTimeline(): Promise<void> {
-    this.timelineJobs.set(
-      await firstValueFrom(
-        this.metrics.getJobs({
-          limit: TIMELINE_LIMIT,
-          offset: 0,
-          hours: this.timelineWindowHours(),
-        }),
-      ),
-    );
+    const range = this.timelineRange();
+    this.timelineReachedStart = false;
+    this.timelineLoadingOlder = false;
+    if (range === 'all') {
+      const sinceMs = Date.now() - SEVEN_DAYS_MS;
+      const jobs = await firstValueFrom(
+        this.metrics.getJobs({ limit: 0, offset: 0, since: new Date(sinceMs).toISOString() }),
+      );
+      this.timelineJobs.set(jobs);
+      this.timelineOldestMs = this.oldestFinishedMs(jobs, sinceMs);
+    } else {
+      this.timelineOldestMs = null;
+      this.timelineJobs.set(
+        await firstValueFrom(this.metrics.getJobs({ limit: 0, offset: 0, hours: range })),
+      );
+    }
+    this.timelineReloadKey.update((key) => key + 1);
+  }
+
+  /** El finished_at más viejo (ms) de un conjunto; `fallback` si está vacío. */
+  private oldestFinishedMs(jobs: readonly RecentJob[], fallback: number): number {
+    let oldest = Infinity;
+    for (const job of jobs) {
+      const ms = Date.parse(job.finished_at);
+      if (ms < oldest) {
+        oldest = ms;
+      }
+    }
+    return Number.isFinite(oldest) ? oldest : fallback;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

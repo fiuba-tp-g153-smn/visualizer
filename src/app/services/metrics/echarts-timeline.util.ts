@@ -42,8 +42,8 @@ interface RenderParams {
  */
 export function buildEchartsOption(
   jobs: readonly RecentJob[],
-  opts: { utc: boolean; colorBy: TimelineColorBy },
-): { option: EchartsTimelineOption; lanes: number } {
+  opts: { utc: boolean; colorBy: TimelineColorBy; maxSpanMs?: number | null },
+): { option: EchartsTimelineOption; lanes: number; extent: [number, number] } {
   const { rows, lanes } = packIntoLanes(jobs);
   const typeColorFor = buildTypeColorMap(jobs.map((job) => job.job_type));
 
@@ -55,6 +55,27 @@ export function buildEchartsOption(
   }));
 
   const laneLabels = Array.from({ length: Math.max(lanes, 1) }, (_, i) => String(i + 1));
+
+  // Extensión temporal de los datos (min inicio / max fin), con reduce para no
+  // desbordar la pila al hacer spread sobre miles de filas.
+  let extentMin = Infinity;
+  let extentMax = -Infinity;
+  for (const row of rows) {
+    if (row.start < extentMin) extentMin = row.start;
+    if (row.end > extentMax) extentMax = row.end;
+  }
+  if (!rows.length) {
+    extentMin = 0;
+    extentMax = 0;
+  }
+
+  // Modo "todo": acota la ventana visible a `maxSpanMs` y arranca en el tramo
+  // más reciente; el componente carga semanas anteriores al desplazarte.
+  const maxSpan = opts.maxSpanMs ?? null;
+  const windowed = maxSpan != null && rows.length > 0;
+  const zoomBounds: Record<string, number> = windowed
+    ? { maxValueSpan: maxSpan, startValue: Math.max(extentMin, extentMax - maxSpan), endValue: extentMax }
+    : {};
 
   const renderItem = (params: RenderParams, api: RenderApi): unknown => {
     const lane = api.value(0);
@@ -72,6 +93,7 @@ export function buildEchartsOption(
 
   return {
     lanes,
+    extent: [extentMin, extentMax],
     option: {
       useUTC: opts.utc,
       animation: false,
@@ -89,6 +111,7 @@ export function buildEchartsOption(
       },
       dataZoom: [
         // Rueda hace zoom; el arrastre lo maneja el componente (banda → dataZoom).
+        // `zoomBounds` acota la ventana a `maxSpanMs` y la sitúa en el tramo reciente.
         {
           type: 'inside',
           xAxisIndex: 0,
@@ -98,8 +121,9 @@ export function buildEchartsOption(
           // El arrastre lo maneja el componente (banda de selección); sin cursor "mano".
           cursorGrab: false,
           cursorGrabbing: false,
+          ...zoomBounds,
         },
-        { type: 'slider', xAxisIndex: 0, filterMode: 'weakFilter', height: 18, bottom: 6 },
+        { type: 'slider', xAxisIndex: 0, filterMode: 'weakFilter', height: 18, bottom: 6, ...zoomBounds },
       ],
       tooltip: {
         trigger: 'item',
@@ -111,6 +135,10 @@ export function buildEchartsOption(
         {
           type: 'custom',
           clip: true,
+          // Render por lotes para que una semana completa (miles de barras) no
+          // bloquee el hilo principal.
+          progressive: 2000,
+          progressiveThreshold: 2000,
           encode: { x: [1, 2], y: 0 },
           data,
           renderItem,

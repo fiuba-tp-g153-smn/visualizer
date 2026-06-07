@@ -34,6 +34,9 @@ import {
 } from '../../../services/settings/timezone-settings.service';
 
 const DRAG_THRESHOLD_PX = 6;
+/** Cerca del borde izquierdo: si la ventana llega a <12 h del dato más viejo, pedir más. */
+const EDGE_MS = 12 * 3600 * 1000;
+const DATAZOOM_DEBOUNCE_MS = 200;
 type Range = [number, number];
 
 /**
@@ -149,7 +152,13 @@ type Range = [number, number];
 })
 export class JobTimelineEchartsComponent {
   readonly jobs = input.required<readonly RecentJob[]>();
+  /** Ancho máximo de la ventana visible (ms); null = sin tope (rangos fijos). */
+  readonly maxSpanMs = input<number | null>(null);
+  /** Cambia en cada carga "fresca" (cambio de rango); igual = sólo se agregaron datos. */
+  readonly reloadKey = input<number>(0);
   readonly jobClick = output<RecentJob>();
+  /** Se emite al desplazarse cerca del borde izquierdo (modo "todo"): cargar más viejo. */
+  readonly loadOlder = output<void>();
 
   private readonly timezone = inject(TimezoneSettingsService);
   private readonly chartEl = viewChild.required<ElementRef<HTMLElement>>('chart');
@@ -176,6 +185,12 @@ export class JobTimelineEchartsComponent {
   private dragWrapLeft = 0;
   private dragWidth = 0;
 
+  // Carga perezosa / preservación de la vista.
+  private extent: Range = [0, 0];
+  private viewWindow: Range | null = null;
+  private lastReloadKey = NaN;
+  private dzTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     afterNextRender(() => {
       const host = this.chartEl().nativeElement;
@@ -186,21 +201,27 @@ export class JobTimelineEchartsComponent {
           this.jobClick.emit(job);
         }
       });
+      this.chart.on('datazoom', this.onDataZoom);
       this.resizeObserver = new ResizeObserver(() => this.chart?.resize());
       this.resizeObserver.observe(host);
       this.render();
     });
 
-    // Re-render cuando cambian los datos, el color o la zona horaria.
+    // Re-render cuando cambian datos/color/zona/rango (reloadKey)/tope (maxSpanMs).
     effect(() => {
       this.jobs();
       this.colorBy();
       this.utc();
+      this.maxSpanMs();
+      this.reloadKey();
       this.render();
     });
 
     inject(DestroyRef).onDestroy(() => {
       this.detachDrag();
+      if (this.dzTimer) {
+        clearTimeout(this.dzTimer);
+      }
       this.resizeObserver?.disconnect();
       this.chart?.dispose();
     });
@@ -211,18 +232,72 @@ export class JobTimelineEchartsComponent {
     if (!chart) {
       return;
     }
-    this.resetZoomState(); // datos nuevos → rango completo, sin historial
+    // `reloadKey` cambia sólo en cargas frescas (cambio de rango); si es igual y
+    // crecieron los datos, es un "append" perezoso → preservar la ventana actual.
+    const fresh = this.reloadKey() !== this.lastReloadKey;
+    this.lastReloadKey = this.reloadKey();
     if (!this.hasData()) {
       chart.clear();
+      this.resetZoomState();
+      this.extent = [0, 0];
+      this.viewWindow = null;
       return;
     }
-    const { option, lanes } = buildEchartsOption(this.jobs(), {
+    const { option, lanes, extent } = buildEchartsOption(this.jobs(), {
       utc: this.utc(),
       colorBy: this.colorBy(),
+      maxSpanMs: this.maxSpanMs(),
     });
+    this.extent = extent;
     this.chartEl().nativeElement.style.height = `${Math.max(200, lanes * ROW_HEIGHT + 80)}px`;
     chart.resize();
     chart.setOption(option as unknown as Parameters<echarts.ECharts['setOption']>[0], true);
+    if (fresh) {
+      this.resetZoomState();
+      this.viewWindow = this.initialWindow();
+    } else if (this.viewWindow) {
+      // Se agregaron datos más viejos: mantené la ventana donde estaba el usuario
+      // (absoluta en ms, así no salta aunque la extensión crezca a la izquierda).
+      this.dispatchZoom(this.viewWindow);
+    }
+  }
+
+  /** Ventana inicial: el tramo más reciente (modo tope) o la extensión completa. */
+  private initialWindow(): Range | null {
+    const [min, max] = this.extent;
+    if (!(max > 0)) {
+      return null;
+    }
+    const span = this.maxSpanMs();
+    return span != null && max - min > span ? [max - span, max] : [min, max];
+  }
+
+  // Lee la ventana visible del evento (debounced) y, en modo tope, pide datos
+  // más viejos al acercarse al borde izquierdo.
+  private readonly onDataZoom = (): void => {
+    if (this.dzTimer) {
+      clearTimeout(this.dzTimer);
+    }
+    this.dzTimer = setTimeout(() => this.handleDataZoom(), DATAZOOM_DEBOUNCE_MS);
+  };
+
+  private handleDataZoom(): void {
+    const chart = this.chart;
+    if (!chart) {
+      return;
+    }
+    const opt = chart.getOption() as { dataZoom?: Array<{ start?: number; end?: number }> };
+    const dz = opt.dataZoom?.[0];
+    const [min, max] = this.extent;
+    const span = max - min;
+    if (!dz || span <= 0) {
+      return;
+    }
+    const startMs = min + ((dz.start ?? 0) / 100) * span;
+    this.viewWindow = [startMs, min + ((dz.end ?? 100) / 100) * span];
+    if (this.maxSpanMs() != null && startMs <= min + EDGE_MS) {
+      this.loadOlder.emit();
+    }
   }
 
   // ── Zoom por arrastre (banda → acción dataZoom) ───────────────────────────
@@ -284,6 +359,7 @@ export class JobTimelineEchartsComponent {
     this.history.push(this.currentRange);
     this.canBack.set(true);
     this.currentRange = range;
+    this.viewWindow = range;
     this.dispatchZoom(range);
   }
 
@@ -294,14 +370,24 @@ export class JobTimelineEchartsComponent {
     const prev = this.history.pop() ?? null;
     this.canBack.set(this.history.length > 0);
     this.currentRange = prev;
+    this.viewWindow = prev ?? this.initialWindow();
     this.dispatchZoom(prev);
   }
 
   zoomAll(): void {
     this.history = [];
-    this.currentRange = null;
     this.canBack.set(false);
-    this.dispatchZoom(null);
+    // Con tope: "ver todo" = el tramo más reciente (máximo zoom-out permitido).
+    if (this.maxSpanMs() != null) {
+      const w = this.initialWindow();
+      this.currentRange = w;
+      this.viewWindow = w;
+      this.dispatchZoom(w);
+    } else {
+      this.currentRange = null;
+      this.viewWindow = this.initialWindow();
+      this.dispatchZoom(null);
+    }
   }
 
   private dispatchZoom(range: Range | null): void {
