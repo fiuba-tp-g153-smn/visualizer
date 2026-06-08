@@ -21,8 +21,8 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CdkDragHandle } from '@angular/cdk/drag-drop';
+import { LoadingSpinnerComponent } from '../../../../shared/loading-spinner/loading-spinner';
 import {
   BarbTileRender,
   EcmwfTpLayerControls,
@@ -48,7 +48,7 @@ import {
   formatDateFull,
   formatDateTimeOnly,
   parseEcmwfTimestamp,
-  formatWrfInitTag,
+  parseWrfInitTag,
 } from '../../../../../utils/tileset-timestamp';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
@@ -94,8 +94,8 @@ function isBarbTileRender(
     MatRadioModule,
     MatSelectModule,
     MatFormFieldModule,
-    MatProgressSpinnerModule,
     CdkDragHandle,
+    LoadingSpinnerComponent,
   ],
   templateUrl: './layer-item.html',
   styleUrl: './layer-item.scss',
@@ -753,26 +753,23 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return formatDateTimeOnly(tilesets[timeIndex].time);
   }
 
-  /**
-   * Formats an ECMWF forecast run timestamp as "HH:MM" for the selector label.
-   */
+  /** Forecast run timestamp (ECMWF or WRF) as "HH:MM", for the selector label. */
   formatForecastTime(forecastTs: string): string {
-    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
-      return formatWrfInitTag(forecastTs);
-    }
-    const date = parseEcmwfTimestamp(forecastTs);
+    const date = this.parseForecastTimestamp(forecastTs);
     return date ? formatDateTimeOnly(date) : forecastTs;
   }
 
-  /**
-   * Formats an ECMWF forecast run timestamp as "YYYY-MM-DD HH:MM" for its tooltip.
-   */
+  /** Forecast run timestamp (ECMWF or WRF) as "YYYY-MM-DD HH:MM", for its tooltip. */
   formatForecastFull(forecastTs: string): string {
-    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
-      return formatWrfInitTag(forecastTs);
-    }
-    const date = parseEcmwfTimestamp(forecastTs);
+    const date = this.parseForecastTimestamp(forecastTs);
     return date ? formatDateFull(date) : forecastTs;
+  }
+
+  private parseForecastTimestamp(forecastTs: string): Date | null {
+    if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
+      return parseWrfInitTag(forecastTs);
+    }
+    return parseEcmwfTimestamp(forecastTs);
   }
 
   forecastControlGroups = computed((): ForecastControlGroup[] => {
@@ -946,14 +943,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         renderId,
         nextVisible,
       );
-    }
-
-    if (!nextVisible && this.isForecastSelected(forecastTs)) {
-      const allRenderIds = [PRIMARY_RENDER_ID, ...this.getForecastRenders().map((r) => r.id)];
-      const allHidden = allRenderIds.every((id) => !this.getForecastRenderVisible(forecastTs, id));
-      if (allHidden) {
-        this.onForecastToggle(forecastTs);
-      }
     }
   }
 

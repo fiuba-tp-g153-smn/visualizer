@@ -54,6 +54,26 @@
     .layer-checkbox,
     .layer-radio {
       flex: 1;
+      min-width: 0;
+
+      .layer-option-name {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      ::ng-deep {
+        .mat-internal-form-field {
+          display: flex;
+          width: 100%;
+        }
+        .mdc-label {
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
+        }
+      }
     }
   }
 
@@ -128,7 +148,7 @@
 
         .elevation-checkbox {
           ::ng-deep {
-            .mdc-form-field {
+            .mat-internal-form-field {
               font-size: 0.875rem;
             }
           }
@@ -155,12 +175,27 @@
         gap: 8px;
 
         .elevation-item-checkbox {
-          min-width: 60px;
-          flex-shrink: 0;
+          flex: 0 1 auto;
+          max-width: 80px;
+          min-width: 0;
+
+          .elevation-name {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
 
           ::ng-deep {
-            .mdc-form-field {
+            .mat-internal-form-field {
+              display: flex;
+              width: 100%;
               font-size: 0.875rem;
+            }
+            .mdc-label {
+              flex: 1;
+              min-width: 0;
+              overflow: hidden;
             }
           }
         }
@@ -220,7 +255,7 @@
 
         .forecast-checkbox {
           ::ng-deep {
-            .mdc-form-field {
+            .mat-internal-form-field {
               font-size: 0.875rem;
             }
           }
@@ -252,7 +287,9 @@
         gap: 8px;
 
         .forecast-run-checkbox {
-          flex: 0 0 130px;
+          flex: 0 1 auto;
+          max-width: 130px;
+          min-width: 0;
 
           .forecast-ts {
             display: block;
@@ -262,7 +299,7 @@
           }
 
           ::ng-deep {
-            .mdc-form-field {
+            .mat-internal-form-field {
               font-size: 0.875rem;
               display: flex;
               width: 100%;
@@ -317,7 +354,9 @@
           gap: 8px;
 
           .forecast-render-checkbox {
-            flex: 0 0 130px;
+            flex: 0 1 auto;
+            max-width: 130px;
+            min-width: 0;
 
             .forecast-render-name {
               display: block;
@@ -327,7 +366,7 @@
             }
 
             ::ng-deep {
-              .mdc-form-field {
+              .mat-internal-form-field {
                 font-size: 0.875rem;
                 display: flex;
                 width: 100%;
@@ -530,8 +569,7 @@
           &:hover {
             color: var(--mat-sys-primary);
           }
-          mat-progress-spinner {
-            display: inline-block;
+          app-loading-spinner {
             margin: 0 auto;
           }
         }
