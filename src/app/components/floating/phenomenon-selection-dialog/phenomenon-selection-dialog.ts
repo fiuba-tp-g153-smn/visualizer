@@ -4,8 +4,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner';
 import { AlertsService } from '../../../services/polygons/alerts.service';
 import { Phenomenon } from '../../../models/phenomenon.model';
 import { PHENOMENON_CODES } from '../../../constants';
@@ -19,8 +19,8 @@ import { PHENOMENON_CODES } from '../../../constants';
     MatDialogModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatProgressSpinnerModule,
     MatIconModule,
+    LoadingSpinnerComponent,
   ],
   templateUrl: './phenomenon-selection-dialog.html',
   styleUrl: './phenomenon-selection-dialog.scss',

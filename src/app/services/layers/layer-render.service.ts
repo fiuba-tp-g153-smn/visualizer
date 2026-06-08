@@ -1535,17 +1535,46 @@ export class LayerRenderService {
     return wmsLayer;
   }
 
+  /**
+   * Creates an IGN WMS layer as the primary source for layers that are also
+   * pre-scraped and cached by the data-service.
+   *
+   * Primary: `wms.ign.gob.ar` (direct WMS, no proxy hop).
+   * Fallback: `data.mapasmn.com/basemap/{id}/{z}/{x}/{y}.png` (XYZ, via the
+   * data-service cache chain: Redis → S3 → WMS relay).
+   *
+   * On `tileerror` the failed tile's `src` is replaced with the data-service
+   * URL built from `e.coords` (XYZ, pre-WMS-BBOX, the same convention the
+   * data-service endpoint expects). `dataset.fallbackUsed` guards against loops.
+   */
   private createIgnCachedTileLayer(layer: WmsLayer, controls: WmsLayerControls): L.TileLayer {
-    const tileUrl = buildBasemapTileUrl(layer.id);
-    const tileLayer = L.tileLayer(tileUrl, {
-      minZoom: MAP_CONFIG.minZoom,
-      maxZoom: MAP_CONFIG.maxZoom,
-      noWrap: false,
+    const url = layer.wmsWorkspace
+      ? IGN_WMS_WORKSPACE_URLS[layer.wmsWorkspace] || IGN_WMS_BASE_CONFIG.defaultUrl
+      : IGN_WMS_BASE_CONFIG.defaultUrl;
+
+    const wmsLayer = L.tileLayer.wms(url, {
+      layers: layer.wmsLayerName,
+      format: IGN_WMS_BASE_CONFIG.format,
+      transparent: IGN_WMS_BASE_CONFIG.transparent,
+      version: IGN_WMS_BASE_CONFIG.version,
+      crs: L.CRS.EPSG3857,
       opacity: controls.opacity,
-      attribution: IGN_WMS_BASE_CONFIG.attribution,
     });
-    this.attachErrorHandlers(tileLayer, layer.id);
-    return tileLayer;
+
+    const fallbackUrlTemplate = buildBasemapTileUrl(layer.id);
+    wmsLayer.on('tileerror', (e: L.TileErrorEvent) => {
+      const tile = e.tile as HTMLImageElement;
+      if (tile.dataset['fallbackUsed']) return;
+      tile.dataset['fallbackUsed'] = '1';
+      const { x, y, z } = e.coords;
+      tile.src = fallbackUrlTemplate
+        .replace('{z}', String(z))
+        .replace('{x}', String(x))
+        .replace('{y}', String(y));
+    });
+
+    this.attachErrorHandlers(wmsLayer, layer.id);
+    return wmsLayer;
   }
 
   // ============================================================================

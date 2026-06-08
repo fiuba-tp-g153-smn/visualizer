@@ -14,7 +14,7 @@
       [class.disabled]="isLoadingDepartments"
     >
       @if (isLoadingDepartments) {
-        <mat-icon matListItemIcon class="spinning">sync</mat-icon>
+        <mat-icon matListItemIcon class="spinning">autorenew</mat-icon>
       } @else {
         <mat-icon matListItemIcon>map</mat-icon>
       }
@@ -42,7 +42,7 @@
       [class.disabled]="isLoadingCut || hasAlerts"
     >
       @if (isLoadingCut) {
-        <mat-icon matListItemIcon class="spinning">sync</mat-icon>
+        <mat-icon matListItemIcon class="spinning">autorenew</mat-icon>
       } @else {
         <mat-icon matListItemIcon>content_cut</mat-icon>
       }

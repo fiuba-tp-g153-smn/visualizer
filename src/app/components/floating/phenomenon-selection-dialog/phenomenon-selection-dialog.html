@@ -2,7 +2,7 @@
 <mat-dialog-content>
   @if (loading()) {
     <div class="loading-container">
-      <mat-spinner diameter="50"></mat-spinner>
+      <app-loading-spinner [diameter]="50" />
       <p>Cargando fenómenos meteorológicos...</p>
     </div>
   } @else {

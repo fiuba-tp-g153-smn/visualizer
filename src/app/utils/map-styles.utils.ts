@@ -1,8 +1,8 @@
-import * as L from 'leaflet';
+import { PathOptions, PolylineOptions } from 'leaflet';
 import { POLYGON_STYLE, LINE_GUIDE_STYLE, DEPARTMENT_STYLE } from '../config/map-polygons.config';
 import { POLYGON_COLOR } from '../config/polygon.config';
 
-export const POLYGON_OPTIONS: L.PolylineOptions = {
+export const POLYGON_OPTIONS: PolylineOptions = {
   className: 'map-polygon',
   color: POLYGON_COLOR,
   weight: POLYGON_STYLE.WEIGHT,
@@ -11,14 +11,14 @@ export const POLYGON_OPTIONS: L.PolylineOptions = {
   fillOpacity: POLYGON_STYLE.FILL_OPACITY,
 };
 
-export const LINE_GUIDE_OPTIONS: L.PolylineOptions = {
+export const LINE_GUIDE_OPTIONS: PolylineOptions = {
   color: POLYGON_COLOR,
   weight: LINE_GUIDE_STYLE.WEIGHT,
   opacity: LINE_GUIDE_STYLE.OPACITY,
   dashArray: LINE_GUIDE_STYLE.DASH_ARRAY,
 };
 
-export function createDepartmentStyle(color: string): L.PathOptions {
+export function createDepartmentStyle(color: string): PathOptions {
   return {
     color,
     weight: DEPARTMENT_STYLE.WEIGHT,

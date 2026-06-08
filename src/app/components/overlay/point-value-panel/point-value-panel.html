@@ -9,7 +9,7 @@
     <span class="layer-name" [matTooltip]="layerName">{{ layerName }}</span>
 
     @if (isLoading) {
-      <mat-progress-spinner diameter="14" mode="indeterminate"></mat-progress-spinner>
+      <app-loading-spinner [diameter]="14" />
     } @else if (valueData) {
       <span class="value" [matTooltip]="valueTooltip">{{ formattedValue }}</span>
       <span class="unit">{{ displayUnit }}</span>

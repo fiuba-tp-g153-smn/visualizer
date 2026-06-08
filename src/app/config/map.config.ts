@@ -1,16 +1,32 @@
+import { LatLngBoundsLiteral } from 'leaflet';
+
+const CENTER_LATITUDE = -40;
+const CENTER_LONGITUDE = -59;
+
+/** Web Mercator's projectable limit — past this lies empty space beyond Antarctica/the North Pole. */
+const MAX_PANNABLE_LATITUDE = 85;
+
+/** Two world-copies on each side of CENTER_LONGITUDE, so the wrap seam stays out in the Pacific. */
+const PANNABLE_LONGITUDE_RADIUS = 2 * 360;
+
 /**
  * Configuración inicial del mapa
  */
 export const MAP_CONFIG = {
-  // Centro y zoom inicial
   initialCenter: {
-    lat: -40,
-    lng: -59,
+    lat: CENTER_LATITUDE,
+    lng: CENTER_LONGITUDE,
   } as const,
 
   initialZoom: 4,
   minZoom: 2,
   maxZoom: 18,
+
+  maxBounds: [
+    [-MAX_PANNABLE_LATITUDE, CENTER_LONGITUDE - PANNABLE_LONGITUDE_RADIUS],
+    [MAX_PANNABLE_LATITUDE, CENTER_LONGITUDE + PANNABLE_LONGITUDE_RADIUS],
+  ] as LatLngBoundsLiteral,
+  maxBoundsViscosity: 1.0,
 
   // Default base map ID
   defaultBaseMapId: 'argenmap',

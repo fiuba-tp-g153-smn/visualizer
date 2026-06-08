@@ -45,7 +45,7 @@
   <section class="ws-history__body">
     @if (loading()) {
       <div class="ws-history__state">
-        <mat-spinner diameter="40"></mat-spinner>
+        <app-loading-spinner [diameter]="40" />
         <span>Cargando histórico…</span>
       </div>
     } @else if (error()) {

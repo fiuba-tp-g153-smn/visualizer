@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 import {
@@ -12,6 +11,7 @@ import {
   WeatherStationHistoryChartsData,
 } from './weather-station-history-charts.component';
 import { WeatherStationsHistoryService } from '../../../services/layers/weather-stations-history.service';
+import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner';
 import type { StationSeries } from '../../../models/geo/weather-station-series.model';
 
 function pt(t: string, temperature: number): StationSeries['points'][number] {
@@ -56,7 +56,7 @@ function configure(
   });
   TestBed.overrideComponent(WeatherStationHistoryChartsComponent, {
     set: {
-      imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+      imports: [CommonModule, MatButtonModule, MatIconModule, LoadingSpinnerComponent],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     },
   });

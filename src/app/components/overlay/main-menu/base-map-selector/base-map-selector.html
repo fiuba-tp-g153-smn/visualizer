@@ -2,7 +2,7 @@
   @switch (loadState()) {
     @case ('loading') {
       <div class="base-map-status">
-        <mat-spinner diameter="32"></mat-spinner>
+        <app-loading-spinner [diameter]="32" />
         <span>Cargando mapas base…</span>
       </div>
     }

@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner';
 import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
 
 import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '../../../models';
@@ -16,7 +16,7 @@ import { impliedMinFractionDigits } from '../../../utils/number-format.utils';
 @Component({
   selector: 'app-point-value-panel',
   standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule, MatTooltipModule, PanelCloseButtonComponent],
+  imports: [CommonModule, LoadingSpinnerComponent, MatTooltipModule, PanelCloseButtonComponent],
   templateUrl: './point-value-panel.html',
   styleUrl: './point-value-panel.scss',
 })

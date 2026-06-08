@@ -35,4 +35,16 @@ export interface BaseMap {
   previewX: number;
   /** Preview Y coordinate for the selector thumbnail */
   previewY: number;
+  /**
+   * Direct upstream URL template (e.g. IGN, ArcGIS, Google) used as the primary
+   * Leaflet tile source. `null` for providers without a known direct endpoint
+   * (WMS-only). When non-null, the data-service URL (`url`) is used as fallback.
+   */
+  directUrl: string | null;
+  /**
+   * True when `directUrl` uses TMS Y convention (Y=0 at bottom).
+   * Pass `tms: true` to `L.tileLayer` when using this source directly so
+   * Leaflet flips Y before substituting the template.
+   */
+  isTms: boolean;
 }

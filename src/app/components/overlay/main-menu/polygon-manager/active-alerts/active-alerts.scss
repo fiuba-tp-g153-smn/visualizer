@@ -28,8 +28,7 @@
       color: var(--mat-sys-primary);
     }
 
-    mat-progress-spinner {
-      display: inline-block;
+    app-loading-spinner {
       margin: 0 auto;
     }
   }

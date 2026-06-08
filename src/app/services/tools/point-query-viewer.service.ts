@@ -55,7 +55,7 @@ import { buildWrfPointQueryUrl, buildWrfSecondaryPointQueryUrl } from '../../con
 import {
   formatDateFull,
   parseEcmwfTimestamp,
-  formatWrfInitTag,
+  parseWrfInitTag,
   wrfFxxxForInitAndTime,
 } from '../../utils/tileset-timestamp';
 
@@ -254,7 +254,8 @@ export class PointQueryViewerService {
         const baseName = this.layersService.getLayerFullName(wrfLayer);
 
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
-          const forecastLabel = formatWrfInitTag(forecastTs);
+          const forecastDate = parseWrfInitTag(forecastTs);
+          const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
 
           const items: DisplaySourceItem[] = [];

@@ -1,0 +1,21 @@
+:host {
+  display: inline-flex;
+}
+
+.loading-spinner {
+  display: inline-block;
+  border-style: solid;
+  border-color: var(--mat-sys-surface-container-highest);
+  border-top-color: var(--mat-sys-primary);
+  border-radius: 50%;
+  animation: loading-spinner-rotate 1s linear infinite;
+}
+
+@keyframes loading-spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,5 +1,18 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
-import * as L from 'leaflet';
+import {
+  Control,
+  LatLngExpression,
+  LayerGroup,
+  LeafletMouseEvent,
+  Map as LeafletMap,
+  Marker,
+  Polyline,
+  PolylineOptions,
+  divIcon,
+  layerGroup,
+  marker,
+  polyline,
+} from 'leaflet';
 import { MAP_CONFIG } from '../../config';
 import { STORAGE_KEYS } from '../../constants';
 
@@ -43,7 +56,7 @@ const GRATICULE_LONGITUDES = [
 ];
 
 // Use theme-aligned colors (primary: #0090d0, secondary: #fcbf49, tertiary: #242c4f)
-const CROSSHAIR_STYLE: L.PolylineOptions = {
+const CROSSHAIR_STYLE: PolylineOptions = {
   color: '#0090d0', // primary
   weight: 1,
   opacity: 0.6,
@@ -51,7 +64,7 @@ const CROSSHAIR_STYLE: L.PolylineOptions = {
   interactive: false,
 };
 
-const GRATICULE_STYLE: L.PolylineOptions = {
+const GRATICULE_STYLE: PolylineOptions = {
   color: '#73777c', // neutral-50
   weight: 1,
   opacity: 0.4,
@@ -59,14 +72,14 @@ const GRATICULE_STYLE: L.PolylineOptions = {
   interactive: false,
 };
 
-const GRATICULE_SPECIAL_STYLE: L.PolylineOptions = {
+const GRATICULE_SPECIAL_STYLE: PolylineOptions = {
   color: '#555c82', // tertiary-40
   weight: 1,
   opacity: 0.5,
   interactive: false,
 };
 
-const QUERY_MARKER_ICON = L.divIcon({
+const QUERY_MARKER_ICON = divIcon({
   className: 'query-marker',
   iconSize: [20, 20],
   iconAnchor: [10, 10],
@@ -90,7 +103,7 @@ const QUERY_MARKER_ICON = L.divIcon({
   providedIn: 'root',
 })
 export class MapInfoService {
-  private map: L.Map | null = null;
+  private map: LeafletMap | null = null;
 
   // Zoom state
   readonly currentZoom = signal<number>(MAP_CONFIG.initialZoom);
@@ -125,13 +138,13 @@ export class MapInfoService {
   readonly isZooming = signal<boolean>(false);
 
   // Overlay layers (managed internally)
-  private latitudeLine: L.Polyline | null = null;
-  private longitudeLine: L.Polyline | null = null;
-  private graticuleGroup: L.LayerGroup | null = null;
-  private queryMarker: L.Marker | null = null;
+  private latitudeLine: Polyline | null = null;
+  private longitudeLine: Polyline | null = null;
+  private graticuleGroup: LayerGroup | null = null;
+  private queryMarker: Marker | null = null;
 
   // Event handlers
-  private mouseMoveHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
+  private mouseMoveHandler: ((e: LeafletMouseEvent) => void) | null = null;
   private mouseOutHandler: (() => void) | null = null;
   private zoomStartHandler: (() => void) | null = null;
   private zoomEndHandler: (() => void) | null = null;
@@ -198,7 +211,7 @@ export class MapInfoService {
     }
   }
 
-  initialize(map: L.Map): void {
+  initialize(map: LeafletMap): void {
     this.map = map;
     this.currentZoom.set(Math.round(map.getZoom()));
     this.mapCenterLat.set(map.getCenter().lat);
@@ -228,7 +241,7 @@ export class MapInfoService {
     if (!this.map) return;
 
     // Mouse move for coordinates
-    this.mouseMoveHandler = (e: L.LeafletMouseEvent) => {
+    this.mouseMoveHandler = (e: LeafletMouseEvent) => {
       this.mouseLatitude.set(e.latlng.lat);
       this.mouseLongitude.set(e.latlng.lng);
     };
@@ -416,25 +429,25 @@ export class MapInfoService {
 
     if (show && lat !== null && lng !== null) {
       // Latitude line (horizontal)
-      const latCoords: L.LatLngExpression[] = [
+      const latCoords: LatLngExpression[] = [
         [lat, -180],
         [lat, 180],
       ];
       if (this.latitudeLine) {
         this.latitudeLine.setLatLngs(latCoords);
       } else {
-        this.latitudeLine = L.polyline(latCoords, CROSSHAIR_STYLE).addTo(this.map);
+        this.latitudeLine = polyline(latCoords, CROSSHAIR_STYLE).addTo(this.map);
       }
 
       // Longitude line (vertical)
-      const lngCoords: L.LatLngExpression[] = [
+      const lngCoords: LatLngExpression[] = [
         [-90, lng],
         [90, lng],
       ];
       if (this.longitudeLine) {
         this.longitudeLine.setLatLngs(lngCoords);
       } else {
-        this.longitudeLine = L.polyline(lngCoords, CROSSHAIR_STYLE).addTo(this.map);
+        this.longitudeLine = polyline(lngCoords, CROSSHAIR_STYLE).addTo(this.map);
       }
     } else {
       this.removeCrosshair();
@@ -457,7 +470,7 @@ export class MapInfoService {
 
     if (show) {
       if (!this.graticuleGroup) {
-        this.graticuleGroup = L.layerGroup().addTo(this.map);
+        this.graticuleGroup = layerGroup().addTo(this.map);
         this.createGraticuleLines();
       }
     } else {
@@ -472,7 +485,7 @@ export class MapInfoService {
     for (const { lat, label } of GRATICULE_LATITUDES) {
       const isSpecial = lat === 0; // Ecuador
       const style = isSpecial ? GRATICULE_SPECIAL_STYLE : GRATICULE_STYLE;
-      const line = L.polyline(
+      const line = polyline(
         [
           [lat, -180],
           [lat, 180],
@@ -487,7 +500,7 @@ export class MapInfoService {
     for (const { lng, label } of GRATICULE_LONGITUDES) {
       const isSpecial = lng === 0; // Greenwich
       const style = isSpecial ? GRATICULE_SPECIAL_STYLE : GRATICULE_STYLE;
-      const line = L.polyline(
+      const line = polyline(
         [
           [-90, lng],
           [90, lng],
@@ -511,11 +524,11 @@ export class MapInfoService {
     if (!this.map) return;
 
     if (position) {
-      const latLng: L.LatLngExpression = [position.lat, position.lon];
+      const latLng: LatLngExpression = [position.lat, position.lon];
       if (this.queryMarker) {
         this.queryMarker.setLatLng(latLng);
       } else {
-        this.queryMarker = L.marker(latLng, {
+        this.queryMarker = marker(latLng, {
           icon: QUERY_MARKER_ICON,
           interactive: false,
         }).addTo(this.map);

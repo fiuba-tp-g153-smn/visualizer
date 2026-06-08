@@ -3,8 +3,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner';
 
 import { StationSeries } from '../../../models/geo/weather-station-series.model';
 import { WeatherStationsHistoryService } from '../../../services/layers/weather-stations-history.service';
@@ -41,8 +41,8 @@ enum DetailSection {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule,
     NgApexchartsModule,
+    LoadingSpinnerComponent,
   ],
   templateUrl: './weather-station-history-charts.component.html',
   styleUrl: './weather-station-history-charts.component.scss',

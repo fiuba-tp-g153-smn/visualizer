@@ -15,7 +15,7 @@
           class="layer-radio"
           [matTooltip]="layer.description || 'Sin descripción'"
         >
-          {{ layerShortName() }}
+          <span class="layer-option-name">{{ layerShortName() }}</span>
         </mat-radio-button>
       } @else {
         <mat-checkbox
@@ -25,7 +25,7 @@
           class="layer-checkbox"
           [matTooltip]="layer.description || 'Sin descripción'"
         >
-          {{ layerShortName() }}
+          <span class="layer-option-name">{{ layerShortName() }}</span>
         </mat-checkbox>
       }
       <div class="header-actions">
@@ -159,9 +159,10 @@
                   <mat-checkbox
                     [checked]="isElevationSelected(elevation.id)"
                     (change)="onElevationToggle(elevation.id)"
+                    [matTooltip]="elevation.name"
                     class="elevation-item-checkbox"
                   >
-                    {{ elevation.name }}
+                    <span class="elevation-name">{{ elevation.name }}</span>
                   </mat-checkbox>
                   <mat-slider
                     min="0"
@@ -252,22 +253,20 @@
                         ? getForecastOpacityPercent(group.forecastTs) + '%'
                         : '-'
                     }}</span>
-                    @if (group.secondaryRenders.length > 0) {
-                      <button
-                        mat-icon-button
-                        (click)="toggleForecastRunExpansion(group.forecastTs)"
-                        [matTooltip]="
-                          isForecastRunExpanded(group.forecastTs)
-                            ? 'Contraer capas'
-                            : 'Expandir capas'
-                        "
-                        class="expand-btn"
-                      >
-                        <mat-icon>{{
-                          isForecastRunExpanded(group.forecastTs) ? 'expand_less' : 'expand_more'
-                        }}</mat-icon>
-                      </button>
-                    }
+                    <button
+                      mat-icon-button
+                      (click)="toggleForecastRunExpansion(group.forecastTs)"
+                      [matTooltip]="
+                        isForecastRunExpanded(group.forecastTs)
+                          ? 'Contraer capas'
+                          : 'Expandir capas'
+                      "
+                      class="expand-btn"
+                    >
+                      <mat-icon>{{
+                        isForecastRunExpanded(group.forecastTs) ? 'expand_less' : 'expand_more'
+                      }}</mat-icon>
+                    </button>
                   </div>
 
                   @if (isForecastRunExpanded(group.forecastTs)) {
@@ -465,7 +464,7 @@
                   class="reload-btn"
                 >
                   @if (isLoadingConfig()) {
-                    <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+                    <app-loading-spinner [diameter]="18" />
                   } @else {
                     <mat-icon>refresh</mat-icon>
                   }
