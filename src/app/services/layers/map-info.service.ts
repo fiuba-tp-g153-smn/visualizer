@@ -1,18 +1,23 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import {
   Control,
+  DomEvent,
+  GeoJSON as GeoJsonLayer,
   LatLngExpression,
   LayerGroup,
   LeafletMouseEvent,
   Map as LeafletMap,
   Marker,
+  PathOptions,
   Polyline,
   PolylineOptions,
   divIcon,
+  geoJSON,
   layerGroup,
   marker,
   polyline,
 } from 'leaflet';
+import type { Geometry } from 'geojson';
 import { MAP_CONFIG } from '../../config';
 import { STORAGE_KEYS } from '../../constants';
 
@@ -99,6 +104,44 @@ const QUERY_MARKER_ICON = divIcon({
   </svg>`,
 });
 
+/** A flat, centered badge — matches the circular language of the weather-station markers. */
+const SEARCH_MARKER_ICON = divIcon({
+  className: 'search-result-marker',
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  html: `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="search-marker-shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.35"/>
+      </filter>
+    </defs>
+    <g filter="url(#search-marker-shadow)">
+      <circle cx="16" cy="16" r="11" fill="var(--mat-sys-primary)" stroke="white" stroke-width="3"/>
+      <circle cx="16" cy="16" r="3.5" fill="white" />
+    </g>
+  </svg>`,
+});
+
+/** Themed like `SEARCH_MARKER_ICON`, so every "search result" cue stays visually consistent. */
+const SEARCH_RESULT_POLYGON_STYLE: PathOptions = {
+  color: 'var(--mat-sys-primary)',
+  weight: 2,
+  fillColor: 'var(--mat-sys-primary)',
+  fillOpacity: 0.12,
+};
+
+/** Caps how far a polygon fly-to zooms in, so small boundaries don't feel jarring. */
+const SEARCH_POLYGON_FIT_MAX_ZOOM = 12;
+
+type SearchResult =
+  | { readonly kind: 'marker'; readonly lat: number; readonly lon: number; readonly label: string }
+  | {
+      readonly kind: 'polygon';
+      readonly geometry: Geometry;
+      readonly label: string;
+      readonly animate: boolean;
+    };
+
 @Injectable({
   providedIn: 'root',
 })
@@ -137,11 +180,16 @@ export class MapInfoService {
   readonly queryMarkerScreenPosition = signal<{ x: number; y: number } | null>(null);
   readonly isZooming = signal<boolean>(false);
 
+  readonly searchResult = signal<SearchResult | null>(null);
+  readonly searchResultContextMenu = signal<{ x: number; y: number } | null>(null);
+
   // Overlay layers (managed internally)
   private latitudeLine: Polyline | null = null;
   private longitudeLine: Polyline | null = null;
   private graticuleGroup: LayerGroup | null = null;
   private queryMarker: Marker | null = null;
+  private searchMarker: Marker | null = null;
+  private searchPolygon: GeoJsonLayer | null = null;
 
   // Event handlers
   private mouseMoveHandler: ((e: LeafletMouseEvent) => void) | null = null;
@@ -175,6 +223,12 @@ export class MapInfoService {
       const position = this.queryMarkerPosition();
       this.updateQueryMarker(position);
       this.updateQueryMarkerScreenPosition(position);
+    });
+
+    // Effect: update place-search result overlay (marker or polygon)
+    effect(() => {
+      const result = this.searchResult();
+      this.updateSearchResult(result);
     });
   }
 
@@ -410,15 +464,54 @@ export class MapInfoService {
     this.setCurrentZoom(this.currentZoom() - 1);
   }
 
+  /**
+   * Moves the map to the given coordinates, optionally adjusting zoom.
+   * Animation is opt-in: an in-flight `flyTo` gets cancelled (and can silently
+   * no-op) when another view change — e.g. a quick double click — interrupts
+   * it, which feels broken for a search "go to result" action.
+   */
+  flyTo(lat: number, lon: number, zoom?: number, animate = false): void {
+    if (!this.map) return;
+
+    // Recompute the container size first: right after load (or while a panel's
+    // open/close transition is still settling) Leaflet's cached size can be stale,
+    // which throws off the very first programmatic move.
+    this.map.invalidateSize();
+
+    const targetZoom = zoom ?? Math.max(this.map.getZoom(), MAP_CONFIG.initialZoom);
+    if (animate) {
+      this.map.flyTo([lat, lon], targetZoom);
+    } else {
+      this.map.setView([lat, lon], targetZoom, { animate: false });
+    }
+    this.setCurrentZoom(Math.round(targetZoom));
+  }
+
   destroy(): void {
     this.removeEventListeners();
     this.removeCrosshair();
     this.removeGraticule();
     this.removeQueryMarker();
+    this.removeSearchResult();
     this.map = null;
   }
 
   // ── Overlay Management ─────────────────────────────────────────────────────
+
+  /** Drops a pin marking a point place-search result, replacing any prior marker/polygon. */
+  setSearchResultMarker(lat: number, lon: number, label: string): void {
+    this.searchResult.set({ kind: 'marker', lat, lon, label });
+  }
+
+  /** Outlines an area place-search result, replacing any prior marker/polygon. */
+  setSearchResultPolygon(geometry: Geometry, label: string, animate = false): void {
+    this.searchResult.set({ kind: 'polygon', geometry, label, animate });
+  }
+
+  /** Removes the place-search marker/polygon shown on the map, if any. */
+  clearSearchResult(): void {
+    this.searchResult.set(null);
+  }
 
   setQueryMarkerPosition(position: { lat: number; lon: number } | null): void {
     this.queryMarkerPosition.set(position);
@@ -555,5 +648,98 @@ export class MapInfoService {
     }
 
     this.queryMarkerScreenPosition.set(null);
+  }
+
+  private updateSearchResult(result: SearchResult | null): void {
+    if (!this.map) return;
+
+    this.removeSearchResult();
+    if (!result) return;
+
+    if (result.kind === 'marker') {
+      this.showSearchMarker(result.lat, result.lon, result.label);
+    } else {
+      this.showSearchPolygon(result.geometry, result.label, result.animate);
+    }
+  }
+
+  private showSearchMarker(lat: number, lon: number, label: string): void {
+    if (!this.map) return;
+
+    const latLng: LatLngExpression = [lat, lon];
+    this.searchMarker = marker(latLng, { icon: SEARCH_MARKER_ICON, interactive: true })
+      .bindTooltip(label, { direction: 'top', offset: [0, -16] })
+      .addTo(this.map);
+
+    this.bindClearOnContextMenu(this.searchMarker);
+  }
+
+  private showSearchPolygon(geometry: Geometry, label: string, animate: boolean): void {
+    const map = this.map;
+    if (!map) return;
+
+    const layer = geoJSON(geometry, { style: () => SEARCH_RESULT_POLYGON_STYLE }).bindTooltip(
+      label,
+      { direction: 'top', sticky: true },
+    );
+    this.searchPolygon = layer;
+    this.bindClearOnContextMenu(layer);
+
+    const bounds = layer.getBounds();
+    if (!bounds.isValid()) {
+      layer.addTo(map);
+      return;
+    }
+
+    // See `flyTo` — refresh the cached container size before the first move.
+    map.invalidateSize();
+
+    if (animate) {
+      // Defer adding until the fly settles: rendering the boundary mid-flight,
+      // at the pre-zoom scale, makes large areas flash as a giant, jarring block.
+      map.once('moveend', () => {
+        if (this.searchPolygon === layer) {
+          layer.addTo(map);
+        }
+      });
+      map.flyToBounds(bounds, { maxZoom: SEARCH_POLYGON_FIT_MAX_ZOOM });
+      return;
+    }
+
+    map.fitBounds(bounds, { maxZoom: SEARCH_POLYGON_FIT_MAX_ZOOM, animate: false });
+    this.setCurrentZoom(Math.round(map.getZoom()));
+    layer.addTo(map);
+  }
+
+  /** Opens the search-result context menu on right-click; left-click stays reserved for point queries. */
+  private bindClearOnContextMenu(layer: Marker | GeoJsonLayer): void {
+    const map = this.map;
+    if (!map) return;
+
+    layer.on('contextmenu', (evt: LeafletMouseEvent) => {
+      if (evt.originalEvent) {
+        DomEvent.preventDefault(evt.originalEvent);
+      }
+
+      const point = map.latLngToContainerPoint(evt.latlng);
+      this.searchResultContextMenu.set({ x: Math.round(point.x), y: Math.round(point.y) });
+    });
+  }
+
+  closeSearchResultContextMenu(): void {
+    this.searchResultContextMenu.set(null);
+  }
+
+  private removeSearchResult(): void {
+    if (this.searchMarker) {
+      this.searchMarker.remove();
+      this.searchMarker = null;
+    }
+    if (this.searchPolygon) {
+      this.searchPolygon.remove();
+      this.searchPolygon = null;
+    }
+
+    this.closeSearchResultContextMenu();
   }
 }

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
 import { BaseMapSelectorComponent } from './base-map-selector';
-import { BaseMapService } from '../../../../services/base-maps/base-map.service';
+import { BaseMapService } from '../../../../../services/base-maps/base-map.service';
 
 describe('BaseMapSelectorComponent', () => {
   let component: BaseMapSelectorComponent;

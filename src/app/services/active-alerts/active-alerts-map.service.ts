@@ -103,7 +103,9 @@ export class ActiveAlertsMapService {
         color,
         fillColor: color,
       });
-      polygon.bindPopup(this.buildPopup(alert));
+      // `autoPan: false` — otherwise Leaflet recenters the map to fit the popup,
+      // making a simple click on an alert feel like it's dragging the view.
+      polygon.bindPopup(this.buildPopup(alert), { autoPan: false });
       this.layerGroup.addLayer(polygon);
     }
   }

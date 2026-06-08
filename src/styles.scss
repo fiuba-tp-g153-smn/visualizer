@@ -70,6 +70,16 @@ body {
   }
 }
 
+.search-result-marker {
+  background: transparent;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  }
+}
+
 // Wundermap-style station card. The card internals are styled by the popup
 // component (scoped scss); here we only size/round the Leaflet popup shell.
 .weather-station-popup .leaflet-popup-content-wrapper {

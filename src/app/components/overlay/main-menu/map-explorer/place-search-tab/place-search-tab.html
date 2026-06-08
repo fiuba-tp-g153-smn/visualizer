@@ -1,0 +1,152 @@
+<div class="place-search-tab">
+  <div class="search-container">
+    <mat-icon>search</mat-icon>
+    <input
+      type="text"
+      placeholder="Buscar localidad, departamento o provincia…"
+      autocomplete="off"
+      spellcheck="false"
+      [ngModel]="query()"
+      (ngModelChange)="onQueryChange($event)"
+      (keydown)="onKeydown($event)"
+    />
+    @if (loading()) {
+      <app-loading-spinner [diameter]="16" />
+    }
+    @if (query().length > 0) {
+      <button
+        mat-icon-button
+        type="button"
+        class="search-action-btn"
+        matTooltip="Limpiar texto"
+        (click)="clearQuery()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+    <button
+      mat-icon-button
+      type="button"
+      class="search-action-btn"
+      [class.active]="configOpen()"
+      [matTooltip]="
+        configOpen() ? 'Ocultar configuración de búsqueda' : 'Configuración de búsqueda'
+      "
+      (click)="toggleConfig()"
+    >
+      <mat-icon>tune</mat-icon>
+    </button>
+  </div>
+
+  @if (configOpen()) {
+    <div class="search-config">
+      <span class="control-label">Fuente de búsqueda</span>
+      <mat-radio-group
+        [value]="source()"
+        (change)="onSourceChange($event.value)"
+        class="search-config-group"
+      >
+        <mat-radio-button
+          value="ign"
+          color="primary"
+          matTooltip="Nomenclátor oficial argentino: localidades, departamentos y provincias, ubicadas por centroide."
+          >IGN (Argentina)</mat-radio-button
+        >
+        <mat-radio-button
+          value="nominatim"
+          color="primary"
+          matTooltip="OpenStreetMap: también puede marcar el límite de un área como un polígono en el mapa."
+          >Nominatim (OSM)</mat-radio-button
+        >
+      </mat-radio-group>
+
+      @if (source() === 'nominatim') {
+        <span class="control-label">Cómo marcar áreas</span>
+        <mat-radio-group
+          [value]="nominatimDisplayMode()"
+          (change)="onNominatimDisplayModeChange($event.value)"
+          class="search-config-group"
+        >
+          <mat-radio-button
+            value="polygon"
+            color="primary"
+            matTooltip="Dibuja el límite del área como un polígono sobre el mapa."
+            >Polígono</mat-radio-button
+          >
+          <mat-radio-button
+            value="marker"
+            color="primary"
+            matTooltip="Marca el centro del área con un pin, sin dibujar su límite."
+            >Marcador</mat-radio-button
+          >
+        </mat-radio-group>
+      }
+
+      <mat-checkbox
+        [checked]="animateFlyTo()"
+        (change)="onAnimateFlyToChange($event.checked)"
+        color="primary"
+        matTooltip="Anima el desplazamiento del mapa al ir a un resultado, en vez de saltar directo."
+      >
+        Animar desplazamiento al resultado
+      </mat-checkbox>
+    </div>
+  }
+
+  @if (query().trim().length < minQueryLength) {
+    <div class="hint-state">
+      <mat-icon>map</mat-icon>
+      <p>Buscá un lugar de Argentina</p>
+      <span
+        >Escribí al menos {{ minQueryLength }} letras de una localidad, departamento o
+        provincia</span
+      >
+    </div>
+  } @else if (error(); as message) {
+    <div class="empty-state empty-state--error">
+      <mat-icon>error</mat-icon>
+      <p>{{ message }}</p>
+    </div>
+  } @else if (!loading() && results().length === 0) {
+    <div class="empty-state">
+      <mat-icon>search_off</mat-icon>
+      <p>No se encontraron resultados</p>
+      <span>Probá con otros términos de búsqueda</span>
+    </div>
+  } @else if (results().length > 0) {
+    <ul class="search-results" role="listbox">
+      @for (item of results(); track item.id; let i = $index) {
+        <li
+          class="search-result"
+          role="option"
+          [class.active]="i === activeIndex()"
+          [attr.aria-selected]="i === activeIndex()"
+          [matTooltip]="item.title + ' — ' + item.subtitle"
+          matTooltipPosition="left"
+          (mouseenter)="activeIndex.set(i)"
+          (click)="selectPlace(item)"
+        >
+          <mat-icon class="result-icon">{{ item.icon }}</mat-icon>
+          <div class="result-text">
+            <span class="result-name">{{ item.title }}</span>
+            <span class="result-meta">{{ item.subtitle }}</span>
+          </div>
+        </li>
+      }
+    </ul>
+
+    @if (hasMore()) {
+      <button type="button" class="load-more-btn" [disabled]="loadingMore()" (click)="loadMore()">
+        @if (loadingMore()) {
+          <app-loading-spinner [diameter]="16" />
+          <span>Cargando…</span>
+        } @else {
+          <mat-icon>expand_more</mat-icon>
+          <span>Cargar más resultados</span>
+        }
+      </button>
+    } @else {
+      <span class="load-more-end">No hay más resultados</span>
+    }
+  }
+</div>

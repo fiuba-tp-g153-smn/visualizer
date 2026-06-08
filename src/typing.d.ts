@@ -8,4 +8,6 @@ interface Env {
   APP_HOST_PORT: integer;
   DOCS_URL: string;
   METRICS_SERVICE_BASE_URL: string;
+  IGN_PLACE_SEARCH_URL: string;
+  NOMINATIM_SEARCH_URL: string;
 }

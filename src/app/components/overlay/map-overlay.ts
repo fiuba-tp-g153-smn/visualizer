@@ -16,6 +16,7 @@ import { PolygonEditDockComponent } from '../floating/polygon-edit-dock/polygon-
 import { MainMenuComponent } from './main-menu/main-menu';
 import { SidebarButtonsComponent } from './sidebar-buttons/sidebar-buttons';
 import { MapPolygonContextMenuComponent } from '../floating/polygon-context-menu/polygon-context-menu';
+import { SearchResultContextMenuComponent } from '../floating/search-result-context-menu/search-result-context-menu';
 import { MapPointValuesComponent, PointValuesLayoutMode } from './point-values/point-values';
 import { MapScaleToolsComponent } from './scale-tools/scale-tools';
 import { MapZoomControlsComponent } from './zoom-controls/zoom-controls';
@@ -31,6 +32,7 @@ import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
     SidebarButtonsComponent,
     PolygonEditDockComponent,
     MapPolygonContextMenuComponent,
+    SearchResultContextMenuComponent,
     MapPointValuesComponent,
     MapScaleToolsComponent,
     MapZoomControlsComponent,
@@ -114,6 +116,7 @@ export class MapOverlayComponent {
   );
 
   readonly contextMenuState = this.polygonsService.contextMenuState;
+  readonly searchResultContextMenuState = this.mapInfoService.searchResultContextMenu;
 
   closeFloatingViewer(layerId: string): void {
     this.pointQueryViewerService.removeSourceSelection(layerId);
@@ -159,5 +162,13 @@ export class MapOverlayComponent {
 
   handleContextMenuAction(action: PolygonContextMenuAction): void {
     this.polygonsService.handleContextMenuAction(action);
+  }
+
+  closeSearchResultContextMenu(): void {
+    this.mapInfoService.closeSearchResultContextMenu();
+  }
+
+  clearSearchResult(): void {
+    this.mapInfoService.clearSearchResult();
   }
 }

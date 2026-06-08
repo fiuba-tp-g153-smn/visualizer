@@ -16,6 +16,12 @@ module.exports = {
         METRICS_SERVICE_BASE_URL: JSON.stringify(
           process.env.METRICS_SERVICE_BASE_URL || 'http://localhost:6020',
         ),
+        IGN_PLACE_SEARCH_URL: JSON.stringify(
+          process.env.IGN_PLACE_SEARCH_URL || 'https://api.ign.gob.ar/buscador/search',
+        ),
+        NOMINATIM_SEARCH_URL: JSON.stringify(
+          process.env.NOMINATIM_SEARCH_URL || 'https://nominatim.openstreetmap.org/search',
+        ),
       },
     }),
   ],

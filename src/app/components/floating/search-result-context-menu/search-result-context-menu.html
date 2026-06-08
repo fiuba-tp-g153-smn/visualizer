@@ -1,0 +1,17 @@
+@if (state(); as menuState) {
+  <div class="context-menu-backdrop" (click)="onBackdropClick()">
+    <div
+      class="context-menu-positioner"
+      [style.left.px]="menuState.x"
+      [style.top.px]="menuState.y"
+      (click)="onMenuClick($event)"
+    >
+      <mat-nav-list class="search-result-context-menu">
+        <mat-list-item (click)="onClear()">
+          <mat-icon matListItemIcon color="warn">layers_clear</mat-icon>
+          <span matListItemTitle>Quitar marca del mapa</span>
+        </mat-list-item>
+      </mat-nav-list>
+    </div>
+  </div>
+}

@@ -87,3 +87,9 @@
   (close)="closeContextMenu()"
   (action)="handleContextMenuAction($event)"
 />
+
+<app-search-result-context-menu
+  [state]="searchResultContextMenuState()"
+  (close)="closeSearchResultContextMenu()"
+  (clear)="clearSearchResult()"
+/>
