@@ -98,26 +98,17 @@
         [class.dash__content--busy]="reloading()"
         [attr.aria-busy]="reloading()"
       >
-        <app-metric-panel
-          heading="Resumen general"
-          tip="Estado de un vistazo: memoria total de Redis y mayor dominio consumidor, más la salud del loop de sincronización (ciclos, fallos consecutivos, último ciclo)."
-        >
+        <app-metric-panel heading="Resumen general" [tip]="tips.summary">
           <app-data-stat-cards [summary]="summary()" />
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Estado de sincronización"
-          tip="Último ciclo registrado de cada dominio de sync/scrape (satélite, radar, ECMWF, WRF, mapa base, estaciones): resultado, tiles descargados, errores, duración y hace cuánto terminó."
-        >
+        <app-metric-panel heading="Estado de sincronización" [tip]="tips.syncStatus">
           <div class="dash__scroll-x">
             <app-data-sync-status-table [domains]="syncStatus()?.domains ?? []" />
           </div>
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Memoria Redis por dominio"
-          tip="Cuánta memoria consume cada dominio en Redis (suma de MEMORY USAGE por prefijo de clave) y cuántas claves tiene. Es la respuesta a '¿qué está llenando Redis?'. Se muestrea en segundo plano cada ~15 min."
-        >
+        <app-metric-panel heading="Memoria Redis por dominio" [tip]="tips.memory">
           <div class="dash__chart">
             @if (memoryBarOptions(); as opts) {
               <app-metric-chart [options]="opts" />
@@ -130,10 +121,7 @@
           </div>
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Evolución de memoria Redis"
-          tip="Crecimiento de la memoria por dominio a lo largo del tiempo (área apilada). Útil para detectar qué dominio está creciendo y cuándo. Sigue la ventana seleccionada."
-        >
+        <app-metric-panel heading="Evolución de memoria Redis" [tip]="tips.memoryHistory">
           <div class="dash__chart">
             @if (memoryAreaOptions(); as opts) {
               <app-metric-chart [options]="opts" />
@@ -143,10 +131,7 @@
           </div>
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Throughput de sincronización"
-          tip="Tiles/objetos descargados por intervalo y dominio (barras apiladas). Refleja cuánto trae cada sync en cada ciclo."
-        >
+        <app-metric-panel heading="Throughput de sincronización" [tip]="tips.throughput">
           <div class="dash__chart">
             @if (throughputOptions(); as opts) {
               <app-metric-chart [options]="opts" />
@@ -156,10 +141,7 @@
           </div>
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Errores de sincronización"
-          tip="Errores por intervalo y dominio. Picos sostenidos indican un problema persistente en ese dominio."
-        >
+        <app-metric-panel heading="Errores de sincronización" [tip]="tips.errors">
           <div class="dash__chart">
             @if (errorsOptions(); as opts) {
               <app-metric-chart [options]="opts" />
@@ -169,26 +151,17 @@
           </div>
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Redis · INFO"
-          tip="Estadísticas globales de Redis: memoria usada/RSS/pico, límite, fragmentación, claves evictadas, hit rate y clientes conectados. Evictadas > 0 significa que Redis está descartando datos por presión de memoria."
-        >
+        <app-metric-panel heading="Redis · INFO" [tip]="tips.info">
           <app-redis-info-cards [info]="info()" />
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Scraper de mapa base"
-          tip="Progreso por provider del scraper de basemap: estado (ocioso/scrapeando/circuito abierto), posición del cursor de reanudación, rango de zooms, trips del circuit breaker y hace cuánto completó un barrido."
-        >
+        <app-metric-panel heading="Scraper de mapa base" [tip]="tips.basemap">
           <div class="dash__scroll-x">
             <app-basemap-providers-table [providers]="providers()" />
           </div>
         </app-metric-panel>
 
-        <app-metric-panel
-          heading="Ciclos recientes"
-          tip="Últimos ciclos de sync/scrape registrados (más nuevos primero), de todos los dominios, dentro de la ventana seleccionada."
-        >
+        <app-metric-panel heading="Ciclos recientes" [tip]="tips.cycles">
           <div class="dash__scroll-x">
             <app-data-sync-cycles-table [cycles]="cycles()" />
           </div>

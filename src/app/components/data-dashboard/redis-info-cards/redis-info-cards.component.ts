@@ -73,11 +73,12 @@ interface InfoCard {
       flex: 1 1 auto;
     }
     .card__info {
-      font-size: 14px;
-      width: 14px;
-      height: 14px;
+      font-size: 13px;
+      width: 13px;
+      height: 13px;
+      line-height: 13px;
       cursor: help;
-      color: var(--mat-sys-outline, #9aa0a6);
+      color: var(--mat-sys-on-surface-variant, #5f6368);
     }
     .card__value {
       margin-top: 6px;
@@ -143,10 +144,10 @@ export class RedisInfoCardsComponent {
         accent: frag != null && frag > 1.5 ? 'orange' : '',
       },
       {
-        label: 'Claves evictadas',
+        label: 'Claves desalojadas',
         value: (i.evicted_keys ?? 0).toLocaleString('es-AR'),
         tooltip:
-          'Claves expulsadas por presión de memoria (evicted_keys). >0 indica que Redis está descartando datos.',
+          'Claves desalojadas por presión de memoria (evicted_keys). >0 indica que Redis está descartando datos.',
         accent: (i.evicted_keys ?? 0) > 0 ? 'red' : '',
       },
       {

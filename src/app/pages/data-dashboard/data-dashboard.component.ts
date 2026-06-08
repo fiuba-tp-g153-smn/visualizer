@@ -49,6 +49,51 @@ import {
 type WindowHours = 24 | 168 | 0;
 type RefreshSeconds = 0 | 10 | 30 | 60;
 
+/** Resúmenes con viñetas para los tooltips de cada panel (clase `panel__tooltip`
+ *  respeta los saltos de línea). Clave: qué muestra · de dónde · cada cuánto. */
+const PANEL_TIPS = {
+  summary:
+    'Estado de un vistazo.\n' +
+    '• Memoria y claves: colector de Redis, ~15 min\n' +
+    '• Sync (ciclos, fallos): hash sync:status, ~60 s',
+  syncStatus:
+    'Último ciclo de cada dominio (tabla sync_cycles).\n' +
+    '• Tiles S3→Redis (sat/radar/ECMWF/WRF): ~60 s\n' +
+    '• Estaciones (SMN): ~5 min · Mapa base: ~7 días\n' +
+    '• "descargado" = ítems nuevos del ciclo',
+  memory:
+    'Qué está llenando Redis.\n' +
+    '• SCAN + MEMORY USAGE por prefijo de clave, ~15 min\n' +
+    '• Lo llenan tiles (~60 s) y estaciones (~5 min)\n' +
+    '• Mapa base (no_cache): escribe S3, ≈ 0 en Redis',
+  memoryHistory:
+    'Crecimiento de memoria por dominio (área apilada).\n' +
+    '• Tabla redis_memory_samples\n' +
+    '• 1 punto cada ~15 min · retención 14 días\n' +
+    '• Sigue la ventana e intervalo',
+  throughput:
+    'Ítems descargados por intervalo y dominio.\n' +
+    '• Agrega sync_cycles por bucket (hora/día)\n' +
+    '• Tiles S3→Redis, obs. del SMN, tiles de mapa base',
+  errors:
+    'Errores por intervalo y dominio.\n' +
+    '• Agrega sync_cycles por bucket\n' +
+    '• Picos sostenidos = problema persistente (S3, SMN, providers)',
+  info:
+    'Redis INFO + DBSIZE, ~15 min.\n' +
+    '• Fragmentación = RSS ÷ used_memory\n' +
+    '• Hit rate = hits ÷ (hits + misses)\n' +
+    '• Desalojadas > 0 = descartando datos por memoria',
+  basemap:
+    'Estado en vivo del scraper de mapa base (SQLite propio).\n' +
+    '• ocioso / scrapeando (cursor z·índice) / circuito abierto\n' +
+    '• trips = fallos del breaker; motivo en el tooltip\n' +
+    '• Barrido completo cada ~7 días (no_cache → S3)',
+  cycles:
+    'Filas crudas de sync_cycles (más nuevas primero, máx. 100).\n' +
+    '• El detalle sin agregar detrás de throughput y errores',
+} as const;
+
 /**
  * Panel de estado y memoria del data-service (pestaña "Servicio de datos" del
  * shell `/status`). Dueño del estado: mantiene controles y datos en signals, los
@@ -86,6 +131,9 @@ export class DataDashboardComponent {
   private readonly metrics = inject(DataMetricsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly timezone = inject(TimezoneSettingsService);
+
+  /** Textos de los tooltips de cada panel. */
+  readonly tips = PANEL_TIPS;
 
   // Controles
   readonly windowHours = signal<WindowHours>(168);

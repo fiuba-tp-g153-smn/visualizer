@@ -72,11 +72,12 @@ interface StatCard {
       flex: 1 1 auto;
     }
     .card__info {
-      font-size: 14px;
-      width: 14px;
-      height: 14px;
+      font-size: 13px;
+      width: 13px;
+      height: 13px;
+      line-height: 13px;
       cursor: help;
-      color: var(--mat-sys-outline, #9aa0a6);
+      color: var(--mat-sys-on-surface-variant, #5f6368);
     }
     .card__value {
       margin-top: 6px;
@@ -111,51 +112,54 @@ export class DataStatCardsComponent {
         label: 'Memoria Redis usada',
         value: formatBytes(s.used_memory),
         tooltip:
-          'Memoria total reportada por Redis (INFO used_memory) en la última muestra.',
+          'Memoria total reportada por Redis (INFO used_memory).\nFuente: colector de Redis, muestra cada ~15 min.',
         accent: '',
       },
       {
         label: 'Claves totales',
         value: s.total_keys.toLocaleString('es-AR'),
-        tooltip: 'Cantidad de claves en Redis (DBSIZE) en la última muestra.',
+        tooltip: 'Cantidad de claves en Redis (DBSIZE).\nFuente: colector de Redis, ~15 min.',
         accent: '',
       },
       {
         label: 'Mayor consumidor',
         value: topDomain,
-        tooltip: 'Dominio que más memoria consume y cuántos bytes ocupa.',
+        tooltip:
+          'Dominio que más memoria consume y cuántos bytes ocupa.\nFuente: SCAN + MEMORY USAGE por prefijo de clave, ~15 min.',
         accent: 'orange',
       },
       {
         label: 'Memoria por dominios',
         value: formatBytes(s.total_bytes),
         tooltip:
-          'Suma de MEMORY USAGE sobre todas las claves, agrupada por dominio (≈ used_memory, sin overhead interno de Redis).',
+          'Suma de MEMORY USAGE sobre todas las claves, agrupada por dominio (≈ used_memory, sin el overhead interno de Redis).\nFuente: colector de Redis, ~15 min.',
         accent: '',
       },
       {
         label: 'Dominios de sync',
         value: String(s.active_sync_domains),
-        tooltip: 'Dominios de sincronización con al menos un ciclo registrado.',
+        tooltip: 'Dominios con al menos un ciclo registrado en la tabla sync_cycles (SQLite).',
         accent: '',
       },
       {
         label: 'Ciclos de sync',
         value: s.sync_total_cycles.toLocaleString('es-AR'),
         tooltip:
-          'Ciclos completados del loop combinado (satélite + radar + ECMWF + WRF).',
+          'Ciclos completados del loop combinado (satélite + radar + ECMWF + WRF).\nFuente: hash sync:status en Redis, actualizado cada ciclo (~60 s).',
         accent: '',
       },
       {
         label: 'Fallos consecutivos',
         value: String(s.sync_consecutive_failures),
-        tooltip: 'Ciclos con errores seguidos del loop de sync (0 = saludable).',
+        tooltip:
+          'Ciclos con errores seguidos del loop de sync (0 = saludable).\nFuente: hash sync:status en Redis.',
         accent: s.sync_consecutive_failures > 0 ? 'red' : 'green',
       },
       {
         label: 'Último sync',
         value: ago(s.last_sync_finished),
-        tooltip: 'Hace cuánto terminó el ciclo de sync más reciente (cualquier dominio).',
+        tooltip:
+          'Hace cuánto terminó el ciclo más reciente de cualquier dominio.\nFuente: tabla sync_cycles.',
         accent: '',
       },
     ];
