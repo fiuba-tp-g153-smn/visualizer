@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, of } from 'rxjs';
 import {
+  BASEMAP_DIRECT_SOURCES,
   BASE_MAP_PREVIEW_CONFIG,
   MAP_CONFIG,
   buildBasemapProvidersUrl,
@@ -70,6 +71,7 @@ export class BaseMapService {
   private buildOptimisticBaseMap(): BaseMap {
     const id = this.readStoredBaseMapId() ?? MAP_CONFIG.defaultBaseMapId;
     const isDefault = id === MAP_CONFIG.defaultBaseMapId;
+    const direct = BASEMAP_DIRECT_SOURCES[id] ?? null;
     return {
       id,
       name: isDefault ? DEFAULT_BASE_MAP_META.name : id,
@@ -83,6 +85,8 @@ export class BaseMapService {
       previewZ: BASE_MAP_PREVIEW_CONFIG.z,
       previewX: BASE_MAP_PREVIEW_CONFIG.x,
       previewY: BASE_MAP_PREVIEW_CONFIG.y,
+      directUrl: direct?.urlTemplate ?? null,
+      isTms: direct?.isTms ?? false,
     };
   }
 
@@ -151,6 +155,7 @@ export class BaseMapService {
 }
 
 function toBaseMap(dto: BaseMapProviderDto): BaseMap {
+  const direct = BASEMAP_DIRECT_SOURCES[dto.id] ?? null;
   return {
     id: dto.id,
     name: dto.name,
@@ -167,5 +172,7 @@ function toBaseMap(dto: BaseMapProviderDto): BaseMap {
     previewZ: BASE_MAP_PREVIEW_CONFIG.z,
     previewX: BASE_MAP_PREVIEW_CONFIG.x,
     previewY: BASE_MAP_PREVIEW_CONFIG.y,
+    directUrl: direct?.urlTemplate ?? null,
+    isTms: direct?.isTms ?? false,
   };
 }
