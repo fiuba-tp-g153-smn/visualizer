@@ -20,6 +20,8 @@ describe('BaseMapSelectorComponent', () => {
     previewZ: 2,
     previewX: 1,
     previewY: 2,
+    directUrl: null,
+    isTms: false,
   };
   const satellite = {
     id: 'satellite',
@@ -32,6 +34,8 @@ describe('BaseMapSelectorComponent', () => {
     previewZ: 2,
     previewX: 1,
     previewY: 2,
+    directUrl: null,
+    isTms: false,
   };
 
   beforeEach(async () => {

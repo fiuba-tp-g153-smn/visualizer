@@ -168,14 +168,15 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
     service.activateLayer(ECMWF_LAYER_ID);
     expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)?.length).toBeGreaterThan(0);
 
-    // Steps 2–3: toggle the only selected forecast off — the layer deactivates
-    // and availableTilesets is driven to empty (this is the "broken" state the
-    // user reproduces by deactivating the run).
+    // Steps 2-3: toggling the only run off empties availableTilesets but leaves
+    // the layer active (see toggleEcmwfTpForecast) — the "broken" state.
     service.toggleEcmwfTpForecast(ECMWF_LAYER_ID, FORECAST_LATEST);
     expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)).toEqual([]);
+    expect(service.getControls(ECMWF_LAYER_ID).visible).toBe(true);
 
-    // Step 4: reactivate. Without the fix, availableTilesets would stay [] and
-    // the period selector would render "No hay períodos disponibles" forever.
+    // Step 4: deactivate (e.g. via the layer's own checkbox) and reactivate —
+    // availableTilesets must be rebuilt, not left stale at [].
+    service.deactivateLayer(ECMWF_LAYER_ID);
     service.activateLayer(ECMWF_LAYER_ID);
     const tilesetsAfterReactivation = configStub.getAvailableTilesets(ECMWF_LAYER_ID);
     expect(tilesetsAfterReactivation?.length).toBeGreaterThan(0);
@@ -256,13 +257,13 @@ describe('LayerControlService — forecast secondary render controls', () => {
 
     const service = TestBed.inject(LayerControlService);
     service.activateLayer(ECMWF_LAYER_ID);
-    service.setEcmwfTpForecastSecondaryRenderVisible(
+    service.setEcmwfTpForecastRenderVisible(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
       'ecmwf-mslp-isobars',
       false,
     );
-    service.setEcmwfTpForecastSecondaryRenderOpacity(
+    service.setEcmwfTpForecastRenderOpacity(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
       'ecmwf-mslp-isobars',
@@ -305,18 +306,13 @@ describe('LayerControlService — forecast secondary render controls', () => {
 
     const service = TestBed.inject(LayerControlService);
     service.activateLayer(WRF_LAYER_ID);
-    service.setWrfForecastSecondaryRenderVisible(
+    service.setWrfForecastRenderVisible(
       WRF_LAYER_ID,
       WRF_FORECAST,
       'wrf-Precipitacion1h-barbs',
       false,
     );
-    service.setWrfForecastSecondaryRenderOpacity(
-      WRF_LAYER_ID,
-      WRF_FORECAST,
-      'wrf-Precipitacion1h-slp',
-      0.6,
-    );
+    service.setWrfForecastRenderOpacity(WRF_LAYER_ID, WRF_FORECAST, 'wrf-Precipitacion1h-slp', 0.6);
 
     const controls = service.getControls(WRF_LAYER_ID) as WrfLayerControls;
     expect(controls.forecast.renderControls[WRF_FORECAST]).toEqual({
