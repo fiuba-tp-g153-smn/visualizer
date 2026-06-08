@@ -11,6 +11,7 @@ import type {
   RedisMemoryDomain,
   RedisMemoryHistoryPoint,
 } from '../../models/metrics/data-metrics.models';
+import { domainLabel } from './data-metrics-labels';
 import {
   buildTypeColorMap,
   pivot,
@@ -21,6 +22,63 @@ import { fmtBucket } from './metrics-format.util';
 
 const GRID_COLOR = '#e3e3e6';
 const LABEL_COLOR = '#5f6368';
+
+/** Compact a count: 1234 → "1.2k", 2_500_000 → "2.5m" (trailing .0 trimmed). */
+export function compactCount(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1e6) {
+    return `${(value / 1e6).toFixed(1).replace(/\.0$/, '')}m`;
+  }
+  if (abs >= 1e3) {
+    return `${(value / 1e3).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+  return String(Math.round(value));
+}
+
+/** Context ApexCharts passes to a `custom` tooltip (typed to avoid `any`). */
+interface CustomTooltipContext {
+  readonly series: ReadonlyArray<ReadonlyArray<number | null>>;
+  readonly dataPointIndex: number;
+  readonly w: {
+    readonly globals: {
+      readonly seriesNames: readonly string[];
+      readonly colors: readonly string[];
+      readonly labels: ReadonlyArray<string | number>;
+    };
+  };
+}
+
+/** Tooltip de barras apiladas: una fila por dominio (compactada) + un Total. */
+function renderThroughputTooltip(context: CustomTooltipContext): string {
+  const { series, dataPointIndex, w } = context;
+  const { seriesNames, colors, labels } = w.globals;
+
+  let total = 0;
+  const rows: string[] = [];
+  for (let i = 0; i < series.length; i++) {
+    const value = series[i]?.[dataPointIndex];
+    const count = typeof value === 'number' ? value : 0;
+    total += count;
+    if (count > 0) {
+      rows.push(
+        `<div class="apx-tip__row">` +
+          `<span class="apx-tip__dot" style="background:${colors[i]}"></span>` +
+          `<span class="apx-tip__name">${domainLabel(seriesNames[i])}</span>` +
+          `<span class="apx-tip__val">${compactCount(count)}</span>` +
+          `</div>`,
+      );
+    }
+  }
+
+  const label = labels?.[dataPointIndex];
+  const title = label == null ? '' : `<div class="apx-tip__title">${label}</div>`;
+  const totalRow =
+    `<div class="apx-tip__row apx-tip__total">` +
+    `<span class="apx-tip__name">Total</span>` +
+    `<span class="apx-tip__val">${compactCount(total)}</span>` +
+    `</div>`;
+  return `<div class="apx-tip">${title}${rows.join('')}${totalRow}</div>`;
+}
 
 /** Bytes → human string (B/KB/MB/GB/TB). Shared by charts and tables. */
 export function formatBytes(bytes: number | null | undefined): string {
@@ -45,6 +103,8 @@ type Formatter = (value: number | null) => string;
 const bytesFormatter: Formatter = (value) => (value == null ? '' : formatBytes(value));
 const countFormatter: Formatter = (value) =>
   value == null ? '' : String(Math.round(value));
+const compactCountFormatter: Formatter = (value) =>
+  value == null ? '' : compactCount(value);
 
 function baseChart(type: ApexChart['type'], stacked: boolean, height: number): ApexChart {
   return {
@@ -140,7 +200,9 @@ export function buildMemoryBarChart(
     dataLabels: { enabled: false },
     legend: { show: false },
     grid: baseGrid(),
-    tooltip: { theme: 'light', y: { formatter: bytesFormatter } },
+    // shared:false + intersect:false → el tooltip se dispara desde la banda x
+    // (toda la columna vertical), no solo al pasar por la barra (corta).
+    tooltip: { theme: 'light', shared: false, intersect: false, y: { formatter: bytesFormatter } },
     plotOptions: { bar: { distributed: true, columnWidth: '60%', borderRadius: 2 } },
   };
 }
@@ -165,13 +227,18 @@ export function buildSyncThroughputChart(
     chart: baseChart('bar', true, 260),
     colors: data.types.map(colorFor),
     xaxis: categoryXAxis(data.buckets.map((bucket) => fmtBucket(bucket, utc))),
-    yaxis: valueYAxis(countFormatter),
+    yaxis: valueYAxis(compactCountFormatter),
     stroke: { width: 0 },
     fill: { type: 'solid', opacity: 1 },
     dataLabels: { enabled: false },
     legend: baseLegend(),
     grid: baseGrid(),
-    tooltip: { theme: 'light', shared: true, intersect: false, y: { formatter: countFormatter } },
+    // Tooltip compartido con total acumulado por intervalo (estilo tiles-processor).
+    tooltip: {
+      shared: true,
+      intersect: false,
+      custom: (context: CustomTooltipContext) => renderThroughputTooltip(context),
+    },
     plotOptions: { bar: { columnWidth: '70%', borderRadius: 2 } },
   };
 }

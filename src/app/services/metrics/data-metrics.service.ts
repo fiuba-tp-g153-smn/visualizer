@@ -50,10 +50,23 @@ export class DataMetricsService {
     return this.http.get<DataSyncHistoryPoint[]>(buildDataSyncHistoryUrl(), { params });
   }
 
-  getSyncCycles(hours: number, domain?: string, limit = 200): Observable<DataSyncCycle[]> {
+  getSyncCycles(
+    hours: number,
+    domain?: string,
+    limit = 200,
+    opts: { since?: string; before?: string } = {},
+  ): Observable<DataSyncCycle[]> {
+    // The cycles table uses hours+limit; the timeline passes an explicit
+    // since/before window + limit=0 (all rows in that window).
     let params = new HttpParams().set('hours', hours).set('limit', limit);
     if (domain) {
       params = params.set('domain', domain);
+    }
+    if (opts.since) {
+      params = params.set('since', opts.since);
+    }
+    if (opts.before) {
+      params = params.set('before', opts.before);
     }
     return this.http.get<DataSyncCycle[]>(buildDataSyncCyclesUrl(), { params });
   }

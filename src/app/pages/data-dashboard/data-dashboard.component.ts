@@ -20,6 +20,7 @@ import { DataSyncCyclesTableComponent } from '../../components/data-dashboard/da
 import { DataSyncStatusTableComponent } from '../../components/data-dashboard/data-sync-status-table/data-sync-status-table.component';
 import { RedisInfoCardsComponent } from '../../components/data-dashboard/redis-info-cards/redis-info-cards.component';
 import { RedisMemoryTableComponent } from '../../components/data-dashboard/redis-memory-table/redis-memory-table.component';
+import { JobTimelineEchartsComponent } from '../../components/dashboard/job-timeline-echarts/job-timeline-echarts.component';
 import { MetricChartComponent } from '../../components/dashboard/metric-chart/metric-chart.component';
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
 import type {
@@ -33,15 +34,17 @@ import type {
   RedisMemoryResponse,
   SyncBucket,
 } from '../../models/metrics/data-metrics.models';
+import type { RecentJob } from '../../models/metrics/metrics.models';
 import {
   buildMemoryAreaChart,
   buildMemoryBarChart,
   buildSyncErrorsChart,
   buildSyncThroughputChart,
 } from '../../services/metrics/data-metrics-chart.util';
+import { domainLabel } from '../../services/metrics/data-metrics-labels';
 import { DataMetricsService } from '../../services/metrics/data-metrics.service';
 import type { MetricsChartOptions } from '../../services/metrics/metrics-chart.util';
-import { ago } from '../../services/metrics/metrics-format.util';
+import { ago, secs } from '../../services/metrics/metrics-format.util';
 import {
   TIMEZONE_MODES,
   TimezoneSettingsService,
@@ -49,6 +52,55 @@ import {
 
 type WindowHours = 24 | 168 | 0;
 type RefreshSeconds = 0 | 10 | 30 | 60;
+type TimelineRange = 6 | 12 | 24 | 48 | 72 | 168 | 'all';
+
+const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
+
+/** Stable key for a cycle (no DB id) — used for lazy-merge dedup. */
+function cycleKey(c: DataSyncCycle): string {
+  return `${c.domain}|${c.started_at}|${c.finished_at}`;
+}
+
+/** Map a sync cycle to the RecentJob shape the timeline component consumes. */
+function cycleAsJob(c: DataSyncCycle, index: number): RecentJob {
+  return {
+    id: index,
+    work_unit_id: null,
+    image_id: domainLabel(c.domain),
+    data_source_id: c.domain,
+    processor_id: null,
+    band_id: null,
+    job_type: c.domain,
+    product_label: domainLabel(c.domain),
+    image_timestamp: null,
+    outcome: c.errors > 0 ? 'error' : 'success',
+    worker_host: null,
+    started_at: c.started_at,
+    finished_at: c.finished_at,
+    retry_count: 0,
+    error_message: null,
+    download_s: null,
+    process_s: null,
+    total_s: c.duration_ms / 1000,
+    stage_timings: {},
+  };
+}
+
+/** HH:mm:ss respecting the UTC/local toggle. */
+function clock(iso: string, utc: boolean): string {
+  const d = new Date(iso);
+  const h = String(utc ? d.getUTCHours() : d.getHours()).padStart(2, '0');
+  const m = String(utc ? d.getUTCMinutes() : d.getMinutes()).padStart(2, '0');
+  const s = String(utc ? d.getUTCSeconds() : d.getSeconds()).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+function tipRow(label: string, value: string): string {
+  return (
+    `<div class="apx-tip__row"><span class="apx-tip__name">${label}</span>` +
+    `<span class="apx-tip__val">${value}</span></div>`
+  );
+}
 
 /** Resúmenes con viñetas para los tooltips de cada panel (clase `panel__tooltip`
  *  respeta los saltos de línea). Clave: qué muestra · de dónde · cada cuánto. */
@@ -88,12 +140,17 @@ const PANEL_TIPS = {
   basemap:
     'Estado en vivo del scraper de mapa base (SQLite propio).\n' +
     '• respaldado · respaldando (cursor z·índice) · con errores\n' +
-    '• scrapeado % y fallidos = del último barrido (ok / intentos)\n' +
+    '• respaldado % y fallidos = del último barrido (ok / intentos)\n' +
     '• "con errores" = pausado: la tasa de error superó el umbral\n' +
     '• Barrido completo cada ~7 días (no_cache → S3)',
   cycles:
     'Filas crudas de sync_cycles (más nuevas primero, máx. 100).\n' +
     '• El detalle sin agregar detrás de throughput y errores',
+  timeline:
+    'Cada ciclo de sync como una barra (inicio → fin), apilado en filas sin solaparse.\n' +
+    '• Color por dominio (toggle a resultado); las filas son concurrencia, no workers\n' +
+    '• Rango 6h…7d + "todo" con carga perezosa al desplazarte; rueda/arrastre = zoom\n' +
+    '• Se carga al cambiar el rango (no en el auto-refresh, para no perder el zoom)',
 } as const;
 
 /** "muestreado hace …" para un timestamp ISO, o '' si no hay. */
@@ -102,7 +159,7 @@ function stampAgo(iso: string | null | undefined): string {
 }
 
 /**
- * Panel de estado y memoria del data-service (pestaña "Servicio de datos" del
+ * Panel de estado y memoria del data-service (pestaña "Caché y mapas" del
  * shell `/status`). Dueño del estado: mantiene controles y datos en signals, los
  * refresca contra el API `/metrics` del data-service y los reparte a componentes
  * de presentación.
@@ -124,6 +181,7 @@ function stampAgo(iso: string | null | undefined): string {
     RedisInfoCardsComponent,
     BasemapProvidersTableComponent,
     DataSyncCyclesTableComponent,
+    JobTimelineEchartsComponent,
   ],
   providers: [
     {
@@ -181,6 +239,37 @@ export class DataDashboardComponent {
   /** Hay más ciclos por traer si la API devolvió una página completa. */
   readonly cyclesHasMore = computed<boolean>(() => this.cycles().length >= this.cyclesLimit());
 
+  // ── Línea de tiempo de sincronización (carga aparte del auto-refresh) ──────
+  readonly timelineRange = signal<TimelineRange>(24);
+  readonly timelineCycles = signal<readonly DataSyncCycle[]>([]);
+  readonly timelineMaxSpanMs = computed<number | null>(() =>
+    this.timelineRange() === 'all' ? SEVEN_DAYS_MS : null,
+  );
+  readonly timelineReloadKey = signal<number>(0);
+  readonly timelineJobs = computed<RecentJob[]>(() =>
+    this.timelineCycles().map((c, i) => cycleAsJob(c, i)),
+  );
+  private readonly cycleByKey = computed(
+    () => new Map(this.timelineCycles().map((c) => [cycleKey(c), c])),
+  );
+  private timelineOldestMs: number | null = null;
+  private timelineReachedStart = false;
+  private timelineLoadingOlder = false;
+
+  /** Tooltip del timeline: lee el ciclo original por clave (descargados/errores). */
+  readonly cycleTooltip = (job: RecentJob): string => {
+    const c = this.cycleByKey().get(`${job.job_type}|${job.started_at}|${job.finished_at}`);
+    const utc = this.utc;
+    const rows =
+      tipRow('Inicio', clock(job.started_at, utc)) +
+      tipRow('Fin', clock(job.finished_at, utc)) +
+      tipRow('Duración', secs(job.total_s)) +
+      tipRow('Descargados', c ? c.downloaded.toLocaleString('es-AR') : '—') +
+      tipRow('Errores', c ? String(c.errors) : '—') +
+      tipRow('Resultado', c && c.errors > 0 ? 'error' : 'ok');
+    return `<div class="apx-tip"><div class="apx-tip__title">${job.product_label}</div>${rows}</div>`;
+  };
+
   // ── Marcas de "muestreado hace …" para los paneles que se actualizan lento
   //    (colector de Redis ~15 min, barrido de basemap ~7 días). ──────────────
   readonly summaryStamp = computed(() => stampAgo(this.summary()?.sampled_at));
@@ -230,6 +319,7 @@ export class DataDashboardComponent {
     });
     this.destroyRef.onDestroy(() => this.clearTimer());
     void this.refresh();
+    void this.loadTimeline();
   }
 
   // ── Controles ──────────────────────────────────────────────────────────────
@@ -260,6 +350,90 @@ export class DataDashboardComponent {
         this.metrics.getSyncCycles(this.windowHours(), undefined, this.cyclesLimit()),
       ),
     );
+  }
+
+  // ── Línea de tiempo ──────────────────────────────────────────────────────────
+
+  onTimelineRangeChange(event: Event): void {
+    const value = this.stringValue(event);
+    this.timelineRange.set(value === 'all' ? 'all' : (Number(value) as TimelineRange));
+    void this.loadTimeline();
+  }
+
+  /** Carga fresca del timeline (cambio de rango / inicial). Bumpea reloadKey. */
+  private async loadTimeline(): Promise<void> {
+    const range = this.timelineRange();
+    this.timelineReachedStart = false;
+    this.timelineLoadingOlder = false;
+    try {
+      if (range === 'all') {
+        const sinceMs = Date.now() - SEVEN_DAYS_MS;
+        const cycles = await firstValueFrom(
+          this.metrics.getSyncCycles(0, undefined, 0, { since: new Date(sinceMs).toISOString() }),
+        );
+        this.timelineCycles.set(cycles);
+        this.timelineOldestMs = this.oldestFinishedMs(cycles, sinceMs);
+      } else {
+        this.timelineOldestMs = null;
+        this.timelineCycles.set(
+          await firstValueFrom(this.metrics.getSyncCycles(range, undefined, 0)),
+        );
+      }
+      this.timelineReloadKey.update((k) => k + 1);
+    } catch {
+      // El timeline es secundario: si falla, conservamos lo que haya.
+    }
+  }
+
+  /** Modo "todo": pide ciclos más viejos al desplazarse al borde. */
+  async onTimelineLoadOlder(): Promise<void> {
+    if (
+      this.timelineRange() !== 'all' ||
+      this.timelineReachedStart ||
+      this.timelineLoadingOlder ||
+      this.timelineOldestMs == null
+    ) {
+      return;
+    }
+    this.timelineLoadingOlder = true;
+    try {
+      const oldest = this.timelineOldestMs;
+      const older = await firstValueFrom(
+        this.metrics.getSyncCycles(0, undefined, 0, {
+          since: new Date(oldest - SEVEN_DAYS_MS).toISOString(),
+          before: new Date(oldest).toISOString(),
+        }),
+      );
+      if (!older.length) {
+        this.timelineReachedStart = true;
+        return;
+      }
+      const byKey = new Map(this.timelineCycles().map((c) => [cycleKey(c), c]));
+      for (const c of older) {
+        byKey.set(cycleKey(c), c);
+      }
+      const merged = [...byKey.values()];
+      const newOldest = this.oldestFinishedMs(merged, oldest);
+      if (newOldest >= oldest) {
+        this.timelineReachedStart = true;
+        return;
+      }
+      this.timelineCycles.set(merged);
+      this.timelineOldestMs = newOldest;
+    } finally {
+      this.timelineLoadingOlder = false;
+    }
+  }
+
+  private oldestFinishedMs(cycles: readonly DataSyncCycle[], fallback: number): number {
+    let oldest = Infinity;
+    for (const c of cycles) {
+      const ms = Date.parse(c.finished_at);
+      if (ms < oldest) {
+        oldest = ms;
+      }
+    }
+    return Number.isFinite(oldest) ? oldest : fallback;
   }
 
   // ── Carga de datos ──────────────────────────────────────────────────────────

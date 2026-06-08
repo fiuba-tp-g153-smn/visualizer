@@ -1,102 +1,17 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
 
 import type { DataMetricsSummary } from '../../../models/metrics/data-metrics.models';
 import { formatBytes } from '../../../services/metrics/data-metrics-chart.util';
 import { ago } from '../../../services/metrics/metrics-format.util';
-
-type Accent = '' | 'green' | 'orange' | 'red';
-
-interface StatCard {
-  readonly label: string;
-  readonly value: string;
-  readonly tooltip: string;
-  readonly accent: Accent;
-}
+import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.component';
 
 /** Tarjetas del "Resumen general" del panel del data-service. */
 @Component({
   selector: 'app-data-stat-cards',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, MatTooltipModule],
-  template: `
-    <div class="cards">
-      @for (card of cards(); track card.label) {
-        <div class="card">
-          <div class="card__label">
-            <span class="card__label-text">{{ card.label }}</span>
-            <mat-icon
-              class="card__info"
-              [matTooltip]="card.tooltip"
-              matTooltipClass="stat-tip"
-              matTooltipPosition="above"
-              >info</mat-icon
-            >
-          </div>
-          <div
-            class="card__value"
-            [class.card__value--green]="card.accent === 'green'"
-            [class.card__value--orange]="card.accent === 'orange'"
-            [class.card__value--red]="card.accent === 'red'"
-          >
-            {{ card.value }}
-          </div>
-        </div>
-      }
-    </div>
-  `,
-  styles: `
-    // Grilla con divisores (estilo tiles-processor): celdas separadas por
-    // border-right/bottom, sin tarjetas con borde/redondeo propios. El marco lo
-    // da el panel (borde redondeado + overflow:hidden, body con padding:0).
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-    .card {
-      padding: 12px 14px;
-      border-right: 1px solid var(--mat-sys-outline-variant, #ececec);
-      border-bottom: 1px solid var(--mat-sys-outline-variant, #ececec);
-    }
-    .card__label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .card__label-text {
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--mat-sys-on-surface-variant, #5f6368);
-    }
-    .card__info {
-      font-size: 13px;
-      width: 13px;
-      height: 13px;
-      line-height: 13px;
-      cursor: help;
-      color: var(--mat-sys-on-surface-variant, #5f6368);
-    }
-    .card__value {
-      margin-top: 5px;
-      font-size: 30px;
-      font-weight: 600;
-      line-height: 1.15;
-      color: var(--mat-sys-on-surface, #1f1f1f);
-      font-variant-numeric: tabular-nums;
-    }
-    .card__value--green {
-      color: var(--metric-success, #2e9b51);
-    }
-    .card__value--orange {
-      color: var(--metric-error, #e8702a);
-    }
-    .card__value--red {
-      color: var(--metric-dlq, #d23b4e);
-    }
-  `,
+  imports: [StatCardsComponent],
+  template: `<app-stat-cards [cards]="cards()" />`,
 })
 export class DataStatCardsComponent {
   readonly summary = input<DataMetricsSummary | null>(null);

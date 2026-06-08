@@ -7,13 +7,13 @@
         [class.dash__status--down]="online() === false"
         [matTooltip]="
           online() === false
-            ? 'Servicio de datos sin conexión'
+            ? 'Caché y mapas sin conexión'
             : online() === true
-              ? 'Servicio de datos operativo'
+              ? 'Caché y mapas operativo'
               : 'Conectando…'
         "
       ></span>
-      <span class="dash__title">Estado y memoria del servicio de datos</span>
+      <span class="dash__title">Estado del sistema de caché y respaldo de mapa base (data service)</span>
     </span>
     <span class="dash__spacer"></span>
 
@@ -164,6 +164,30 @@
           <div class="dash__scroll-x">
             <app-basemap-providers-table [providers]="providers()" />
           </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Línea de tiempo de sincronización" [tip]="tips.timeline">
+          <label panelActions class="dash__ctl">
+            rango
+            <select [value]="timelineRange()" (change)="onTimelineRangeChange($event)">
+              <option value="6">6h</option>
+              <option value="12">12h</option>
+              <option value="24">24h</option>
+              <option value="48">2d</option>
+              <option value="72">3d</option>
+              <option value="168">7d</option>
+              <option value="all">todo</option>
+            </select>
+          </label>
+          <app-job-timeline-echarts
+            [jobs]="timelineJobs()"
+            [maxSpanMs]="timelineMaxSpanMs()"
+            [reloadKey]="timelineReloadKey()"
+            [tooltip]="cycleTooltip"
+            initialColorBy="type"
+            typeLabel="dominio"
+            (loadOlder)="onTimelineLoadOlder()"
+          />
         </app-metric-panel>
 
         <app-metric-panel heading="Ciclos recientes" [tip]="tips.cycles">

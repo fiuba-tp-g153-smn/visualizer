@@ -11,15 +11,9 @@ import {
   type ColumnSpec,
   type SortState,
 } from '../../dashboard/sortable-table/sortable-table.models';
+import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.component';
 
 type State = 'respaldado' | 'respaldando' | 'con errores';
-
-interface Summary {
-  readonly hasData: boolean;
-  readonly scraped: string;
-  readonly failedText: string;
-  readonly hasFailures: boolean;
-}
 
 /** ok / attempted como porcentaje con 2 decimales (para que 99.99% siga visible). */
 function scrapedPct(ok: number, attempted: number): string {
@@ -65,7 +59,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<BasemapProviderStatus>> = [
     sortValue: (p) => stateOf(p),
   },
   {
-    header: { key: 'scrapeado', label: 'scrapeado', align: 'center', sortable: true },
+    header: { key: 'respaldado', label: 'respaldado', align: 'center', sortable: true },
     cell: scrapedCell,
     sortValue: (p) => (p.attempted ? p.ok / p.attempted : -1),
   },
@@ -74,6 +68,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<BasemapProviderStatus>> = [
     cell: (p) =>
       textCell(p.failed.toLocaleString('es-AR'), {
         tone: p.failed === 0 ? undefined : p.circuit_open ? 'err' : 'warn',
+        title: p.attempted ? `de ${p.attempted.toLocaleString('es-AR')} intentos` : '',
       }),
     sortValue: (p) => p.failed,
   },
@@ -114,13 +109,10 @@ const COLUMNS: ReadonlyArray<ColumnSpec<BasemapProviderStatus>> = [
   selector: 'app-basemap-providers-table',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SortableTableComponent],
+  imports: [SortableTableComponent, StatCardsComponent],
   template: `
-    @if (summary().hasData) {
-      <div class="headline">
-        Mapa base · <strong>{{ summary().scraped }}</strong> scrapeado ·
-        <strong [class.err]="summary().hasFailures">{{ summary().failedText }}</strong> tiles fallidos
-      </div>
+    @if (summaryCards().length) {
+      <app-stat-cards [cards]="summaryCards()" />
     }
     <app-sortable-table
       [headers]="table().headers"
@@ -128,20 +120,6 @@ const COLUMNS: ReadonlyArray<ColumnSpec<BasemapProviderStatus>> = [
       [initialSort]="initialSort"
       emptyText="El scraper de basemap no está activo (o no hay providers)."
     />
-  `,
-  styles: `
-    .headline {
-      margin: 0 0 10px 12px;
-      font-size: 13px;
-      color: var(--mat-sys-on-surface-variant, #5f6368);
-    }
-    .headline strong {
-      color: var(--mat-sys-on-surface, #1f1f1f);
-      font-variant-numeric: tabular-nums;
-    }
-    .headline strong.err {
-      color: var(--metric-dlq, #d23b4e);
-    }
   `,
 })
 export class BasemapProvidersTableComponent {
@@ -151,20 +129,50 @@ export class BasemapProvidersTableComponent {
 
   readonly table = computed(() => buildTable(COLUMNS, this.providers()));
 
-  readonly summary = computed<Summary>(() => {
+  readonly summaryCards = computed<StatCard[]>(() => {
+    const providers = this.providers();
+    if (!providers.length) {
+      return [];
+    }
     let attempted = 0;
     let ok = 0;
     let failed = 0;
-    for (const p of this.providers()) {
+    let tripped = 0;
+    for (const p of providers) {
       attempted += p.attempted;
       ok += p.ok;
       failed += p.failed;
+      if (p.circuit_open) {
+        tripped += 1;
+      }
     }
-    return {
-      hasData: attempted > 0,
-      scraped: scrapedPct(ok, attempted),
-      failedText: failed.toLocaleString('es-AR'),
-      hasFailures: failed > 0,
-    };
+    return [
+      {
+        label: 'Respaldado',
+        value: scrapedPct(ok, attempted),
+        tooltip: 'ok / intentos del último barrido, sumado sobre todos los providers.',
+        accent: attempted === 0 ? '' : failed === 0 ? 'green' : 'orange',
+      },
+      {
+        label: 'Tiles fallidos',
+        value: failed.toLocaleString('es-AR'),
+        suffix: attempted ? ` / ${attempted.toLocaleString('es-AR')}` : undefined,
+        tooltip:
+          'Tiles que fallaron sobre el total de intentos del último barrido (ok + fallidos), sumado sobre todos los providers.',
+        accent: failed > 0 ? 'red' : '',
+      },
+      {
+        label: 'Providers',
+        value: String(providers.length),
+        tooltip: 'Providers de mapa base configurados.',
+        accent: '',
+      },
+      {
+        label: 'Con errores',
+        value: String(tripped),
+        tooltip: 'Providers con el circuito abierto (su tasa de error superó el umbral).',
+        accent: tripped > 0 ? 'red' : 'green',
+      },
+    ];
   });
 }
