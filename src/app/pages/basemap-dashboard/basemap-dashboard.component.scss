@@ -1,7 +1,7 @@
 @use '../../styles/dashboard-chrome' as chrome;
 
 :host {
-  // Tokens de color de estado (heredados por las pills de las tablas hijas).
+  // Tokens de color de estado (heredados por las pills de la tabla hija).
   @include chrome.metric-tokens();
 
   // Fluye dentro del shell `/status` (que provee el contenedor con scroll).

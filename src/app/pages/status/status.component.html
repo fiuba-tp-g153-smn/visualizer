@@ -19,12 +19,23 @@
         class="status__tab"
         role="tab"
         type="button"
-        [class.status__tab--active]="tab() === 'data'"
-        [attr.aria-selected]="tab() === 'data'"
-        (click)="setTab('data')"
+        [class.status__tab--active]="tab() === 'cache'"
+        [attr.aria-selected]="tab() === 'cache'"
+        (click)="setTab('cache')"
       >
         <mat-icon>save_clock</mat-icon>
-        <span>Caché y mapas</span>
+        <span>Caché</span>
+      </button>
+      <button
+        class="status__tab"
+        role="tab"
+        type="button"
+        [class.status__tab--active]="tab() === 'basemap'"
+        [attr.aria-selected]="tab() === 'basemap'"
+        (click)="setTab('basemap')"
+      >
+        <mat-icon>layers</mat-icon>
+        <span>Mapas base</span>
       </button>
     </div>
   </header>
@@ -32,8 +43,10 @@
   <div class="status__body">
     @if (tab() === 'processing') {
       <app-dashboard />
-    } @else {
+    } @else if (tab() === 'cache') {
       <app-data-dashboard />
+    } @else {
+      <app-basemap-dashboard />
     }
   </div>
 </div>

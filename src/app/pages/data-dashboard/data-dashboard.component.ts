@@ -14,7 +14,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 
-import { BasemapProvidersTableComponent } from '../../components/data-dashboard/basemap-providers-table/basemap-providers-table.component';
 import { DataStatCardsComponent } from '../../components/data-dashboard/data-stat-cards/data-stat-cards.component';
 import { DataSyncCyclesTableComponent } from '../../components/data-dashboard/data-sync-cycles-table/data-sync-cycles-table.component';
 import { DataSyncStatusTableComponent } from '../../components/data-dashboard/data-sync-status-table/data-sync-status-table.component';
@@ -24,7 +23,6 @@ import { JobTimelineEchartsComponent } from '../../components/dashboard/job-time
 import { MetricChartComponent } from '../../components/dashboard/metric-chart/metric-chart.component';
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
 import type {
-  BasemapProviderStatus,
   DataMetricsSummary,
   DataSyncCycle,
   DataSyncHistoryPoint,
@@ -137,12 +135,6 @@ const PANEL_TIPS = {
     '• Fragmentación = RSS ÷ used_memory\n' +
     '• Hit rate = hits ÷ (hits + misses)\n' +
     '• Desalojadas > 0 = descartando datos por memoria',
-  basemap:
-    'Estado en vivo del scraper de mapa base (SQLite propio).\n' +
-    '• respaldado · respaldando (cursor z·índice) · con errores\n' +
-    '• respaldado % y fallidos = del último barrido (ok / intentos)\n' +
-    '• "con errores" = pausado: la tasa de error superó el umbral\n' +
-    '• Barrido completo cada ~7 días (no_cache → S3)',
   cycles:
     'Filas crudas de sync_cycles (más nuevas primero, máx. 100).\n' +
     '• El detalle sin agregar detrás de throughput y errores',
@@ -159,8 +151,8 @@ function stampAgo(iso: string | null | undefined): string {
 }
 
 /**
- * Panel de estado y memoria del data-service (pestaña "Caché y mapas" del
- * shell `/status`). Dueño del estado: mantiene controles y datos en signals, los
+ * Panel de estado y memoria del data-service (pestaña "Caché" del shell
+ * `/status`). Dueño del estado: mantiene controles y datos en signals, los
  * refresca contra el API `/metrics` del data-service y los reparte a componentes
  * de presentación.
  */
@@ -179,7 +171,6 @@ function stampAgo(iso: string | null | undefined): string {
     DataSyncStatusTableComponent,
     RedisMemoryTableComponent,
     RedisInfoCardsComponent,
-    BasemapProvidersTableComponent,
     DataSyncCyclesTableComponent,
     JobTimelineEchartsComponent,
   ],
@@ -214,7 +205,6 @@ export class DataDashboardComponent {
   readonly memoryHistory = signal<readonly RedisMemoryHistoryPoint[]>([]);
   readonly syncHistory = signal<readonly DataSyncHistoryPoint[]>([]);
   readonly info = signal<RedisInfo | null>(null);
-  readonly providers = signal<readonly BasemapProviderStatus[]>([]);
   readonly cycles = signal<readonly DataSyncCycle[]>([]);
 
   readonly updatedAt = signal<string>('—');
@@ -275,15 +265,6 @@ export class DataDashboardComponent {
   readonly summaryStamp = computed(() => stampAgo(this.summary()?.sampled_at));
   readonly memoryStamp = computed(() => stampAgo(this.memory()?.sampled_at));
   readonly infoStamp = computed(() => stampAgo(this.info()?.sampled_at));
-  readonly basemapStamp = computed(() => {
-    const times = this.providers()
-      .map((p) => p.last_swept)
-      .filter((t): t is number => t != null);
-    if (!times.length) {
-      return '';
-    }
-    return 'último barrido ' + ago(new Date(Math.max(...times) * 1000).toISOString());
-  });
 
   // ── Opciones de gráficos ──────────────────────────────────────────────────
 
@@ -448,7 +429,7 @@ export class DataDashboardComponent {
     }
     try {
       const hours = this.windowHours();
-      const [summary, syncStatus, memory, memoryHistory, syncHistory, info, providers, cycles] =
+      const [summary, syncStatus, memory, memoryHistory, syncHistory, info, cycles] =
         await Promise.all([
           firstValueFrom(this.metrics.getSummary()),
           firstValueFrom(this.metrics.getSyncStatus()),
@@ -456,7 +437,6 @@ export class DataDashboardComponent {
           firstValueFrom(this.metrics.getRedisMemoryHistory(hours)),
           firstValueFrom(this.metrics.getSyncHistory(hours, this.bucket())),
           firstValueFrom(this.metrics.getRedisInfo()),
-          firstValueFrom(this.metrics.getBasemapProviders()),
           firstValueFrom(this.metrics.getSyncCycles(hours, undefined, this.cyclesLimit())),
         ]);
       this.summary.set(summary);
@@ -465,7 +445,6 @@ export class DataDashboardComponent {
       this.memoryHistory.set(memoryHistory);
       this.syncHistory.set(syncHistory);
       this.info.set(info);
-      this.providers.set(providers);
       this.cycles.set(cycles);
       this.updatedAt.set(new Date().toLocaleTimeString());
       this.errorMsg.set(null);

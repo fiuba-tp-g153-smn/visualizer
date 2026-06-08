@@ -1,0 +1,92 @@
+<div class="dash">
+  <header class="dash__head">
+    <span class="dash__brand">
+      <span
+        class="dash__status"
+        [class.dash__status--up]="online() === true"
+        [class.dash__status--down]="online() === false"
+        [matTooltip]="
+          online() === false
+            ? 'Mapa base sin conexión'
+            : online() === true
+              ? 'Mapa base operativo'
+              : 'Conectando…'
+        "
+      ></span>
+      <span class="dash__title">Scraper de respaldo de mapa base (data service)</span>
+    </span>
+    <span class="dash__spacer"></span>
+
+    <label class="dash__ctl">
+      <span
+        class="dash__ctl-title"
+        matTooltipClass="nav-tip"
+        matTooltip="Frecuencia del refresco automático. 'no' lo desactiva."
+        >Actualización cada</span
+      >
+      <select [value]="refreshSecs()" (change)="onRefreshChange($event)">
+        <option value="0">no</option>
+        <option value="10">10s</option>
+        <option value="30">30s</option>
+        <option value="60">60s</option>
+      </select>
+    </label>
+    <div class="dash__refresh-wrap">
+      <button
+        mat-stroked-button
+        class="dash__refresh"
+        (click)="refreshNow()"
+        [disabled]="loading()"
+        matTooltip="Refresca los datos ahora."
+        matTooltipClass="nav-tip"
+      >
+        <span class="dash__refresh-glyph">
+          @if (loading()) {
+            <mat-spinner diameter="16" />
+          } @else {
+            <mat-icon>refresh</mat-icon>
+          }
+        </span>
+        Actualizar
+      </button>
+      <span class="dash__updated">Actualizado {{ updatedAt() }}</span>
+    </div>
+  </header>
+
+  <main class="dash__body">
+    @if (errorMsg(); as err) {
+      <div class="dash__error" role="alert">
+        <mat-icon>error</mat-icon>
+        <span>No se pudo actualizar el estado del scraper: {{ err }}</span>
+        <button mat-button (click)="refreshNow()" [disabled]="loading()">Reintentar</button>
+      </div>
+    }
+
+    @if (firstLoad()) {
+      <div class="dash__loading">
+        <mat-spinner diameter="40" />
+        <span>Cargando estado del scraper…</span>
+      </div>
+    } @else {
+      <div
+        class="dash__content"
+        [class.dash__content--busy]="reloading()"
+        [attr.aria-busy]="reloading()"
+      >
+        <app-metric-panel heading="Scraper de mapa base" [tip]="tip">
+          <span panelActions class="dash__stamp">{{ basemapStamp() }}</span>
+          <div class="dash__scroll-x">
+            <app-basemap-providers-table [providers]="providers()" />
+          </div>
+        </app-metric-panel>
+      </div>
+
+      @if (reloading()) {
+        <div class="dash__overlay" role="status" aria-live="polite">
+          <mat-spinner diameter="40" />
+          <span>Cargando estado del scraper…</span>
+        </div>
+      }
+    }
+  </main>
+</div>

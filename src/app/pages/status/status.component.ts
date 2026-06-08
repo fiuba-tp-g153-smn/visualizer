@@ -4,14 +4,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 
+import { BasemapDashboardComponent } from '../basemap-dashboard/basemap-dashboard.component';
 import { DashboardComponent } from '../dashboard/dashboard.component';
 import { DataDashboardComponent } from '../data-dashboard/data-dashboard.component';
 
-type StatusTab = 'processing' | 'data';
+type StatusTab = 'processing' | 'cache' | 'basemap';
 
 /**
- * Shell de la ruta `/status`: una barra superior (volver + dos pestañas) y, en el
- * cuerpo, uno de los dos paneles. Solo se instancia el panel de la pestaña
+ * Shell de la ruta `/status`: una barra superior (volver + tres pestañas) y, en
+ * el cuerpo, uno de los tres paneles. Solo se instancia el panel de la pestaña
  * activa (`@if`), así nada más uno hace polling a la vez; cambiar de pestaña
  * destruye el anterior (corta su intervalo) y monta el otro con datos frescos.
  */
@@ -25,6 +26,7 @@ type StatusTab = 'processing' | 'data';
     MatTooltipModule,
     DashboardComponent,
     DataDashboardComponent,
+    BasemapDashboardComponent,
   ],
   templateUrl: './status.component.html',
   styleUrl: './status.component.scss',

@@ -7,13 +7,13 @@
         [class.dash__status--down]="online() === false"
         [matTooltip]="
           online() === false
-            ? 'Caché y mapas sin conexión'
+            ? 'Caché sin conexión'
             : online() === true
-              ? 'Caché y mapas operativo'
+              ? 'Caché operativo'
               : 'Conectando…'
         "
       ></span>
-      <span class="dash__title">Estado del sistema de caché y respaldo de mapa base (data service)</span>
+      <span class="dash__title">Estado del sistema de caché (data service)</span>
     </span>
     <span class="dash__spacer"></span>
 
@@ -156,13 +156,6 @@
             } @else {
               <div class="dash__note">Sin ciclos de sync en esta ventana.</div>
             }
-          </div>
-        </app-metric-panel>
-
-        <app-metric-panel heading="Scraper de mapa base" [tip]="tips.basemap">
-          <span panelActions class="dash__stamp">{{ basemapStamp() }}</span>
-          <div class="dash__scroll-x">
-            <app-basemap-providers-table [providers]="providers()" />
           </div>
         </app-metric-panel>
 

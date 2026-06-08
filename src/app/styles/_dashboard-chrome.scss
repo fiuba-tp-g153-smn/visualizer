@@ -1,0 +1,219 @@
+// Tokens de color de estado + chrome del dashboard, compartidos por las pestañas
+// de caché (`DataDashboardComponent`) y de mapa base (`BasemapDashboardComponent`)
+// del shell `/status`.
+
+// Tokens en :host para que los hijos (las pills de las tablas) los hereden. No se
+// filtran al resto de la app porque se incluyen solo en el :host de cada panel.
+@mixin metric-tokens() {
+  --metric-success: #2e9b51;
+  --metric-success-bg: #e6f4ec;
+  --metric-error: #e8702a;
+  --metric-error-bg: #fdeee5;
+  --metric-dlq: #d23b4e;
+  --metric-requeued: #b5892a;
+  --metric-skipped: #6b7280;
+  --metric-skipped-bg: #eceef0;
+  --metric-info: var(--mat-sys-primary, #0090d0);
+}
+
+// Chrome del dashboard: cabecera pegajosa, controles, cuerpo y estados de carga.
+@mixin dashboard-chrome() {
+  .dash {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dash__head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 16px;
+    min-height: 52px;
+    background: var(--mat-sys-surface, #ffffff);
+    border-bottom: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  }
+
+  .dash__brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dash__status {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--mat-sys-outline, #9aa0a6);
+  }
+
+  .dash__status--up {
+    background: var(--metric-success, #2e9b51);
+  }
+
+  .dash__status--down {
+    background: var(--metric-dlq, #d23b4e);
+  }
+
+  .dash__title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .dash__spacer {
+    flex: 1 1 auto;
+  }
+
+  .dash__ctl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+
+    select {
+      font-size: 12px;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--mat-sys-on-surface, #1f1f1f);
+      background: var(--mat-sys-surface, #ffffff);
+      border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+      border-radius: 4px;
+      padding: 4px 8px;
+    }
+  }
+
+  .dash__ctl-title {
+    cursor: help;
+  }
+
+  .dash__refresh {
+    white-space: nowrap;
+  }
+
+  .dash__refresh-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+    vertical-align: middle;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+    }
+  }
+
+  .dash__refresh-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .dash__updated {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant, #9aa0a6);
+  }
+
+  .dash__body {
+    width: 100%;
+    max-width: 1540px;
+    margin: 0 auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dash__content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dash__scroll-x {
+    overflow-x: auto;
+  }
+
+  // "muestreado hace …" en el slot de acciones del panel (paneles lentos).
+  .dash__stamp {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant, #9aa0a6);
+    white-space: nowrap;
+  }
+
+  // Contenedor de gráficos ApexCharts dentro de un panel.
+  .dash__chart {
+    height: 320px;
+    padding: 8px 10px 0;
+  }
+
+  .dash__note {
+    padding: 18px;
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+  }
+
+  .dash__error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid var(--metric-error, #e8702a);
+    background: var(--metric-error-bg, #fdeee5);
+    color: var(--metric-error, #e8702a);
+    border-radius: 8px;
+    font-size: 13px;
+
+    span {
+      flex: 1 1 auto;
+    }
+  }
+
+  .dash__content--busy {
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+
+  .dash__overlay {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 28px;
+    border-radius: 12px;
+    background: var(--mat-sys-surface, #ffffff);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+  }
+
+  .dash__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 80px 20px;
+    font-size: 13px;
+    color: var(--mat-sys-on-surface-variant, #5f6368);
+  }
+}
