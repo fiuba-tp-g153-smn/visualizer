@@ -12,6 +12,7 @@ import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 import { LayerRefreshService } from './services/layers/layer-refresh.service';
 import { BaseMapService } from './services/base-maps/base-map.service';
 import { BasemapPerfService } from './services/base-maps/basemap-perf.service';
+import { SeoService } from './services/seo/seo.service';
 import { weatherStationsHttpInterceptor } from './services/weather-stations/weather-stations-http.interceptor';
 import { TOOLTIP_DELAYS } from './config/timing.config';
 
@@ -38,6 +39,8 @@ export const appConfig: ApplicationConfig = {
         // Eager load BasemapPerfService so its PerformanceObserver attaches
         // before the first tile request (no-op in production builds).
         inject(BasemapPerfService);
+        // Start syncing per-route title/description/OG tags with navigation.
+        inject(SeoService).init();
       },
     },
     {

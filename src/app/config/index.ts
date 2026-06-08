@@ -67,3 +67,14 @@ export {
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
 } from './layers';
+
+// SEO / social-sharing metadata (per-route titles, descriptions, OG/Twitter)
+export {
+  SITE_URL,
+  SITE_NAME,
+  OG_IMAGE,
+  DEFAULT_SEO,
+  STATUS_SEO,
+  DOCS_SEO,
+  type RouteSeo,
+} from './seo.config';

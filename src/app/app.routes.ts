@@ -1,6 +1,7 @@
 import { Routes, UrlSegment } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
 import { DocsComponent } from './pages/docs/docs.component';
+import { DEFAULT_SEO, DOCS_SEO, STATUS_SEO } from './config';
 
 /**
  * Custom URL matcher for docs routes.
@@ -22,12 +23,13 @@ function docsPathMatcher(segments: UrlSegment[]) {
 }
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent },
-  { matcher: docsPathMatcher, component: DocsComponent },
+  { path: '', component: HomeComponent, data: DEFAULT_SEO },
+  { matcher: docsPathMatcher, component: DocsComponent, data: DOCS_SEO },
   {
     path: 'status',
     loadComponent: () =>
       import('./pages/status/status.component').then((m) => m.StatusComponent),
+    data: STATUS_SEO,
   },
   { path: '**', redirectTo: '' },
 ];

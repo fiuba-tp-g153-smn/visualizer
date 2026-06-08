@@ -7,6 +7,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="apple-touch-icon" href="icono.png" />
+
+    <!-- SEO / social link previews. These STATIC tags are what non-JS crawlers
+         (WhatsApp, Slack, Facebook, LinkedIn, Discord, X) read; per-route titles
+         and descriptions are updated at runtime by SeoService for users/Google.
+         Keep the wording in sync with src/app/config/seo.config.ts (DEFAULT_SEO). -->
+    <meta
+      name="description"
+      content="Visualizador interactivo del Servicio Meteorológico Nacional: imágenes satelitales GOES-19, radar meteorológico, modelos de pronóstico y estaciones en Argentina."
+    />
+    <meta name="author" content="Servicio Meteorológico Nacional (SMN)" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#242c4f" />
+    <link rel="canonical" href="https://mapasmn.com/" />
+
+    <!-- Open Graph (Facebook, WhatsApp, Slack, LinkedIn, Discord) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Visualizador SMN" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:url" content="https://mapasmn.com/" />
+    <meta property="og:title" content="Visualizador SMN — Mapa meteorológico interactivo" />
+    <meta
+      property="og:description"
+      content="Visualizador interactivo del Servicio Meteorológico Nacional: imágenes satelitales GOES-19, radar meteorológico, modelos de pronóstico y estaciones en Argentina."
+    />
+    <meta property="og:image" content="https://mapasmn.com/SMN_Logo_Alta.png" />
+    <meta property="og:image:width" content="960" />
+    <meta property="og:image:height" content="851" />
+    <meta property="og:image:alt" content="Logo del Servicio Meteorológico Nacional" />
+
+    <!-- Twitter / X (summary: square thumbnail, suits the ~square logo) -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Visualizador SMN — Mapa meteorológico interactivo" />
+    <meta
+      name="twitter:description"
+      content="Visualizador interactivo del Servicio Meteorológico Nacional: imágenes satelitales GOES-19, radar meteorológico, modelos de pronóstico y estaciones en Argentina."
+    />
+    <meta name="twitter:image" content="https://mapasmn.com/SMN_Logo_Alta.png" />
     <!-- Preconnect to the tile/data origin so the first basemap tile (LCP) connects sooner -->
     <link rel="preconnect" href="https://data.mapasmn.com" crossorigin />
     <!-- Google Fonts: Roboto + Material Icons -->
