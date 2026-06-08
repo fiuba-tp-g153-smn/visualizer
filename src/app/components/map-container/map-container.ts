@@ -1,6 +1,14 @@
 import { Component, OnInit, OnDestroy, PLATFORM_ID, inject, effect } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import * as L from 'leaflet';
+import {
+  DomEvent,
+  LeafletMouseEvent,
+  Map as LeafletMap,
+  TileErrorEvent,
+  TileLayer,
+  map,
+  tileLayer,
+} from 'leaflet';
 import { MAP_CONFIG, MAP_Z_INDEX } from '../../config';
 import { environment } from '../../../environments/environment';
 
@@ -30,7 +38,7 @@ import { UnitsSettingsService } from '../../services/settings/units-settings.ser
   styleUrl: './map-container.scss',
 })
 export class MapContainer implements OnInit, OnDestroy {
-  private map: L.Map | null = null;
+  private map: LeafletMap | null = null;
   private platformId = inject(PLATFORM_ID);
   private baseMapService = inject(BaseMapService);
   private controlService = inject(LayerControlService);
@@ -49,7 +57,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private layerRefreshService = inject(LayerRefreshService);
   private unitsSettings = inject(UnitsSettingsService);
 
-  private currentTileLayer: L.TileLayer | null = null;
+  private currentTileLayer: TileLayer | null = null;
   private currentBaseMapUrl: string | null = null;
 
   readonly showZoom = this.mapInfoService.showZoom;
@@ -138,11 +146,13 @@ export class MapContainer implements OnInit, OnDestroy {
     }
   }
   private async initMap(): Promise<void> {
-    this.map = L.map('map', {
+    this.map = map('map', {
       center: [MAP_CONFIG.initialCenter.lat, MAP_CONFIG.initialCenter.lng],
       zoom: MAP_CONFIG.initialZoom,
       minZoom: MAP_CONFIG.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
+      maxBounds: MAP_CONFIG.maxBounds,
+      maxBoundsViscosity: MAP_CONFIG.maxBoundsViscosity,
       zoomControl: false,
       attributionControl: false,
       doubleClickZoom: true, // Will be disabled during polygon drawing
@@ -177,7 +187,7 @@ export class MapContainer implements OnInit, OnDestroy {
       this.changeBaseMap(initialBaseMap);
     }
 
-    this.map.on('click', (event: L.LeafletMouseEvent) => {
+    this.map.on('click', (event: LeafletMouseEvent) => {
       this.polygonsService.closeContextMenu();
       const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
       this.pointQueryViewerService.handleMapClick(event.latlng.lat, event.latlng.lng, button);
@@ -188,8 +198,8 @@ export class MapContainer implements OnInit, OnDestroy {
     const applyEventBlocking = (selector: string) => {
       const element = document.querySelector(selector) as HTMLElement;
       if (element && !(element as any)._leaflet_disable_events) {
-        L.DomEvent.disableClickPropagation(element);
-        L.DomEvent.disableScrollPropagation(element);
+        DomEvent.disableClickPropagation(element);
+        DomEvent.disableScrollPropagation(element);
         (element as any)._leaflet_disable_events = true;
       }
     };
@@ -228,7 +238,7 @@ export class MapContainer implements OnInit, OnDestroy {
     }
 
     this.currentBaseMapUrl = tileUrl;
-    this.currentTileLayer = L.tileLayer(tileUrl, {
+    this.currentTileLayer = tileLayer(tileUrl, {
       attribution: baseMap.attribution,
       maxZoom: baseMap.maxZoom,
       zIndex: MAP_Z_INDEX.BASE_MAP,
@@ -250,7 +260,7 @@ export class MapContainer implements OnInit, OnDestroy {
     // The data-service handles TMS Y-flip internally, so coords (XYZ) map directly.
     // `fallbackUsed` guards against retriggering tileerror on the fallback itself.
     if (baseMap.directUrl) {
-      this.currentTileLayer.on('tileerror', (e: L.TileErrorEvent) => {
+      this.currentTileLayer.on('tileerror', (e: TileErrorEvent) => {
         const tile = e.tile as HTMLImageElement;
         if (tile.dataset['fallbackUsed']) return;
         tile.dataset['fallbackUsed'] = '1';
