@@ -1141,13 +1141,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     () => this.weatherStationsTemporalMode() === WeatherStationsTemporalMode.SPECIFIC,
   );
 
-  readonly weatherStationsMaxPastHours = computed(() =>
-    this.controlService.getWeatherStationsMaxPastHours(),
+  readonly weatherStationsGracePeriodHours = computed(() =>
+    this.controlService.getWeatherStationsGracePeriodHours(),
   );
 
   // Bound to the "Mostrar estaciones sin datos" checkbox. When false, the
   // renderer drops stations whose `hasData` is false (last observation falls
-  // outside the requested tolerance window).
+  // outside the grace-period window).
   readonly weatherStationsShowStationsWithoutData =
     this.controlService.weatherStationsShowStationsWithoutData;
 
@@ -1184,8 +1184,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     void this.refreshService.loadWeatherStationsSnapshot(true);
   }
 
-  onWeatherStationsMaxPastHoursChange(maxPastHours: number): void {
-    this.controlService.setWeatherStationsMaxPastHours(maxPastHours);
+  onWeatherStationsGracePeriodHoursChange(gracePeriodHours: number): void {
+    this.controlService.setWeatherStationsGracePeriodHours(gracePeriodHours);
     if (this.weatherStationsTemporalMode() === WeatherStationsTemporalMode.SPECIFIC) {
       if (this.isPlaying()) {
         this.startWeatherStationsPlayback();

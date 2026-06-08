@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  type OnInit,
   afterNextRender,
   computed,
   effect,
@@ -76,7 +77,7 @@ type Range = [number, number];
           [checked]="colorBy() === 'type'"
           (change)="colorBy.set($event.checked ? 'type' : 'outcome')"
         >
-          {{ colorBy() === 'type' ? 'Color: tipo' : 'Color: resultado' }}
+          {{ colorBy() === 'type' ? 'Color: ' + typeLabel() : 'Color: resultado' }}
         </mat-slide-toggle>
         <span class="jt__spacer"></span>
         <button
@@ -194,15 +195,25 @@ type Range = [number, number];
     }
   `,
 })
-export class JobTimelineEchartsComponent {
+export class JobTimelineEchartsComponent implements OnInit {
   readonly jobs = input.required<readonly RecentJob[]>();
   /** Ancho máximo de la ventana visible (ms); null = sin tope (rangos fijos). */
   readonly maxSpanMs = input<number | null>(null);
   /** Cambia en cada carga "fresca" (cambio de rango); igual = sólo se agregaron datos. */
   readonly reloadKey = input<number>(0);
+  /** Tooltip HTML por ítem; por defecto el del job (worker/duración/resultado). */
+  readonly tooltip = input<((job: RecentJob) => string) | null>(null);
+  /** Color inicial (resultado/tipo); el toggle puede cambiarlo después. */
+  readonly initialColorBy = input<TimelineColorBy>('outcome');
+  /** Etiqueta del modo "tipo" en el toggle (p. ej. "dominio"). */
+  readonly typeLabel = input<string>('tipo');
   readonly jobClick = output<RecentJob>();
   /** Se emite al desplazarse cerca del borde izquierdo (modo "todo"): cargar más viejo. */
   readonly loadOlder = output<void>();
+
+  ngOnInit(): void {
+    this.colorBy.set(this.initialColorBy());
+  }
 
   private readonly timezone = inject(TimezoneSettingsService);
   private readonly chartEl = viewChild.required<ElementRef<HTMLElement>>('chart');
@@ -299,6 +310,7 @@ export class JobTimelineEchartsComponent {
       utc: this.utc(),
       colorBy: this.colorBy(),
       maxSpanMs: this.maxSpanMs(),
+      tooltipFor: this.tooltip() ?? undefined,
     });
     this.extent = extent;
     const utc = this.utc();

@@ -57,7 +57,7 @@ describe('LayerControlService — weather stations no-data toggle', () => {
       zIndex: null,
       scaleVisible: false,
       temporalMode: 'latest',
-      maxPastHours: 24,
+      gracePeriodHours: 24,
       imageCount: 6,
       selectedTilesetId: null,
     });

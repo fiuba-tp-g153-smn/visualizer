@@ -132,6 +132,15 @@ body {
   max-width: 280px;
 }
 
+// Tooltip de los paneles (ícono "i" del encabezado): respeta saltos de línea
+// para mostrar resúmenes con viñetas, alineado a la izquierda. Global por la
+// misma razón (overlay del CDK). Compartido por ambas pestañas de /status.
+.panel__tooltip .mdc-tooltip__surface {
+  white-space: pre-line;
+  text-align: left;
+  max-width: 340px;
+}
+
 // Tooltips de la barra superior: aparecen debajo (no hay lugar arriba), así que
 // se separan del control para que el cursor no los tape.
 .nav-tip .mdc-tooltip__surface {

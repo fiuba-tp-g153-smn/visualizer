@@ -6,7 +6,7 @@ const DEFAULT_FETCH_CONCURRENCY = 4;
 
 /**
  * Warms the **browser HTTP cache** for weather-station snapshot URLs
- * (`/weather-stations/{tilesetId}?N=`), so timeline playback replays those
+ * (`/weather-stations/{tilesetId}?grace_period_hours=`), so timeline playback replays those
  * frames straight from the browser cache — no network and no JS-heap retention.
  *
  * This is the JSON analogue of {@link TilePrefetchService} (which warms the

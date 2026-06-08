@@ -56,16 +56,23 @@ interface RenderParams {
  */
 export function buildEchartsOption(
   jobs: readonly RecentJob[],
-  opts: { utc: boolean; colorBy: TimelineColorBy; maxSpanMs?: number | null },
+  opts: {
+    utc: boolean;
+    colorBy: TimelineColorBy;
+    maxSpanMs?: number | null;
+    /** Custom tooltip HTML per item; defaults to the job tooltip. */
+    tooltipFor?: (job: RecentJob) => string;
+  },
 ): { option: EchartsTimelineOption; lanes: number; extent: [number, number] } {
   const { rows, lanes } = packIntoLanes(jobs);
   const typeColorFor = buildTypeColorMap(jobs.map((job) => job.job_type));
+  const tooltipFor = opts.tooltipFor ?? ((job: RecentJob) => tooltipHtml(job, opts.utc));
 
   const data: EchartsTimelineDatum[] = rows.map((row) => ({
     value: [row.lane, row.start, row.end],
     job: row.job,
     color: colorOf(row.job, opts.colorBy, typeColorFor),
-    tooltip: tooltipHtml(row.job, opts.utc),
+    tooltip: tooltipFor(row.job),
   }));
 
   const laneLabels = Array.from({ length: Math.max(lanes, 1) }, (_, i) => String(i + 1));

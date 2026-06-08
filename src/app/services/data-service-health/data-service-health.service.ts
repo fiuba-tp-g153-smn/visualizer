@@ -30,8 +30,8 @@ export class DataServiceHealthService {
   private static readonly PROBE_TIMEOUT_MS = 3_000;
   private static readonly POLL_INTERVAL_MS = 10_000;
   private static readonly BANNER_MESSAGE =
-    'El servicio de datos no está disponible. Algunas capas pueden no cargar. Reintentando…';
-  private static readonly RECOVERY_MESSAGE = 'Servicio de datos reconectado.';
+    'El Caché y mapas no está disponible. Algunas capas pueden no cargar. Reintentando…';
+  private static readonly RECOVERY_MESSAGE = 'Caché y mapas reconectado.';
 
   private readonly http = inject(HttpClient);
   private readonly notificationService = inject(NotificationService);

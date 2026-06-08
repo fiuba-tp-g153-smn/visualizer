@@ -175,11 +175,16 @@ export function buildWeatherStationsLatestUrl(): string {
 }
 
 /**
- * URL del snapshot para un tilesetId específico (hora bucket) con
- * tolerancia de N horas hacia atrás. N=0 fuerza match exacto.
+ * URL del snapshot para un tilesetId específico (hora bucket). El backend
+ * marca cada estación `is_current` cuando su `observed_at` está dentro de
+ * `gracePeriodHours` de la hora seleccionada; `gracePeriodHours=0` deja como
+ * actuales sólo las observadas en la hora exacta.
  */
-export function buildWeatherStationsTilesetUrl(tilesetId: string, maxPastHours: number): string {
-  return `${DATA_SERVICE_BASE_URL}/weather-stations/${tilesetId}?N=${maxPastHours}`;
+export function buildWeatherStationsTilesetUrl(
+  tilesetId: string,
+  gracePeriodHours: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/weather-stations/${tilesetId}?grace_period_hours=${gracePeriodHours}`;
 }
 
 /**

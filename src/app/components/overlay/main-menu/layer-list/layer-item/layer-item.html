@@ -407,9 +407,9 @@
                         <div class="tolerance-control">
                           <input
                             type="number"
-                            [value]="weatherStationsMaxPastHours()"
+                            [value]="weatherStationsGracePeriodHours()"
                             (change)="
-                              onWeatherStationsMaxPastHoursChange(+$any($event.target).value)
+                              onWeatherStationsGracePeriodHoursChange(+$any($event.target).value)
                             "
                             min="0"
                             max="24"

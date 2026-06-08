@@ -1,0 +1,210 @@
+<div class="dash">
+  <header class="dash__head">
+    <span class="dash__brand">
+      <span
+        class="dash__status"
+        [class.dash__status--up]="online() === true"
+        [class.dash__status--down]="online() === false"
+        [matTooltip]="
+          online() === false
+            ? 'Caché y mapas sin conexión'
+            : online() === true
+              ? 'Caché y mapas operativo'
+              : 'Conectando…'
+        "
+      ></span>
+      <span class="dash__title">Estado del sistema de caché y respaldo de mapa base (data service)</span>
+    </span>
+    <span class="dash__spacer"></span>
+
+    <label class="dash__ctl">
+      <span
+        class="dash__ctl-title"
+        matTooltipClass="nav-tip"
+        matTooltip="Ventana de tiempo de las series históricas (memoria, throughput, errores, ciclos). No afecta a los estados/snapshots en vivo."
+        >ventana</span
+      >
+      <select [value]="windowHours()" (change)="onWindowChange($event)">
+        <option value="24">24h</option>
+        <option value="168">7d</option>
+        <option value="0">todo</option>
+      </select>
+    </label>
+    <label class="dash__ctl">
+      <span
+        class="dash__ctl-title"
+        matTooltipClass="nav-tip"
+        matTooltip="Intervalo de agrupación de las series de sincronización: por hora o por día."
+        >intervalo</span
+      >
+      <select [value]="bucket()" (change)="onBucketChange($event)">
+        <option value="hour">hora</option>
+        <option value="day">día</option>
+      </select>
+    </label>
+    <label class="dash__ctl">
+      <span
+        class="dash__ctl-title"
+        matTooltipClass="nav-tip"
+        matTooltip="Frecuencia del refresco automático. 'no' lo desactiva."
+        >Actualización cada</span
+      >
+      <select [value]="refreshSecs()" (change)="onRefreshChange($event)">
+        <option value="0">no</option>
+        <option value="10">10s</option>
+        <option value="30">30s</option>
+        <option value="60">60s</option>
+      </select>
+    </label>
+    <div class="dash__refresh-wrap">
+      <button
+        mat-stroked-button
+        class="dash__refresh"
+        (click)="refreshNow()"
+        [disabled]="loading()"
+        matTooltip="Refresca los datos ahora."
+        matTooltipClass="nav-tip"
+      >
+        <span class="dash__refresh-glyph">
+          @if (loading()) {
+            <mat-spinner diameter="16" />
+          } @else {
+            <mat-icon>refresh</mat-icon>
+          }
+        </span>
+        Actualizar
+      </button>
+      <span class="dash__updated">Actualizado {{ updatedAt() }}</span>
+    </div>
+  </header>
+
+  <main class="dash__body">
+    @if (errorMsg(); as err) {
+      <div class="dash__error" role="alert">
+        <mat-icon>error</mat-icon>
+        <span>No se pudieron actualizar las métricas: {{ err }}</span>
+        <button mat-button (click)="refreshNow()" [disabled]="loading()">Reintentar</button>
+      </div>
+    }
+
+    @if (firstLoad()) {
+      <div class="dash__loading">
+        <mat-spinner diameter="40" />
+        <span>Cargando métricas…</span>
+      </div>
+    } @else {
+      <div
+        class="dash__content"
+        [class.dash__content--busy]="reloading()"
+        [attr.aria-busy]="reloading()"
+      >
+        <app-metric-panel heading="Resumen general" [tip]="tips.summary">
+          <span panelActions class="dash__stamp">{{ summaryStamp() }}</span>
+          <app-data-stat-cards [summary]="summary()" />
+        </app-metric-panel>
+
+        <app-metric-panel heading="Redis · INFO" [tip]="tips.info">
+          <span panelActions class="dash__stamp">{{ infoStamp() }}</span>
+          <app-redis-info-cards [info]="info()" />
+        </app-metric-panel>
+
+        <app-metric-panel heading="Estado de sincronización" [tip]="tips.syncStatus">
+          <div class="dash__scroll-x">
+            <app-data-sync-status-table [domains]="syncStatus()?.domains ?? []" />
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Memoria Redis por dominio" [tip]="tips.memory">
+          <span panelActions class="dash__stamp">{{ memoryStamp() }}</span>
+          <div class="dash__chart">
+            @if (memoryBarOptions(); as opts) {
+              <app-metric-chart [options]="opts" />
+            } @else {
+              <div class="dash__note">Sin muestras de memoria todavía.</div>
+            }
+          </div>
+          <div class="dash__scroll-x">
+            <app-redis-memory-table [memory]="memory()" />
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Evolución de memoria Redis" [tip]="tips.memoryHistory">
+          <span panelActions class="dash__stamp">{{ memoryStamp() }}</span>
+          <div class="dash__chart">
+            @if (memoryAreaOptions(); as opts) {
+              <app-metric-chart [options]="opts" />
+            } @else {
+              <div class="dash__note">Sin historial de memoria en esta ventana.</div>
+            }
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Throughput de sincronización" [tip]="tips.throughput">
+          <div class="dash__chart">
+            @if (throughputOptions(); as opts) {
+              <app-metric-chart [options]="opts" />
+            } @else {
+              <div class="dash__note">Sin ciclos de sync en esta ventana.</div>
+            }
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Errores de sincronización" [tip]="tips.errors">
+          <div class="dash__chart">
+            @if (errorsOptions(); as opts) {
+              <app-metric-chart [options]="opts" />
+            } @else {
+              <div class="dash__note">Sin ciclos de sync en esta ventana.</div>
+            }
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Scraper de mapa base" [tip]="tips.basemap">
+          <span panelActions class="dash__stamp">{{ basemapStamp() }}</span>
+          <div class="dash__scroll-x">
+            <app-basemap-providers-table [providers]="providers()" />
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Línea de tiempo de sincronización" [tip]="tips.timeline">
+          <label panelActions class="dash__ctl">
+            rango
+            <select [value]="timelineRange()" (change)="onTimelineRangeChange($event)">
+              <option value="6">6h</option>
+              <option value="12">12h</option>
+              <option value="24">24h</option>
+              <option value="48">2d</option>
+              <option value="72">3d</option>
+              <option value="168">7d</option>
+              <option value="all">todo</option>
+            </select>
+          </label>
+          <app-job-timeline-echarts
+            [jobs]="timelineJobs()"
+            [maxSpanMs]="timelineMaxSpanMs()"
+            [reloadKey]="timelineReloadKey()"
+            [tooltip]="cycleTooltip"
+            initialColorBy="type"
+            typeLabel="dominio"
+            (loadOlder)="onTimelineLoadOlder()"
+          />
+        </app-metric-panel>
+
+        <app-metric-panel heading="Ciclos recientes" [tip]="tips.cycles">
+          <app-data-sync-cycles-table
+            [cycles]="cycles()"
+            [hasMore]="cyclesHasMore()"
+            (loadMore)="onLoadMoreCycles()"
+          />
+        </app-metric-panel>
+      </div>
+
+      @if (reloading()) {
+        <div class="dash__overlay" role="status" aria-live="polite">
+          <mat-spinner diameter="40" />
+          <span>Cargando métricas…</span>
+        </div>
+      }
+    }
+  </main>
+</div>

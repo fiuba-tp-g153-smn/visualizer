@@ -54,9 +54,10 @@ export interface CurrentWeatherStationDto {
 export interface WeatherStationObservation {
   station: WeatherStationDto;
   weather: CurrentWeatherStationDto;
-  // True when `weather.date` is within the requested tolerance window.
-  // Always true in LATEST mode (no window). In SPECIFIC mode the renderer
-  // uses this to apply the "no data for the requested period" styling.
+  // True when the station is "current": the backend `is_current` flag (station
+  // observed within `grace_period_hours` of the selected hour), or a client-side
+  // fallback for older backends. Always true in LATEST mode. In SPECIFIC mode the
+  // renderer uses this to apply the "no data for the requested period" styling.
   hasData: boolean;
 }
 
