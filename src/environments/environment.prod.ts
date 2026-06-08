@@ -22,4 +22,8 @@ export const environment = {
   metricsService: {
     baseUrl: $ENV.METRICS_SERVICE_BASE_URL,
   },
+  placeSearch: {
+    ignUrl: $ENV.IGN_PLACE_SEARCH_URL,
+    nominatimUrl: $ENV.NOMINATIM_SEARCH_URL,
+  },
 };

@@ -50,6 +50,8 @@ services:
       - SMN_API_PROMPT_FOR_TOKEN=${SMN_API_PROMPT_FOR_TOKEN}
       - APP_HOST_PORT=${APP_HOST_PORT}
       - DOCS_URL=${DOCS_URL}
+      - IGN_PLACE_SEARCH_URL=${IGN_PLACE_SEARCH_URL}
+      - NOMINATIM_SEARCH_URL=${NOMINATIM_SEARCH_URL}
     volumes:
       - .:/app
       - visualizer_node_modules:/app/node_modules
