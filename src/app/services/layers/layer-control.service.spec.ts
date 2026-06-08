@@ -14,6 +14,15 @@ import {
   WrfLayerControls,
 } from '../../models';
 
+// Mirrors LayerConfigService.configsAreEqual's availableTilesets comparison —
+// without it, stub updates always publish a new Map reference and the
+// reconciliation effect (which re-derives availableTilesets on every configs()
+// emission) spins forever reacting to its own writes.
+function tilesetIdsAreEqual(a: readonly TilesetEntry[], b: readonly TilesetEntry[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((entry, i) => entry.id === b[i].id);
+}
+
 describe('LayerControlService — weather stations no-data toggle', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -105,8 +114,10 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
         .sort()
         .map((id) => ({ id, time: new Date(0) }));
       const newConfig: EcmwfTpTileLayerConfig = { ...config, availableTilesets };
-      configMap.set(layerId, newConfig);
-      publish();
+      if (!tilesetIdsAreEqual(config.availableTilesets, availableTilesets)) {
+        configMap.set(layerId, newConfig);
+        publish();
+      }
       return newConfig;
     };
 
@@ -168,15 +179,14 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
     service.activateLayer(ECMWF_LAYER_ID);
     expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)?.length).toBeGreaterThan(0);
 
-    // Steps 2-3: toggling the only run off empties availableTilesets but leaves
-    // the layer active (see toggleEcmwfTpForecast) — the "broken" state.
+    // Steps 2-3: toggling the only run off empties the selection, which empties
+    // availableTilesets and — per toggleEcmwfTpForecast — deactivates the layer.
     service.toggleEcmwfTpForecast(ECMWF_LAYER_ID, FORECAST_LATEST);
     expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)).toEqual([]);
-    expect(service.getControls(ECMWF_LAYER_ID).visible).toBe(true);
+    expect(service.getControls(ECMWF_LAYER_ID).visible).toBe(false);
 
-    // Step 4: deactivate (e.g. via the layer's own checkbox) and reactivate —
-    // availableTilesets must be rebuilt, not left stale at [].
-    service.deactivateLayer(ECMWF_LAYER_ID);
+    // Step 4: reactivate — activateLayer must reseed the most recent forecast
+    // and rebuild availableTilesets, not leave it stale at [].
     service.activateLayer(ECMWF_LAYER_ID);
     const tilesetsAfterReactivation = configStub.getAvailableTilesets(ECMWF_LAYER_ID);
     expect(tilesetsAfterReactivation?.length).toBeGreaterThan(0);
@@ -217,8 +227,10 @@ describe('LayerControlService — forecast secondary render controls', () => {
           .sort()
           .map((id) => ({ id, time: new Date(0) }));
         const next = { ...config, availableTilesets };
-        configMap.set(layerId, next);
-        publish();
+        if (!tilesetIdsAreEqual(config.availableTilesets, availableTilesets)) {
+          configMap.set(layerId, next);
+          publish();
+        }
         return next;
       },
       updateWrfSelectedForecasts: (layerId: string) => {
@@ -281,7 +293,9 @@ describe('LayerControlService — forecast secondary render controls', () => {
     const controls = reloaded.getControls(ECMWF_LAYER_ID) as EcmwfTpLayerControls;
 
     expect(controls.forecast.renderControls[ECMWF_FORECAST]).toEqual({
-      selectedRenderIds: [],
+      // PRIMARY_RENDER_ID stays selected by default — only the isobars overlay
+      // (the only one explicitly hidden) drops out of the selection.
+      selectedRenderIds: ['primary'],
       renderOpacity: { 'ecmwf-mslp-isobars': 0.35 },
     });
   });
@@ -316,7 +330,9 @@ describe('LayerControlService — forecast secondary render controls', () => {
 
     const controls = service.getControls(WRF_LAYER_ID) as WrfLayerControls;
     expect(controls.forecast.renderControls[WRF_FORECAST]).toEqual({
-      selectedRenderIds: ['wrf-Precipitacion1h-slp'],
+      // PRIMARY_RENDER_ID stays selected by default — only the barbs render
+      // (the only one explicitly hidden) drops out of the selection.
+      selectedRenderIds: ['primary', 'wrf-Precipitacion1h-slp'],
       renderOpacity: { 'wrf-Precipitacion1h-slp': 0.6 },
     });
   });
