@@ -1,0 +1,44 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+:host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.context-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.context-menu-positioner {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.search-result-context-menu {
+  @include overlaySurface.floating-surface();
+
+  padding: 8px;
+  min-width: 220px;
+}
+
+mat-list-item {
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:active {
+    background-color: var(--mat-sys-surface-container-highest);
+  }
+
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  span {
+    color: var(--mat-sys-on-surface);
+    font-size: 14px;
+  }
+}
