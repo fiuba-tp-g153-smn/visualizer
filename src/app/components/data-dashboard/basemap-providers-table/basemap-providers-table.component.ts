@@ -13,7 +13,7 @@ import {
 } from '../../dashboard/sortable-table/sortable-table.models';
 import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.component';
 
-type State = 'respaldado' | 'respaldando' | 'con errores';
+type State = 'respaldado' | 'respaldando' | 'pendiente' | 'con errores';
 
 /** ok / attempted como porcentaje con 2 decimales (para que 99.99% siga visible). */
 function scrapedPct(ok: number, attempted: number): string {
@@ -21,7 +21,17 @@ function scrapedPct(ok: number, attempted: number): string {
 }
 
 function stateOf(p: BasemapProviderStatus): State {
-  return p.circuit_open ? 'con errores' : p.in_progress ? 'respaldando' : 'respaldado';
+  if (p.circuit_open) {
+    return 'con errores';
+  }
+  if (p.in_progress) {
+    return 'respaldando';
+  }
+  // Nunca se completó un respaldo ni se intentó ningún tile: aún no respaldado.
+  if (p.last_completed == null && p.attempted === 0) {
+    return 'pendiente';
+  }
+  return 'respaldado';
 }
 
 function statePill(p: BasemapProviderStatus): Cell {
@@ -31,6 +41,9 @@ function statePill(p: BasemapProviderStatus): Cell {
   }
   if (state === 'respaldando') {
     return pillCell('requeued', 'respaldando');
+  }
+  if (state === 'pendiente') {
+    return pillCell('skipped', 'pendiente', undefined, 'Sin barridos registrados todavía.');
   }
   return pillCell('success', 'respaldado');
 }
