@@ -117,7 +117,7 @@
                             [disabled]="isLoadingCut(polygon) || hasAlerts(polygon)"
                           >
                             @if (isLoadingCut(polygon)) {
-                              <mat-icon class="spinning">sync</mat-icon>
+                              <mat-icon class="spinning">autorenew</mat-icon>
                             } @else {
                               <mat-icon>content_cut</mat-icon>
                             }
@@ -180,7 +180,7 @@
                             [disabled]="isLoadingDepartments(polygon)"
                           >
                             @if (isLoadingDepartments(polygon)) {
-                              <mat-icon class="spinning">sync</mat-icon>
+                              <mat-icon class="spinning">autorenew</mat-icon>
                             } @else {
                               <mat-icon>location_city</mat-icon>
                             }
@@ -210,7 +210,7 @@
                             [disabled]="isLoadingDepartments(polygon)"
                           >
                             @if (isLoadingDepartments(polygon)) {
-                              <mat-icon class="spinning">sync</mat-icon>
+                              <mat-icon class="spinning">autorenew</mat-icon>
                             } @else {
                               <mat-icon>search</mat-icon>
                             }
@@ -228,7 +228,7 @@
                         >
                           @if (isLoadingAlerts(polygon)) {
                             <ng-container>
-                              <mat-icon class="spinning">sync</mat-icon>
+                              <mat-icon class="spinning">autorenew</mat-icon>
                               Generando aviso...
                             </ng-container>
                           } @else {
