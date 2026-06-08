@@ -1,0 +1,27 @@
+<div class="explorer-panel">
+  <mat-tab-group class="explorer-tabs" animationDuration="0ms">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
+          <mat-icon class="tab-icon">search</mat-icon>
+          <span class="tab-label">Buscar</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-place-search-tab />
+      </div>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <div class="tab-label-container">
+          <mat-icon class="tab-icon">map</mat-icon>
+          <span class="tab-label">Mapa base</span>
+        </div>
+      </ng-template>
+      <div class="tab-content">
+        <app-base-map-selector />
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

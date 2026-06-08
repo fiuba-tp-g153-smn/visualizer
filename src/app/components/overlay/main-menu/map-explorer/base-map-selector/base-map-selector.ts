@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { LoadingSpinnerComponent } from '../../../shared/loading-spinner/loading-spinner';
-import { BaseMapService } from '../../../../services/base-maps/base-map.service';
-import { BaseMap } from '../../../../models';
-import { MenuPanelComponent } from '../menu-section.model';
+import { LoadingSpinnerComponent } from '../../../../shared/loading-spinner/loading-spinner';
+import { BaseMapService } from '../../../../../services/base-maps/base-map.service';
+import { BaseMap } from '../../../../../models';
+import { MenuPanelComponent } from '../../menu-section.model';
 
 @Component({
   selector: 'app-base-map-selector',

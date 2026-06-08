@@ -32,12 +32,11 @@ const MENU_SECTIONS: ReadonlyArray<MenuSection> = [
     loadComponent: () => import('./map-tools/tools').then((m) => m.MapToolsComponent),
   },
   {
-    id: 'basemaps',
-    title: 'Mapa Base',
+    id: 'explore',
+    title: 'Explorar mapa',
     icon: 'map',
-    tooltip: 'Seleccionar mapa base',
-    loadComponent: () =>
-      import('./base-map-selector/base-map-selector').then((m) => m.BaseMapSelectorComponent),
+    tooltip: 'Buscar lugares y elegir mapa base',
+    loadComponent: () => import('./map-explorer/map-explorer').then((m) => m.MapExplorerComponent),
   },
   {
     id: 'settings',
