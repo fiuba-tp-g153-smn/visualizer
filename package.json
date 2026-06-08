@@ -1,6 +1,10 @@
 {
   "name": "visualizer",
   "version": "0.0.1",
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
