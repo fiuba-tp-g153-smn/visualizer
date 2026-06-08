@@ -59,7 +59,13 @@ export interface NominatimSearchResult {
 }
 
 /** Selectable place-search providers backing the search tab. */
-export type PlaceSearchSource = 'ign' | 'nominatim';
+export enum PlaceSearchSource {
+  IGN = 'ign',
+  NOMINATIM = 'nominatim',
+}
 
 /** How an area result from Nominatim should be marked on the map. */
-export type NominatimDisplayMode = 'polygon' | 'marker';
+export enum NominatimDisplayMode {
+  POLYGON = 'polygon',
+  MARKER = 'marker',
+}

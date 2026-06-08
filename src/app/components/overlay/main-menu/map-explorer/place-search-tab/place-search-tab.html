@@ -47,34 +47,34 @@
         class="search-config-group"
       >
         <mat-radio-button
-          value="ign"
+          [value]="placeSearchSource.IGN"
           color="primary"
           matTooltip="Nomenclátor oficial argentino: localidades, departamentos y provincias, ubicadas por centroide."
           >IGN (Argentina)</mat-radio-button
         >
         <mat-radio-button
-          value="nominatim"
+          [value]="placeSearchSource.NOMINATIM"
           color="primary"
           matTooltip="OpenStreetMap: también puede marcar el límite de un área como un polígono en el mapa."
           >Nominatim (OSM)</mat-radio-button
         >
       </mat-radio-group>
 
-      @if (source() === 'nominatim') {
-        <span class="control-label">Cómo marcar áreas</span>
+      @if (source() === placeSearchSource.NOMINATIM) {
+        <span class="control-label">Cómo mostrar resultados de área</span>
         <mat-radio-group
           [value]="nominatimDisplayMode()"
           (change)="onNominatimDisplayModeChange($event.value)"
           class="search-config-group"
         >
           <mat-radio-button
-            value="polygon"
+            [value]="nominatimDisplayModeOption.POLYGON"
             color="primary"
             matTooltip="Dibuja el límite del área como un polígono sobre el mapa."
             >Polígono</mat-radio-button
           >
           <mat-radio-button
-            value="marker"
+            [value]="nominatimDisplayModeOption.MARKER"
             color="primary"
             matTooltip="Marca el centro del área con un pin, sin dibujar su límite."
             >Marcador</mat-radio-button
@@ -117,6 +117,7 @@
     <ul class="search-results" role="listbox">
       @for (item of results(); track item.id; let i = $index) {
         <li
+          #resultItem
           class="search-result"
           role="option"
           [class.active]="i === activeIndex()"
@@ -131,22 +132,34 @@
             <span class="result-name">{{ item.title }}</span>
             <span class="result-meta">{{ item.subtitle }}</span>
           </div>
+          @if (item === selectedResult()) {
+            <span class="remove-result" (click)="$event.stopPropagation()">
+              <app-panel-close-button
+                ariaLabel="Quitar marca del mapa"
+                (pressed)="removeMapResult(item)"
+              />
+            </span>
+          }
+        </li>
+      }
+      @if (hasMore()) {
+        <li class="load-more-row" role="presentation">
+          <button
+            type="button"
+            class="load-more-btn"
+            [disabled]="loadingMore()"
+            (click)="loadMore()"
+          >
+            @if (loadingMore()) {
+              <app-loading-spinner [diameter]="16" />
+              <span>Cargando…</span>
+            } @else {
+              <mat-icon>expand_more</mat-icon>
+              <span>Cargar más resultados</span>
+            }
+          </button>
         </li>
       }
     </ul>
-
-    @if (hasMore()) {
-      <button type="button" class="load-more-btn" [disabled]="loadingMore()" (click)="loadMore()">
-        @if (loadingMore()) {
-          <app-loading-spinner [diameter]="16" />
-          <span>Cargando…</span>
-        } @else {
-          <mat-icon>expand_more</mat-icon>
-          <span>Cargar más resultados</span>
-        }
-      </button>
-    } @else {
-      <span class="load-more-end">No hay más resultados</span>
-    }
   }
 </div>

@@ -17,6 +17,13 @@ const NOMINATIM_SEARCH_URL = environment.placeSearch.nominatimUrl;
 const NOMINATIM_COUNTRY_CODES = 'ar';
 const NOMINATIM_LANGUAGE = 'es';
 
+/** OSM `place`/`boundary` categories cover named zones; `highway` and POI categories don't. */
+const NOMINATIM_ZONE_CATEGORIES = new Set(['place', 'boundary']);
+
+function isNominatimZone(result: NominatimSearchResult): boolean {
+  return NOMINATIM_ZONE_CATEGORIES.has(result.category);
+}
+
 function toIgnPlace(result: IgnPlaceSearchResult): IgnPlace {
   const [lon, lat] = result.geometry.coordinates;
 
@@ -74,6 +81,6 @@ export class PlaceSearchService {
 
     return this.http
       .get<NominatimSearchResult[]>(NOMINATIM_SEARCH_URL, { params })
-      .pipe(map((results) => results.map(toNominatimPlace)));
+      .pipe(map((results) => results.filter(isNominatimZone).map(toNominatimPlace)));
   }
 }

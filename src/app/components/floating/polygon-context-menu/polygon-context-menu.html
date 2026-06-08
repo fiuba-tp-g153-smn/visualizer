@@ -1,5 +1,5 @@
 @if (state(); as menuState) {
-  <div class="context-menu-backdrop" (click)="onBackdropClick()">
+  <div class="context-menu-backdrop" (click)="onBackdropClick(); $event.stopPropagation()">
     <div
       class="context-menu-positioner"
       [style.left.px]="menuState.x"

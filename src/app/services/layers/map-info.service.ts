@@ -133,12 +133,24 @@ const SEARCH_RESULT_POLYGON_STYLE: PathOptions = {
 /** Caps how far a polygon fly-to zooms in, so small boundaries don't feel jarring. */
 const SEARCH_POLYGON_FIT_MAX_ZOOM = 12;
 
+/** Zoom level used when flying to a point search result (marker). */
+const SEARCH_MARKER_FLY_TO_ZOOM = 11;
+
+enum SearchResultKind {
+  MARKER = 'marker',
+  POLYGON = 'polygon',
+}
+
 type SearchResult =
-  | { readonly kind: 'marker'; readonly lat: number; readonly lon: number; readonly label: string }
   | {
-      readonly kind: 'polygon';
+      readonly kind: SearchResultKind.MARKER;
+      readonly lat: number;
+      readonly lon: number;
+      readonly animate: boolean;
+    }
+  | {
+      readonly kind: SearchResultKind.POLYGON;
       readonly geometry: Geometry;
-      readonly label: string;
       readonly animate: boolean;
     };
 
@@ -464,19 +476,10 @@ export class MapInfoService {
     this.setCurrentZoom(this.currentZoom() - 1);
   }
 
-  /**
-   * Moves the map to the given coordinates, optionally adjusting zoom.
-   * Animation is opt-in: an in-flight `flyTo` gets cancelled (and can silently
-   * no-op) when another view change — e.g. a quick double click — interrupts
-   * it, which feels broken for a search "go to result" action.
-   */
+  /** Moves the map to the given coordinates, optionally adjusting zoom and animating the move. */
   flyTo(lat: number, lon: number, zoom?: number, animate = false): void {
     if (!this.map) return;
-
-    // Recompute the container size first: right after load (or while a panel's
-    // open/close transition is still settling) Leaflet's cached size can be stale,
-    // which throws off the very first programmatic move.
-    this.map.invalidateSize();
+    this.map.stop();
 
     const targetZoom = zoom ?? Math.max(this.map.getZoom(), MAP_CONFIG.initialZoom);
     if (animate) {
@@ -484,7 +487,6 @@ export class MapInfoService {
     } else {
       this.map.setView([lat, lon], targetZoom, { animate: false });
     }
-    this.setCurrentZoom(Math.round(targetZoom));
   }
 
   destroy(): void {
@@ -498,14 +500,17 @@ export class MapInfoService {
 
   // ── Overlay Management ─────────────────────────────────────────────────────
 
-  /** Drops a pin marking a point place-search result, replacing any prior marker/polygon. */
-  setSearchResultMarker(lat: number, lon: number, label: string): void {
-    this.searchResult.set({ kind: 'marker', lat, lon, label });
+  /**
+   * Drops a pin marking a point place-search result, replacing any prior marker/polygon,
+   * and flies the map to it.
+   */
+  setSearchResultMarker(lat: number, lon: number, animate = false): void {
+    this.searchResult.set({ kind: SearchResultKind.MARKER, lat, lon, animate });
   }
 
   /** Outlines an area place-search result, replacing any prior marker/polygon. */
-  setSearchResultPolygon(geometry: Geometry, label: string, animate = false): void {
-    this.searchResult.set({ kind: 'polygon', geometry, label, animate });
+  setSearchResultPolygon(geometry: Geometry, animate = false): void {
+    this.searchResult.set({ kind: SearchResultKind.POLYGON, geometry, animate });
   }
 
   /** Removes the place-search marker/polygon shown on the map, if any. */
@@ -656,47 +661,40 @@ export class MapInfoService {
     this.removeSearchResult();
     if (!result) return;
 
-    if (result.kind === 'marker') {
-      this.showSearchMarker(result.lat, result.lon, result.label);
+    if (result.kind === SearchResultKind.MARKER) {
+      this.showSearchMarker(result.lat, result.lon, result.animate);
     } else {
-      this.showSearchPolygon(result.geometry, result.label, result.animate);
+      this.showSearchPolygon(result.geometry, result.animate);
     }
   }
 
-  private showSearchMarker(lat: number, lon: number, label: string): void {
+  private showSearchMarker(lat: number, lon: number, animate: boolean): void {
     if (!this.map) return;
 
+    this.flyTo(lat, lon, SEARCH_MARKER_FLY_TO_ZOOM, animate);
+
     const latLng: LatLngExpression = [lat, lon];
-    this.searchMarker = marker(latLng, { icon: SEARCH_MARKER_ICON, interactive: true })
-      .bindTooltip(label, { direction: 'top', offset: [0, -16] })
-      .addTo(this.map);
+    this.searchMarker = marker(latLng, { icon: SEARCH_MARKER_ICON, interactive: true }).addTo(
+      this.map,
+    );
 
     this.bindClearOnContextMenu(this.searchMarker);
   }
 
-  private showSearchPolygon(geometry: Geometry, label: string, animate: boolean): void {
+  private showSearchPolygon(geometry: Geometry, animate: boolean): void {
     const map = this.map;
     if (!map) return;
 
-    const layer = geoJSON(geometry, { style: () => SEARCH_RESULT_POLYGON_STYLE }).bindTooltip(
-      label,
-      { direction: 'top', sticky: true },
-    );
+    const layer = geoJSON(geometry, { style: () => SEARCH_RESULT_POLYGON_STYLE });
     this.searchPolygon = layer;
     this.bindClearOnContextMenu(layer);
 
     const bounds = layer.getBounds();
     if (!bounds.isValid()) {
-      layer.addTo(map);
       return;
     }
 
-    // See `flyTo` — refresh the cached container size before the first move.
-    map.invalidateSize();
-
     if (animate) {
-      // Defer adding until the fly settles: rendering the boundary mid-flight,
-      // at the pre-zoom scale, makes large areas flash as a giant, jarring block.
       map.once('moveend', () => {
         if (this.searchPolygon === layer) {
           layer.addTo(map);
@@ -704,11 +702,10 @@ export class MapInfoService {
       });
       map.flyToBounds(bounds, { maxZoom: SEARCH_POLYGON_FIT_MAX_ZOOM });
       return;
+    } else {
+      layer.addTo(map);
+      map.fitBounds(bounds, { maxZoom: SEARCH_POLYGON_FIT_MAX_ZOOM, animate: false });
     }
-
-    map.fitBounds(bounds, { maxZoom: SEARCH_POLYGON_FIT_MAX_ZOOM, animate: false });
-    this.setCurrentZoom(Math.round(map.getZoom()));
-    layer.addTo(map);
   }
 
   /** Opens the search-result context menu on right-click; left-click stays reserved for point queries. */
