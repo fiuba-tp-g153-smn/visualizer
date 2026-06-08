@@ -18,6 +18,7 @@ Angular 21 standalone-component app for interactive map visualization (GOES-19 s
 ### Layer System
 
 Discriminated union type system:
+
 - `LayerType` enum (`TILE` | `WMS`) → Leaflet rendering strategy
 - `LayerCategory` enum (`GOES_19` | `RADAR` | `IGN_WMS`) → behavioral config
 - Union: `type Layer = ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | WmsLayer`
@@ -27,16 +28,16 @@ Discriminated union type system:
 
 ### Services
 
-| Service | Role |
-|---|---|
-| `LayersService` | Stateless layer definitions and metadata |
+| Service               | Role                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `LayersService`       | Stateless layer definitions and metadata                                                  |
 | `LayerControlService` | Stateful visibility/opacity/playback; persists to `localStorage` (`smn-active-layers-v3`) |
-| `LayerConfigService` | Fetches dynamic tile configs; reactive caching |
-| `LayerRenderService` | Creates Leaflet layers; pools for reuse on opacity-only changes |
-| `LayerRefreshService` | Auto-refresh polling for time-based layers |
-| `MapLayersService` | Leaflet layer lifecycle on the map |
-| `BaseMapService` | Base map selection/persistence (`localStorage`: `mapasmn_selected_base_map`) |
-| `AlertsService` | HTTP calls to alerts backend for polygon intersection |
+| `LayerConfigService`  | Fetches dynamic tile configs; reactive caching                                            |
+| `LayerRenderService`  | Creates Leaflet layers; pools for reuse on opacity-only changes                           |
+| `LayerRefreshService` | Auto-refresh polling for time-based layers                                                |
+| `MapLayersService`    | Leaflet layer lifecycle on the map                                                        |
+| `BaseMapService`      | Base map selection/persistence (`localStorage`: `mapasmn_selected_base_map`)              |
+| `AlertsService`       | HTTP calls to alerts backend for polygon intersection                                     |
 
 ### Reactivity
 
@@ -49,6 +50,7 @@ Discriminated union type system:
 Env vars injected at build time via custom webpack `DefinePlugin` (`custom-webpack.config.js`). `$ENV` global typed in `src/environments/environment*.ts`. URL builders in `src/app/config/backend.config.ts`.
 
 Key vars (see `.env.example`):
+
 - `DATA_SERVICE_BASE_URL` — tile/config API (default: `https://data.mapasmn.com`)
 - `ALERTS_SERVICE_BASE_URL` — alerts backend (default: `http://localhost:8080`)
 - `DOCS_URL` — external Docusaurus docs
@@ -137,3 +139,4 @@ Key vars (see `.env.example`):
 - **Models**: `*.models.ts` or `*.types.ts` in separate files
 - **Constants**: typed constants in config files — no magic numbers/strings
 - **Utilities**: reusable functions in `src/app/utils/`
+- **Comments**: JSDoc for public APIs; inline comments for complex logic — avoid obvious comments and excessive commenting
