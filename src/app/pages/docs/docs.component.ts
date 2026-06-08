@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { LoadingSpinnerComponent } from '../../components/shared/loading-spinner/loading-spinner';
 
 interface DocsNavigationMessage {
   type: 'docs-navigation';
@@ -19,10 +19,10 @@ interface DocsNavigationMessage {
   standalone: true,
   imports: [
     CommonModule,
-    MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    LoadingSpinnerComponent,
   ],
   template: `
     <div class="docs-container">
@@ -43,7 +43,7 @@ interface DocsNavigationMessage {
         ></iframe>
 
         <div class="loading-overlay" *ngIf="isLoading">
-          <mat-spinner diameter="50"></mat-spinner>
+          <app-loading-spinner [diameter]="50" />
           <p>Cargando documentación...</p>
         </div>
       </div>

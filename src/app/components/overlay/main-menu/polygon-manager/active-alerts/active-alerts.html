@@ -17,7 +17,7 @@
         class="reload-btn"
       >
         @if (loading()) {
-          <mat-progress-spinner diameter="18" mode="indeterminate"></mat-progress-spinner>
+          <app-loading-spinner [diameter]="18" />
         } @else {
           <mat-icon>refresh</mat-icon>
         }
