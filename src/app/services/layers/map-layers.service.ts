@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import * as L from 'leaflet';
+import { GridLayer, Layer, Map as LeafletMap, latLng, latLngBounds } from 'leaflet';
 import { LayerControlService } from './layer-control.service';
 import { LayerRenderService } from './layer-render.service';
 import { LayerConfigService } from './layer-config.service';
@@ -35,7 +35,7 @@ const VECTOR_OVERLAY_PANE_PREFIX = 'data-vector-overlay-';
 
 /** Bounds aproximados del dominio WRF (Argentina + alrededores). Evita pedir
  *  tiles fuera del dominio Lambert cuando el viewport está en otra región. */
-const WRF_BARB_BOUNDS = L.latLngBounds(L.latLng(-60.0, -110.0), L.latLng(-15.0, -30.0));
+const WRF_BARB_BOUNDS = latLngBounds(latLng(-60.0, -110.0), latLng(-15.0, -30.0));
 
 function isBarbTileRender(
   render: SecondaryVectorRender | BarbTileRender,
@@ -53,16 +53,16 @@ export class MapLayersService {
   private layerRenderService = inject(LayerRenderService);
   private vectorOverlay = inject(VectorOverlayService);
 
-  private map: L.Map | null = null;
-  private onMapLayers = new Map<string, L.Layer>();
-  private onMapOverlays = new Map<string, L.Layer>();
+  private map: LeafletMap | null = null;
+  private onMapLayers = new Map<string, Layer>();
+  private onMapOverlays = new Map<string, Layer>();
   /** Cache de GridLayers vectoriales de barbas, ruteada por `layerId#productId#fxxx`. */
-  private barbTileLayers = new Map<string, L.GridLayer>();
+  private barbTileLayers = new Map<string, GridLayer>();
 
   /**
    * Initialize the service with a Leaflet map instance
    */
-  initialize(map: L.Map): void {
+  initialize(map: LeafletMap): void {
     this.map = map;
     if (!map.getPane(WEATHER_STATION_PANE)) {
       const tilePane = map.getPane(LEAFLET_TILE_PANE);
@@ -80,7 +80,7 @@ export class MapLayersService {
   syncLayers(layerIds: string[]): void {
     if (!this.map) return;
 
-    const desiredLayersOnMap = new Map<string, L.Layer>();
+    const desiredLayersOnMap = new Map<string, Layer>();
     const previousWeatherStationLayers = this.getWeatherStationLayerEntries(this.onMapLayers);
 
     // Sort layers by z-index (low to high) so we process bottom layers first
@@ -265,10 +265,8 @@ export class MapLayersService {
     return layer?.category === LayerCategory.WEATHER_STATIONS;
   }
 
-  private getWeatherStationLayerEntries(
-    layers: ReadonlyMap<string, L.Layer>,
-  ): Map<string, L.Layer> {
-    const entries = new Map<string, L.Layer>();
+  private getWeatherStationLayerEntries(layers: ReadonlyMap<string, Layer>): Map<string, Layer> {
+    const entries = new Map<string, Layer>();
 
     for (const [layerId, layerRef] of layers) {
       if (this.isWeatherStationLayerId(layerId)) {
@@ -280,8 +278,8 @@ export class MapLayersService {
   }
 
   private shouldCloseWeatherStationPopup(
-    previousLayers: ReadonlyMap<string, L.Layer>,
-    nextLayers: ReadonlyMap<string, L.Layer>,
+    previousLayers: ReadonlyMap<string, Layer>,
+    nextLayers: ReadonlyMap<string, Layer>,
   ): boolean {
     if (previousLayers.size !== nextLayers.size) {
       return true;
@@ -312,7 +310,7 @@ export class MapLayersService {
   ): void {
     if (!this.map) return;
 
-    const desired = new Map<string, L.Layer>();
+    const desired = new Map<string, Layer>();
 
     for (const layerId of sortedLayerIds) {
       const layer = this.layersService.getLayerById(layerId);
@@ -374,7 +372,7 @@ export class MapLayersService {
     layerId: string,
     ecmwfLayer: EcmwfTpTileLayer,
     layerActualZIndexes: ReadonlyMap<string, number>,
-    desired: Map<string, L.Layer>,
+    desired: Map<string, Layer>,
   ): void {
     const secondary = ecmwfLayer.secondaryRender;
     if (!secondary) return;
@@ -443,7 +441,7 @@ export class MapLayersService {
     layerId: string,
     wrfLayer: WrfTileLayer,
     layerActualZIndexes: ReadonlyMap<string, number>,
-    desired: Map<string, L.Layer>,
+    desired: Map<string, Layer>,
   ): void {
     const renders = wrfLayer.secondaryRenders;
     if (!renders || renders.length === 0) return;
@@ -535,7 +533,7 @@ export class MapLayersService {
     fxxx: string,
     opacity: number,
     zIndex: number,
-    desired: Map<string, L.Layer>,
+    desired: Map<string, Layer>,
   ): void {
     const cacheKey = `${layerId}#${render.id}#${initTag}#${fxxx}`;
     const paneName = `${VECTOR_OVERLAY_PANE_PREFIX}${layerId}#${render.id}#${initTag}`;
@@ -576,7 +574,7 @@ export class MapLayersService {
     timestampTs: string,
     opacity: number,
     zIndex: number,
-    desired: Map<string, L.Layer>,
+    desired: Map<string, Layer>,
   ): void {
     const url = render.buildUrl(forecastTs, timestampTs);
     const overlayKey = `${layerId}#${render.id}#${forecastTs}#${timestampTs}`;

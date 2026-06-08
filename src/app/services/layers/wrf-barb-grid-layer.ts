@@ -1,4 +1,4 @@
-import * as L from 'leaflet';
+import { Coords, DomUtil, DoneCallback, GridLayer, GridLayerOptions } from 'leaflet';
 import type { Feature, FeatureCollection, Point } from 'geojson';
 
 import { buildWrfBarbTileUrl } from '../../config/backend.config';
@@ -28,7 +28,7 @@ function lonLatToTilePixel(
   return [(fx - tx) * TILE_SIZE, (fy - ty) * TILE_SIZE];
 }
 
-export interface WrfBarbGridLayerOptions extends L.GridLayerOptions {
+export interface WrfBarbGridLayerOptions extends GridLayerOptions {
   productId: string;
   initTag: string;
   fxxx: string;
@@ -43,20 +43,17 @@ export interface WrfBarbGridLayerOptions extends L.GridLayerOptions {
  * features al pixel-en-tile que Leaflet realmente pidió. Render = 1 `<svg>`
  * por tile con N glyphs adentro (sin DOM por barba).
  */
-export class WrfBarbGridLayer extends L.GridLayer {
+export class WrfBarbGridLayer extends GridLayer {
   private readonly opts: WrfBarbGridLayerOptions;
-  private readonly nativeTileCache = new Map<
-    string,
-    Promise<FeatureCollection | null>
-  >();
+  private readonly nativeTileCache = new Map<string, Promise<FeatureCollection | null>>();
 
   constructor(opts: WrfBarbGridLayerOptions) {
     super({ tileSize: TILE_SIZE, noWrap: true, ...opts });
     this.opts = opts;
   }
 
-  override createTile(coords: L.Coords, done: L.DoneCallback): HTMLElement {
-    const tile = L.DomUtil.create('div', 'wrf-barb-tile');
+  override createTile(coords: Coords, done: DoneCallback): HTMLElement {
+    const tile = DomUtil.create('div', 'wrf-barb-tile');
     tile.style.position = 'absolute';
     tile.style.overflow = 'visible';
     tile.style.pointerEvents = 'none';
@@ -123,11 +120,7 @@ export class WrfBarbGridLayer extends L.GridLayer {
     return lp;
   }
 
-  private paintTile(
-    tile: HTMLElement,
-    fc: FeatureCollection,
-    coords: L.Coords,
-  ): void {
+  private paintTile(tile: HTMLElement, fc: FeatureCollection, coords: Coords): void {
     // Scale glyphs with zoom so barbs maintain visual prominence at high zoom.
     // At z=4 scale=1 (16px staff), at z=14 scale=2.5 (40px staff).
     const scale = 1 + Math.max(0, coords.z - 4) * 0.15;

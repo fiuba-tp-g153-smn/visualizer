@@ -1,5 +1,13 @@
 import { Injectable, effect, inject } from '@angular/core';
-import * as L from 'leaflet';
+import {
+  FeatureGroup,
+  GeoJSON,
+  LatLngExpression,
+  Map as LeafletMap,
+  featureGroup,
+  geoJSON,
+  polygon as leafletPolygon,
+} from 'leaflet';
 import { ActiveAlertsService } from './active-alerts.service';
 import { ActiveAlert, Department } from '../../models/geo';
 import {
@@ -33,12 +41,12 @@ function normalizeName(name: string): string {
 export class ActiveAlertsMapService {
   private readonly activeAlertsService = inject(ActiveAlertsService);
 
-  private map: L.Map | null = null;
-  private readonly layerGroup: L.FeatureGroup = L.featureGroup();
+  private map: LeafletMap | null = null;
+  private readonly layerGroup: FeatureGroup = featureGroup();
 
   // Lightened version of the shown alert's expiry color; updated on render.
   private departmentColor = lightenColor(ACTIVE_ALERT_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
-  private readonly departmentLayers = new Map<string, L.GeoJSON>(); // normalized name -> layer
+  private readonly departmentLayers = new Map<string, GeoJSON>(); // normalized name -> layer
 
   constructor() {
     effect(() => {
@@ -74,7 +82,7 @@ export class ActiveAlertsMapService {
   }
 
   /** Wire the service to the Leaflet map instance (called from MapContainer). */
-  initialize(map: L.Map): void {
+  initialize(map: LeafletMap): void {
     this.map = map;
     this.layerGroup.addTo(map);
   }
@@ -87,10 +95,10 @@ export class ActiveAlertsMapService {
       if (hiddenIds.has(alert.alertId)) continue; // hidden by the user
       if (alert.coordinates.length < 3) continue; // not a drawable polygon
 
-      const latlngs = alert.coordinates.map(([lat, lng]) => [lat, lng] as L.LatLngExpression);
+      const latlngs = alert.coordinates.map(([lat, lng]) => [lat, lng] as LatLngExpression);
       // Color reflects time left until expiry (green → yellow → red).
       const color = activeAlertColorForExpiry(alert.endDatetime, now);
-      const polygon = L.polygon(latlngs, {
+      const polygon = leafletPolygon(latlngs, {
         ...ACTIVE_ALERT_POLYGON_OPTIONS,
         color,
         fillColor: color,
@@ -115,7 +123,7 @@ export class ActiveAlertsMapService {
     }
 
     for (const dept of departments) {
-      const layer = L.geoJSON(dept.geometry as GeoJSON.GeoJsonObject, {
+      const layer = geoJSON(dept.geometry as GeoJSON.GeoJsonObject, {
         pane: MAP_PANES.DEPARTMENTS,
         interactive: false,
         style: createDepartmentStyle(this.departmentColor),

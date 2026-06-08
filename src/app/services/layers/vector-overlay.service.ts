@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import * as L from 'leaflet';
+import { GeoJSON, LatLng, Layer, PathOptions, Polyline, geoJSON, svg } from 'leaflet';
 import type { Feature, FeatureCollection } from 'geojson';
 
 import { SecondaryVectorRender } from '../../models';
@@ -120,15 +120,15 @@ export class VectorOverlayService {
     config: SecondaryVectorRender,
     opacity: number = 1,
     pane?: string,
-  ): L.GeoJSON {
+  ): GeoJSON {
     // `leaflet-textpath` manipula el DOM SVG (<textPath>) — si el mapa global usa
     // canvas, hay que forzar el renderer SVG por feature en el style callback.
     // El renderer también define el pane donde se inserta el <svg>, así que su
     // pane debe coincidir con el del L.GeoJSON para que toda la capa quede en
     // el mismo nivel de stacking.
-    const renderer = pane ? L.svg({ pane }) : L.svg();
+    const renderer = pane ? svg({ pane }) : svg();
     const textpathOptions = withFillOpacity(config.textpathOptions, opacity);
-    return L.geoJSON(fc, {
+    return geoJSON(fc, {
       pane,
       pointToLayer: config.pointToLayer
         ? (feature, latlng) => config.pointToLayer!(feature, latlng)
@@ -138,7 +138,7 @@ export class VectorOverlayService {
         if (value === null) return { renderer };
         return { ...styleToLeaflet(config.styleFor(value), opacity), renderer };
       },
-      onEachFeature: (feature: Feature, layer: L.Layer) => {
+      onEachFeature: (feature: Feature, layer: Layer) => {
         const value = this.readValue(feature, config.valueProperty);
         if (value === null) return;
         const label = config.labelFor(value);
@@ -238,11 +238,11 @@ export class VectorOverlayService {
  * enough for the label-density threshold — we only care about ordering, not
  * great-circle distance.
  */
-function polylineLengthDegrees(layer: L.Polyline): number {
-  const latlngs = layer.getLatLngs() as L.LatLng[] | L.LatLng[][];
+function polylineLengthDegrees(layer: Polyline): number {
+  const latlngs = layer.getLatLngs() as LatLng[] | LatLng[][];
   if (latlngs.length === 0) return 0;
 
-  const segmentLength = (pts: L.LatLng[]): number => {
+  const segmentLength = (pts: LatLng[]): number => {
     let total = 0;
     for (let i = 1; i < pts.length; i++) {
       const dLat = pts[i].lat - pts[i - 1].lat;
@@ -252,25 +252,25 @@ function polylineLengthDegrees(layer: L.Polyline): number {
     return total;
   };
 
-  if (latlngs[0] instanceof L.LatLng) {
-    return segmentLength(latlngs as L.LatLng[]);
+  if (latlngs[0] instanceof LatLng) {
+    return segmentLength(latlngs as LatLng[]);
   }
-  return (latlngs as L.LatLng[][]).reduce((acc, ring) => acc + segmentLength(ring), 0);
+  return (latlngs as LatLng[][]).reduce((acc, ring) => acc + segmentLength(ring), 0);
 }
 
-function ensureLeftToRight(layer: L.Polyline): void {
-  const latlngs = layer.getLatLngs() as L.LatLng[] | L.LatLng[][];
+function ensureLeftToRight(layer: Polyline): void {
+  const latlngs = layer.getLatLngs() as LatLng[] | LatLng[][];
   if (latlngs.length === 0) return;
 
-  if (latlngs[0] instanceof L.LatLng) {
-    const arr = latlngs as L.LatLng[];
+  if (latlngs[0] instanceof LatLng) {
+    const arr = latlngs as LatLng[];
     if (arr.length >= 2 && arr[arr.length - 1].lng < arr[0].lng) {
       layer.setLatLngs([...arr].reverse());
     }
     return;
   }
 
-  const rings = latlngs as L.LatLng[][];
+  const rings = latlngs as LatLng[][];
   let mutated = false;
   const fixed = rings.map((ring) => {
     if (ring.length >= 2 && ring[ring.length - 1].lng < ring[0].lng) {
@@ -294,7 +294,7 @@ function styleToLeaflet(
     opacity?: number;
   },
   opacityMultiplier: number = 1,
-): L.PathOptions {
+): PathOptions {
   return {
     color: style.color,
     weight: style.weight,
