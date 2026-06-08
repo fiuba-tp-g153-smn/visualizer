@@ -48,7 +48,7 @@ export const IGN_WMS_BACKED_UP_LAYER_IDS: ReadonlySet<string> = new Set([
 export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-limits',
-  name: 'Límites (IGN)',
+  name: 'Límites',
   description: 'Límites políticos y administrativos',
   layers: [
     {
@@ -74,7 +74,7 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
 export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-administrative',
-  name: 'Administrativo (IGN)',
+  name: 'Administrativo',
   description: 'Límites administrativos y divisiones territoriales',
   layers: [
     {
@@ -121,7 +121,7 @@ const IGN_WMS_TERRITORIAL_DEFAULTS = {
 export const IGN_WMS_TERRITORIAL_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-territorial',
-  name: 'Territorial (IGN)',
+  name: 'Territorial',
   description: 'Organización territorial',
   layers: [
     {
@@ -144,7 +144,7 @@ const IGN_WMS_INFRASTRUCTURE_DEFAULTS = {
 export const IGN_WMS_INFRASTRUCTURE_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-infrastructure',
-  name: 'Infraestructura (IGN)',
+  name: 'Infraestructura',
   description: 'Infraestructura física y construcciones',
   layers: [
     {
@@ -189,7 +189,7 @@ const IGN_WMS_HYDROGRAPHY_DEFAULTS = {
 export const IGN_WMS_HYDROGRAPHY_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-hydrography',
-  name: 'Hidrografía (IGN)',
+  name: 'Hidrografía',
   description: 'Cursos de agua, lagos y características hidrográficas',
   layers: [
     {
@@ -219,7 +219,7 @@ const IGN_WMS_DEFENSE_SECURITY_DEFAULTS = {
 export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-defense-security',
-  name: 'Defensa y Seguridad (IGN)',
+  name: 'Defensa y Seguridad',
   description: 'Infraestructura de defensa y seguridad',
   layers: [
     {
@@ -249,7 +249,7 @@ const IGN_WMS_OTHER_DEFAULTS = {
 export const IGN_WMS_OTHER_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-other',
-  name: 'Otros (IGN)',
+  name: 'Otros',
   description: 'Otras capas temáticas',
   layers: [
     {
