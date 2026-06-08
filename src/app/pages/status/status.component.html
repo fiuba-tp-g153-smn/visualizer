@@ -1,0 +1,39 @@
+<div class="status">
+  <header class="status__bar">
+    <button mat-icon-button (click)="goBack()" aria-label="Volver" matTooltip="Ir al mapa">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="status__tabs" role="tablist" aria-label="Paneles de estado">
+      <button
+        class="status__tab"
+        role="tab"
+        type="button"
+        [class.status__tab--active]="tab() === 'processing'"
+        [attr.aria-selected]="tab() === 'processing'"
+        (click)="setTab('processing')"
+      >
+        <mat-icon>assessment</mat-icon>
+        <span>Procesamiento</span>
+      </button>
+      <button
+        class="status__tab"
+        role="tab"
+        type="button"
+        [class.status__tab--active]="tab() === 'data'"
+        [attr.aria-selected]="tab() === 'data'"
+        (click)="setTab('data')"
+      >
+        <mat-icon>memory</mat-icon>
+        <span>Servicio de datos</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="status__body">
+    @if (tab() === 'processing') {
+      <app-dashboard />
+    } @else {
+      <app-data-dashboard />
+    }
+  </div>
+</div>

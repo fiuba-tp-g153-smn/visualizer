@@ -27,14 +27,7 @@ export const routes: Routes = [
   {
     path: 'status',
     loadComponent: () =>
-      import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-  },
-  {
-    path: 'data-status',
-    loadComponent: () =>
-      import('./pages/data-dashboard/data-dashboard.component').then(
-        (m) => m.DataDashboardComponent,
-      ),
+      import('./pages/status/status.component').then((m) => m.StatusComponent),
   },
   { path: '**', redirectTo: '' },
 ];

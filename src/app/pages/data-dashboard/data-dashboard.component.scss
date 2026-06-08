@@ -11,10 +11,8 @@
   --metric-skipped-bg: #eceef0;
   --metric-info: var(--mat-sys-primary, #0090d0);
 
+  // Fluye dentro del shell `/status` (que provee el contenedor con scroll).
   display: block;
-  position: fixed;
-  inset: 0;
-  overflow: auto;
   background: var(--mat-sys-surface-container-lowest, #f7f7f9);
   color: var(--mat-sys-on-surface, #1f1f1f);
   font-family: Roboto, 'Helvetica Neue', sans-serif;

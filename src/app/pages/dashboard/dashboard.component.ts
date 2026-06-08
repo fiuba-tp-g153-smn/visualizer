@@ -13,7 +13,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { InProgressJobsComponent } from '../../components/dashboard/in-progress-jobs/in-progress-jobs.component';
@@ -92,7 +91,6 @@ const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
 })
 export class DashboardComponent {
   private readonly metrics = inject(MetricsService);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
   private readonly timezone = inject(TimezoneSettingsService);
@@ -308,10 +306,6 @@ export class DashboardComponent {
 
   refreshNow(): void {
     void this.refresh(true);
-  }
-
-  goBack(): void {
-    void this.router.navigate(['/']);
   }
 
   // ── Carga de datos ────────────────────────────────────────────────────────

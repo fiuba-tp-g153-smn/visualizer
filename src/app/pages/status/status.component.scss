@@ -1,0 +1,75 @@
+:host {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--mat-sys-surface-container-lowest, #f7f7f9);
+  color: var(--mat-sys-on-surface, #1f1f1f);
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
+
+// `.status` is the actual flex column (it holds the bar + body); it must fill
+// the host so `.status__body` can flex-grow and own the scroll. Without this the
+// body sizes to content and nothing scrolls.
+.status {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// Barra superior fija (no scrollea): volver + selector de pestañas.
+.status__bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--mat-sys-surface, #ffffff);
+  border-bottom: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  z-index: 11;
+}
+
+.status__tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.status__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  color: var(--mat-sys-on-surface-variant, #5f6368);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: var(--mat-sys-surface-container, #eceef0);
+  }
+}
+
+.status__tab--active {
+  color: var(--mat-sys-primary, #0090d0);
+  border-bottom-color: var(--mat-sys-primary, #0090d0);
+  font-weight: 600;
+}
+
+// Único contenedor con scroll: dentro fluye el panel de la pestaña activa, cuyo
+// encabezado sticky (`.dash__head`) se ancla al tope de este contenedor.
+.status__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}

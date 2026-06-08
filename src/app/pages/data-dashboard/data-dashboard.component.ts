@@ -12,7 +12,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { BasemapProvidersTableComponent } from '../../components/data-dashboard/basemap-providers-table/basemap-providers-table.component';
@@ -51,9 +50,10 @@ type WindowHours = 24 | 168 | 0;
 type RefreshSeconds = 0 | 10 | 30 | 60;
 
 /**
- * Página del panel de estado y memoria del data-service (ruta `/data-status`).
- * Dueño del estado: mantiene controles y datos en signals, los refresca contra
- * el API `/metrics` del data-service y los reparte a componentes de presentación.
+ * Panel de estado y memoria del data-service (pestaña "Servicio de datos" del
+ * shell `/status`). Dueño del estado: mantiene controles y datos en signals, los
+ * refresca contra el API `/metrics` del data-service y los reparte a componentes
+ * de presentación.
  */
 @Component({
   selector: 'app-data-dashboard',
@@ -84,7 +84,6 @@ type RefreshSeconds = 0 | 10 | 30 | 60;
 })
 export class DataDashboardComponent {
   private readonly metrics = inject(DataMetricsService);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly timezone = inject(TimezoneSettingsService);
 
@@ -176,10 +175,6 @@ export class DataDashboardComponent {
 
   refreshNow(): void {
     void this.refresh(true);
-  }
-
-  goBack(): void {
-    void this.router.navigate(['/']);
   }
 
   // ── Carga de datos ──────────────────────────────────────────────────────────
