@@ -39,7 +39,7 @@ import {
   getDefaultCursorIndex,
 } from '../../utils/playback-window';
 import {
-  DEFAULT_WEATHER_STATIONS_MAX_PAST_HOURS,
+  DEFAULT_WEATHER_STATIONS_GRACE_PERIOD_HOURS,
   WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
   isWeatherStationsTemporalMode,
   WeatherStationsTemporalMode,
@@ -50,11 +50,11 @@ interface PersistedWeatherStationsSharedControlsState {
   zIndex: number | null;
   scaleVisible: boolean;
   temporalMode: WeatherStationsTemporalMode;
-  maxPastHours: number;
+  gracePeriodHours: number;
   imageCount: number;
   selectedTilesetId: string | null;
   // When false, the renderer filters out stations whose `hasData` is false
-  // (i.e. their last observation falls outside the requested tolerance window).
+  // (i.e. their last observation falls outside the grace-period window).
   // Default true preserves "show everything" until the user opts to declutter.
   showStationsWithoutData: boolean;
 }
@@ -112,7 +112,7 @@ export class LayerControlService {
       zIndex: null,
       scaleVisible: false,
       temporalMode: WeatherStationsTemporalMode.LATEST,
-      maxPastHours: DEFAULT_WEATHER_STATIONS_MAX_PAST_HOURS,
+      gracePeriodHours: DEFAULT_WEATHER_STATIONS_GRACE_PERIOD_HOURS,
       imageCount: 6,
       selectedTilesetId: null,
       showStationsWithoutData: true,
@@ -460,8 +460,8 @@ export class LayerControlService {
     return this.weatherStationsSharedState().temporalMode;
   }
 
-  getWeatherStationsMaxPastHours(): number {
-    return this.weatherStationsSharedState().maxPastHours;
+  getWeatherStationsGracePeriodHours(): number {
+    return this.weatherStationsSharedState().gracePeriodHours;
   }
 
   getWeatherStationsSelectedTilesetId(): string | null {
@@ -513,10 +513,10 @@ export class LayerControlService {
     this.saveWeatherStationsSharedState();
   }
 
-  setWeatherStationsMaxPastHours(maxPastHours: number): void {
+  setWeatherStationsGracePeriodHours(gracePeriodHours: number): void {
     this.weatherStationsSharedState.update((state) => ({
       ...state,
-      maxPastHours: Math.max(0, Math.min(24, Math.round(maxPastHours))),
+      gracePeriodHours: Math.max(0, Math.min(24, Math.round(gracePeriodHours))),
     }));
     this.saveWeatherStationsSharedState();
   }
@@ -1606,10 +1606,11 @@ export class LayerControlService {
         temporalMode: isWeatherStationsTemporalMode(parsed.temporalMode)
           ? parsed.temporalMode
           : this.weatherStationsSharedState().temporalMode,
-        maxPastHours:
-          typeof parsed.maxPastHours === 'number' && Number.isFinite(parsed.maxPastHours)
-            ? Math.max(0, Math.min(24, Math.round(parsed.maxPastHours)))
-            : this.weatherStationsSharedState().maxPastHours,
+        gracePeriodHours:
+          typeof parsed.gracePeriodHours === 'number' &&
+          Number.isFinite(parsed.gracePeriodHours)
+            ? Math.max(0, Math.min(24, Math.round(parsed.gracePeriodHours)))
+            : this.weatherStationsSharedState().gracePeriodHours,
         imageCount:
           typeof parsed.imageCount === 'number' && Number.isFinite(parsed.imageCount)
             ? this.normalizeWeatherStationsImageCount(parsed.imageCount)

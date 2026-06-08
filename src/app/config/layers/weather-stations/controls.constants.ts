@@ -3,7 +3,7 @@ export enum WeatherStationsTemporalMode {
   SPECIFIC = 'specific',
 }
 
-export const DEFAULT_WEATHER_STATIONS_MAX_PAST_HOURS = 3;
+export const DEFAULT_WEATHER_STATIONS_GRACE_PERIOD_HOURS = 2;
 
 export const WEATHER_STATIONS_IMAGE_COUNT_OPTIONS: readonly number[] = [1, 6, 12, 24];
 

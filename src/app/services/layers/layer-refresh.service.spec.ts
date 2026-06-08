@@ -26,21 +26,21 @@ const WEATHER_STATIONS_LAYER_ID = 'weather-stations';
 function buildLayerControlStub(
   overrides: Partial<{
     temporalMode: WeatherStationsTemporalMode;
-    maxPastHours: number;
+    gracePeriodHours: number;
     selectedTilesetId: string | null;
     imageCount: number;
   }> = {},
 ) {
   const state = {
     temporalMode: overrides.temporalMode ?? WeatherStationsTemporalMode.LATEST,
-    maxPastHours: overrides.maxPastHours ?? 6,
+    gracePeriodHours: overrides.gracePeriodHours ?? 6,
     selectedTilesetId: overrides.selectedTilesetId ?? null,
     imageCount: overrides.imageCount ?? 6,
   };
   return {
     activeLayers: signal<readonly { layer: unknown }[]>([]),
     getWeatherStationsTemporalMode: () => state.temporalMode,
-    getWeatherStationsMaxPastHours: () => state.maxPastHours,
+    getWeatherStationsGracePeriodHours: () => state.gracePeriodHours,
     getWeatherStationsSelectedTilesetId: () => state.selectedTilesetId,
     getWeatherStationsImageCount: () => state.imageCount,
     setWeatherStationsSelectedTilesetId: (id: string | null) => {
@@ -76,7 +76,7 @@ const REGISTRY_RESPONSE = {
 
 function makeSnapshot(
   scrapedAt: string,
-  observations: Array<{ station_id: number; observed_at: string }>,
+  observations: Array<{ station_id: number; observed_at: string; is_current?: boolean }>,
 ) {
   return {
     scraped_at: scrapedAt,
@@ -91,6 +91,7 @@ function makeSnapshot(
       visibility: 10,
       weather: { id: 1, description: 'Despejado' },
       wind: { direction: 'Norte', deg: 5, speed: 8.2 },
+      ...(o.is_current === undefined ? {} : { is_current: o.is_current }),
     })),
   };
 }
@@ -104,7 +105,7 @@ interface Harness {
 function setupHarness(
   overrides: Partial<{
     temporalMode: WeatherStationsTemporalMode;
-    maxPastHours: number;
+    gracePeriodHours: number;
     selectedTilesetId: string | null;
     imageCount: number;
     apiKey: string;
@@ -195,10 +196,10 @@ describe('LayerRefreshService — weather station backend integration', () => {
     expect(snap.observations.every((o) => o.hasData)).toBe(true);
   });
 
-  it('SPECIFIC mode: hits the tileset URL with N=hours and computes hasData from observed_at', async () => {
+  it('SPECIFIC mode: hits the tileset URL with grace_period_hours and uses backend is_current', async () => {
     const { service, httpMock } = setupHarness({
       temporalMode: WeatherStationsTemporalMode.SPECIFIC,
-      maxPastHours: 3,
+      gracePeriodHours: 1,
       selectedTilesetId: '20260517T1400Z',
     });
     harness = { ...harness, httpMock };
@@ -213,12 +214,14 @@ describe('LayerRefreshService — weather station backend integration', () => {
     httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
     await new Promise((r) => setTimeout(r, 0));
 
-    // Target T = 2026-05-17T14:00Z, window = [11:00, 14:00].
-    const tilesetReq = httpMock.expectOne(buildWeatherStationsTilesetUrl('20260517T1400Z', 3));
+    // The request carries grace_period_hours; the backend's per-station is_current
+    // is what drives greying (not a client recomputation).
+    const tilesetReq = httpMock.expectOne(buildWeatherStationsTilesetUrl('20260517T1400Z', 1));
+    expect(tilesetReq.request.urlWithParams).toContain('grace_period_hours=1');
     tilesetReq.flush(
-      makeSnapshot('2026-05-17T13:30:00Z', [
-        { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' }, // within window
-        { station_id: 87582, observed_at: '2026-05-17T08:00:00Z' }, // outside window
+      makeSnapshot('2026-05-17T14:05:00Z', [
+        { station_id: 87344, observed_at: '2026-05-17T14:00:00Z', is_current: true },
+        { station_id: 87582, observed_at: '2026-05-17T08:00:00Z', is_current: false },
       ]),
     );
 
@@ -231,13 +234,45 @@ describe('LayerRefreshService — weather station backend integration', () => {
     expect(byId[87582].hasData).toBe(false);
   });
 
+  it('SPECIFIC mode: falls back to the client-side window when is_current is absent', async () => {
+    const { service, httpMock } = setupHarness({
+      temporalMode: WeatherStationsTemporalMode.SPECIFIC,
+      gracePeriodHours: 3,
+      selectedTilesetId: '20260517T1400Z',
+    });
+    harness = { ...harness, httpMock };
+
+    const promise = service.loadWeatherStationsSnapshot(true);
+
+    httpMock.expectOne(buildWeatherStationsTilesetsUrl()).flush({
+      tilesets: [
+        { tileset_id: '20260517T1400Z', scraped_at: '2026-05-17T14:00:00Z', station_count: 2 },
+      ],
+    });
+    httpMock.expectOne(buildWeatherStationsRegistryUrl()).flush(REGISTRY_RESPONSE);
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Older backend: no is_current. Target T = 14:00Z, window = [11:00, 14:00].
+    httpMock.expectOne(buildWeatherStationsTilesetUrl('20260517T1400Z', 3)).flush(
+      makeSnapshot('2026-05-17T13:30:00Z', [
+        { station_id: 87344, observed_at: '2026-05-17T13:00:00Z' }, // within window
+        { station_id: 87582, observed_at: '2026-05-17T08:00:00Z' }, // outside window
+      ]),
+    );
+
+    const snap = await promise;
+    const byId = Object.fromEntries(snap.observations.map((o) => [o.station.id, o]));
+    expect(byId[87344].hasData).toBe(true);
+    expect(byId[87582].hasData).toBe(false);
+  });
+
   it('SPECIFIC mode: warms the rest of the window into the browser cache', async () => {
     // Replay-from-cache itself is the browser HTTP cache (Cache-Control), which
     // HttpTestingController does not simulate — that is verified manually/E2E.
     // Here we assert the warmer issues a GET for the other window frame.
     const { service, httpMock } = setupHarness({
       temporalMode: WeatherStationsTemporalMode.SPECIFIC,
-      maxPastHours: 3,
+      gracePeriodHours: 3,
       selectedTilesetId: '20260517T1400Z',
       imageCount: 2,
     });

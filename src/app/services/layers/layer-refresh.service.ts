@@ -45,6 +45,10 @@ interface BackendStationObservation {
   visibility: number | null;
   weather: { id: number; description: string } | null;
   wind: CurrentWeatherStationDto['wind'] | null;
+  // Per-station freshness from `/{tileset_id}?grace_period_hours=`: true when the
+  // station was observed within the grace window of the selected hour. Absent on
+  // `/latest` and on older backends (the join falls back to a client-side check).
+  is_current?: boolean;
 }
 
 interface BackendSnapshot {
@@ -393,37 +397,37 @@ export class LayerRefreshService {
 
     let backendSnapshot: BackendSnapshot;
     let referenceTimestamp: Date;
-    let maxPastHours: number;
+    let gracePeriodHours: number;
 
     if (temporalMode === WeatherStationsTemporalMode.SPECIFIC) {
       const tilesetId = this.resolveRequestedWeatherStationsTilesetId(endpointConfig.tilesetIds);
-      maxPastHours = this.layerControlService.getWeatherStationsMaxPastHours();
+      gracePeriodHours = this.layerControlService.getWeatherStationsGracePeriodHours();
       if (!tilesetId) {
         throw new Error('No tilesets available for weather stations specific mode');
       }
       // Plain GET: the browser HTTP cache serves a replayed/scrubbed frame (no
       // network), and only this current frame's payload is retained (the signal).
       backendSnapshot = await firstValueFrom(
-        this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, maxPastHours)),
+        this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, gracePeriodHours)),
       );
       referenceTimestamp = this.fromWeatherStationsTilesetId(tilesetId) ?? new Date();
       // Warm the browser cache for the rest of the window so playback/scrub is
       // served off-heap from the browser cache rather than re-fetched.
-      this.prefetchWeatherStationsWindow(endpointConfig.tilesetIds, maxPastHours);
+      this.prefetchWeatherStationsWindow(endpointConfig.tilesetIds, gracePeriodHours);
     } else {
       backendSnapshot = await firstValueFrom(
         this.http.get<BackendSnapshot>(buildWeatherStationsLatestUrl()),
       );
       referenceTimestamp = new Date(backendSnapshot.scraped_at);
-      // hasData is always true in latest mode; window doesn't matter.
-      maxPastHours = 0;
+      // hasData is always true in latest mode; the grace window doesn't matter.
+      gracePeriodHours = 0;
     }
 
     const observations = this.joinSnapshotWithRegistry(
       backendSnapshot,
       registry,
       referenceTimestamp,
-      maxPastHours,
+      gracePeriodHours,
       temporalMode === WeatherStationsTemporalMode.LATEST,
     );
 
@@ -439,12 +443,12 @@ export class LayerRefreshService {
    * `imageCount` tilesets at the current Max-Past-Hours) so timeline playback is
    * served from the browser cache instead of the network. Non-blocking.
    */
-  prefetchWeatherStationsWindow(tilesetIds?: readonly string[], maxPastHours?: number): void {
+  prefetchWeatherStationsWindow(tilesetIds?: readonly string[], gracePeriodHours?: number): void {
     const ids = tilesetIds ?? this.weatherStationsEndpointConfigSignal()?.tilesetIds ?? [];
     if (ids.length === 0) {
       return;
     }
-    const n = maxPastHours ?? this.layerControlService.getWeatherStationsMaxPastHours();
+    const n = gracePeriodHours ?? this.layerControlService.getWeatherStationsGracePeriodHours();
     const imageCount = this.layerControlService.getWeatherStationsImageCount();
     const windowIds = imageCount > 0 ? ids.slice(-imageCount) : ids;
     // Skip the currently-selected frame — the read path just fetched it directly.
@@ -546,14 +550,16 @@ export class LayerRefreshService {
     snapshot: BackendSnapshot,
     registry: readonly WeatherStationDto[],
     referenceTimestamp: Date,
-    maxPastHours: number,
+    gracePeriodHours: number,
     isLatestMode: boolean,
   ): WeatherStationObservation[] {
     const observationsById = new Map<number, BackendStationObservation>();
     for (const o of snapshot.stations) {
       observationsById.set(o.station_id, o);
     }
-    const windowStart = new Date(referenceTimestamp.getTime() - maxPastHours * 60 * 60 * 1000);
+    // Fallback window for older backends that don't return `is_current`: a
+    // station is current when observed within `gracePeriodHours` of the hour.
+    const windowStart = new Date(referenceTimestamp.getTime() - gracePeriodHours * 60 * 60 * 1000);
 
     const result: WeatherStationObservation[] = [];
     for (const station of registry) {
@@ -562,9 +568,13 @@ export class LayerRefreshService {
         continue;
       }
       const weather = this.adaptBackendObservationToDto(obs);
+      // Prefer the backend's per-station freshness flag; fall back to the
+      // client-side window only when the field is absent (latest mode is always
+      // current, so the window never applies there).
       const hasData =
         isLatestMode ||
-        (weather.date ? new Date(weather.date).getTime() >= windowStart.getTime() : false);
+        (obs.is_current ??
+          (weather.date ? new Date(weather.date).getTime() >= windowStart.getTime() : false));
       result.push({ station, weather, hasData });
     }
     return result.sort((a, b) => a.station.name.localeCompare(b.station.name, 'es'));
