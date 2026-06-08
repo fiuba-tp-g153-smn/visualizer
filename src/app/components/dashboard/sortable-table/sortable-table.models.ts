@@ -34,6 +34,8 @@ export interface Cell {
   readonly title?: string;
   readonly muted?: boolean;
   readonly strong?: boolean;
+  /** Optional color emphasis for text cells (success / warning / danger). */
+  readonly tone?: 'ok' | 'warn' | 'err';
   readonly outcome?: string;
   readonly label?: string;
   readonly suffix?: string;
@@ -67,13 +69,18 @@ export interface ColumnSpec<T> {
 
 export function textCell(
   value: string,
-  opts: { title?: string; muted?: boolean; strong?: boolean } = {},
+  opts: { title?: string; muted?: boolean; strong?: boolean; tone?: 'ok' | 'warn' | 'err' } = {},
 ): Cell {
   return { kind: 'text', text: value, ...opts };
 }
 
-export function pillCell(outcome: string, label: string, suffix?: string): Cell {
-  return { kind: 'pill', outcome, label, suffix };
+export function pillCell(
+  outcome: string,
+  label: string,
+  suffix?: string,
+  title?: string,
+): Cell {
+  return { kind: 'pill', outcome, label, suffix, title };
 }
 
 export function pillsCell(

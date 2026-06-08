@@ -31,12 +31,17 @@
                   <span
                     [class.muted]="cell.muted"
                     [class.strong]="cell.strong"
+                    [class.tone-ok]="cell.tone === 'ok'"
+                    [class.tone-warn]="cell.tone === 'warn'"
+                    [class.tone-err]="cell.tone === 'err'"
                     [title]="cell.title ?? ''"
                     >{{ cell.text }}</span
                   >
                 }
                 @case ('pill') {
-                  <span [class]="'pill pill--' + cell.outcome">{{ cell.label }}</span>
+                  <span [class]="'pill pill--' + cell.outcome" [title]="cell.title ?? ''">{{
+                    cell.label
+                  }}</span>
                   @if (cell.suffix) {
                     <span class="muted">{{ cell.suffix }}</span>
                   }

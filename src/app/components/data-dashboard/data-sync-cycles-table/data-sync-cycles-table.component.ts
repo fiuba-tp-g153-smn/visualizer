@@ -1,119 +1,117 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 
 import type { DataSyncCycle } from '../../../models/metrics/data-metrics.models';
 import { domainLabel } from '../../../services/metrics/data-metrics-labels';
-import { ago } from '../../../services/metrics/metrics-format.util';
+import { ago, fmtInstant } from '../../../services/metrics/metrics-format.util';
+import { SortableTableComponent } from '../../dashboard/sortable-table/sortable-table.component';
+import {
+  buildTable,
+  pillCell,
+  textCell,
+  type Cell,
+  type ColumnSpec,
+  type SortState,
+} from '../../dashboard/sortable-table/sortable-table.models';
 
-interface Row {
-  readonly key: string;
-  readonly finished: string;
-  readonly label: string;
-  readonly downloaded: string;
-  readonly errors: number;
-  readonly duration: string;
-  readonly outcome: string;
+function resultCell(outcome: string): Cell {
+  if (outcome === 'ok') {
+    return pillCell('success', 'ok');
+  }
+  if (outcome === 'error') {
+    return pillCell('error', 'error');
+  }
+  return textCell(outcome, { muted: true });
 }
 
-/** Tabla de ciclos de sync recientes (más nuevos primero). */
+const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncCycle>> = [
+  {
+    header: { key: 'finalizado', label: 'finalizado', align: 'center', sortable: true },
+    cell: (c) => textCell(ago(c.finished_at), { muted: true, title: fmtInstant(c.finished_at) }),
+    sortValue: (c) => c.finished_at,
+  },
+  {
+    header: { key: 'dominio', label: 'dominio', align: 'left', sortable: true },
+    cell: (c) => textCell(domainLabel(c.domain)),
+    sortValue: (c) => domainLabel(c.domain),
+  },
+  {
+    header: { key: 'descargado', label: 'descargado', align: 'center', sortable: true },
+    cell: (c) => textCell(c.downloaded.toLocaleString('es-AR')),
+    sortValue: (c) => c.downloaded,
+  },
+  {
+    header: { key: 'errores', label: 'errores', align: 'center', sortable: true },
+    cell: (c) => textCell(String(c.errors), { tone: c.errors > 0 ? 'err' : undefined }),
+    sortValue: (c) => c.errors,
+  },
+  {
+    header: { key: 'duracion', label: 'duración', align: 'center', sortable: true },
+    cell: (c) => textCell(`${(c.duration_ms / 1000).toFixed(1)}s`),
+    sortValue: (c) => c.duration_ms,
+  },
+  {
+    header: { key: 'resultado', label: 'resultado', align: 'center', sortable: true },
+    cell: (c) => resultCell(c.outcome),
+    sortValue: (c) => c.outcome,
+  },
+];
+
+/** Ciclos de sync recientes: ordenables, con tope de scroll + "cargar más". */
 @Component({
   selector: 'app-data-sync-cycles-table',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [SortableTableComponent, MatButtonModule],
   template: `
-    @if (rows().length) {
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>finalizado</th>
-            <th>dominio</th>
-            <th class="num">descargado</th>
-            <th class="num">errores</th>
-            <th class="num">duración</th>
-            <th>resultado</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track row.key) {
-            <tr>
-              <td>{{ row.finished }}</td>
-              <td>{{ row.label }}</td>
-              <td class="num">{{ row.downloaded }}</td>
-              <td class="num" [class.err]="row.errors > 0">{{ row.errors }}</td>
-              <td class="num">{{ row.duration }}</td>
-              <td>
-                <span class="pill" [class.pill--ok]="row.outcome === 'ok'" [class.pill--err]="row.outcome === 'error'">
-                  {{ row.outcome }}
-                </span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    } @else {
-      <div class="empty">Sin ciclos en la ventana seleccionada.</div>
-    }
+    <div class="cycles__scroll">
+      <app-sortable-table
+        [headers]="table().headers"
+        [rows]="table().tableRows"
+        [initialSort]="initialSort"
+        emptyText="Sin ciclos en la ventana seleccionada."
+      />
+    </div>
+    <div class="cycles__foot">
+      <button mat-stroked-button [disabled]="!hasMore()" (click)="loadMore.emit()">
+        cargar 50 más
+      </button>
+      <span class="cycles__count">{{ cycles().length }} cargados</span>
+      <span class="cycles__hint">(el orden aplica a las filas cargadas)</span>
+    </div>
   `,
   styles: `
-    .tbl {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
+    :host {
+      display: block;
     }
-    .tbl th,
-    .tbl td {
-      padding: 7px 10px;
-      text-align: left;
-      border-bottom: 1px solid var(--mat-sys-outline-variant, #ececec);
+    .cycles__scroll {
+      max-height: 460px;
+      overflow-y: auto;
+      overflow-x: auto;
+      scrollbar-width: thin;
     }
-    .tbl th {
+    .cycles__foot {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-top: 1px solid var(--mat-sys-outline-variant, #ececec);
       font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    }
+    .cycles__count {
       color: var(--mat-sys-on-surface-variant, #5f6368);
     }
-    .num {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-    .err {
-      color: var(--metric-dlq, #d23b4e);
-      font-weight: 600;
-    }
-    .pill {
-      display: inline-block;
-      padding: 1px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      background: var(--metric-skipped-bg, #eceef0);
-      color: var(--metric-skipped, #6b7280);
-    }
-    .pill--ok {
-      background: var(--metric-success-bg, #e6f4ec);
-      color: var(--metric-success, #2e9b51);
-    }
-    .pill--err {
-      background: var(--metric-error-bg, #fdeee5);
-      color: var(--metric-dlq, #d23b4e);
-    }
-    .empty {
-      padding: 18px;
-      font-size: 12px;
-      color: var(--mat-sys-on-surface-variant, #5f6368);
+    .cycles__hint {
+      color: var(--mat-sys-on-surface-variant, #9aa0a6);
     }
   `,
 })
 export class DataSyncCyclesTableComponent {
   readonly cycles = input.required<readonly DataSyncCycle[]>();
+  readonly hasMore = input<boolean>(false);
+  readonly loadMore = output<void>();
 
-  readonly rows = computed<Row[]>(() =>
-    this.cycles().map((c, index) => ({
-      key: `${c.domain}-${c.finished_at}-${index}`,
-      finished: ago(c.finished_at),
-      label: domainLabel(c.domain),
-      downloaded: c.downloaded.toLocaleString('es-AR'),
-      errors: c.errors,
-      duration: `${(c.duration_ms / 1000).toFixed(1)}s`,
-      outcome: c.outcome,
-    })),
-  );
+  readonly initialSort: SortState = { key: 'finalizado', dir: 'desc' };
+
+  readonly table = computed(() => buildTable(COLUMNS, this.cycles()));
 }

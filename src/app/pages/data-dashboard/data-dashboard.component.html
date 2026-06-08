@@ -99,7 +99,13 @@
         [attr.aria-busy]="reloading()"
       >
         <app-metric-panel heading="Resumen general" [tip]="tips.summary">
+          <span panelActions class="dash__stamp">{{ summaryStamp() }}</span>
           <app-data-stat-cards [summary]="summary()" />
+        </app-metric-panel>
+
+        <app-metric-panel heading="Redis · INFO" [tip]="tips.info">
+          <span panelActions class="dash__stamp">{{ infoStamp() }}</span>
+          <app-redis-info-cards [info]="info()" />
         </app-metric-panel>
 
         <app-metric-panel heading="Estado de sincronización" [tip]="tips.syncStatus">
@@ -109,6 +115,7 @@
         </app-metric-panel>
 
         <app-metric-panel heading="Memoria Redis por dominio" [tip]="tips.memory">
+          <span panelActions class="dash__stamp">{{ memoryStamp() }}</span>
           <div class="dash__chart">
             @if (memoryBarOptions(); as opts) {
               <app-metric-chart [options]="opts" />
@@ -122,6 +129,7 @@
         </app-metric-panel>
 
         <app-metric-panel heading="Evolución de memoria Redis" [tip]="tips.memoryHistory">
+          <span panelActions class="dash__stamp">{{ memoryStamp() }}</span>
           <div class="dash__chart">
             @if (memoryAreaOptions(); as opts) {
               <app-metric-chart [options]="opts" />
@@ -151,20 +159,19 @@
           </div>
         </app-metric-panel>
 
-        <app-metric-panel heading="Redis · INFO" [tip]="tips.info">
-          <app-redis-info-cards [info]="info()" />
-        </app-metric-panel>
-
         <app-metric-panel heading="Scraper de mapa base" [tip]="tips.basemap">
+          <span panelActions class="dash__stamp">{{ basemapStamp() }}</span>
           <div class="dash__scroll-x">
             <app-basemap-providers-table [providers]="providers()" />
           </div>
         </app-metric-panel>
 
         <app-metric-panel heading="Ciclos recientes" [tip]="tips.cycles">
-          <div class="dash__scroll-x">
-            <app-data-sync-cycles-table [cycles]="cycles()" />
-          </div>
+          <app-data-sync-cycles-table
+            [cycles]="cycles()"
+            [hasMore]="cyclesHasMore()"
+            (loadMore)="onLoadMoreCycles()"
+          />
         </app-metric-panel>
       </div>
 

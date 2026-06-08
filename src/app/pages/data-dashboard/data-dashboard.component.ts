@@ -41,6 +41,7 @@ import {
 } from '../../services/metrics/data-metrics-chart.util';
 import { DataMetricsService } from '../../services/metrics/data-metrics.service';
 import type { MetricsChartOptions } from '../../services/metrics/metrics-chart.util';
+import { ago } from '../../services/metrics/metrics-format.util';
 import {
   TIMEZONE_MODES,
   TimezoneSettingsService,
@@ -86,13 +87,19 @@ const PANEL_TIPS = {
     '• Desalojadas > 0 = descartando datos por memoria',
   basemap:
     'Estado en vivo del scraper de mapa base (SQLite propio).\n' +
-    '• ocioso / scrapeando (cursor z·índice) / circuito abierto\n' +
-    '• trips = fallos del breaker; motivo en el tooltip\n' +
+    '• respaldado · respaldando (cursor z·índice) · con errores\n' +
+    '• scrapeado % y fallidos = del último barrido (ok / intentos)\n' +
+    '• "con errores" = pausado: la tasa de error superó el umbral\n' +
     '• Barrido completo cada ~7 días (no_cache → S3)',
   cycles:
     'Filas crudas de sync_cycles (más nuevas primero, máx. 100).\n' +
     '• El detalle sin agregar detrás de throughput y errores',
 } as const;
+
+/** "muestreado hace …" para un timestamp ISO, o '' si no hay. */
+function stampAgo(iso: string | null | undefined): string {
+  return iso ? 'muestreado ' + ago(iso) : '';
+}
 
 /**
  * Panel de estado y memoria del data-service (pestaña "Servicio de datos" del
@@ -139,6 +146,8 @@ export class DataDashboardComponent {
   readonly windowHours = signal<WindowHours>(168);
   readonly bucket = signal<SyncBucket>('hour');
   readonly refreshSecs = signal<RefreshSeconds>(30);
+  // Tope de filas de "Ciclos recientes" (crece con "cargar 50 más").
+  readonly cyclesLimit = signal<number>(50);
 
   // Datos
   readonly summary = signal<DataMetricsSummary | null>(null);
@@ -168,6 +177,24 @@ export class DataDashboardComponent {
   private get utc(): boolean {
     return this.timezone.mode() === TIMEZONE_MODES.UTC;
   }
+
+  /** Hay más ciclos por traer si la API devolvió una página completa. */
+  readonly cyclesHasMore = computed<boolean>(() => this.cycles().length >= this.cyclesLimit());
+
+  // ── Marcas de "muestreado hace …" para los paneles que se actualizan lento
+  //    (colector de Redis ~15 min, barrido de basemap ~7 días). ──────────────
+  readonly summaryStamp = computed(() => stampAgo(this.summary()?.sampled_at));
+  readonly memoryStamp = computed(() => stampAgo(this.memory()?.sampled_at));
+  readonly infoStamp = computed(() => stampAgo(this.info()?.sampled_at));
+  readonly basemapStamp = computed(() => {
+    const times = this.providers()
+      .map((p) => p.last_swept)
+      .filter((t): t is number => t != null);
+    if (!times.length) {
+      return '';
+    }
+    return 'último barrido ' + ago(new Date(Math.max(...times) * 1000).toISOString());
+  });
 
   // ── Opciones de gráficos ──────────────────────────────────────────────────
 
@@ -225,6 +252,16 @@ export class DataDashboardComponent {
     void this.refresh(true);
   }
 
+  /** "cargar 50 más" en Ciclos recientes: agranda el tope y recarga los ciclos. */
+  async onLoadMoreCycles(): Promise<void> {
+    this.cyclesLimit.update((n) => n + 50);
+    this.cycles.set(
+      await firstValueFrom(
+        this.metrics.getSyncCycles(this.windowHours(), undefined, this.cyclesLimit()),
+      ),
+    );
+  }
+
   // ── Carga de datos ──────────────────────────────────────────────────────────
 
   private async refresh(foreground = false): Promise<void> {
@@ -246,7 +283,7 @@ export class DataDashboardComponent {
           firstValueFrom(this.metrics.getSyncHistory(hours, this.bucket())),
           firstValueFrom(this.metrics.getRedisInfo()),
           firstValueFrom(this.metrics.getBasemapProviders()),
-          firstValueFrom(this.metrics.getSyncCycles(hours, undefined, 100)),
+          firstValueFrom(this.metrics.getSyncCycles(hours, undefined, this.cyclesLimit())),
         ]);
       this.summary.set(summary);
       this.syncStatus.set(syncStatus);

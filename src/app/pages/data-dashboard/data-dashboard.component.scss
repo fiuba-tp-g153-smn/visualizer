@@ -147,6 +147,13 @@
   overflow-x: auto;
 }
 
+// "muestreado hace …" en el slot de acciones del panel (paneles lentos).
+.dash__stamp {
+  font-size: 11px;
+  color: var(--mat-sys-on-surface-variant, #9aa0a6);
+  white-space: nowrap;
+}
+
 // Contenedor de gráficos ApexCharts dentro de un panel.
 .dash__chart {
   height: 320px;

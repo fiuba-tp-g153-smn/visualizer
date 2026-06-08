@@ -143,6 +143,14 @@
   gap: 16px;
 }
 
+// Los paneles viven dentro de .dash__content (no son hijos directos de
+// .dash__body), así que el gap va acá para recuperar el margen entre secciones.
+.dash__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .dash__scroll-x {
   overflow-x: auto;
 }

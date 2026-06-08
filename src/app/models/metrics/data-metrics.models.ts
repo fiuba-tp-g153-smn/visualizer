@@ -102,6 +102,13 @@ export interface BasemapProviderStatus {
   consecutive_trips: number;
   cooldown_until: number | null;
   last_reason: string | null;
+  // Último barrido: attempted = ok + failed; error_rate = failed / attempted.
+  attempted: number;
+  ok: number;
+  failed: number;
+  error_rate: number | null;
+  completed: boolean;
+  last_swept: number | null;
 }
 
 /** KPIs de cabecera del dashboard. */

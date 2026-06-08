@@ -73,6 +73,21 @@
   font-weight: 600;
 }
 
+// Énfasis de color para celdas de texto (opt-in vía Cell.tone).
+.tone-ok {
+  color: var(--metric-success, #2e9b51);
+}
+
+.tone-warn {
+  color: var(--metric-error, #e8702a);
+  font-weight: 600;
+}
+
+.tone-err {
+  color: var(--metric-dlq, #d23b4e);
+  font-weight: 600;
+}
+
 .pill {
   display: inline-block;
   font-size: 10.5px;

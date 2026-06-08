@@ -48,28 +48,28 @@ interface StatCard {
     </div>
   `,
   styles: `
+    // Grilla con divisores (estilo tiles-processor): celdas separadas por
+    // border-right/bottom, sin tarjetas con borde/redondeo propios. El marco lo
+    // da el panel (borde redondeado + overflow:hidden, body con padding:0).
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
     .card {
-      background: var(--mat-sys-surface, #fff);
-      border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
-      border-radius: 8px;
-      padding: 10px 12px;
+      padding: 12px 14px;
+      border-right: 1px solid var(--mat-sys-outline-variant, #ececec);
+      border-bottom: 1px solid var(--mat-sys-outline-variant, #ececec);
     }
     .card__label {
       display: flex;
       align-items: center;
       gap: 4px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--mat-sys-on-surface-variant, #5f6368);
     }
     .card__label-text {
-      flex: 1 1 auto;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mat-sys-on-surface-variant, #5f6368);
     }
     .card__info {
       font-size: 13px;
@@ -80,10 +80,12 @@ interface StatCard {
       color: var(--mat-sys-on-surface-variant, #5f6368);
     }
     .card__value {
-      margin-top: 6px;
-      font-size: 22px;
+      margin-top: 5px;
+      font-size: 30px;
       font-weight: 600;
+      line-height: 1.15;
       color: var(--mat-sys-on-surface, #1f1f1f);
+      font-variant-numeric: tabular-nums;
     }
     .card__value--green {
       color: var(--metric-success, #2e9b51);
