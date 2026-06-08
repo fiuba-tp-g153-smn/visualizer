@@ -18,4 +18,5 @@ export const STORAGE_KEYS = {
   POLYGON_SIMPLIFICATION_LEVEL: buildStorageKey('polygon-simplification-level'),
   WEATHER_STATIONS_SHARED_CONTROLS: buildStorageKey('weather-stations-shared-controls'),
   WEATHER_STATIONS_API_KEY: buildStorageKey('weather-stations-api-key'),
+  PLACE_SEARCH_CONFIG: buildStorageKey('place-search-config'),
 } as const;
