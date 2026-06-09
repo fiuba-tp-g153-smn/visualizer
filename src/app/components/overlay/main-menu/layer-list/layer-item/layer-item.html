@@ -471,7 +471,12 @@
                 </button>
               </div>
 
-              @if (hasTimeControl()) {
+              @if (hasNoElevationsSelected()) {
+                <div class="no-periods-message">
+                  <mat-icon class="info-icon">info</mat-icon>
+                  <span>Sin elevación seleccionada</span>
+                </div>
+              } @else if (hasTimeControl()) {
                 <div class="time-slider-container">
                   <span class="time-min" [matTooltip]="getTimeLabel(minTimeIndex())">{{
                     getTimeOnly(minTimeIndex())

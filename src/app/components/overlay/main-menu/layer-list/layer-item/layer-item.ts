@@ -287,6 +287,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return !tilesets || tilesets.length === 0;
   });
 
+  hasNoElevationsSelected = computed(() => {
+    return this.layer.category === LayerCategory.RADAR && this.selectedElevationIds().length === 0;
+  });
+
   needsTimeControl = computed(() => {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       return true;

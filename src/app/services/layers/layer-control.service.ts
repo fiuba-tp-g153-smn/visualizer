@@ -803,9 +803,10 @@ export class LayerControlService {
     if (
       updatedControls.type === LayerType.TILE &&
       updatedControls.category === LayerCategory.RADAR &&
-      updatedControls.elevation.selectedElevationIds.length === 0
+      updatedControls.elevation.selectedElevationIds.length === 0 &&
+      updatedControls.playback.isPlaying
     ) {
-      this.deactivateLayer(layerId);
+      this.stopPlayback(layerId);
     }
   }
 
@@ -827,7 +828,10 @@ export class LayerControlService {
     });
 
     if (elevationIds.length === 0) {
-      this.deactivateLayer(layerId);
+      const updatedControls = this.getControls(layerId);
+      if (updatedControls.type === LayerType.TILE && updatedControls.playback.isPlaying) {
+        this.stopPlayback(layerId);
+      }
     }
   }
 
