@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 
 import { buildSeriesCharts, buildTabChart, buildTempDewChart } from './weather-station-chart.util';
 import { WeatherStationVariable } from '../../models/layers/models';
@@ -39,10 +40,11 @@ const SERIES: StationSeries = {
 };
 
 function units(): UnitsSettingsService {
-  return new UnitsSettingsService();
+  return TestBed.inject(UnitsSettingsService);
 }
 
 describe('buildTempDewChart', () => {
+  beforeEach(() => TestBed.configureTestingModule({}));
   it('overlays Temperatura and Punto de rocío as two straight-line series', () => {
     const vm = buildTempDewChart(SERIES, units(), { utc: true, height: 200 });
     expect(vm.series).toHaveLength(2);
@@ -68,6 +70,8 @@ describe('buildTempDewChart', () => {
 });
 
 describe('buildTabChart', () => {
+  beforeEach(() => TestBed.configureTestingModule({}));
+
   it('overlays temp + dew when Temperatura is the selected map variable', () => {
     const vm = buildTabChart(SERIES, WeatherStationVariable.TEMPERATURE, units(), {
       utc: true,
@@ -87,6 +91,8 @@ describe('buildTabChart', () => {
 });
 
 describe('buildSeriesCharts', () => {
+  beforeEach(() => TestBed.configureTestingModule({}));
+
   it('builds one chart per variable with the palette colours and straight lines', () => {
     const charts = buildSeriesCharts(SERIES, units(), { group: 'ws-48h', utc: true, height: 200 });
     expect(charts).toHaveLength(6);

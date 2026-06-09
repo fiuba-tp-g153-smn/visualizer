@@ -14,6 +14,7 @@ import { PRIMARY_RENDER_ID } from '../../models/layers/controls.models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayersService } from '../layers/layers.service';
+import { LocalStorageService } from '../storage/local-storage.service';
 
 type LayerWithScale = Layer & { scale: LayerScale };
 
@@ -48,6 +49,7 @@ export class ScaleToolsService {
   private readonly MIN_DISCRETE_STEPS = 1;
 
   private readonly controlService = inject(LayerControlService);
+  private readonly storage = inject(LocalStorageService);
   private readonly layersService = inject(LayersService);
   private previousDisplayLayerIds = new Set<string>();
   private restoredSelectionFromStorage = false;
@@ -276,42 +278,18 @@ export class ScaleToolsService {
   }
 
   private loadStateFromStorage(): boolean {
-    if (typeof localStorage === 'undefined') {
-      return false;
-    }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.SCALE_TOOLS);
-      if (!raw) {
-        return false;
-      }
-
-      const parsed = JSON.parse(raw) as PersistedScaleToolsState;
-
-      this.enabled.set(parsed.enabled ?? false);
-      this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
-      return true;
-    } catch {
-      this.enabled.set(false);
-      this.selectedLayerIdsOrdered.set([]);
-      return false;
-    }
+    const parsed = this.storage.getJson<PersistedScaleToolsState>(STORAGE_KEYS.SCALE_TOOLS);
+    if (!parsed) return false;
+    this.enabled.set(parsed.enabled ?? false);
+    this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
+    return true;
   }
 
   private saveStateToStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
     const payload: PersistedScaleToolsState = {
       enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
     };
-
-    try {
-      localStorage.setItem(STORAGE_KEYS.SCALE_TOOLS, JSON.stringify(payload));
-    } catch {
-      // Ignore storage write errors.
-    }
+    this.storage.setJson(STORAGE_KEYS.SCALE_TOOLS, payload);
   }
 }

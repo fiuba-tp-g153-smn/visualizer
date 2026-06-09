@@ -33,6 +33,7 @@ import { PanelCloseButtonComponent } from '../../../../shared/panel-close-button
 import { PlaceSearchService } from '../../../../../services/search/place-search.service';
 import { MapInfoService } from '../../../../../services/layers/map-info.service';
 import { STORAGE_KEYS } from '../../../../../constants';
+import { LocalStorageService } from '../../../../../services/storage/local-storage.service';
 import {
   IgnPlace,
   NominatimDisplayMode,
@@ -142,6 +143,7 @@ export class PlaceSearchTabComponent {
   private readonly placeSearchService = inject(PlaceSearchService);
   private readonly mapInfoService = inject(MapInfoService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly storage = inject(LocalStorageService);
 
   private readonly queryInput$ = new Subject<{ term: string; source: PlaceSearchSource }>();
   private currentTerm = '';
@@ -377,40 +379,20 @@ export class PlaceSearchTabComponent {
   }
 
   private loadConfigFromStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
+    const parsed = this.storage.getJson<Partial<PlaceSearchConfig>>(STORAGE_KEYS.PLACE_SEARCH_CONFIG);
+    if (!parsed) return;
+    if (isPlaceSearchSource(parsed.source)) {
+      this.source.set(parsed.source);
     }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.PLACE_SEARCH_CONFIG);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as Partial<PlaceSearchConfig>;
-      if (isPlaceSearchSource(parsed.source)) {
-        this.source.set(parsed.source);
-      }
-      if (isNominatimDisplayMode(parsed.nominatimDisplayMode)) {
-        this.nominatimDisplayMode.set(parsed.nominatimDisplayMode);
-      }
-      if (typeof parsed.animateFlyTo === 'boolean') {
-        this.animateFlyTo.set(parsed.animateFlyTo);
-      }
-    } catch (error) {
-      console.warn('Failed to load place search config from localStorage:', error);
+    if (isNominatimDisplayMode(parsed.nominatimDisplayMode)) {
+      this.nominatimDisplayMode.set(parsed.nominatimDisplayMode);
+    }
+    if (typeof parsed.animateFlyTo === 'boolean') {
+      this.animateFlyTo.set(parsed.animateFlyTo);
     }
   }
 
   private saveConfigToStorage(config: PlaceSearchConfig): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEYS.PLACE_SEARCH_CONFIG, JSON.stringify(config));
-    } catch (error) {
-      console.warn('Failed to save place search config to localStorage:', error);
-    }
+    this.storage.setJson(STORAGE_KEYS.PLACE_SEARCH_CONFIG, config);
   }
 }

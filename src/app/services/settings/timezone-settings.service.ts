@@ -1,10 +1,11 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { STORAGE_KEYS } from '../../constants';
 import {
   setTimestampTimezoneMode,
   TIMESTAMP_TIMEZONE_MODES,
   type TimestampTimezoneMode,
 } from '../../utils/tileset-timestamp';
+import { LocalStorageService } from '../storage/local-storage.service';
 
 export const TIMEZONE_MODES = TIMESTAMP_TIMEZONE_MODES;
 
@@ -22,6 +23,8 @@ function isTimezoneMode(value: unknown): value is TimezoneMode {
   providedIn: 'root',
 })
 export class TimezoneSettingsService {
+  private readonly storage = inject(LocalStorageService);
+
   readonly mode = signal<TimezoneMode>(TIMEZONE_MODES.LOCAL);
 
   constructor() {
@@ -40,38 +43,15 @@ export class TimezoneSettingsService {
   }
 
   private loadFromStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.TIMEZONE_SETTINGS);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as Partial<TimezoneSettings>;
-      if (isTimezoneMode(parsed.mode)) {
-        this.mode.set(parsed.mode);
-      }
-    } catch (error) {
-      console.warn('Failed to load timezone settings from localStorage:', error);
+    const parsed = this.storage.getJson<Partial<TimezoneSettings>>(STORAGE_KEYS.TIMEZONE_SETTINGS);
+    if (!parsed) return;
+    if (isTimezoneMode(parsed.mode)) {
+      this.mode.set(parsed.mode);
     }
   }
 
   private saveToStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    const payload: TimezoneSettings = {
-      mode: this.mode(),
-    };
-
-    try {
-      localStorage.setItem(STORAGE_KEYS.TIMEZONE_SETTINGS, JSON.stringify(payload));
-    } catch (error) {
-      console.warn('Failed to save timezone settings to localStorage:', error);
-    }
+    const payload: TimezoneSettings = { mode: this.mode() };
+    this.storage.setJson(STORAGE_KEYS.TIMEZONE_SETTINGS, payload);
   }
 }

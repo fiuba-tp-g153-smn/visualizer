@@ -12,6 +12,7 @@ import {
 } from '../../components/floating/weather-stations-api-key-dialog/weather-stations-api-key-dialog';
 import { LayerControlService } from '../layers/layer-control.service';
 import { buildWeatherStationsTilesetsUrl } from '../../config/backend.config';
+import { LocalStorageService } from '../storage/local-storage.service';
 
 interface StoredKeyState {
   key: string;
@@ -30,6 +31,7 @@ interface StoredKeyState {
 export class WeatherStationsApiKeyService {
   private readonly dialog = inject(MatDialog);
   private readonly layerControl = inject(LayerControlService);
+  private readonly storage = inject(LocalStorageService);
   private readonly keyChangeTick = signal(0);
   private dialogInFlight: Promise<string | null> | null = null;
 
@@ -191,42 +193,17 @@ export class WeatherStationsApiKeyService {
   }
 
   private removeKeyFromStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-    localStorage.removeItem(STORAGE_KEYS.WEATHER_STATIONS_API_KEY);
+    this.storage.remove(STORAGE_KEYS.WEATHER_STATIONS_API_KEY);
     this.keyChangeTick.update((v) => v + 1);
   }
 
   private readStoredKey(): string | null {
-    if (typeof localStorage === 'undefined') {
-      return null;
-    }
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.WEATHER_STATIONS_API_KEY);
-      if (!raw) {
-        return null;
-      }
-      const parsed = JSON.parse(raw) as StoredKeyState;
-      return parsed.key ? parsed.key : null;
-    } catch {
-      return null;
-    }
+    const parsed = this.storage.getJson<StoredKeyState>(STORAGE_KEYS.WEATHER_STATIONS_API_KEY);
+    return parsed?.key ?? null;
   }
 
   private storeKey(key: string): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-    try {
-      const payload: StoredKeyState = { key };
-      localStorage.setItem(
-        STORAGE_KEYS.WEATHER_STATIONS_API_KEY,
-        JSON.stringify(payload),
-      );
-      this.keyChangeTick.update((v) => v + 1);
-    } catch {
-      // Storage failures (private mode, quota) are non-fatal.
-    }
+    this.storage.setJson<StoredKeyState>(STORAGE_KEYS.WEATHER_STATIONS_API_KEY, { key });
+    this.keyChangeTick.update((v) => v + 1);
   }
 }
