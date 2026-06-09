@@ -74,6 +74,76 @@ export function packIntoLanes(jobs: readonly RecentJob[]): { rows: LaneRow[]; la
   return { rows, lanes: laneEnds.length };
 }
 
+/** Nombre de contenedor de un worker: `worker1`, `worker2`, `worker-light1`, … */
+const WORKER_NAME_RE = /^worker(-light)?\d+$/;
+
+/** Layout de la línea de tiempo: filas, nº de carriles, etiquetas y modo. */
+export interface TimelineLayout {
+  readonly rows: LaneRow[];
+  readonly lanes: number;
+  readonly laneLabels: string[];
+  /** `true` si los carriles son por worker; `false` si por solape (datos viejos). */
+  readonly grouped: boolean;
+}
+
+/**
+ * ¿Se puede agrupar por worker? Sólo si **todos** los trabajos visibles traen un
+ * `worker_host` con formato de contenedor (`worker1`, `worker-light1`, …). Datos
+ * viejos (host con hash o nulo) o mixtos → `false`, y se cae al empaquetado por
+ * solape, preservando el render actual.
+ */
+export function canGroupByWorker(jobs: readonly RecentJob[]): boolean {
+  return (
+    jobs.length > 0 &&
+    jobs.every((job) => job.worker_host != null && WORKER_NAME_RE.test(job.worker_host))
+  );
+}
+
+/** Orden de carriles: workers generales antes que los light, luego por número. */
+function workerSortKey(name: string): [number, number] {
+  const match = /^worker(-light)?(\d+)$/.exec(name);
+  return match ? [match[1] ? 1 : 0, Number(match[2])] : [2, 0];
+}
+
+/**
+ * Un carril por worker (contenedor), ordenados general→light y por número. Dentro
+ * de un worker los trabajos comparten carril: con prefetch=1 cada worker procesa
+ * uno por vez, así que no se solapan en el tiempo.
+ */
+export function packByWorker(jobs: readonly RecentJob[]): {
+  rows: LaneRow[];
+  lanes: number;
+  laneLabels: string[];
+} {
+  const workers = [...new Set(jobs.map((job) => job.worker_host as string))].sort((a, b) => {
+    const [ga, na] = workerSortKey(a);
+    const [gb, nb] = workerSortKey(b);
+    return ga - gb || na - nb || a.localeCompare(b);
+  });
+  const laneOf = new Map(workers.map((worker, index) => [worker, index]));
+  const rows: LaneRow[] = jobs.map((job) => ({
+    job,
+    lane: laneOf.get(job.worker_host as string) ?? 0,
+    start: new Date(job.started_at).getTime(),
+    end: new Date(job.finished_at).getTime(),
+  }));
+  return { rows, lanes: workers.length, laneLabels: workers };
+}
+
+/**
+ * Distribuye los trabajos en carriles: por worker (contenedor) cuando los datos
+ * lo permiten, o por solape como antes para datos viejos/mixtos. `laneLabels` son
+ * nombres de worker (modo agrupado) o números `1..N` (modo solape).
+ */
+export function layoutTimeline(jobs: readonly RecentJob[]): TimelineLayout {
+  if (canGroupByWorker(jobs)) {
+    return { ...packByWorker(jobs), grouped: true };
+  }
+  const { rows, lanes } = packIntoLanes(jobs);
+  const laneLabels = Array.from({ length: Math.max(lanes, 1) }, (_, i) => String(i + 1));
+  return { rows, lanes, laneLabels, grouped: false };
+}
+
 /** Color de una unidad: por resultado o por tipo de trabajo. */
 export function colorOf(
   job: RecentJob,

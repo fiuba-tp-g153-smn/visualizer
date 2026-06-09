@@ -47,16 +47,40 @@ describe('buildEchartsOption', () => {
     expect(o.lanes).toBe(1);
   });
 
-  it('packs overlapping jobs onto separate lanes (peak concurrency)', () => {
+  it('packs overlapping jobs onto separate lanes (peak concurrency) for legacy data', () => {
+    // worker_host: null → no clean worker name → overlap layout (as before).
     const o = buildEchartsOption(
       [
-        job({ id: 1, started_at: '2026-06-04T00:00:00Z', finished_at: '2026-06-04T00:02:00Z' }),
-        job({ id: 2, started_at: '2026-06-04T00:01:00Z', finished_at: '2026-06-04T00:03:00Z' }),
+        job({ id: 1, worker_host: null, started_at: '2026-06-04T00:00:00Z', finished_at: '2026-06-04T00:02:00Z' }),
+        job({ id: 2, worker_host: null, started_at: '2026-06-04T00:01:00Z', finished_at: '2026-06-04T00:03:00Z' }),
       ],
       { utc: true, colorBy: 'outcome' },
     );
     expect(o.lanes).toBe(2);
     expect(new Set(data(o).map((d) => d.value[0]))).toEqual(new Set([0, 1]));
+    expect((o.option.yAxis as { show: boolean }).show).toBe(false);
+  });
+
+  it('groups overlapping jobs into one lane per worker container, with named axis', () => {
+    // Two overlapping jobs on the same worker → a single lane (not two), and the
+    // y-axis shows the worker names.
+    const o = buildEchartsOption(
+      [
+        job({ id: 1, worker_host: 'worker1', started_at: '2026-06-04T00:00:00Z', finished_at: '2026-06-04T00:02:00Z' }),
+        job({ id: 2, worker_host: 'worker1', started_at: '2026-06-04T00:01:00Z', finished_at: '2026-06-04T00:03:00Z' }),
+        job({ id: 3, worker_host: 'worker-light1', started_at: '2026-06-04T00:00:30Z', finished_at: '2026-06-04T00:01:30Z' }),
+      ],
+      { utc: true, colorBy: 'outcome' },
+    );
+    expect(o.lanes).toBe(2); // worker1, worker-light1 — not 3 (overlap would split)
+    const yAxis = o.option.yAxis as { show: boolean; data: string[] };
+    expect(yAxis.show).toBe(true);
+    expect(yAxis.data).toEqual(['worker1', 'worker-light1']); // general before light
+    // worker1's two jobs share lane 0; the light worker is lane 1.
+    const laneById = new Map(data(o).map((d) => [d.job.id, d.value[0]]));
+    expect(laneById.get(1)).toBe(0);
+    expect(laneById.get(2)).toBe(0);
+    expect(laneById.get(3)).toBe(1);
   });
 
   it('colors by outcome and by type', () => {

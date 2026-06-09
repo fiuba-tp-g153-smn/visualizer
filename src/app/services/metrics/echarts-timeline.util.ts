@@ -3,7 +3,7 @@ import { buildTypeColorMap, LABEL_COLOR } from './metrics-chart.util';
 import {
   colorOf,
   fmtDateTime,
-  packIntoLanes,
+  layoutTimeline,
   type TimelineColorBy,
   tooltipHtml,
 } from './timeline-shared.util';
@@ -64,7 +64,7 @@ export function buildEchartsOption(
     tooltipFor?: (job: RecentJob) => string;
   },
 ): { option: EchartsTimelineOption; lanes: number; extent: [number, number] } {
-  const { rows, lanes } = packIntoLanes(jobs);
+  const { rows, lanes, laneLabels, grouped } = layoutTimeline(jobs);
   const typeColorFor = buildTypeColorMap(jobs.map((job) => job.job_type));
   const tooltipFor = opts.tooltipFor ?? ((job: RecentJob) => tooltipHtml(job, opts.utc));
 
@@ -74,8 +74,6 @@ export function buildEchartsOption(
     color: colorOf(row.job, opts.colorBy, typeColorFor),
     tooltip: tooltipFor(row.job),
   }));
-
-  const laneLabels = Array.from({ length: Math.max(lanes, 1) }, (_, i) => String(i + 1));
 
   // Extensión temporal de los datos (min inicio / max fin), con reduce para no
   // desbordar la pila al hacer spread sobre miles de filas.
@@ -144,10 +142,16 @@ export function buildEchartsOption(
         splitLine: { show: true, lineStyle: { color: '#eceef0' } },
       },
       yAxis: {
+        // Agrupado por worker: se muestran los nombres de contenedor como
+        // etiquetas de carril. Modo solape (datos viejos): eje oculto, idéntico
+        // al render previo.
         type: 'category',
         data: laneLabels,
-        show: false,
+        show: grouped,
         inverse: true,
+        axisTick: { show: false },
+        axisLine: { show: false },
+        axisLabel: { color: LABEL_COLOR, fontSize: 11 },
       },
       dataZoom: [
         // Rueda hace zoom; el arrastre lo maneja el componente (banda → dataZoom).
