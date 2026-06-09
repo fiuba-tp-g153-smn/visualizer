@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 
 import { buildObservationRows } from './weather-station-observations.util';
 import { UnitsSettingsService } from '../settings/units-settings.service';
@@ -37,9 +38,10 @@ const SERIES: StationSeries = {
   latest: pt('2026-05-30T13:00:00Z', 19, null),
 };
 
-const units = () => new UnitsSettingsService();
+const units = () => TestBed.inject(UnitsSettingsService);
 
 describe('buildObservationRows', () => {
+  beforeEach(() => TestBed.configureTestingModule({}));
   it('builds one row per observation, newest first, with units', () => {
     const rows = buildObservationRows(SERIES, units());
     expect(rows).toHaveLength(2);

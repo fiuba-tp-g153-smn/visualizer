@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 
 import { buildSeriesSummary } from './weather-station-summary.util';
 import { UnitsSettingsService } from '../settings/units-settings.service';
@@ -33,9 +34,10 @@ const SERIES: StationSeries = {
   latest: pt(15, 60),
 };
 
-const units = () => new UnitsSettingsService();
+const units = () => TestBed.inject(UnitsSettingsService);
 
 describe('buildSeriesSummary', () => {
+  beforeEach(() => TestBed.configureTestingModule({}));
   it('computes max/min/avg for a variable with data', () => {
     const groups = buildSeriesSummary(SERIES, units());
     const temp = groups.find((g) => g.title.startsWith('Temperatura'))!;

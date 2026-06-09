@@ -1,5 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { STORAGE_KEYS, TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../constants';
+import { LocalStorageService } from '../storage/local-storage.service';
 
 export type TemperatureUnit = typeof TEMPERATURE_UNITS.KELVIN | typeof TEMPERATURE_UNITS.CELSIUS;
 export type WindSpeedUnit =
@@ -17,6 +18,8 @@ interface UnitsSettings {
   providedIn: 'root',
 })
 export class UnitsSettingsService {
+  private readonly storage = inject(LocalStorageService);
+
   readonly temperatureUnit = signal<TemperatureUnit>(TEMPERATURE_UNITS.CELSIUS);
   readonly windSpeedUnit = signal<WindSpeedUnit>(WIND_SPEED_UNITS.KNOTS);
   readonly decimalPrecision = signal<DecimalPrecision>(2);
@@ -48,40 +51,19 @@ export class UnitsSettingsService {
   }
 
   private loadFromStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.UNITS_SETTINGS);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as UnitsSettings;
-      this.temperatureUnit.set(parsed.temperatureUnit ?? TEMPERATURE_UNITS.CELSIUS);
-      this.windSpeedUnit.set(parsed.windSpeedUnit ?? WIND_SPEED_UNITS.KNOTS);
-      this.decimalPrecision.set(parsed.decimalPrecision ?? 2);
-    } catch (error) {
-      console.warn('Failed to load units settings from localStorage:', error);
-    }
+    const parsed = this.storage.getJson<UnitsSettings>(STORAGE_KEYS.UNITS_SETTINGS);
+    if (!parsed) return;
+    this.temperatureUnit.set(parsed.temperatureUnit ?? TEMPERATURE_UNITS.CELSIUS);
+    this.windSpeedUnit.set(parsed.windSpeedUnit ?? WIND_SPEED_UNITS.KNOTS);
+    this.decimalPrecision.set(parsed.decimalPrecision ?? 2);
   }
 
   private saveToStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
     const payload: UnitsSettings = {
       temperatureUnit: this.temperatureUnit(),
       windSpeedUnit: this.windSpeedUnit(),
       decimalPrecision: this.decimalPrecision(),
     };
-
-    try {
-      localStorage.setItem(STORAGE_KEYS.UNITS_SETTINGS, JSON.stringify(payload));
-    } catch (error) {
-      console.warn('Failed to save units settings to localStorage:', error);
-    }
+    this.storage.setJson(STORAGE_KEYS.UNITS_SETTINGS, payload);
   }
 }

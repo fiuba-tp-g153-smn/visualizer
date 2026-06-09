@@ -20,6 +20,7 @@ import {
 import type { Geometry } from 'geojson';
 import { MAP_CONFIG } from '../../config';
 import { STORAGE_KEYS } from '../../constants';
+import { LocalStorageService } from '../storage/local-storage.service';
 
 interface MapToolsState {
   showCoordinates: boolean;
@@ -158,6 +159,8 @@ type SearchResult =
   providedIn: 'root',
 })
 export class MapInfoService {
+  private readonly storage = inject(LocalStorageService);
+
   private map: LeafletMap | null = null;
 
   // Zoom state
@@ -245,36 +248,26 @@ export class MapInfoService {
   }
 
   private loadPersistedState(): void {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.MAP_TOOLS);
-      if (stored) {
-        const state = JSON.parse(stored) as MapToolsState;
-        this.showCoordinates.set(state.showCoordinates ?? MAP_CONFIG.defaultShowCoordinates);
-        this.showAttribution.set(state.showAttribution ?? MAP_CONFIG.defaultShowAttribution);
-        this.showScale.set(state.showScale ?? MAP_CONFIG.defaultShowScale);
-        this.showZoom.set(state.showZoom ?? MAP_CONFIG.defaultShowZoom);
-        this.showCursorLines.set(state.showCursorLines ?? false);
-        this.showGraticule.set(state.showGraticule ?? false);
-      }
-    } catch {
-      // Ignore parse errors, use defaults
-    }
+    const state = this.storage.getJson<MapToolsState>(STORAGE_KEYS.MAP_TOOLS);
+    if (!state) return;
+    this.showCoordinates.set(state.showCoordinates ?? MAP_CONFIG.defaultShowCoordinates);
+    this.showAttribution.set(state.showAttribution ?? MAP_CONFIG.defaultShowAttribution);
+    this.showScale.set(state.showScale ?? MAP_CONFIG.defaultShowScale);
+    this.showZoom.set(state.showZoom ?? MAP_CONFIG.defaultShowZoom);
+    this.showCursorLines.set(state.showCursorLines ?? false);
+    this.showGraticule.set(state.showGraticule ?? false);
   }
 
   private persistState(): void {
-    try {
-      const state: MapToolsState = {
-        showCoordinates: this.showCoordinates(),
-        showAttribution: this.showAttribution(),
-        showScale: this.showScale(),
-        showZoom: this.showZoom(),
-        showCursorLines: this.showCursorLines(),
-        showGraticule: this.showGraticule(),
-      };
-      localStorage.setItem(STORAGE_KEYS.MAP_TOOLS, JSON.stringify(state));
-    } catch {
-      // Ignore storage errors
-    }
+    const state: MapToolsState = {
+      showCoordinates: this.showCoordinates(),
+      showAttribution: this.showAttribution(),
+      showScale: this.showScale(),
+      showZoom: this.showZoom(),
+      showCursorLines: this.showCursorLines(),
+      showGraticule: this.showGraticule(),
+    };
+    this.storage.setJson(STORAGE_KEYS.MAP_TOOLS, state);
   }
 
   initialize(map: LeafletMap): void {

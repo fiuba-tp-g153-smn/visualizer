@@ -33,6 +33,7 @@ import {
 import { STORAGE_KEYS } from '../../constants';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
+import { LocalStorageService } from '../storage/local-storage.service';
 import {
   buildEcmwfTpFrameOptions,
   computeWindowStart,
@@ -104,6 +105,7 @@ export class LayerControlService {
   private readonly layersService = inject(LayersService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly engineService = inject(PlaybackEngineService);
+  private readonly storage = inject(LocalStorageService);
 
   private readonly controls = signal<Map<string, LayerControls>>(new Map());
   private readonly weatherStationsSharedState = signal<PersistedWeatherStationsSharedControlsState>(
@@ -1420,7 +1422,7 @@ export class LayerControlService {
 
   private saveControls(): void {
     const state = this.activeLayers().map(({ controls }) => this.toPersistedControls(controls));
-    localStorage.setItem(STORAGE_KEYS.ACTIVE_LAYERS, JSON.stringify(state));
+    this.storage.setJson(STORAGE_KEYS.ACTIVE_LAYERS, state);
   }
 
   private toPersistedControls(controls: LayerControls): PersistedLayerControls {
@@ -1564,12 +1566,7 @@ export class LayerControlService {
   }
 
   private loadControls(): PersistedLayerControls[] | undefined {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_LAYERS);
-      return saved ? (JSON.parse(saved) as PersistedLayerControls[]) : undefined;
-    } catch {
-      return undefined;
-    }
+    return this.storage.getJson<PersistedLayerControls[]>(STORAGE_KEYS.ACTIVE_LAYERS) ?? undefined;
   }
 
   private clampWeatherStationsOpacity(opacity: number): number {
@@ -1577,20 +1574,12 @@ export class LayerControlService {
   }
 
   private loadWeatherStationsSharedState(): void {
+    const parsed = this.storage.getJson<Partial<PersistedWeatherStationsSharedControlsState>>(
+      STORAGE_KEYS.WEATHER_STATIONS_SHARED_CONTROLS,
+    );
+    if (!parsed) return;
 
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.WEATHER_STATIONS_SHARED_CONTROLS);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as Partial<PersistedWeatherStationsSharedControlsState>;
-
-      this.weatherStationsSharedState.set({
+    this.weatherStationsSharedState.set({
         opacity:
           typeof parsed.opacity === 'number'
             ? this.clampWeatherStationsOpacity(parsed.opacity)
@@ -1622,23 +1611,10 @@ export class LayerControlService {
             ? parsed.showStationsWithoutData
             : this.weatherStationsSharedState().showStationsWithoutData,
       });
-    } catch {
-    }
   }
 
   private saveWeatherStationsSharedState(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEYS.WEATHER_STATIONS_SHARED_CONTROLS,
-        JSON.stringify(this.weatherStationsSharedState()),
-      );
-    } catch {
-      // Ignore storage failures.
-    }
+    this.storage.setJson(STORAGE_KEYS.WEATHER_STATIONS_SHARED_CONTROLS, this.weatherStationsSharedState());
   }
 
   private normalizeWeatherStationsImageCount(imageCount: number): number {

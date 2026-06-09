@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
 import { STORAGE_KEYS } from '../../constants';
+import { LocalStorageService } from '../storage/local-storage.service';
 
 @Injectable({
   providedIn: 'root',
@@ -12,6 +13,7 @@ import { STORAGE_KEYS } from '../../constants';
 export class PolygonService {
   private readonly polygons = signal<Polygon[]>([]);
   private readonly alertsService = inject(AlertsService);
+  private readonly storage = inject(LocalStorageService);
 
   private readonly loadingCut = signal<Set<string>>(new Set());
   private readonly loadingDepartments = signal<Set<string>>(new Set());
@@ -316,52 +318,27 @@ export class PolygonService {
   }
 
   private saveToStorage(): void {
-    try {
-      const data = JSON.stringify(this.polygons());
-      localStorage.setItem(STORAGE_KEYS.POLYGONS, data);
-    } catch (error) {
-      console.error('Error al guardar polígonos en localStorage:', error);
-    }
+    this.storage.setJson(STORAGE_KEYS.POLYGONS, this.polygons());
   }
 
   private loadFromStorage(): void {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.POLYGONS);
-      if (data) {
-        const parsed = JSON.parse(data) as Polygon[];
-        const polygons = parsed.map((p) => ({
-          ...p,
-          createdAt: new Date(p.createdAt),
-          updatedAt: new Date(p.updatedAt),
-        }));
-        this.polygons.set(polygons);
-      }
-    } catch (error) {
-      console.error('Error al cargar polígonos desde localStorage:', error);
-      this.polygons.set([]);
-    }
+    const parsed = this.storage.getJson<Polygon[]>(STORAGE_KEYS.POLYGONS);
+    if (!parsed) return;
+    this.polygons.set(
+      parsed.map((p) => ({ ...p, createdAt: new Date(p.createdAt), updatedAt: new Date(p.updatedAt) })),
+    );
   }
 
   private saveSimplificationLevelToStorage(level: number): void {
-    try {
-      localStorage.setItem(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL, level.toString());
-    } catch (error) {
-      console.error('Error al guardar nivel de simplificación en localStorage:', error);
-    }
+    this.storage.setString(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL, level.toString());
   }
 
   private loadSimplificationLevelFromStorage(): void {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL);
-      if (data !== null) {
-        const level = parseInt(data, 10);
-        if (!isNaN(level)) {
-          const clampedLevel = Math.max(0, Math.min(10, level));
-          this.simplificationLevel.set(clampedLevel);
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar nivel de simplificación desde localStorage:', error);
+    const data = this.storage.getString(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL);
+    if (data === null) return;
+    const level = parseInt(data, 10);
+    if (!isNaN(level)) {
+      this.simplificationLevel.set(Math.max(0, Math.min(10, level)));
     }
   }
 

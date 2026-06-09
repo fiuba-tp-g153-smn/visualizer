@@ -13,6 +13,7 @@ import {
 } from '../../config';
 import { STORAGE_KEYS } from '../../constants';
 import { BaseMap } from '../../models';
+import { LocalStorageService } from '../storage/local-storage.service';
 
 export type BaseMapLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -42,6 +43,7 @@ const DEFAULT_BASE_MAP_META = {
 })
 export class BaseMapService {
   private readonly http = inject(HttpClient);
+  private readonly storage = inject(LocalStorageService);
 
   private readonly _providers = signal<ReadonlyArray<BaseMap>>([]);
   private readonly _currentBaseMap = signal<BaseMap | null>(null);
@@ -137,20 +139,11 @@ export class BaseMapService {
   }
 
   private readStoredBaseMapId(): string | null {
-    try {
-      return localStorage.getItem(STORAGE_KEYS.BASE_MAP);
-    } catch (error) {
-      console.warn('Failed to read base map from storage:', error);
-      return null;
-    }
+    return this.storage.getString(STORAGE_KEYS.BASE_MAP);
   }
 
   private saveBaseMapToStorage(baseMapId: string): void {
-    try {
-      localStorage.setItem(STORAGE_KEYS.BASE_MAP, baseMapId);
-    } catch (error) {
-      console.warn('Failed to save base map to storage:', error);
-    }
+    this.storage.setString(STORAGE_KEYS.BASE_MAP, baseMapId);
   }
 }
 

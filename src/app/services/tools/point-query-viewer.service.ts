@@ -42,6 +42,7 @@ import { PRIMARY_RENDER_ID } from '../../models/layers/controls.models';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayerConfigService } from '../layers/layer-config.service';
+import { LocalStorageService } from '../storage/local-storage.service';
 import { LayersService } from '../layers/layers.service';
 import { MapInfoService } from '../layers/map-info.service';
 import { DrawingMode, PolygonDrawingService } from '../polygons/polygon-drawing.service';
@@ -135,6 +136,7 @@ export class PointQueryViewerService {
   private readonly layersService = inject(LayersService);
   private readonly mapInfoService = inject(MapInfoService);
   private readonly polygonDrawingService = inject(PolygonDrawingService);
+  private readonly storage = inject(LocalStorageService);
 
   private readonly subscriptions = new Subscription();
   private readonly queryTriggerSubject = new Subject<MouseCoordinates>();
@@ -1213,38 +1215,21 @@ export class PointQueryViewerService {
   }
 
   private loadStateFromStorage(): boolean {
-    if (typeof localStorage === 'undefined') {
-      return false;
-    }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.POINT_QUERY_VIEWER);
-      if (!raw) {
-        return false;
-      }
-
-      const parsed = JSON.parse(raw) as PersistedPointQueryViewerState;
-
-      const showMarker = parsed.showMarker ?? false;
-      const panelMode = parsed.panelMode ?? POINT_QUERY_PANEL_MODES.FIXED;
-
-      this.enabled.set(parsed.enabled ?? false);
-      this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
-      this.manuallyDeselectedLayerIds.set(new Set(parsed.manuallyDeselectedLayerIds ?? []));
-      this.showMarker.set(showMarker);
-      this.panelMode.set(showMarker ? panelMode : POINT_QUERY_PANEL_MODES.FIXED);
-      return true;
-    } catch (error) {
-      console.warn('Failed to load point query viewer state from localStorage:', error);
-      return false;
-    }
+    const parsed = this.storage.getJson<PersistedPointQueryViewerState>(
+      STORAGE_KEYS.POINT_QUERY_VIEWER,
+    );
+    if (!parsed) return false;
+    const showMarker = parsed.showMarker ?? false;
+    const panelMode = parsed.panelMode ?? POINT_QUERY_PANEL_MODES.FIXED;
+    this.enabled.set(parsed.enabled ?? false);
+    this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
+    this.manuallyDeselectedLayerIds.set(new Set(parsed.manuallyDeselectedLayerIds ?? []));
+    this.showMarker.set(showMarker);
+    this.panelMode.set(showMarker ? panelMode : POINT_QUERY_PANEL_MODES.FIXED);
+    return true;
   }
 
   private saveStateToStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
     const payload: PersistedPointQueryViewerState = {
       enabled: this.enabled(),
       selectedLayerIdsOrdered: this.selectedLayerIdsOrdered(),
@@ -1252,66 +1237,31 @@ export class PointQueryViewerService {
       showMarker: this.showMarker(),
       panelMode: this.panelMode(),
     };
-
-    try {
-      localStorage.setItem(STORAGE_KEYS.POINT_QUERY_VIEWER, JSON.stringify(payload));
-    } catch (error) {
-      console.warn('Failed to save point query viewer state to localStorage:', error);
-    }
+    this.storage.setJson(STORAGE_KEYS.POINT_QUERY_VIEWER, payload);
   }
 
   private loadResultsFromStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
+    const parsed = this.storage.getJson<Record<string, unknown>>(STORAGE_KEYS.POINT_QUERY_RESULTS);
+    if (!parsed || typeof parsed !== 'object') return;
+
+    const nextResults = new Map<string, PointQueryDisplayData>();
+    for (const [layerId, result] of Object.entries(parsed)) {
+      if (result && typeof result === 'object' && 'status' in result) {
+        nextResults.set(layerId, result as PointQueryDisplayData);
+      }
     }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEYS.POINT_QUERY_RESULTS);
-      if (!raw) {
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      if (!parsed || typeof parsed !== 'object') {
-        return;
-      }
-
-      const nextResults = new Map<string, PointQueryDisplayData>();
-      for (const [layerId, result] of Object.entries(parsed)) {
-        // Basic validation that result has expected shape
-        if (result && typeof result === 'object' && 'status' in result) {
-          nextResults.set(layerId, result as PointQueryDisplayData);
-        }
-      }
-
-      if (nextResults.size > 0) {
-        this.resultsBySource.set(nextResults);
-      }
-    } catch (error) {
-      console.warn('Failed to load point query results from localStorage:', error);
+    if (nextResults.size > 0) {
+      this.resultsBySource.set(nextResults);
     }
   }
 
   private saveResultsToStorage(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
     const results = this.resultsBySource();
     if (results.size === 0) {
-      try {
-        localStorage.removeItem(STORAGE_KEYS.POINT_QUERY_RESULTS);
-      } catch {
-        // Ignore remove errors
-      }
+      this.storage.remove(STORAGE_KEYS.POINT_QUERY_RESULTS);
       return;
     }
-
-    try {
-      const payload: Record<string, PointQueryDisplayData> = Object.fromEntries(results);
-      localStorage.setItem(STORAGE_KEYS.POINT_QUERY_RESULTS, JSON.stringify(payload));
-    } catch (error) {
-      console.warn('Failed to save point query results to localStorage:', error);
-    }
+    const payload: Record<string, PointQueryDisplayData> = Object.fromEntries(results);
+    this.storage.setJson(STORAGE_KEYS.POINT_QUERY_RESULTS, payload);
   }
 }
