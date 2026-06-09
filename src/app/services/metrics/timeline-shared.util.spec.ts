@@ -2,7 +2,16 @@ import { describe, it, expect } from 'vitest';
 
 import type { RecentJob } from '../../models/metrics/metrics.models';
 import { outcomeColor } from './metrics-labels.constants';
-import { colorOf, fmtDate, fmtDateTime, legendItems, packIntoLanes } from './timeline-shared.util';
+import {
+  canGroupByWorker,
+  colorOf,
+  fmtDate,
+  fmtDateTime,
+  layoutTimeline,
+  legendItems,
+  packByWorker,
+  packIntoLanes,
+} from './timeline-shared.util';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 
@@ -69,6 +78,60 @@ describe('packIntoLanes', () => {
   it('returns zero lanes for no jobs', () => {
     expect(packIntoLanes([]).lanes).toBe(0);
     expect(packIntoLanes([]).rows).toEqual([]);
+  });
+});
+
+describe('canGroupByWorker', () => {
+  it('is true only when every job has a clean worker container name', () => {
+    expect(
+      canGroupByWorker([job({ worker_host: 'worker1' }), job({ worker_host: 'worker-light2' })]),
+    ).toBe(true);
+    expect(canGroupByWorker([])).toBe(false);
+    expect(canGroupByWorker([job({ worker_host: null })])).toBe(false);
+    expect(canGroupByWorker([job({ worker_host: '3f2a1b9c4d5e' })])).toBe(false); // legacy hostname hash
+    // Mixed: one legacy → whole set falls back.
+    expect(
+      canGroupByWorker([job({ worker_host: 'worker1' }), job({ worker_host: null })]),
+    ).toBe(false);
+  });
+});
+
+describe('packByWorker', () => {
+  it('assigns one lane per worker, ordered general→light then by number', () => {
+    const { lanes, laneLabels, rows } = packByWorker([
+      job({ id: 1, worker_host: 'worker-light1' }),
+      job({ id: 2, worker_host: 'worker2' }),
+      job({ id: 3, worker_host: 'worker1' }),
+      job({ id: 4, worker_host: 'worker2' }),
+    ]);
+    expect(lanes).toBe(3);
+    expect(laneLabels).toEqual(['worker1', 'worker2', 'worker-light1']);
+    const laneById = new Map(rows.map((r) => [r.job.id, r.lane]));
+    expect(laneById.get(3)).toBe(0); // worker1
+    expect(laneById.get(2)).toBe(1); // worker2
+    expect(laneById.get(4)).toBe(1); // worker2 shares its lane
+    expect(laneById.get(1)).toBe(2); // worker-light1 last
+  });
+});
+
+describe('layoutTimeline', () => {
+  it('groups by worker (named lanes) when all names are clean', () => {
+    const layout = layoutTimeline([
+      job({ worker_host: 'worker1' }),
+      job({ worker_host: 'worker-light1' }),
+    ]);
+    expect(layout.grouped).toBe(true);
+    expect(layout.laneLabels).toEqual(['worker1', 'worker-light1']);
+  });
+
+  it('falls back to overlap packing (numeric labels) for legacy/mixed data', () => {
+    const layout = layoutTimeline([
+      job({ id: 1, worker_host: null, started_at: '2026-06-04T00:00:00Z', finished_at: '2026-06-04T00:02:00Z' }),
+      job({ id: 2, worker_host: 'worker1', started_at: '2026-06-04T00:01:00Z', finished_at: '2026-06-04T00:03:00Z' }),
+    ]);
+    expect(layout.grouped).toBe(false);
+    expect(layout.lanes).toBe(2); // overlap
+    expect(layout.laneLabels).toEqual(['1', '2']);
   });
 });
 
