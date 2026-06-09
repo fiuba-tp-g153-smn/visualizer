@@ -9,7 +9,8 @@ interface QueueTile {
 }
 
 /**
- * Profundidad de las colas de RabbitMQ (cola de trabajo y descartes/DLQ).
+ * Profundidad de las colas de RabbitMQ: total en espera, cola de trabajo general,
+ * cola de trabajo ligera y descartes/DLQ.
  * Degrada a "N/A" por tile y muestra un aviso de "sin conexión" cuando el
  * broker no responde. Presentacional: recibe `queues` por input.
  */
@@ -27,15 +28,21 @@ export class QueueDepthsComponent {
     const queues = this.queues();
     const fmt = (value: number | null | undefined): string =>
       value == null ? 'N/A' : String(value);
+    const total =
+      queues?.work == null && queues?.light == null
+        ? null
+        : (queues?.work ?? 0) + (queues?.light ?? 0);
     return [
-      { key: 'cola de trabajo', value: fmt(queues?.work), sub: 'en espera' },
+      { key: 'total en espera', value: fmt(total), sub: 'general + ligera' },
+      { key: 'cola de trabajo general', value: fmt(queues?.work), sub: 'en espera' },
+      { key: 'cola de trabajo ligera', value: fmt(queues?.light), sub: 'en espera' },
       { key: 'descartes (DLQ)', value: fmt(queues?.dlq), sub: 'mensajes' },
     ];
   });
 
-  /** RabbitMQ no responde: sin payload o ambas profundidades nulas. */
+  /** RabbitMQ no responde: sin payload o todas las profundidades nulas. */
   readonly offline = computed<boolean>(() => {
     const queues = this.queues();
-    return !queues || (queues.work == null && queues.dlq == null);
+    return !queues || (queues.work == null && queues.light == null && queues.dlq == null);
   });
 }

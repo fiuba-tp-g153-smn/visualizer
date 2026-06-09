@@ -107,7 +107,7 @@
 
         <app-metric-panel
           heading="Colas · RabbitMQ"
-          tip="Cuántos trabajos están esperando para procesarse (cola de trabajo) y cuántos cayeron en la cola de descartes (DLQ) tras agotar los reintentos. 'N/A' si RabbitMQ no responde."
+          tip="Trabajos esperando para procesarse: el total en espera y su desglose entre la cola de trabajo general (GOES/GLM) y la ligera (radar/WRF). 'Descartes (DLQ)' son los que cayeron tras agotar los reintentos. 'N/A' si RabbitMQ no responde."
         >
           <app-queue-depths [queues]="live()?.queues ?? null" />
         </app-metric-panel>
