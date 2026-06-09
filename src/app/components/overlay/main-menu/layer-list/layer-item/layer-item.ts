@@ -32,6 +32,7 @@ import {
   LayerCategory,
   LayerSelectionMode,
   LayerType,
+  NotificationType,
   SecondaryVectorRender,
   TilesetEntry,
   WrfLayerControls,
@@ -39,11 +40,13 @@ import {
   WrfTileLayerConfig,
   PRIMARY_RENDER_ID,
 } from '../../../../../models';
+import { HttpErrorResponse } from '@angular/common/http';
 import { LayersService } from '../../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../../../../services/layers/layer-config.service';
 import { LayerRefreshService } from '../../../../../services/layers/layer-refresh.service';
 import { SyncPlaybackService } from '../../../../../services/layers/sync-playback.service';
+import { NotificationService } from '../../../../../services/notifications/notification.service';
 import {
   formatDateFull,
   formatDateTimeOnly,
@@ -52,6 +55,7 @@ import {
 } from '../../../../../utils/tileset-timestamp';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
+import { WeatherStationsApiKeyService } from '../../../../../services/weather-stations/weather-stations-api-key.service';
 import {
   WeatherStationsTemporalMode,
   WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
@@ -107,12 +111,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly WeatherStationsTemporalMode = WeatherStationsTemporalMode;
   readonly PRIMARY_RENDER_ID = PRIMARY_RENDER_ID;
 
+  private readonly _activating = signal(false);
+  readonly displayChecked = computed(() => this._activating() || this.isActive());
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
   private readonly syncService = inject(SyncPlaybackService);
   private readonly scaleTools = inject(ScaleToolsService);
+  private readonly apiKeyService = inject(WeatherStationsApiKeyService);
+  private readonly notifications = inject(NotificationService);
 
   @Input({ required: true }) layer!: Layer;
 
@@ -415,11 +423,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  ngOnInit(): void {
-  }
+  ngOnInit(): void {}
 
-  ngOnChanges(changes: SimpleChanges): void {
-  }
+  ngOnChanges(_changes: SimpleChanges): void {}
 
   ngOnDestroy(): void {
     if (this.isWeatherStationsLayer()) {
@@ -473,9 +479,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   async toggleActive(checked: boolean): Promise<void> {
     if (checked) {
+      this._activating.set(true);
       await this.activateLayer();
+      this._activating.set(false);
       if (this.isActive()) {
-        // Expand details by default when activating
         this.isExpanded.set(true);
       }
     } else {
@@ -484,7 +491,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   async onRadioSelected(): Promise<void> {
+    this._activating.set(true);
     await this.activateLayer();
+    this._activating.set(false);
     if (this.isActive()) {
       this.isExpanded.set(true);
     }
@@ -539,6 +548,31 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private async activateLayer(): Promise<void> {
     if (this.isWeatherStationsLayer()) {
       this.captureCurrentWeatherStationsSharedState();
+      const key = await this.apiKeyService.ensureKey();
+      if (!key) {
+        this.notifications.show(
+          NotificationType.WARNING,
+          'Necesitás configurar tu clave API del SMN para activar las estaciones meteorológicas.',
+          { autoClose: true, duration: 6000 },
+        );
+        return;
+      }
+      try {
+        await this.refreshService.loadWeatherStationsOnActivation();
+      } catch (err) {
+        if (!(err instanceof HttpErrorResponse && err.status === 401)) {
+          const detail =
+            err instanceof HttpErrorResponse && err.status >= 500
+              ? 'el servidor no está disponible en este momento'
+              : 'no se pudo establecer la conexión';
+          this.notifications.show(
+            NotificationType.ERROR,
+            `No se pudieron cargar las estaciones meteorológicas: ${detail}.`,
+            { autoClose: true, duration: 5000 },
+          );
+        }
+        return;
+      }
     }
 
     if (this.selectionMode === LayerSelectionMode.SINGLE) {
@@ -549,16 +583,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
     if (this.isWeatherStationsLayer()) {
       this.applySharedStateToWeatherStationsLayer();
-      // Belt-and-suspenders: the weather-stations HTTP interceptor handles
-      // 401 re-prompt + notification, and both refresh-service methods are
-      // already fail-soft on other errors. The try/catch here just prevents
-      // a future regression from surfacing as `Uncaught (in promise)`.
-      try {
-        await this.refreshService.ensureWeatherStationsEndpointConfigLoaded();
-        await this.refreshService.loadWeatherStationsSnapshot(true);
-      } catch (err) {
-        console.warn('[LayerItem] weather stations activation failed:', err);
-      }
     }
   }
 

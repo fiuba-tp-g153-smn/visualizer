@@ -8,7 +8,7 @@
       @if (selectionMode === LayerSelectionMode.SINGLE) {
         <mat-radio-button
           [name]="radioGroupName"
-          [checked]="isActive()"
+          [checked]="displayChecked()"
           (click)="onRadioClick($event)"
           (change)="onRadioSelected()"
           color="primary"
@@ -19,7 +19,7 @@
         </mat-radio-button>
       } @else {
         <mat-checkbox
-          [checked]="isActive()"
+          [checked]="displayChecked()"
           (change)="toggleActive($event.checked)"
           color="primary"
           class="layer-checkbox"

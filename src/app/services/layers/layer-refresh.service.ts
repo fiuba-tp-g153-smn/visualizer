@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
 import { Observable, throwError, firstValueFrom, from } from 'rxjs';
 import { finalize, map } from 'rxjs/operators';
@@ -286,6 +286,11 @@ export class LayerRefreshService {
     this.syncWeatherStationsTemporalControlsWithConfig(config);
   }
 
+  async loadWeatherStationsOnActivation(): Promise<void> {
+    this.weatherStationsEndpointConfigFetchedAt = 0;
+    await this.loadWeatherStationsSnapshot(true);
+  }
+
   async loadWeatherStationsSnapshot(force = false): Promise<WeatherStationSnapshot> {
     const currentSnapshot = this.weatherStationsSnapshotSignal();
     if (!force && currentSnapshot) {
@@ -365,15 +370,12 @@ export class LayerRefreshService {
     const source: WeatherStationSnapshot['source'] =
       temporalMode === WeatherStationsTemporalMode.SPECIFIC ? 'tileset' : 'latest';
 
-    // 401 re-prompt + retry is owned by the weather-stations HTTP interceptor.
-    // We only fail-soft here so any error (including a 401 the user cancelled)
-    // surfaces as an empty snapshot instead of bubbling uncaught.
     try {
       return await this.runWeatherStationsFetchAttempt(temporalMode, source);
     } catch (error) {
-      console.warn('[LayerRefreshService] failed to load weather stations snapshot', {
-        error,
-      });
+      if (error instanceof HttpErrorResponse && error.status === 401) {
+        throw error;
+      }
       return {
         observations: [],
         fetchedAt: new Date().toISOString(),
@@ -501,8 +503,9 @@ export class LayerRefreshService {
             : sortedTilesetIds,
       };
     } catch (error) {
-      // The interceptor already re-prompted on 401; a 401 reaching here means
-      // the user cancelled. Treat it like any other failure (fail-soft).
+      if (error instanceof HttpErrorResponse && error.status === 401) {
+        throw error;
+      }
       console.warn('[LayerRefreshService] failed to load weather station tilesets', { error });
       return { tilesetIds: [] };
     }

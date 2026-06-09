@@ -1,13 +1,17 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
+import { HttpBackend, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { STORAGE_KEYS } from '../../constants';
+import { LayerCategory } from '../../models';
 import {
   WeatherStationsApiKeyDialogComponent,
   WeatherStationsApiKeyDialogResult,
 } from '../../components/floating/weather-stations-api-key-dialog/weather-stations-api-key-dialog';
+import { LayerControlService } from '../layers/layer-control.service';
+import { buildWeatherStationsTilesetsUrl } from '../../config/backend.config';
 
 interface StoredKeyState {
   key: string;
@@ -25,8 +29,20 @@ interface StoredKeyState {
 @Injectable({ providedIn: 'root' })
 export class WeatherStationsApiKeyService {
   private readonly dialog = inject(MatDialog);
+  private readonly layerControl = inject(LayerControlService);
   private readonly keyChangeTick = signal(0);
   private dialogInFlight: Promise<string | null> | null = null;
+
+  // Bypasses HTTP interceptors so validation requests don't trigger the
+  // unauthorized-recovery flow and don't overwrite the header with the old key.
+  private readonly http: HttpClient;
+
+  constructor() {
+    this.http = new HttpClient(inject(HttpBackend));
+    if (!this.getKey()) {
+      this.deactivateWeatherStationLayers();
+    }
+  }
 
   /** Read-only tick that consumers can subscribe to for reactive header rebuilds. */
   readonly keyChanges = this.keyChangeTick.asReadonly();
@@ -60,36 +76,34 @@ export class WeatherStationsApiKeyService {
   }
 
   clearKey(): void {
-    if (typeof localStorage === 'undefined') {
-      return;
+    this.removeKeyFromStorage();
+    this.deactivateWeatherStationLayers();
+  }
+
+  private deactivateWeatherStationLayers(): void {
+    for (const { layer } of this.layerControl.activeLayers()) {
+      if (layer.category === LayerCategory.WEATHER_STATIONS) {
+        this.layerControl.deactivateLayer(layer.id);
+      }
     }
-    localStorage.removeItem(STORAGE_KEYS.WEATHER_STATIONS_API_KEY);
-    this.keyChangeTick.update((v) => v + 1);
   }
 
   /**
-   * Returns the existing key, prompting the user if there isn't one. Multiple
-   * concurrent calls share a single in-flight prompt so a stampede (e.g. the
-   * panel `(opened)` event firing twice on rapid clicks) doesn't stack dialogs.
-   * Skipped entirely when `SMN_API_PROMPT_FOR_TOKEN` is disabled.
+   * Returns a validated key, prompting the user if there isn't one or if the
+   * stored key is rejected by the server. Multiple concurrent calls share a
+   * single in-flight prompt. Skipped entirely when `SMN_API_PROMPT_FOR_TOKEN`
+   * is disabled.
    */
   async ensureKey(): Promise<string | null> {
     const existing = this.getKey();
     if (existing) {
+      if (await this.isKeyRejected(existing)) {
+        this.removeKeyFromStorage();
+        return this.promptIfAllowed('Tu clave ya no es válida. Ingresá una nueva para continuar.');
+      }
       return existing;
     }
-    if (!environment.smnApi.promptForToken) {
-      return null;
-    }
-    if (this.dialogInFlight) {
-      return this.dialogInFlight;
-    }
-    this.dialogInFlight = this.promptForKey();
-    try {
-      return await this.dialogInFlight;
-    } finally {
-      this.dialogInFlight = null;
-    }
+    return this.promptIfAllowed();
   }
 
   /**
@@ -147,6 +161,43 @@ export class WeatherStationsApiKeyService {
     }
   }
 
+  /** Returns true only when the server explicitly rejects the key with 401. */
+  private async isKeyRejected(key: string): Promise<boolean> {
+    try {
+      await firstValueFrom(
+        this.http.get(buildWeatherStationsTilesetsUrl(), {
+          headers: { 'X-API-Key': key, 'Cache-Control': 'no-cache' },
+        }),
+      );
+      return false;
+    } catch (err) {
+      return err instanceof HttpErrorResponse && err.status === 401;
+    }
+  }
+
+  private async promptIfAllowed(reason?: string): Promise<string | null> {
+    if (!environment.smnApi.promptForToken) {
+      return null;
+    }
+    if (this.dialogInFlight) {
+      return this.dialogInFlight;
+    }
+    this.dialogInFlight = this.promptForKey(reason);
+    try {
+      return await this.dialogInFlight;
+    } finally {
+      this.dialogInFlight = null;
+    }
+  }
+
+  private removeKeyFromStorage(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+    localStorage.removeItem(STORAGE_KEYS.WEATHER_STATIONS_API_KEY);
+    this.keyChangeTick.update((v) => v + 1);
+  }
+
   private readStoredKey(): string | null {
     if (typeof localStorage === 'undefined') {
       return null;
@@ -175,8 +226,7 @@ export class WeatherStationsApiKeyService {
       );
       this.keyChangeTick.update((v) => v + 1);
     } catch {
-      // Storage failures (private mode, quota) are non-fatal — the key is
-      // already in memory for this session; the next reload will re-prompt.
+      // Storage failures (private mode, quota) are non-fatal.
     }
   }
 }

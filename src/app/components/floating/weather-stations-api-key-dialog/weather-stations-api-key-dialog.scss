@@ -32,7 +32,11 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.dialog-reason {
+.key-field {
+  width: 100%;
+}
+
+.dialog-error {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
@@ -44,16 +48,12 @@
   font-size: 0.875rem;
   line-height: 1.4;
 
-  .reason-icon {
+  .error-icon {
     flex: 0 0 auto;
     font-size: 20px;
     width: 20px;
     height: 20px;
   }
-}
-
-.key-field {
-  width: 100%;
 }
 
 .dialog-actions {

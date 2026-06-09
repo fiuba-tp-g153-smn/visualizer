@@ -12,6 +12,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { HttpBackend, HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { buildWeatherStationsTilesetsUrl } from '../../../config/backend.config';
 
 export interface WeatherStationsApiKeyDialogData {
   initialKey: string;
@@ -36,6 +40,7 @@ export interface WeatherStationsApiKeyDialogResult {
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './weather-stations-api-key-dialog.html',
   styleUrl: './weather-stations-api-key-dialog.scss',
@@ -49,15 +54,45 @@ export class WeatherStationsApiKeyDialogComponent {
   }) ?? { initialKey: '' };
 
   readonly key = signal(this.data.initialKey);
-  readonly reason = this.data.reason ?? '';
+  readonly isValidating = signal(false);
+  readonly validationError = signal<string | null>(this.data.reason ?? null);
 
-  save(): void {
+  // Bypasses interceptors so the tentative key isn't overwritten by the stored one.
+  private readonly http: HttpClient;
+
+  constructor() {
+    const backend = inject(HttpBackend);
+    this.http = new HttpClient(backend);
+  }
+
+  async save(): Promise<void> {
     const trimmed = this.key().trim();
     if (!trimmed) {
       this.dialogRef.close(null);
       return;
     }
-    this.dialogRef.close({ key: trimmed });
+
+    this.isValidating.set(true);
+    this.validationError.set(null);
+
+    try {
+      await firstValueFrom(
+        this.http.get(buildWeatherStationsTilesetsUrl(), {
+          headers: { 'X-API-Key': trimmed, 'Cache-Control': 'no-cache' },
+        }),
+      );
+      this.dialogRef.close({ key: trimmed });
+    } catch (err) {
+      if (err instanceof HttpErrorResponse && err.status === 401) {
+        this.validationError.set('La clave ingresada no es válida. Verificá que sea correcta e intentá de nuevo.');
+      } else {
+        // Red de conectividad u otro error del servidor — cerramos y el
+        // interceptor maneja el error cuando se haga la primera request real.
+        this.dialogRef.close({ key: trimmed });
+      }
+    } finally {
+      this.isValidating.set(false);
+    }
   }
 
   cancel(): void {

@@ -4,18 +4,11 @@
 </h2>
 
 <mat-dialog-content class="dialog-content">
-  @if (reason) {
-    <div class="dialog-reason" role="alert">
-      <mat-icon class="reason-icon">error</mat-icon>
-      <span>{{ reason }}</span>
-    </div>
-  }
-
   <p class="dialog-description">
     Ingresá la clave de acceso al servicio de estaciones del SMN. Se guarda en el navegador.
   </p>
 
-  <mat-form-field appearance="outline" class="key-field">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="key-field">
     <mat-label>Clave</mat-label>
     <input
       matInput
@@ -23,15 +16,35 @@
       [(ngModel)]="key"
       autocomplete="off"
       spellcheck="false"
+      [disabled]="isValidating()"
       (keydown.enter)="save()"
     />
     <mat-icon matSuffix>vpn_key</mat-icon>
   </mat-form-field>
+
+  @if (validationError()) {
+    <div class="dialog-error" role="alert">
+      <mat-icon class="error-icon">error</mat-icon>
+      <span>{{ validationError() }}</span>
+    </div>
+  }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end" class="dialog-actions">
-  <button mat-stroked-button type="button" (click)="cancel()">Cancelar</button>
-  <button mat-flat-button color="primary" type="button" [disabled]="!key().trim()" (click)="save()">
-    Guardar
+  <button mat-stroked-button type="button" [disabled]="isValidating()" (click)="cancel()">
+    Cancelar
+  </button>
+  <button
+    mat-flat-button
+    color="primary"
+    type="button"
+    [disabled]="!key().trim() || isValidating()"
+    (click)="save()"
+  >
+    @if (isValidating()) {
+      <mat-spinner diameter="18" />
+    } @else {
+      Guardar
+    }
   </button>
 </mat-dialog-actions>
