@@ -20,7 +20,7 @@ import {
 const RADAR_DEFAULTS = {
   type: LayerType.TILE,
   zIndexGroup: ActiveLayerGroupId.BASE,
-  availablePeriods: [1, 6, 12] as const,
+  availablePeriods: [6, 12] as const,
   availableElevations: [
     {
       id: 'elev0',

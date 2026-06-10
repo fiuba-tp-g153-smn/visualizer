@@ -11,7 +11,7 @@ const ECMWF_TP_DEFAULTS = {
   type: LayerType.TILE,
   category: LayerCategory.ECMWF_TP,
   zIndexGroup: ActiveLayerGroupId.BASE,
-  availablePeriods: [1, 8, 16, 32, 48] as const,
+  availablePeriods: [8, 16, 32, 48] as const,
   minNativeZoom: 3,
   maxNativeZoom: 7,
   boundingBox: [

@@ -538,15 +538,35 @@
                   <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
 
                   <div class="images-count-control">
-                    <mat-form-field appearance="fill" class="images-count-select">
+                    <mat-form-field
+                      appearance="fill"
+                      class="images-count-select"
+                      [matTooltip]="
+                        !isImageCountSelectOpen() && imageCount() === maxImageCountOption()
+                          ? imageCount() + ' imágenes'
+                          : ''
+                      "
+                    >
                       <mat-select
                         [value]="imageCount()"
                         (selectionChange)="onImageCountChange($event.value)"
+                        (openedChange)="isImageCountSelectOpen.set($event)"
                         panelClass="layer-select-panel"
                         [disabled]="isSynced()"
                       >
+                        <mat-select-trigger>
+                          {{ getImageCountOptionLabel(imageCount()) }}
+                        </mat-select-trigger>
                         @for (option of lastImagesOptions(); track option) {
-                          <mat-option [value]="option">{{ option }}</mat-option>
+                          <mat-option
+                            [value]="option"
+                            [matTooltip]="
+                              isImageCountSelectOpen() && option === maxImageCountOption()
+                                ? option + ' imágenes'
+                                : ''
+                            "
+                            >{{ getImageCountOptionLabel(option) }}</mat-option
+                          >
                         }
                       </mat-select>
                     </mat-form-field>

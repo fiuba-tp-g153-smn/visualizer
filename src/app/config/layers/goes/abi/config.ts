@@ -8,7 +8,7 @@ import { ABI_CH13_SCALE, ABI_CH2_SCALE, ABI_CH9_SCALE } from './scales.config';
  */
 const ABI_DEFAULTS = {
   zIndexGroup: ActiveLayerGroupId.BASE,
-  availablePeriods: [1, 6, 12, 24] as const,
+  availablePeriods: [6, 12, 24] as const,
   category: LayerCategory.GOES_19,
   type: LayerType.TILE,
   minNativeZoom: 3,

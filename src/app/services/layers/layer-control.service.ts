@@ -911,17 +911,11 @@ export class LayerControlService {
       }
     }
 
-    if (count === 1) {
-      if (wasPlaying) {
-        this.stopPlayback(layerId);
-      }
-    } else {
-      if (wasPlaying) {
-        this.stopPlayback(layerId);
-        setTimeout(() => {
-          this.startPlayback(layerId);
-        }, 0);
-      }
+    if (wasPlaying) {
+      this.stopPlayback(layerId);
+      setTimeout(() => {
+        this.startPlayback(layerId);
+      }, 0);
     }
   }
 
@@ -1207,6 +1201,14 @@ export class LayerControlService {
   // Private Helpers
   // ============================================================================
 
+  /**
+   * Default imageCount for a tile layer: "Todas" (the largest available period),
+   * or a single frame if the layer defines no `availablePeriods`.
+   */
+  private getDefaultImageCount(availablePeriods?: readonly number[]): number {
+    return availablePeriods ? Math.max(...availablePeriods) : 1;
+  }
+
   private isActive(layerId: string): boolean {
     const controls = this.getControls(layerId);
     return controls?.visible ?? false;
@@ -1355,7 +1357,7 @@ export class LayerControlService {
             isPlaying: false,
             timeIndex: undefined, // Will be set to latest when config loads
             speed: DEFAULT_LAYER_CONTROLS.playbackSpeed,
-            imageCount: DEFAULT_LAYER_CONTROLS.imageCount,
+            imageCount: this.getDefaultImageCount(layer.availablePeriods),
           },
         };
         switch (layer.category) {

@@ -25,7 +25,7 @@ import {
   parseEcmwfTimestamp,
   parseWrfStepTimestamp,
 } from '../../utils/tileset-timestamp';
-import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
+import { computeWindowStart } from '../../utils/playback-window';
 
 /**
  * Service responsible for fetching and caching layer configurations.
@@ -668,13 +668,6 @@ export class LayerConfigService {
         const layer = this.layersService.getLayerById(layerId);
         const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
 
-        if (imageCount === 1) {
-          // Single-frame mode: jump to the layer's default cursor
-          // (first frame for forecasts, last for historical).
-          return getDefaultCursorIndex(totalTilesets, isForecast);
-        }
-
-        // Multi-frame mode: position cursor at the start of the active window.
         return computeWindowStart(totalTilesets, imageCount, isForecast);
       }
       default:

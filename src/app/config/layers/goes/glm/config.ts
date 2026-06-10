@@ -7,7 +7,7 @@ import { GLM_FED_SCALE, GLM_MFA_SCALE, GLM_TOE_SCALE } from './scales.config';
  */
 const GLM_DEFAULTS = {
   zIndexGroup: ActiveLayerGroupId.BASE,
-  availablePeriods: [1, 6, 12, 24] as const,
+  availablePeriods: [6, 12, 24] as const,
   type: LayerType.TILE,
   category: LayerCategory.GOES_19,
   minNativeZoom: 3,

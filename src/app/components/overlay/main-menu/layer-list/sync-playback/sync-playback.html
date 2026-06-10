@@ -51,14 +51,34 @@
                 <div class="time-controls-row">
                   <span class="time-current">{{ currentFrameLabel() }}</span>
                   <div class="images-count-control">
-                    <mat-form-field appearance="fill" class="images-count-select">
+                    <mat-form-field
+                      appearance="fill"
+                      class="images-count-select"
+                      [matTooltip]="
+                        !isFrameCountSelectOpen() && displayFrameCount() === maxFrameCountOption()
+                          ? displayFrameCount() + ' imágenes'
+                          : ''
+                      "
+                    >
                       <mat-select
-                        [value]="state().frameCount"
+                        [value]="displayFrameCount()"
                         (selectionChange)="onFrameCountChange($event.value)"
+                        (openedChange)="isFrameCountSelectOpen.set($event)"
                         panelClass="layer-select-panel"
                       >
+                        <mat-select-trigger>
+                          {{ getFrameCountOptionLabel(displayFrameCount()) }}
+                        </mat-select-trigger>
                         @for (n of availableFrameCounts(); track n) {
-                          <mat-option [value]="n">{{ n }}</mat-option>
+                          <mat-option
+                            [value]="n"
+                            [matTooltip]="
+                              isFrameCountSelectOpen() && n === maxFrameCountOption()
+                                ? n + ' imágenes'
+                                : ''
+                            "
+                            >{{ getFrameCountOptionLabel(n) }}</mat-option
+                          >
                         }
                       </mat-select>
                     </mat-form-field>

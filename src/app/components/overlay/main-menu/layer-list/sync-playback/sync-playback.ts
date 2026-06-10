@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatIconModule } from '@angular/material/icon';
@@ -54,6 +54,13 @@ export class SyncPlaybackComponent {
     return effective > 0 && effective < selected;
   });
 
+  /** frameCount clamped to a valid option, falling back to "Todas" when out of range. */
+  readonly displayFrameCount = computed(() => {
+    const raw = this.state().frameCount;
+    const options = this.availableFrameCounts();
+    return options.includes(raw) ? raw : Math.max(...options);
+  });
+
   readonly canPlay = computed(() => {
     const s = this.state();
     return (
@@ -65,6 +72,15 @@ export class SyncPlaybackComponent {
   });
 
   readonly hasSelectedLayers = computed(() => this.state().selectedLayerIds.length > 0);
+
+  isFrameCountSelectOpen = signal(false);
+
+  /** The largest frame-count option, shown in the dropdown as "Todas" with playback enabled. */
+  readonly maxFrameCountOption = computed(() => Math.max(...this.availableFrameCounts()));
+
+  getFrameCountOptionLabel(option: number): string {
+    return option === this.maxFrameCountOption() ? 'Todas' : `${option}`;
+  }
 
   readonly currentFrameLabel = computed(() => {
     const info = this.syncService.currentFrameInfo();

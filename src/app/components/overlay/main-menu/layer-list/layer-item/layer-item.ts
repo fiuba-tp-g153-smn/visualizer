@@ -143,6 +143,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   isForecastsExpanded = signal(false);
   private expandedForecastRuns = signal<Set<string>>(new Set());
   isWeatherStationsSettingsExpanded = signal(false);
+  isImageCountSelectOpen = signal(false);
   private weatherStationsPlaybackTimerId: number | null = null;
   private readonly weatherStationsPlaybackIsPlaying = signal(false);
   private readonly weatherStationsPlaybackSpeed = signal(1);
@@ -165,18 +166,30 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   imageCount = computed(() => {
-    if (this.isWeatherStationsLayer()) {
-      return this.controlService.getWeatherStationsImageCount();
-    }
+    const raw = (() => {
+      if (this.isWeatherStationsLayer()) {
+        return this.controlService.getWeatherStationsImageCount();
+      }
 
-    const controls = this.controlService.getControls(this.layer.id);
-    switch (controls?.type) {
-      case LayerType.TILE:
-        return controls.playback.imageCount;
-      default:
-        return 1;
-    }
+      const controls = this.controlService.getControls(this.layer.id);
+      switch (controls?.type) {
+        case LayerType.TILE:
+          return controls.playback.imageCount;
+        default:
+          return 1;
+      }
+    })();
+
+    const options = this.lastImagesOptions();
+    return options.includes(raw) ? raw : Math.max(...options);
   });
+
+  /** The largest image-count option, shown in the dropdown as "Todas" with playback enabled. */
+  maxImageCountOption = computed(() => Math.max(...this.lastImagesOptions()));
+
+  getImageCountOptionLabel(option: number): string {
+    return option === this.maxImageCountOption() ? 'Todas' : `${option}`;
+  }
 
   lastImagesOptions = computed(() => {
     if (this.isWeatherStationsLayer()) {
