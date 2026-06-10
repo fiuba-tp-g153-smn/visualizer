@@ -481,6 +481,11 @@
                   <mat-icon class="info-icon">info</mat-icon>
                   <span>Sin pronóstico seleccionado</span>
                 </div>
+              } @else if (hasNoForecastRendersEnabled()) {
+                <div class="no-periods-message">
+                  <mat-icon class="info-icon">info</mat-icon>
+                  <span>Sin capas seleccionadas</span>
+                </div>
               } @else if (hasTimeControl()) {
                 <div class="time-slider-container">
                   <span class="time-min" [matTooltip]="getTimeLabel(minTimeIndex())">{{

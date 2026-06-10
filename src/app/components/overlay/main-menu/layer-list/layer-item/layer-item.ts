@@ -302,6 +302,28 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return this.selectedForecastTimestamps().length === 0;
   });
 
+  hasNoForecastRendersEnabled = computed(() => {
+    if (
+      this.layer.category !== LayerCategory.ECMWF_TP &&
+      this.layer.category !== LayerCategory.WRF
+    ) {
+      return false;
+    }
+
+    const selected = this.selectedForecastTimestamps();
+    if (selected.length === 0) return false;
+
+    const activeItem = this.getActiveLayer();
+    if (!activeItem || activeItem.controls.type !== LayerType.TILE) return false;
+
+    const renderControls = (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls)
+      .forecast.renderControls;
+
+    // No forecast contributes to the timeline if every selected run has all
+    // of its renders (primary + secondary) disabled.
+    return selected.every((ts) => (renderControls[ts]?.selectedRenderIds.length ?? 0) === 0);
+  });
+
   needsTimeControl = computed(() => {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       return true;

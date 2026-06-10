@@ -16,9 +16,11 @@ import {
   EcmwfTpLayerControls,
   EcmwfTpTileLayer,
   EcmwfTpTileLayerConfig,
+  EcmwfTpForecastControls,
   WmsLayerControls,
   VectorLayerControls,
   WrfLayerControls,
+  WrfForecastControls,
   WrfTileLayer,
   ForecastRenderControls,
   ForecastRenderControlsByForecast,
@@ -357,27 +359,23 @@ export class LayerControlService {
                 }
                 ec.forecast.forecastOpacity = pruned;
               }
-              if (hasStalesecondaryRenderControls) {
-                ec.forecast.renderControls = nextsecondaryRenderControls;
+              ec.forecast.renderControls = hasStalesecondaryRenderControls
+                ? nextsecondaryRenderControls
+                : ec.forecast.renderControls;
+              if (isFirstActivationRace) {
+                const seededTs = effectiveSelected[0];
+                ec.forecast.renderControls[seededTs] = this.ensureForecastsecondaryRenderControls(
+                  ec.forecast.renderControls[seededTs],
+                  Array.from(validRenderIds),
+                );
               }
             });
-          }
-
-          if (effectiveSelected.length === 0) {
-            const refreshedControls = this.controls().get(layer.id);
-            if (
-              refreshedControls?.type === LayerType.TILE &&
-              refreshedControls.playback.isPlaying
-            ) {
-              this.stopPlayback(layer.id);
-            }
-            continue;
           }
 
           // Always re-derive availableTilesets from the effective selection —
           // even when nothing was pruned — so the fetch's forecasts[0]-based
           // seed gets replaced by the actual selection-based union.
-          this.layerConfigService.updateEcmwfTpSelectedForecasts(layer.id, effectiveSelected);
+          this.syncForecastTimeline(layer.id, LayerCategory.ECMWF_TP);
         }
       });
     });
@@ -428,40 +426,25 @@ export class LayerControlService {
               (ts, index) => ts !== wrfControls.forecast.selectedForecastTimestamps[index],
             );
 
-          if (!selectionMutated && !hasStaleOpacity && !hasStalesecondaryRenderControls) {
-            continue;
-          }
-
-          this.updateControls(layer.id, (c) => {
-            if (c.type !== LayerType.TILE || c.category !== LayerCategory.WRF) return;
-            const wrf = c as WrfLayerControls;
-            wrf.forecast.selectedForecastTimestamps = validSelected;
-            if (hasStaleOpacity) {
-              const pruned: Record<string, number> = {};
-              for (const [ts, op] of opacityEntries) {
-                if (availableForecasts.has(ts)) pruned[ts] = op;
+          if (selectionMutated || hasStaleOpacity || hasStalesecondaryRenderControls) {
+            this.updateControls(layer.id, (c) => {
+              if (c.type !== LayerType.TILE || c.category !== LayerCategory.WRF) return;
+              const wrf = c as WrfLayerControls;
+              wrf.forecast.selectedForecastTimestamps = validSelected;
+              if (hasStaleOpacity) {
+                const pruned: Record<string, number> = {};
+                for (const [ts, op] of opacityEntries) {
+                  if (availableForecasts.has(ts)) pruned[ts] = op;
+                }
+                wrf.forecast.forecastOpacity = pruned;
               }
-              wrf.forecast.forecastOpacity = pruned;
-            }
-            if (hasStalesecondaryRenderControls) {
-              wrf.forecast.renderControls = nextsecondaryRenderControls;
-            }
-          });
-
-          if (validSelected.length === 0) {
-            const refreshedControls = this.controls().get(layer.id);
-            if (
-              refreshedControls?.type === LayerType.TILE &&
-              refreshedControls.playback.isPlaying
-            ) {
-              this.stopPlayback(layer.id);
-            }
-            continue;
+              if (hasStalesecondaryRenderControls) {
+                wrf.forecast.renderControls = nextsecondaryRenderControls;
+              }
+            });
           }
 
-          if (validSelected.length > 0) {
-            this.layerConfigService.updateWrfSelectedForecasts(layer.id, validSelected);
-          }
+          this.syncForecastTimeline(layer.id, LayerCategory.WRF);
         }
       });
     });
@@ -695,7 +678,6 @@ export class LayerControlService {
             case LayerCategory.GOES_19:
               break;
             case LayerCategory.ECMWF_TP: {
-              this.autoSeededForecastLayers.add(layerId);
               const ecmwfControls = controls as EcmwfTpLayerControls;
               if (ecmwfControls.forecast.selectedForecastTimestamps.length === 0) {
                 const ecmwfConfig = this.layerConfigService.getConfig(layerId);
@@ -708,16 +690,34 @@ export class LayerControlService {
                   const firstForecast = ecmwfConfig.availableForecasts[0];
                   if (firstForecast) {
                     ecmwfControls.forecast.selectedForecastTimestamps = [firstForecast];
+                    const renderIds = this.getForecastRenderIds(layer);
+                    ecmwfControls.forecast.renderControls[firstForecast] =
+                      this.ensureForecastsecondaryRenderControls(
+                        ecmwfControls.forecast.renderControls[firstForecast],
+                        renderIds,
+                      );
                     this.layerConfigService.updateEcmwfTpSelectedForecasts(layerId, [
                       firstForecast,
                     ]);
+                    // Seeding succeeded — don't let the reconciliation effect's
+                    // first-activation race re-seed on the next config refresh.
+                    this.autoSeededForecastLayers.add(layerId);
                   }
+                  // If firstForecast is missing, leave autoSeededForecastLayers
+                  // untouched so the reconciliation effect can seed once the
+                  // config actually has forecasts available.
+                } else {
+                  // Config not loaded yet — leave autoSeededForecastLayers
+                  // untouched so the reconciliation effect's first-activation
+                  // race can seed the default forecast once it arrives.
                 }
+              } else {
+                // Already has a selection — nothing to seed.
+                this.autoSeededForecastLayers.add(layerId);
               }
               break;
             }
             case LayerCategory.WRF: {
-              this.autoSeededForecastLayers.add(layerId);
               const wrfControls = controls as WrfLayerControls;
               if (wrfControls.forecast.selectedForecastTimestamps.length === 0) {
                 const wrfConfig = this.layerConfigService.getConfig(layerId);
@@ -729,8 +729,18 @@ export class LayerControlService {
                   const firstInit = wrfConfig.availableForecasts[0];
                   if (firstInit) {
                     wrfControls.forecast.selectedForecastTimestamps = [firstInit];
+                    const renderIds = this.getForecastRenderIds(layer);
+                    wrfControls.forecast.renderControls[firstInit] =
+                      this.ensureForecastsecondaryRenderControls(
+                        wrfControls.forecast.renderControls[firstInit],
+                        renderIds,
+                      );
+                    this.layerConfigService.updateWrfSelectedForecasts(layerId, [firstInit]);
+                    this.autoSeededForecastLayers.add(layerId);
                   }
                 }
+              } else {
+                this.autoSeededForecastLayers.add(layerId);
               }
               break;
             }
@@ -935,41 +945,7 @@ export class LayerControlService {
       }
     });
 
-    const updatedControls = this.getControls(layerId) as EcmwfTpLayerControls;
-    const newConfig = this.layerConfigService.updateEcmwfTpSelectedForecasts(
-      layerId,
-      updatedControls.forecast.selectedForecastTimestamps,
-    );
-
-    if (updatedControls.forecast.selectedForecastTimestamps.length === 0) {
-      if (updatedControls.playback.isPlaying) {
-        this.stopPlayback(layerId);
-      }
-      return;
-    }
-
-    if (!newConfig) return;
-    const newUnionCount = newConfig.availableTilesets.length;
-    const layer = this.layersService.getLayerById(layerId);
-
-    if (
-      updatedControls.playback.timeIndex !== undefined &&
-      updatedControls.playback.timeIndex >= newUnionCount
-    ) {
-      const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
-      this.setTimeIndex(layerId, getDefaultCursorIndex(newUnionCount, isForecast));
-    }
-
-    if (
-      newUnionCount > 0 &&
-      layer?.type === LayerType.TILE &&
-      layer.category === LayerCategory.ECMWF_TP
-    ) {
-      const options = buildEcmwfTpFrameOptions(layer.availablePeriods ?? [1], newUnionCount);
-      if (!options.includes(updatedControls.playback.imageCount)) {
-        this.setImageCount(layerId, newUnionCount);
-      }
-    }
+    this.syncForecastTimeline(layerId, LayerCategory.ECMWF_TP);
   }
 
   setEcmwfTpForecastOpacity(layerId: string, forecastTs: string, opacity: number): void {
@@ -1002,6 +978,8 @@ export class LayerControlService {
         : forecastControls.selectedRenderIds.filter((id) => id !== renderId);
       ecmwf.forecast.renderControls[forecastTs] = forecastControls;
     });
+
+    this.syncForecastTimeline(layerId, LayerCategory.ECMWF_TP);
   }
 
   setEcmwfTpForecastRenderOpacity(
@@ -1047,41 +1025,7 @@ export class LayerControlService {
       }
     });
 
-    const updatedControls = this.getControls(layerId) as WrfLayerControls;
-    const newConfig = this.layerConfigService.updateWrfSelectedForecasts(
-      layerId,
-      updatedControls.forecast.selectedForecastTimestamps,
-    );
-
-    if (updatedControls.forecast.selectedForecastTimestamps.length === 0) {
-      if (updatedControls.playback.isPlaying) {
-        this.stopPlayback(layerId);
-      }
-      return;
-    }
-
-    if (!newConfig) return;
-    const newUnionCount = newConfig.availableTilesets.length;
-    const layer = this.layersService.getLayerById(layerId);
-
-    if (
-      updatedControls.playback.timeIndex !== undefined &&
-      updatedControls.playback.timeIndex >= newUnionCount
-    ) {
-      const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
-      this.setTimeIndex(layerId, getDefaultCursorIndex(newUnionCount, isForecast));
-    }
-
-    if (
-      newUnionCount > 0 &&
-      layer?.type === LayerType.TILE &&
-      layer.category === LayerCategory.WRF
-    ) {
-      const options = buildEcmwfTpFrameOptions(layer.availablePeriods ?? [1], newUnionCount);
-      if (!options.includes(updatedControls.playback.imageCount)) {
-        this.setImageCount(layerId, newUnionCount);
-      }
-    }
+    this.syncForecastTimeline(layerId, LayerCategory.WRF);
   }
 
   setWrfForecastOpacity(layerId: string, initTag: string, opacity: number): void {
@@ -1114,6 +1058,8 @@ export class LayerControlService {
         : forecastControls.selectedRenderIds.filter((id) => id !== renderId);
       wrf.forecast.renderControls[initTag] = forecastControls;
     });
+
+    this.syncForecastTimeline(layerId, LayerCategory.WRF);
   }
 
   setWrfForecastRenderOpacity(
@@ -1565,15 +1511,14 @@ export class LayerControlService {
         }
       }
 
-      if (
-        nextSelectedSecondaryRenderIds.length > 0 ||
-        Object.keys(nextSecondaryRenderOpacity).length > 0
-      ) {
-        next[forecastTs] = {
-          selectedRenderIds: nextSelectedSecondaryRenderIds,
-          renderOpacity: nextSecondaryRenderOpacity,
-        };
-      }
+      // Keep the entry even when selectedRenderIds/renderOpacity end up empty —
+      // an empty selection is a meaningful "all renders disabled" state, not
+      // "unset". Dropping it here would make a later re-enable fall back to
+      // ensureForecastsecondaryRenderControls's all-renders-on default.
+      next[forecastTs] = {
+        selectedRenderIds: nextSelectedSecondaryRenderIds,
+        renderOpacity: nextSecondaryRenderOpacity,
+      };
     }
 
     return next;
@@ -1601,6 +1546,67 @@ export class LayerControlService {
       selectedRenderIds: [...renderIds],
       renderOpacity: {},
     };
+  }
+
+  /**
+   * Filters selected forecast timestamps down to those with at least one
+   * render enabled — a selected forecast with no renders enabled (primary
+   * or secondary) contributes nothing to the timeline.
+   */
+  private getActiveForecastTimestamps(
+    forecast: EcmwfTpForecastControls | WrfForecastControls,
+  ): string[] {
+    return forecast.selectedForecastTimestamps.filter(
+      (ts) => (forecast.renderControls[ts]?.selectedRenderIds.length ?? 0) > 0,
+    );
+  }
+
+  /**
+   * Recomputes the availableTilesets union for an ECMWF/WRF layer from the
+   * forecasts that are both selected AND have at least one render enabled,
+   * adjusts timeIndex/imageCount to fit the new union, and stops playback if
+   * nothing is left to animate.
+   */
+  private syncForecastTimeline(
+    layerId: string,
+    category: LayerCategory.ECMWF_TP | LayerCategory.WRF,
+  ): void {
+    const controls = this.getControls(layerId);
+    if (controls.type !== LayerType.TILE) return;
+
+    const forecast = (controls as EcmwfTpLayerControls | WrfLayerControls).forecast;
+    const activeTimestamps = this.getActiveForecastTimestamps(forecast);
+
+    const newConfig =
+      category === LayerCategory.ECMWF_TP
+        ? this.layerConfigService.updateEcmwfTpSelectedForecasts(layerId, activeTimestamps)
+        : this.layerConfigService.updateWrfSelectedForecasts(layerId, activeTimestamps);
+
+    if (activeTimestamps.length === 0) {
+      if (controls.playback.isPlaying) {
+        this.stopPlayback(layerId);
+      }
+      return;
+    }
+
+    if (!newConfig) return;
+    const newUnionCount = newConfig.availableTilesets.length;
+    const layer = this.layersService.getLayerById(layerId);
+
+    if (
+      controls.playback.timeIndex !== undefined &&
+      controls.playback.timeIndex >= newUnionCount
+    ) {
+      const isForecast = layer?.type === LayerType.TILE && layer.isForecast;
+      this.setTimeIndex(layerId, getDefaultCursorIndex(newUnionCount, isForecast));
+    }
+
+    if (newUnionCount > 0 && layer?.type === LayerType.TILE) {
+      const options = buildEcmwfTpFrameOptions(layer.availablePeriods ?? [1], newUnionCount);
+      if (!options.includes(controls.playback.imageCount)) {
+        this.setImageCount(layerId, newUnionCount);
+      }
+    }
   }
 
   private loadControls(): PersistedLayerControls[] | undefined {

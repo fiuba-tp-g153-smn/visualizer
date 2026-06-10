@@ -300,6 +300,46 @@ describe('LayerControlService — forecast secondary render controls', () => {
     });
   });
 
+  it('excludes a forecast from the timeline when all of its renders are disabled, and restores it when re-enabled', () => {
+    const configStub = buildConfigServiceStub();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [{ provide: LayerConfigService, useValue: configStub }],
+    });
+
+    configStub.seedConfig(ECMWF_LAYER_ID, {
+      layerId: ECMWF_LAYER_ID,
+      type: LayerType.TILE,
+      category: LayerCategory.ECMWF_TP,
+      availableForecasts: [ECMWF_FORECAST],
+      periodsByForecast: { [ECMWF_FORECAST]: ['P1'] },
+      forecastsByPeriod: { P1: [ECMWF_FORECAST] },
+      availableTilesets: [{ id: 'P1', time: new Date(0) }],
+    } satisfies EcmwfTpTileLayerConfig);
+
+    const service = TestBed.inject(LayerControlService);
+    service.activateLayer(ECMWF_LAYER_ID);
+    expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)?.length).toBeGreaterThan(0);
+
+    // Disable every render (primary + secondary) for the only selected run —
+    // it should drop out of the timeline without deactivating the layer.
+    service.setEcmwfTpForecastRenderVisible(ECMWF_LAYER_ID, ECMWF_FORECAST, 'primary', false);
+    service.setEcmwfTpForecastRenderVisible(
+      ECMWF_LAYER_ID,
+      ECMWF_FORECAST,
+      'ecmwf-mslp-isobars',
+      false,
+    );
+
+    expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)).toEqual([]);
+    expect(service.getControls(ECMWF_LAYER_ID).visible).toBe(true);
+
+    // Re-enabling a render brings the run back into the timeline.
+    service.setEcmwfTpForecastRenderVisible(ECMWF_LAYER_ID, ECMWF_FORECAST, 'primary', true);
+    const tilesets = configStub.getAvailableTilesets(ECMWF_LAYER_ID);
+    expect(tilesets?.map((t) => t.id)).toEqual(['P1']);
+  });
+
   it('initializes WRF forecast secondary render controls and persists raw forecast keys', () => {
     const configStub = buildConfigServiceStub();
     TestBed.resetTestingModule();
