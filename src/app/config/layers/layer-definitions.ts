@@ -49,7 +49,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
   },
   {
     id: 'smn-estaciones',
-    name: 'Estaciones Meteorológicas',
+    name: 'Estaciones meteorológicas',
     description: 'Observaciones actuales de estaciones meteorológicas del SMN',
     icon: 'thermostat',
     expanded: false,
@@ -80,7 +80,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
 export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLayerGroup> = {
   [ActiveLayerGroupId.BASE]: {
     id: ActiveLayerGroupId.BASE,
-    name: 'Capas de Datos',
+    name: 'Capas de datos',
     subtitle: 'Radar, modelos numéricos',
     description:
       'Capas de datos científicos: radar meteorológico, salidas de modelos numéricos, imágenes satelitales, etc.',
@@ -89,7 +89,7 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
   },
   [ActiveLayerGroupId.OVERLAY]: {
     id: ActiveLayerGroupId.OVERLAY,
-    name: 'Capas de Referencia',
+    name: 'Capas de referencia',
     subtitle: 'IGN, cartografía',
     description:
       'Capas de referencia cartográfica del IGN. Siempre se muestran por encima de las capas de datos.',
@@ -98,7 +98,7 @@ export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLa
   },
   [ActiveLayerGroupId.POINTS]: {
     id: ActiveLayerGroupId.POINTS,
-    name: 'Capas Puntuales',
+    name: 'Capas puntuales',
     subtitle: 'Estaciones, puntos de observación',
     description:
       'Capas puntuales interactivas. Se muestran por encima de las capas de referencia para mantener legibilidad.',

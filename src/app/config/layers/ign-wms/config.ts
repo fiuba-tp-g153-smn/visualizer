@@ -94,7 +94,7 @@ export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
     },
     {
       id: 'ign-gobierno-local',
-      name: 'Gobierno Local',
+      name: 'Gobierno local',
       description:
         'Jurisdicción político-administrativa de tercer o cuarto orden. Incluye Municipios, Comunas, Juntas y Comisiones.',
       wmsLayerName: 'gobiernoslocales_2022',
@@ -219,7 +219,7 @@ const IGN_WMS_DEFENSE_SECURITY_DEFAULTS = {
 export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-defense-security',
-  name: 'Defensa y Seguridad',
+  name: 'Defensa y seguridad',
   description: 'Infraestructura de defensa y seguridad',
   layers: [
     {
@@ -232,7 +232,7 @@ export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
     },
     {
       id: 'ign-pasos-de-fronteras-internacionales',
-      name: 'Pasos de Fronteras Internacionales',
+      name: 'Pasos de fronteras internacionales',
       description:
         'Paso de Frontera Internacional (PFI) identifica un punto de entrada y salida de personas, mercaderías y medios de transporte, que vincula de manera directa (por medios fluviales o terrestres) a la República Argentina con los cinco países vecinos. Quedan exceptuados el Puerto de Buenos Aires, todos los Aeropuertos, los puertos ubicados sobre la Hidrovía y los puertos Marítimos.',
       wmsLayerName: 'pasos_de_fronteras_internacionales',

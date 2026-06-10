@@ -25,7 +25,7 @@ import {
 function buildEcmwfTpLayer(): EcmwfTpTileLayer {
   return {
     id: 'ecmwf/total-precipitation',
-    name: 'Precipitación Total',
+    name: 'Precipitación total',
     description: '',
     type: LayerType.TILE,
     category: LayerCategory.ECMWF_TP,

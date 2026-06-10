@@ -31,7 +31,7 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
       ...ECMWF_TP_DEFAULTS,
       id: 'ecmwf/total-precipitation',
       variable: 'total-precipitation',
-      name: 'Precipitación Total',
+      name: 'Precipitación total',
       description:
         'Precipitación total acumulada en las 6 horas previas — modelo ECMWF',
       scale: ECMWF_TP_SCALE,
