@@ -38,6 +38,10 @@ export class BaseMapSelectorComponent implements MenuPanelComponent {
     this.baseMapService.setBaseMap(baseMapId);
   }
 
+  getAttributionText(baseMap: BaseMap): string {
+    return baseMap.attribution.replace(/<[^>]*>/g, '');
+  }
+
   getPreviewUrl(baseMap: BaseMap): string {
     return baseMap.url
       .replace('{s}', 'a')

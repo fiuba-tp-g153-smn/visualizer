@@ -31,9 +31,7 @@
               </div>
               <div class="base-map-info">
                 <h4 class="base-map-name">{{ baseMap.name }}</h4>
-                <span class="base-map-zoom"
-                  >Zoom: {{ baseMap.minZoom }} - {{ baseMap.maxNativeZoom }}</span
-                >
+                <span class="base-map-attribution">{{ getAttributionText(baseMap) }}</span>
               </div>
             </div>
           }
