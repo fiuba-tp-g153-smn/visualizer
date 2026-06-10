@@ -15,7 +15,7 @@ import {
   formatDateTimeOnly,
   formatDateFull,
 } from '../../../../../utils/tileset-timestamp';
-import { Layer, LayerCategory, RadarTileLayer } from '../../../../../models';
+import { Layer, PLAYBACK_SPEED_LIMITS } from '../../../../../models';
 
 @Component({
   selector: 'app-sync-playback',
@@ -38,6 +38,8 @@ import { Layer, LayerCategory, RadarTileLayer } from '../../../../../models';
 export class SyncPlaybackComponent {
   private readonly syncService = inject(SyncPlaybackService);
   private readonly layersService = inject(LayersService);
+
+  readonly PLAYBACK_SPEED_LIMITS = PLAYBACK_SPEED_LIMITS;
 
   readonly eligibleLayers = this.syncService.eligibleLayers;
   readonly state = this.syncService.syncState;

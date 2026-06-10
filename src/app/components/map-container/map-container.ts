@@ -10,7 +10,6 @@ import {
   tileLayer,
 } from 'leaflet';
 import { MAP_CONFIG, MAP_Z_INDEX } from '../../config';
-import { environment } from '../../../environments/environment';
 
 import { LayerControlService } from '../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../services/layers/layer-config.service';

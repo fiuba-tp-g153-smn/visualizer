@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, computed, effect } from '@angular/core';
-import { LayerType, TilesetEntry, FrameInfo, SyncState } from '../../models';
+import { LayerType, TilesetEntry, FrameInfo, SyncState, PLAYBACK_SPEED_LIMITS } from '../../models';
 import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
@@ -438,7 +438,7 @@ export class SyncPlaybackService {
   }
 
   setSpeed(speed: number): void {
-    const clamped = Math.max(0.4, Math.min(10, speed));
+    const clamped = Math.max(PLAYBACK_SPEED_LIMITS.MIN, Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed));
     this.state.update((s) => ({ ...s, speed: clamped }));
     if (this.state().isPlaying) {
       this.engineService.setSpeed(SYNC_ENGINE_ID, clamped);

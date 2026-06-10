@@ -2,7 +2,6 @@ import { WRF_UNITS } from '../../../constants';
 import { ScaleToolGroupKey } from '../../../constants/scale-tools.constants';
 import { LayerScale, ScaleType } from '../../../models';
 import { buildScaleFromThresholds, buildScaleFromUniformThresholds } from '../scale-builders';
-import { SHARED_DBZH_SCALE } from '../shared-scales.config';
 
 /**
  * Escalas legend para los productos WRF-ARG4K.

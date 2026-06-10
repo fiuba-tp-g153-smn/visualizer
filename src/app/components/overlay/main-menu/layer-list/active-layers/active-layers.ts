@@ -6,7 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { LayersService } from '../../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../../services/layers/layer-control.service';
 import { ActiveLayerGroupId, Layer } from '../../../../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../../config/layers';

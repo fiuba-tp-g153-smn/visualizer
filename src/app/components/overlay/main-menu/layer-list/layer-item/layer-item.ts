@@ -39,6 +39,7 @@ import {
   WrfTileLayer,
   WrfTileLayerConfig,
   PRIMARY_RENDER_ID,
+  PLAYBACK_SPEED_LIMITS,
 } from '../../../../../models';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LayersService } from '../../../../../services/layers/layers.service';
@@ -110,6 +111,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly LayerSelectionMode = LayerSelectionMode;
   readonly WeatherStationsTemporalMode = WeatherStationsTemporalMode;
   readonly PRIMARY_RENDER_ID = PRIMARY_RENDER_ID;
+  readonly PLAYBACK_SPEED_LIMITS = PLAYBACK_SPEED_LIMITS;
 
   private readonly _activating = signal(false);
   readonly displayChecked = computed(() => this._activating() || this.isActive());
@@ -285,6 +287,43 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     // Tiene config pero no hay tilesets disponibles
     const tilesets = this.getAvailableTilesetsForLayer();
     return !tilesets || tilesets.length === 0;
+  });
+
+  hasNoElevationsSelected = computed(() => {
+    return this.layer.category === LayerCategory.RADAR && this.selectedElevationIds().length === 0;
+  });
+
+  hasNoForecastsSelected = computed(() => {
+    if (
+      this.layer.category !== LayerCategory.ECMWF_TP &&
+      this.layer.category !== LayerCategory.WRF
+    ) {
+      return false;
+    }
+
+    return this.selectedForecastTimestamps().length === 0;
+  });
+
+  hasNoForecastRendersEnabled = computed(() => {
+    if (
+      this.layer.category !== LayerCategory.ECMWF_TP &&
+      this.layer.category !== LayerCategory.WRF
+    ) {
+      return false;
+    }
+
+    const selected = this.selectedForecastTimestamps();
+    if (selected.length === 0) return false;
+
+    const activeItem = this.getActiveLayer();
+    if (!activeItem || activeItem.controls.type !== LayerType.TILE) return false;
+
+    const renderControls = (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls)
+      .forecast.renderControls;
+
+    // No forecast contributes to the timeline if every selected run has all
+    // of its renders (primary + secondary) disabled.
+    return selected.every((ts) => (renderControls[ts]?.selectedRenderIds.length ?? 0) === 0);
   });
 
   needsTimeControl = computed(() => {
@@ -1283,7 +1322,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private clampPlaybackSpeed(speed: number): number {
-    return Math.max(0.4, Math.min(10, speed));
+    return Math.max(
+      PLAYBACK_SPEED_LIMITS.MIN,
+      Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed),
+    );
   }
 
   private weatherStationsTilesetIdToDate(tilesetId: string): Date | null {
