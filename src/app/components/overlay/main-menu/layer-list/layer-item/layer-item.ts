@@ -421,10 +421,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!tilesets || tilesets.length === 0) return 0;
 
     const imageCount = this.imageCount();
-    if (imageCount === 1) {
-      return tilesets.length - 1;
-    }
-
     const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
     const min = computeWindowStart(tilesets.length, imageCount, isForecast);
     return Math.min(min + imageCount - 1, tilesets.length - 1);
@@ -438,10 +434,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (!tilesets || tilesets.length === 0) return 0;
 
     const imageCount = this.imageCount();
-    if (imageCount === 1) {
-      return 0;
-    }
-
     const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
     return computeWindowStart(tilesets.length, imageCount, isForecast);
   });
@@ -756,6 +748,16 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.stopIfPlaying();
 
     this.controlService.setTimeIndex(this.layer.id, timeIndex);
+  }
+
+  /** Index of the most recent image: the forecast start for forecast layers, or the latest observation otherwise. */
+  latestTimeIndex = computed(() => {
+    const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
+    return isForecast ? this.minTimeIndex() : this.maxTimeIndex();
+  });
+
+  goToLatest(): void {
+    this.onTimeIndexChange(this.latestTimeIndex());
   }
 
   isElevationSelected(elevationId: string): boolean {

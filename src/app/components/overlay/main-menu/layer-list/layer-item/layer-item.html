@@ -537,6 +537,16 @@
                 <div class="time-controls-row">
                   <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
 
+                  <button
+                    mat-icon-button
+                    (click)="goToLatest()"
+                    [disabled]="isSynced() || currentTimeIndex() === latestTimeIndex()"
+                    matTooltip="Ir a la imagen más reciente"
+                    class="latest-btn"
+                  >
+                    <mat-icon>update</mat-icon>
+                  </button>
+
                   <div class="images-count-control">
                     <mat-form-field
                       appearance="fill"
