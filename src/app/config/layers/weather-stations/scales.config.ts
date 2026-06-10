@@ -1,12 +1,13 @@
 import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../../constants';
 import { buildScaleFromThresholds } from '../scale-builders';
 
-// Temperatura: -40 °C a 50 °C (stops cada 10 °C, en Kelvin).
+// Temperatura: -45 °C a 50 °C (stops cada 10 °C, en Kelvin; piso extendido a -45).
 export const TEMPERATURE_SCALE = buildScaleFromThresholds({
   unit: TEMPERATURE_UNITS.KELVIN,
   scaleDisplayName: 'Temperatura',
   stops: [
-    { value: 233.15, color: '#041a3a' },
+    { value: 228.15, color: '#021026' }, // -45 °C (piso, azul casi negro)
+    { value: 233.15, color: '#041a3a' }, // -40
     { value: 243.15, color: '#08306b' },
     { value: 253.15, color: '#2171b5' },
     { value: 263.15, color: '#6baed6' },
@@ -17,8 +18,10 @@ export const TEMPERATURE_SCALE = buildScaleFromThresholds({
     { value: 313.15, color: '#a50026' },
     { value: 323.15, color: '#67000d' },
   ],
-  labelValues: [233.15, 243.15, 253.15, 263.15, 273.15, 283.15, 293.15, 303.15, 313.15, 323.15],
-  labelCount: 10,
+  labelValues: [
+    228.15, 233.15, 243.15, 253.15, 263.15, 273.15, 283.15, 293.15, 303.15, 313.15, 323.15,
+  ],
+  labelCount: 11,
   subTickCount: 4,
 });
 
@@ -60,26 +63,30 @@ export const HUMIDITY_SCALE = buildScaleFromThresholds({
   subTickCount: 4,
 });
 
-// Presión: escala divergente centrada en 1000 hPa, recortada a un rango
-// sinóptico más razonable para superficie, con mayor detalle en 980–1020 hPa.
+// Presión: escala secuencial 600–1050 hPa (frío→cálido). El extremo bajo
+// (600–940) cubre la presión de estaciones de gran altura; stops finos cada
+// 10 hPa en la banda sinóptica 980–1020 y gruesos (~50–100 hPa) por debajo.
 export const PRESSURE_SCALE = buildScaleFromThresholds({
   unit: WEATHER_STATION_UNITS.PRESSURE,
   scaleDisplayName: 'Presion',
   stops: [
-    { value: 940, color: '#313695' },
-    { value: 950, color: '#abd9e9' },
-    { value: 960, color: '#c7e8f2' },
-    { value: 970, color: '#dff3f8' },
-    { value: 980, color: '#f1fbe0' },
-    { value: 990, color: '#fff8bf' },
-    { value: 1000, color: '#fee8a3' },
-    { value: 1010, color: '#fdd07a' },
+    { value: 600, color: '#2c003e' },
+    { value: 700, color: '#3b1466' },
+    { value: 800, color: '#313695' },
+    { value: 900, color: '#4575b4' },
+    { value: 940, color: '#74add1' },
+    { value: 960, color: '#abd9e9' },
+    { value: 980, color: '#e0f3f8' },
+    { value: 990, color: '#f1fbe0' },
+    { value: 1000, color: '#fff8bf' },
+    { value: 1010, color: '#fee090' },
     { value: 1020, color: '#fdae61' },
-    { value: 1030, color: '#f48b4e' },
-    { value: 1040, color: '#e76f51' },
+    { value: 1030, color: '#f46d43' },
+    { value: 1040, color: '#e0542e' },
     { value: 1050, color: '#d1495b' },
   ],
-  labelCount: 12,
+  labelValues: [600, 700, 800, 900, 940, 980, 1000, 1020, 1050],
+  labelCount: 9,
   subTickCount: 1,
 });
 
@@ -99,7 +106,10 @@ export const VISIBILITY_SCALE = buildScaleFromThresholds({
   subTickCount: 1,
 });
 
-// Viento: 0–120 km/h con refuerzo cromático violeta en 90–120 km/h.
+// Viento: 0–120 km/h con refuerzo cromático violeta en 90–120 km/h. El dominio
+// se mantiene en km/h (unidad de origen SMN); la leyenda y la etiqueta del marker
+// se reexpresan en la unidad elegida por el usuario (nudos por defecto) vía el
+// toggle de unidades, sin tocar estos valores.
 export const WIND_SPEED_SCALE = buildScaleFromThresholds({
   unit: WEATHER_STATION_UNITS.WIND_SPEED,
   scaleDisplayName: 'Velocidad del viento',
