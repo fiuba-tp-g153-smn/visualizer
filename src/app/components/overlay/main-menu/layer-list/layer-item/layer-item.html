@@ -471,7 +471,12 @@
                 </button>
               </div>
 
-              @if (hasNoElevationsSelected()) {
+              @if (isInitialPeriodsLoading()) {
+                <div class="no-periods-message">
+                  <mat-icon class="info-icon">info</mat-icon>
+                  <span>Cargando períodos disponibles...</span>
+                </div>
+              } @else if (hasNoElevationsSelected()) {
                 <div class="no-periods-message">
                   <mat-icon class="info-icon">info</mat-icon>
                   <span>Sin elevación seleccionada</span>

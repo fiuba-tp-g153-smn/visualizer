@@ -289,6 +289,11 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return !tilesets || tilesets.length === 0;
   });
 
+  isInitialPeriodsLoading = computed(() => {
+    if (this.layer.type !== LayerType.TILE) return false;
+    return !this.configService.hasConfig(this.layer.id) && this.isLoadingConfig();
+  });
+
   hasNoElevationsSelected = computed(() => {
     return this.layer.category === LayerCategory.RADAR && this.selectedElevationIds().length === 0;
   });
