@@ -47,6 +47,14 @@ export interface PlaybackControls {
   imageCount: number; // Número de últimas imágenes a mostrar (1, 6, 12, 24, etc.)
 }
 
+/**
+ * Límites para la velocidad de reproducción de capas
+ */
+export const PLAYBACK_SPEED_LIMITS = {
+  MIN: 0.1,
+  MAX: 10,
+} as const;
+
 export interface ElevationControls {
   selectedElevationIds: string[]; // IDs de elevaciones seleccionadas (puede estar vacío si no se ha seleccionado ninguna)
   elevationOpacity: Record<string, number>; // Opacity per elevation (0-1), undefined uses the layer's global opacity

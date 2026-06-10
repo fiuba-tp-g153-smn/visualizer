@@ -25,6 +25,7 @@ import {
   ForecastRenderControls,
   ForecastRenderControlsByForecast,
   PRIMARY_RENDER_ID,
+  PLAYBACK_SPEED_LIMITS,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -1122,7 +1123,10 @@ export class LayerControlService {
   // ============================================================================
 
   setPlaySpeed(layerId: string, speed: number): void {
-    const clampedSpeed = Math.max(0.4, Math.min(10, speed));
+    const clampedSpeed = Math.max(
+      PLAYBACK_SPEED_LIMITS.MIN,
+      Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed),
+    );
 
     this.updateControls(layerId, (controls) => {
       if (controls.type === LayerType.TILE) {

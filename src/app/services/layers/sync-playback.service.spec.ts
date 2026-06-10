@@ -704,8 +704,8 @@ describe('SyncPlaybackService', () => {
     });
 
     it('should clamp speed to valid range', () => {
-      service.setSpeed(0.1); // Below min (0.4)
-      expect(service.syncState().speed).toBe(0.4);
+      service.setSpeed(0.01); // Below min (0.1)
+      expect(service.syncState().speed).toBe(0.1);
 
       service.setSpeed(20); // Above max (10)
       expect(service.syncState().speed).toBe(10);
@@ -1548,9 +1548,9 @@ describe('SyncPlaybackService', () => {
       service.selectLayer('layer-a');
     });
 
-    it('should accept speed exactly at minimum (0.4)', () => {
-      service.setSpeed(0.4);
-      expect(service.syncState().speed).toBe(0.4);
+    it('should accept speed exactly at minimum (0.1)', () => {
+      service.setSpeed(0.1);
+      expect(service.syncState().speed).toBe(0.1);
     });
 
     it('should accept speed exactly at maximum (10)', () => {

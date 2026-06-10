@@ -6,11 +6,7 @@ import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel
 
 import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '../../../models';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
-import {
-  convertValueForDisplay,
-  getDisplayUnit,
-  isKelvinUnit,
-} from '../../../utils/unit-conversion.utils';
+import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
 import { impliedMinFractionDigits } from '../../../utils/number-format.utils';
 
 @Component({

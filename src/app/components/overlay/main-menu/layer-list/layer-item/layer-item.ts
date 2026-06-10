@@ -39,6 +39,7 @@ import {
   WrfTileLayer,
   WrfTileLayerConfig,
   PRIMARY_RENDER_ID,
+  PLAYBACK_SPEED_LIMITS,
 } from '../../../../../models';
 import { HttpErrorResponse } from '@angular/common/http';
 import { LayersService } from '../../../../../services/layers/layers.service';
@@ -110,6 +111,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   readonly LayerSelectionMode = LayerSelectionMode;
   readonly WeatherStationsTemporalMode = WeatherStationsTemporalMode;
   readonly PRIMARY_RENDER_ID = PRIMARY_RENDER_ID;
+  readonly PLAYBACK_SPEED_LIMITS = PLAYBACK_SPEED_LIMITS;
 
   private readonly _activating = signal(false);
   readonly displayChecked = computed(() => this._activating() || this.isActive());
@@ -1320,7 +1322,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private clampPlaybackSpeed(speed: number): number {
-    return Math.max(0.4, Math.min(10, speed));
+    return Math.max(
+      PLAYBACK_SPEED_LIMITS.MIN,
+      Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed),
+    );
   }
 
   private weatherStationsTilesetIdToDate(tilesetId: string): Date | null {

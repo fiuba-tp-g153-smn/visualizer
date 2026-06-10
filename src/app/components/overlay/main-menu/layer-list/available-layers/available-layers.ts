@@ -76,10 +76,6 @@ export class AvailableLayersComponent {
           })
           .filter((subgroup) => subgroup.layers.length > 0);
 
-        const hasMatchingLayers = filteredSubgroups.some((sg) => sg._shouldExpandSubgroup);
-        const hasMatchingSubgroups =
-          search && filteredSubgroups.some((sg) => this.normalizeText(sg.name).includes(search));
-
         return {
           ...group,
           subgroups: filteredSubgroups,
