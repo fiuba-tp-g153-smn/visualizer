@@ -137,6 +137,14 @@ export class LayerControlService {
     }
   >();
 
+  /**
+   * Layer IDs for which a default forecast run has already been auto-seeded
+   * during the current activation. Prevents re-seeding the first available
+   * forecast on every config refresh after the user clears the selection.
+   * Cleared on deactivation so the next activation can seed again.
+   */
+  private readonly autoSeededForecastLayers = new Set<string>();
+
   constructor() {
     this.loadWeatherStationsSharedState();
     this.initializeControls();
@@ -183,10 +191,12 @@ export class LayerControlService {
               controls.category === LayerCategory.WRF) &&
             'forecast' in controls &&
             controls.forecast.selectedForecastTimestamps.length === 0 &&
+            !this.autoSeededForecastLayers.has(layer.id) &&
             (config.category === LayerCategory.ECMWF_TP || config.category === LayerCategory.WRF) &&
             config.availableForecasts.length > 0
           ) {
             const firstForecast = config.availableForecasts[0];
+            this.autoSeededForecastLayers.add(layer.id);
             if (controls.category === LayerCategory.WRF) {
               this.toggleWrfForecast(layer.id, firstForecast);
             } else {
@@ -305,14 +315,20 @@ export class LayerControlService {
           // this, the "no valid selection on a visible layer" branch below
           // would deactivate the layer (flickering it off after one click).
           // The "all selections became stale" case is distinguished by
-          // currentSelected.length > 0.
+          // currentSelected.length > 0. If the user explicitly cleared the
+          // selection, don't re-seed it on the next config refresh.
           const isFirstActivationRace =
             currentSelected.length === 0 &&
+            !this.autoSeededForecastLayers.has(layer.id) &&
             ecmwfControls.visible &&
             config.availableForecasts.length > 0;
           const effectiveSelected = isFirstActivationRace
             ? [config.availableForecasts[0]]
             : validSelected;
+
+          if (isFirstActivationRace) {
+            this.autoSeededForecastLayers.add(layer.id);
+          }
 
           const opacityEntries = Object.entries(ecmwfControls.forecast.forecastOpacity);
           const hasStaleOpacity = opacityEntries.some(([ts]) => !available.has(ts));
@@ -348,8 +364,12 @@ export class LayerControlService {
           }
 
           if (effectiveSelected.length === 0) {
-            if (ecmwfControls.visible) {
-              this.deactivateLayer(layer.id);
+            const refreshedControls = this.controls().get(layer.id);
+            if (
+              refreshedControls?.type === LayerType.TILE &&
+              refreshedControls.playback.isPlaying
+            ) {
+              this.stopPlayback(layer.id);
             }
             continue;
           }
@@ -428,8 +448,14 @@ export class LayerControlService {
             }
           });
 
-          if (validSelected.length === 0 && wrfControls.visible) {
-            this.deactivateLayer(layer.id);
+          if (validSelected.length === 0) {
+            const refreshedControls = this.controls().get(layer.id);
+            if (
+              refreshedControls?.type === LayerType.TILE &&
+              refreshedControls.playback.isPlaying
+            ) {
+              this.stopPlayback(layer.id);
+            }
             continue;
           }
 
@@ -669,6 +695,7 @@ export class LayerControlService {
             case LayerCategory.GOES_19:
               break;
             case LayerCategory.ECMWF_TP: {
+              this.autoSeededForecastLayers.add(layerId);
               const ecmwfControls = controls as EcmwfTpLayerControls;
               if (ecmwfControls.forecast.selectedForecastTimestamps.length === 0) {
                 const ecmwfConfig = this.layerConfigService.getConfig(layerId);
@@ -690,6 +717,7 @@ export class LayerControlService {
               break;
             }
             case LayerCategory.WRF: {
+              this.autoSeededForecastLayers.add(layerId);
               const wrfControls = controls as WrfLayerControls;
               if (wrfControls.forecast.selectedForecastTimestamps.length === 0) {
                 const wrfConfig = this.layerConfigService.getConfig(layerId);
@@ -726,6 +754,8 @@ export class LayerControlService {
 
       controls.visible = false;
     });
+
+    this.autoSeededForecastLayers.delete(layerId);
   }
 
   replaceAllWithLayer(layerId: string): void {
@@ -912,7 +942,9 @@ export class LayerControlService {
     );
 
     if (updatedControls.forecast.selectedForecastTimestamps.length === 0) {
-      this.deactivateLayer(layerId);
+      if (updatedControls.playback.isPlaying) {
+        this.stopPlayback(layerId);
+      }
       return;
     }
 
@@ -1022,7 +1054,9 @@ export class LayerControlService {
     );
 
     if (updatedControls.forecast.selectedForecastTimestamps.length === 0) {
-      this.deactivateLayer(layerId);
+      if (updatedControls.playback.isPlaying) {
+        this.stopPlayback(layerId);
+      }
       return;
     }
 

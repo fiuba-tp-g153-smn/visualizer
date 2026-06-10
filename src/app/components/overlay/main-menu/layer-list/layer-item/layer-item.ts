@@ -291,6 +291,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     return this.layer.category === LayerCategory.RADAR && this.selectedElevationIds().length === 0;
   });
 
+  hasNoForecastsSelected = computed(() => {
+    if (
+      this.layer.category !== LayerCategory.ECMWF_TP &&
+      this.layer.category !== LayerCategory.WRF
+    ) {
+      return false;
+    }
+
+    return this.selectedForecastTimestamps().length === 0;
+  });
+
   needsTimeControl = computed(() => {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
       return true;

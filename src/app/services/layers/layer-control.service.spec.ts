@@ -165,7 +165,7 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
     localStorage.clear();
   });
 
-  it('rebuilds availableTilesets when the layer is reactivated after every forecast was toggled off', () => {
+  it('rebuilds availableTilesets after every forecast is toggled off and one is reselected', () => {
     const configStub = buildConfigServiceStub();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -179,19 +179,19 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
     service.activateLayer(ECMWF_LAYER_ID);
     expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)?.length).toBeGreaterThan(0);
 
-    // Steps 2-3: toggling the only run off empties the selection, which empties
-    // availableTilesets and — per toggleEcmwfTpForecast — deactivates the layer.
+    // Steps 2-3: toggling the only run off empties the selection and
+    // availableTilesets, but the layer stays active (just stops the
+    // animation) so the user can pick a different run without reactivating.
     service.toggleEcmwfTpForecast(ECMWF_LAYER_ID, FORECAST_LATEST);
     expect(configStub.getAvailableTilesets(ECMWF_LAYER_ID)).toEqual([]);
-    expect(service.getControls(ECMWF_LAYER_ID).visible).toBe(false);
+    expect(service.getControls(ECMWF_LAYER_ID).visible).toBe(true);
 
-    // Step 4: reactivate — activateLayer must reseed the most recent forecast
-    // and rebuild availableTilesets, not leave it stale at [].
-    service.activateLayer(ECMWF_LAYER_ID);
-    const tilesetsAfterReactivation = configStub.getAvailableTilesets(ECMWF_LAYER_ID);
-    expect(tilesetsAfterReactivation?.length).toBeGreaterThan(0);
-    // The seeded forecast is the most recent one, so its periods must surface.
-    expect(tilesetsAfterReactivation?.map((t) => t.id)).toEqual(['P1', 'P2', 'P3']);
+    // Step 4: reselect a forecast — availableTilesets must rebuild, not stay
+    // stale at [].
+    service.toggleEcmwfTpForecast(ECMWF_LAYER_ID, FORECAST_LATEST);
+    const tilesetsAfterReselection = configStub.getAvailableTilesets(ECMWF_LAYER_ID);
+    expect(tilesetsAfterReselection?.length).toBeGreaterThan(0);
+    expect(tilesetsAfterReselection?.map((t) => t.id)).toEqual(['P1', 'P2', 'P3']);
   });
 });
 
