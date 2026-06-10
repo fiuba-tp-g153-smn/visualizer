@@ -62,7 +62,7 @@ const WRF_DEFAULTS = {
 // `variable: 'wind'` matchea el COG secundario del backend.
 const WIND_POINT_QUERY = {
   variable: 'wind',
-  name: 'Velocidad de viento',
+  name: 'Viento',
   unit: WRF_UNITS.WIND_SPEED,
   scaleRange: { min: 0, max: 80, totalSteps: 80 },
 } as const;
