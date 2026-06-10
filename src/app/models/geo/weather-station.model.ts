@@ -47,6 +47,9 @@ export interface CurrentWeatherStationDto {
   station_id: number;
   temperature: number | null;
   visibility: number | null;
+  // Dew point (°C), derived server-side via the Magnus formula; null when
+  // temperature or humidity is missing.
+  dew_point: number | null;
   weather: WeatherPhenomenonDto;
   wind: WeatherWindDto;
 }

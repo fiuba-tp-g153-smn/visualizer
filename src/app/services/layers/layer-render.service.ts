@@ -866,6 +866,10 @@ export class LayerRenderService {
         return observation.weather.temperature === null
           ? null
           : convertCelsiusToKelvin(observation.weather.temperature);
+      case WeatherStationVariable.DEW_POINT:
+        return observation.weather.dew_point === null
+          ? null
+          : convertCelsiusToKelvin(observation.weather.dew_point);
       case WeatherStationVariable.FEELS_LIKE:
         return observation.weather.feels_like === null
           ? null
@@ -1719,6 +1723,7 @@ type WeatherStationObservationLike = {
     humidity: number | null;
     pressure: number | null;
     visibility: number | null;
+    dew_point: number | null;
     weather: {
       id: number | null;
       description: string | null;

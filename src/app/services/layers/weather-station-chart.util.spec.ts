@@ -80,6 +80,14 @@ describe('buildTabChart', () => {
     expect(vm.series.map((s) => s.name)).toEqual(['Temperatura', 'Punto de rocío']);
   });
 
+  it('overlays temp + dew when Punto de rocío is the selected map variable', () => {
+    const vm = buildTabChart(SERIES, WeatherStationVariable.DEW_POINT, units(), {
+      utc: true,
+      height: 150,
+    });
+    expect(vm.series.map((s) => s.name)).toEqual(['Temperatura', 'Punto de rocío']);
+  });
+
   it('shows a single line for any other selected map variable', () => {
     const vm = buildTabChart(SERIES, WeatherStationVariable.HUMIDITY, units(), {
       utc: true,

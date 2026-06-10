@@ -43,6 +43,7 @@ interface BackendStationObservation {
   humidity: number | null;
   pressure: number | null;
   visibility: number | null;
+  dew_point: number | null;
   weather: { id: number; description: string } | null;
   wind: CurrentWeatherStationDto['wind'] | null;
   // Per-station freshness from `/{tileset_id}?grace_period_hours=`: true when the
@@ -594,6 +595,7 @@ export class LayerRefreshService {
       humidity: o.humidity,
       pressure: o.pressure,
       visibility: o.visibility,
+      dew_point: o.dew_point,
       weather: o.weather ?? { id: 0, description: '' },
       wind: o.wind ?? { direction: 'Calma', deg: 0, speed: null },
     };

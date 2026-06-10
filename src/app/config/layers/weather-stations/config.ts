@@ -54,6 +54,13 @@ export const WEATHER_STATIONS_SUBGROUP: LayerSubgroup = {
       TEMPERATURE_SCALE,
     ),
     createStationLayer(
+      'weather-stations/dew-point',
+      'Punto de rocío',
+      'Punto de rocío observado en estaciones meteorológicas',
+      WeatherStationVariable.DEW_POINT,
+      TEMPERATURE_SCALE,
+    ),
+    createStationLayer(
       'weather-stations/feels-like',
       'Sensación térmica',
       'Sensación térmica observada en estaciones meteorológicas',

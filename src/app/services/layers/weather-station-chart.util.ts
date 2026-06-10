@@ -186,11 +186,16 @@ const SERIES_VARIABLE_BY_MAP: Record<WeatherStationVariable, SeriesVariable['id'
   [WeatherStationVariable.PRESSURE]: 'pressure',
   [WeatherStationVariable.VISIBILITY]: 'visibility',
   [WeatherStationVariable.WIND_SPEED]: 'windSpeed',
+  // Placeholder: DEW_POINT is handled by the temp+dew overlay early-return in
+  // buildTabChart, so this value is never read (dew point is already shown
+  // inside the temperature chart, not as a standalone series).
+  [WeatherStationVariable.DEW_POINT]: 'temperature',
 };
 
 /**
  * The Graph-tab chart for the variable currently selected on the map. Temperatura
- * keeps the dew-point overlay; every other variable is shown as a single line.
+ * and Punto de rocío share the temp+dew overlay; every other variable is shown as
+ * a single line.
  */
 export function buildTabChart(
   series: StationSeries,
@@ -198,7 +203,10 @@ export function buildTabChart(
   unitsSettings: UnitsSettingsService,
   opts: TempDewChartOptions,
 ): TempDewChartVm {
-  if (mapVariable === WeatherStationVariable.TEMPERATURE) {
+  if (
+    mapVariable === WeatherStationVariable.TEMPERATURE ||
+    mapVariable === WeatherStationVariable.DEW_POINT
+  ) {
     return buildTempDewChart(series, unitsSettings, opts);
   }
   const id = SERIES_VARIABLE_BY_MAP[mapVariable];

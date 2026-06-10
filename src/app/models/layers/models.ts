@@ -230,6 +230,7 @@ export enum WeatherStationVariable {
   PRESSURE = 'pressure',
   VISIBILITY = 'visibility',
   WIND_SPEED = 'wind_speed',
+  DEW_POINT = 'dew_point',
 }
 
 /**
