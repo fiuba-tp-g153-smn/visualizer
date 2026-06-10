@@ -262,7 +262,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           pointQuery: {
             variable: 'haildiammax',
             name: 'Diámetro máximo de granizo',
-            unit: WRF_UNITS.PRECIPITATION,
+            unit: WRF_UNITS.HAIL_DIAMETER,
             scaleRange: { min: 0, max: 100, totalSteps: 100 },
           },
         }),
