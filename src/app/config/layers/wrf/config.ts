@@ -45,7 +45,7 @@ const WRF_DEFAULTS = {
   zIndexGroup: ActiveLayerGroupId.BASE,
   availablePeriods: [6, 12, 24, 48, 72] as const,
   minNativeZoom: 4,
-  maxNativeZoom: 9,
+  maxNativeZoom: 6,
   boundingBox: [
     [-60.0, -110.0],
     [-15.0, -30.0],
