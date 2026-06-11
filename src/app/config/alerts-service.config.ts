@@ -21,10 +21,9 @@ export function buildIntersectDepartmentsUrl(): string {
 
 /**
  * Construye URL para el endpoint de generación de alertas
- * @param phenomenonCode - Código del fenómeno meteorológico
  */
-export function buildGenerateAlertsUrl(phenomenonCode: number): string {
-  return `${ALERTS_SERVICE_BASE_URL}/alerts/generate?phenomenon_code=${phenomenonCode}`;
+export function buildGenerateAlertsUrl(): string {
+  return `${ALERTS_SERVICE_BASE_URL}/alerts`;
 }
 
 /**

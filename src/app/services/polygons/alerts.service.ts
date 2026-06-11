@@ -87,10 +87,13 @@ export class AlertsService {
     coordinates: Array<[number, number]>,
     phenomenonCode: number,
   ): Observable<GenerateAlertsResponse> {
-    const url = buildGenerateAlertsUrl(phenomenonCode);
-    const geoJson = coordinatesToGeoJSON(coordinates);
+    const url = buildGenerateAlertsUrl();
+    const geojson = coordinatesToGeoJSON(coordinates);
 
-    return this.http.post<GenerateAlertsResponse>(url, geoJson);
+    return this.http.post<GenerateAlertsResponse>(url, {
+      phenomenon_code: phenomenonCode,
+      geojson,
+    });
   }
 
   getPhenomena(): Observable<Phenomenon[]> {
