@@ -8,7 +8,7 @@ export interface Alert {
   alertId: number;
 
   /**
-   * Generation timestamp (YYYYMMDD_HHMMSS)
+   * Generation timestamp (YYMMDDHHMMSS)
    */
   timestamp: string;
 
