@@ -21,7 +21,7 @@
       <span
         class="dash__ctl-title"
         matTooltipClass="nav-tip"
-        matTooltip="Ventana de tiempo de los datos mostrados (24h, 7 días o todo el histórico). Aplica a todos los paneles."
+        matTooltip="Ventana de tiempo de los datos mostrados (24h, 7 días o todo el histórico). Aplica a todos los paneles, salvo los que tienen su propio rango."
         >ventana</span
       >
       <select [value]="windowHours()" (change)="onWindowChange($event)">
@@ -161,11 +161,22 @@
 
         <app-metric-panel
           heading="Rendimiento por tipo de trabajo"
-          tip="Por cada tipo de trabajo: cuántos se procesaron, cuántos fallaron (% error) y cuánto tardaron (prom/mín/máx/p95, solo sobre los exitosos), con el desglose por etapa. Clic en una columna para ordenar; clic en una fila para ver el detalle completo."
+          tip="Por cada tipo de trabajo: cuántos se procesaron, cuántos fallaron (% error) y cuánto tardaron (prom/mín/máx/p95, solo sobre los exitosos), con el desglose por etapa. Este panel tiene su propio rango (7 días por defecto), independiente de la ventana global. Clic en una columna para ordenar; clic en una fila para ver el detalle completo."
         >
+          <label panelActions class="dash__ctl"
+            >rango
+            <select
+              [value]="summaryTableWindowHours()"
+              (change)="onSummaryTableWindowChange($event)"
+            >
+              <option value="24">24h</option>
+              <option value="168">7d</option>
+              <option value="0">todo</option>
+            </select>
+          </label>
           <div class="dash__scroll-x">
             <app-job-type-summary-table
-              [summary]="summary()"
+              [summary]="summaryTable()"
               (typeClick)="onSummaryTypeClick($event)"
             />
           </div>

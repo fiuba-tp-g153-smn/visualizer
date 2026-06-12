@@ -103,6 +103,8 @@ export class DashboardComponent {
   readonly bucket = signal<Bucket>('hour');
   readonly refreshSecs = signal<RefreshSeconds>(10);
   readonly tpWindowHours = signal<TenMinWindowHours>(6);
+  /** Ventana propia de la tabla "por tipo de trabajo", independiente de la global. */
+  readonly summaryTableWindowHours = signal<WindowHours>(168);
   /** Modo del panel de throughput: 'total' (línea agregada, por defecto) o 'byType' (desglose). */
   readonly tpMode = signal<'total' | 'byType'>('total');
 
@@ -126,6 +128,8 @@ export class DashboardComponent {
 
   // Datos
   readonly summary = signal<readonly JobTypeSummary[]>([]);
+  /** Datos de la tabla "por tipo de trabajo" (ventana propia del panel). */
+  readonly summaryTable = signal<readonly JobTypeSummary[]>([]);
   readonly jobs = signal<readonly RecentJob[]>([]);
   readonly jobsHasMore = signal<boolean>(false);
   readonly live = signal<LiveStatus | null>(null);
@@ -228,6 +232,11 @@ export class DashboardComponent {
     void this.loadTp10();
   }
 
+  onSummaryTableWindowChange(event: Event): void {
+    this.summaryTableWindowHours.set(this.numberValue(event) as WindowHours);
+    void this.loadSummaryTable();
+  }
+
   onTimelineWindowChange(event: Event): void {
     const value = this.stringValue(event);
     this.timelineRange.set(value === 'all' ? 'all' : (Number(value) as TimelineWindowHours));
@@ -296,7 +305,7 @@ export class DashboardComponent {
 
   /** Drill-down desde el resumen: abre el detalle completo de ese tipo. */
   onSummaryTypeClick(jobType: string): void {
-    const entry = this.summary().find((item) => item.job_type === jobType);
+    const entry = this.summaryTable().find((item) => item.job_type === jobType);
     if (!entry) {
       return;
     }
@@ -331,7 +340,13 @@ export class DashboardComponent {
     }
     try {
       this.summary.set(await firstValueFrom(this.metrics.getSummary(this.windowHours())));
-      const tasks = [this.loadJobs(true), this.loadCharts(), this.loadLive(), this.loadTp10()];
+      const tasks = [
+        this.loadJobs(true),
+        this.loadCharts(),
+        this.loadLive(),
+        this.loadTp10(),
+        this.loadSummaryTable(),
+      ];
       if (includeTimeline) {
         tasks.push(this.loadTimeline());
       }
@@ -384,6 +399,12 @@ export class DashboardComponent {
 
   private async loadTp10(): Promise<void> {
     this.tp10.set(await firstValueFrom(this.metrics.getThroughput('10min', this.tpWindowHours())));
+  }
+
+  private async loadSummaryTable(): Promise<void> {
+    this.summaryTable.set(
+      await firstValueFrom(this.metrics.getSummary(this.summaryTableWindowHours())),
+    );
   }
 
   // Carga "fresca" de la línea de tiempo (cambio de rango / inicial / refresco
