@@ -14,6 +14,7 @@ import type {
 import { domainLabel } from './data-metrics-labels';
 import {
   buildTypeColorMap,
+  isolatedPointMarkers,
   pivot,
   typeColor,
   type MetricsChartOptions,
@@ -182,6 +183,7 @@ export function buildMemoryAreaChart(
     grid: baseGrid(),
     tooltip: { theme: 'light', shared: true, intersect: false, y: { formatter: bytesFormatter } },
     plotOptions: {},
+    markers: { size: 0 },
   };
 }
 
@@ -204,6 +206,7 @@ export function buildMemoryBarChart(
     // (toda la columna vertical), no solo al pasar por la barra (corta).
     tooltip: { theme: 'light', shared: false, intersect: false, y: { formatter: bytesFormatter } },
     plotOptions: { bar: { distributed: true, columnWidth: '60%', borderRadius: 2 } },
+    markers: { size: 0 },
   };
 }
 
@@ -240,6 +243,7 @@ export function buildSyncThroughputChart(
       custom: (context: CustomTooltipContext) => renderThroughputTooltip(context),
     },
     plotOptions: { bar: { columnWidth: '70%', borderRadius: 2 } },
+    markers: { size: 0 },
   };
 }
 
@@ -255,13 +259,15 @@ export function buildSyncErrorsChart(
   }));
   const data = pivot(rows, 'errors');
   const colorFor = buildTypeColorMap(data.types);
+  const series = data.types.map((type) => ({
+    name: type,
+    data: data.buckets.map((bucket) => data.at(bucket, type) ?? 0),
+  }));
+  const colors = data.types.map(colorFor);
   return {
-    series: data.types.map((type) => ({
-      name: type,
-      data: data.buckets.map((bucket) => data.at(bucket, type) ?? 0),
-    })),
+    series,
     chart: baseChart('line', false, 220),
-    colors: data.types.map(colorFor),
+    colors,
     xaxis: categoryXAxis(data.buckets.map((bucket) => fmtBucket(bucket, utc))),
     yaxis: valueYAxis(countFormatter),
     stroke: { curve: 'straight', width: 2 },
@@ -271,5 +277,6 @@ export function buildSyncErrorsChart(
     grid: baseGrid(),
     tooltip: { theme: 'light', shared: true, intersect: false, y: { formatter: countFormatter } },
     plotOptions: {},
+    markers: isolatedPointMarkers(series, colors),
   };
 }

@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -42,6 +43,7 @@ import type {
 } from '../../models/metrics/metrics.models';
 import {
   buildLineChart,
+  buildTotalThroughputChart,
   buildTypeColorMap,
   type MetricsChartOptions,
 } from '../../services/metrics/metrics-chart.util';
@@ -66,6 +68,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
+    MatButtonToggleModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
@@ -100,6 +103,8 @@ export class DashboardComponent {
   readonly bucket = signal<Bucket>('hour');
   readonly refreshSecs = signal<RefreshSeconds>(10);
   readonly tpWindowHours = signal<TenMinWindowHours>(6);
+  /** Modo del panel de throughput: 'total' (línea agregada, por defecto) o 'byType' (desglose). */
+  readonly tpMode = signal<'total' | 'byType'>('total');
 
   // Filtros de la tabla de trabajos recientes ('' = todos). Se aplican del lado
   // del servidor vía getJobs (que ya acepta type/outcome).
@@ -174,11 +179,14 @@ export class DashboardComponent {
     if (!rows.length) {
       return null;
     }
+    const utc = this.timezone.mode() === TIMEZONE_MODES.UTC;
+    if (this.tpMode() === 'total') {
+      return buildTotalThroughputChart(rows, 260, utc);
+    }
     // Mapa local: este panel es un dataset aparte (bucket de 10 min), así que
     // sus colores quedan únicos dentro del gráfico; la paridad exacta con el
     // panel de tendencias es best-effort (datasets y orden distintos).
     const colorFor = buildTypeColorMap(rows.map((row) => row.job_type));
-    const utc = this.timezone.mode() === TIMEZONE_MODES.UTC;
     return buildLineChart(rows, 'count', 'count', 260, colorFor, utc);
   });
 

@@ -27,6 +27,7 @@ import type { MetricsChartOptions } from '../../../services/metrics/metrics-char
         [grid]="opts.grid"
         [tooltip]="opts.tooltip"
         [plotOptions]="opts.plotOptions"
+        [markers]="opts.markers"
       ></apx-chart>
     }
   `,

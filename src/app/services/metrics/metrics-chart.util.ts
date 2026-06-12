@@ -5,6 +5,7 @@ import type {
   ApexFill,
   ApexGrid,
   ApexLegend,
+  ApexMarkers,
   ApexNonAxisChartSeries,
   ApexPlotOptions,
   ApexStroke,
@@ -34,6 +35,7 @@ export interface MetricsChartOptions {
   grid: ApexGrid;
   tooltip: ApexTooltip;
   plotOptions: ApexPlotOptions;
+  markers: ApexMarkers;
 }
 
 export interface StagePieOptions {
@@ -289,6 +291,41 @@ function totalCountTooltip(): ApexTooltip {
   };
 }
 
+/**
+ * Marcadores para puntos aislados de un gráfico de líneas: un valor no nulo cuyos
+ * vecinos (anterior y siguiente) son nulos o inexistentes. Sin segmento que dibujar,
+ * ApexCharts dejaría el dato invisible; lo mostramos como un círculo del color de su
+ * serie. `size: 0` mantiene ocultos el resto de los marcadores.
+ */
+export function isolatedPointMarkers(
+  series: ReadonlyArray<{ data: ReadonlyArray<number | null> }>,
+  colors: readonly string[],
+): ApexMarkers {
+  const discrete: NonNullable<ApexMarkers['discrete']> = [];
+  series.forEach((line, seriesIndex) => {
+    const { data } = line;
+    data.forEach((value, i) => {
+      if (value == null) {
+        return;
+      }
+      const prev = i > 0 ? data[i - 1] : null;
+      const next = i < data.length - 1 ? data[i + 1] : null;
+      if (prev == null && next == null) {
+        const color = colors[seriesIndex];
+        discrete.push({
+          seriesIndex,
+          dataPointIndex: i,
+          size: 4,
+          shape: 'circle',
+          fillColor: color,
+          strokeColor: color,
+        });
+      }
+    });
+  });
+  return { size: 0, discrete };
+}
+
 // ── Chart builders ────────────────────────────────────────────────────────────
 
 export function buildLineChart(
@@ -301,22 +338,36 @@ export function buildLineChart(
 ): MetricsChartOptions {
   const data = pivot(rows, valueKey);
   const formatter = unit === 'secs' ? secsFormatter : countFormatter;
+  // Conteos: un bucket sin filas significa 0 trabajos, así que rellenamos el hueco
+  // con 0 para que la línea quede continua y conecte los picos. Tiempos: un hueco
+  // es "sin trabajos exitosos"; rellenar con 0 fingiría procesamiento instantáneo,
+  // así que se deja null (corta la línea) y el punto aislado se marca con un círculo.
+  const series = data.types.map((type) => ({
+    name: type,
+    data: data.buckets.map((bucket) => {
+      const value = data.at(bucket, type);
+      return value == null && unit === 'count' ? 0 : value;
+    }),
+  }));
+  const colors = data.types.map(colorFor);
   return {
-    series: data.types.map((type) => ({
-      name: type,
-      data: data.buckets.map((bucket) => data.at(bucket, type)),
-    })),
+    series,
     chart: baseChart('line', false, height),
-    colors: data.types.map(colorFor),
+    colors,
     xaxis: categoryXAxis(data.buckets.map((bucket) => fmtBucket(bucket, utc))),
     yaxis: valueYAxis(formatter),
-    stroke: { curve: 'straight', width: 2 },
+    // Tiempos: dejamos huecos (null) en vez de 0 ficticios, así que usamos
+    // `monotoneCubic` —la única curva de ApexCharts que omite los null y conecta
+    // los puntos a través del hueco—. Conteos: ya quedan continuos con relleno 0,
+    // así que se mantiene la línea recta.
+    stroke: { curve: unit === 'secs' ? 'monotoneCubic' : 'straight', width: 2 },
     fill: { type: 'solid', opacity: 1 },
     dataLabels: { enabled: false },
     legend: baseLegend(),
     grid: baseGrid(),
     tooltip: unit === 'count' ? totalCountTooltip() : baseTooltip(formatter),
     plotOptions: {},
+    markers: isolatedPointMarkers(series, colors),
   };
 }
 
@@ -343,6 +394,41 @@ export function buildThroughputBarChart(
     grid: baseGrid(),
     tooltip: totalCountTooltip(),
     plotOptions: { bar: { columnWidth: '70%', borderRadius: 2 } },
+    markers: { size: 0 },
+  };
+}
+
+/**
+ * Throughput agregado: una sola línea con el total de trabajos por bucket de 10
+ * min (suma de todos los tipos). Es la vista por defecto del panel; el desglose
+ * por tipo queda detrás del toggle vía `buildLineChart`.
+ */
+export function buildTotalThroughputChart(
+  rows: readonly ThroughputBucket[],
+  height: number = DEFAULT_HEIGHT,
+  utc = true,
+): MetricsChartOptions {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    totals.set(row.bucket, (totals.get(row.bucket) ?? 0) + row.count);
+  }
+  const buckets = [...totals.keys()].sort();
+  const color = TYPE_PALETTE[0]; // un solo color para la línea agregada
+  const series = [{ name: 'Total', data: buckets.map((bucket) => totals.get(bucket) ?? 0) }];
+  return {
+    series,
+    chart: baseChart('line', false, height),
+    colors: [color],
+    xaxis: categoryXAxis(buckets.map((bucket) => fmtBucket(bucket, utc))),
+    yaxis: valueYAxis(countFormatter),
+    stroke: { curve: 'straight', width: 2 },
+    fill: { type: 'solid', opacity: 1 },
+    dataLabels: { enabled: false },
+    legend: { ...baseLegend(), show: false }, // serie única: leyenda redundante
+    grid: baseGrid(),
+    tooltip: baseTooltip(countFormatter), // muestra "Total: N" del bucket
+    plotOptions: {},
+    markers: isolatedPointMarkers(series, [color]),
   };
 }
 
@@ -375,6 +461,7 @@ export function buildStageAreaChart(
     grid: baseGrid(),
     tooltip: baseTooltip(secsFormatter),
     plotOptions: {},
+    markers: { size: 0 },
   };
 }
 

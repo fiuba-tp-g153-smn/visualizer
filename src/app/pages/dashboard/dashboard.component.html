@@ -130,6 +130,17 @@
           heading="Throughput · cada 10 min"
           tip="Evolución del throughput en una ventana corta con intervalos de 10 minutos: trabajos finalizados por cada bloque de 10 min y por tipo de trabajo. Útil para ver picos y huecos recientes que la vista por hora suaviza."
         >
+          <mat-button-toggle-group
+            panelActions
+            class="dash__tp-toggle"
+            [value]="tpMode()"
+            (change)="tpMode.set($event.value)"
+            hideSingleSelectionIndicator
+            aria-label="Modo de throughput"
+          >
+            <mat-button-toggle value="total">Total</mat-button-toggle>
+            <mat-button-toggle value="byType">Por tipo</mat-button-toggle>
+          </mat-button-toggle-group>
           <label panelActions class="dash__ctl"
             >rango
             <select [value]="tpWindowHours()" (change)="onTpWindowChange($event)">

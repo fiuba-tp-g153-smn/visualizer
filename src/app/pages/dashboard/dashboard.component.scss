@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 :host {
   // Tokens de color de estado, definidos solo en el panel para que no se
   // filtren al resto de la app (tema Material claro). Los hijos los heredan.
@@ -91,6 +93,13 @@
     border-radius: 4px;
     padding: 4px 8px;
   }
+}
+
+// Toggle segmentado del modo de throughput: muestra ambas opciones (Total /
+// Por tipo) a la vez. Densidad reducida para caber compacto en la cabecera.
+.dash__tp-toggle {
+  @include mat.button-toggle-density(-3);
+  font-size: 11px;
 }
 
 // Título del control: tiene tooltip explicativo al pasar el mouse.
