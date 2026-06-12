@@ -10,7 +10,7 @@ interface QueueTile {
 
 /**
  * Profundidad de las colas de RabbitMQ: total en espera, cola de trabajo general,
- * cola de trabajo ligera y descartes/DLQ.
+ * cola de trabajo ligera (y su desglose radar / WRF) y descartes/DLQ.
  * Degrada a "N/A" por tile y muestra un aviso de "sin conexión" cuando el
  * broker no responde. Presentacional: recibe `queues` por input.
  */
@@ -35,7 +35,9 @@ export class QueueDepthsComponent {
     return [
       { key: 'total en espera', value: fmt(total), sub: 'general + ligera' },
       { key: 'cola de trabajo general', value: fmt(queues?.work), sub: 'en espera' },
-      { key: 'cola de trabajo ligera', value: fmt(queues?.light), sub: 'en espera' },
+      { key: 'cola de trabajo ligera', value: fmt(queues?.light), sub: 'radar + WRF' },
+      { key: 'cola ligera · radar', value: fmt(queues?.radar_light), sub: 'en espera' },
+      { key: 'cola ligera · WRF', value: fmt(queues?.wrf_light), sub: 'en espera' },
       { key: 'descartes (DLQ)', value: fmt(queues?.dlq), sub: 'mensajes' },
     ];
   });

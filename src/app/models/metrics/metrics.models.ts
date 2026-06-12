@@ -93,7 +93,9 @@ export interface InProgressJob {
 /** Profundidad de colas de RabbitMQ (null si no responde). */
 export interface QueueDepths {
   readonly work: number | null;
-  readonly light: number | null;
+  readonly light: number | null; // ligera combinada (radar + wrf)
+  readonly radar_light: number | null;
+  readonly wrf_light: number | null;
   readonly dlq: number | null;
 }
 

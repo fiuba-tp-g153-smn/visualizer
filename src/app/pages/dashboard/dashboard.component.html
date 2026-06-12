@@ -13,7 +13,9 @@
               : 'Conectando…'
         "
       ></span>
-      <span class="dash__title">Panel de rendimiento y estado del procesamiento (tiles processor)</span>
+      <span class="dash__title"
+        >Panel de rendimiento y estado del procesamiento (tiles processor)</span
+      >
     </span>
     <span class="dash__spacer"></span>
 
@@ -107,7 +109,7 @@
 
         <app-metric-panel
           heading="Colas · RabbitMQ"
-          tip="Trabajos esperando para procesarse: el total en espera y su desglose entre la cola de trabajo general (GOES/GLM) y la ligera (radar/WRF). 'Descartes (DLQ)' son los que cayeron tras agotar los reintentos. 'N/A' si RabbitMQ no responde."
+          tip="Trabajos esperando para procesarse: el total en espera y su desglose entre la cola de trabajo general (GOES/GLM) y la ligera, que a su vez se abre en radar y WRF (colas separadas para que no se bloqueen entre sí). 'Descartes (DLQ)' son los que cayeron tras agotar los reintentos. 'N/A' si RabbitMQ no responde."
         >
           <app-queue-depths [queues]="live()?.queues ?? null" />
         </app-metric-panel>
