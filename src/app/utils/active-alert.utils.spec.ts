@@ -6,8 +6,9 @@ import {
   parseActiveAlertPolygon,
   parseAffectedDepartments,
   toActiveAlert,
+  toPendingAlert,
 } from './active-alert.utils';
-import { ActiveAlertResponse } from '../models/geo';
+import { ActiveAlertResponse, PendingAlertResponse } from '../models/geo';
 
 describe('parseActiveAlertPolygon', () => {
   it('parses "[lat,lon],..." into [lat, lng] pairs', () => {
@@ -105,5 +106,31 @@ describe('toActiveAlert', () => {
     // The 'Z' suffix must be interpreted as UTC (independent of the runner's tz).
     expect(alert.startDatetime.getTime()).toBe(Date.UTC(2026, 5, 1, 10, 0, 0));
     expect(alert.endDatetime.getTime()).toBe(Date.UTC(2026, 5, 1, 13, 0, 0));
+  });
+});
+
+describe('toPendingAlert', () => {
+  it('maps the backend response and prefixes GIF urls with the base url', () => {
+    const res: PendingAlertResponse = {
+      alert_id: 7,
+      phenomenon: 'GRANIZO',
+      area: '<b>CORDOBA:</b> Capital.',
+      polygon: '[-31.40,-64.20],[-31.50,-64.10],[-31.60,-64.30]',
+      gif_gral_url: '/alerts/gral_alerta.gif',
+      gif_area_url: '/alerts/zoom_alerta.gif',
+    };
+
+    const alert = toPendingAlert(res, 'http://localhost:8080');
+
+    expect(alert.alertId).toBe(7);
+    expect(alert.phenomenon).toBe('GRANIZO');
+    expect(alert.departments).toEqual([{ name: 'Capital', province: 'CORDOBA' }]);
+    expect(alert.coordinates).toEqual([
+      [-31.4, -64.2],
+      [-31.5, -64.1],
+      [-31.6, -64.3],
+    ]);
+    expect(alert.gifGralUrl).toBe('http://localhost:8080/alerts/gral_alerta.gif');
+    expect(alert.gifAreaUrl).toBe('http://localhost:8080/alerts/zoom_alerta.gif');
   });
 });

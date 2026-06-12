@@ -1,76 +1,102 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { DepartmentIntersectionService } from '../polygons/department-intersection.service';
-import { ActiveAlert, AlertsVisibility, Department } from '../../models/geo';
-import { toActiveAlert } from '../../utils/active-alert.utils';
+import { AlertsVisibility, Department, PendingAlert } from '../../models/geo';
+import { toPendingAlert } from '../../utils/active-alert.utils';
+import { environment } from '../../../environments/environment';
 import { DEPARTMENTS_DETAIL_LEVEL } from '../../config/polygon.config';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { STORAGE_KEYS } from '../../constants';
 
-/** Auto-refresh cadence for active alerts (matches layer auto-refresh). */
+/** Auto-refresh cadence for pending alerts (matches active alerts). */
 const AUTO_REFRESH_INTERVAL_MS = 10_000;
 
 /**
- * Stateful service for active alerts. Owns the "show active" toggle, the list of
- * active alerts, manual/automatic refresh and expiry pruning.
+ * Stateful service for pending alerts (emitted via POST /alerts but not yet
+ * mirrored into the active alerts table). Owns the "show emitted" toggle, the
+ * pending list and its ETag-conditional polling.
+ *
+ * Pending alerts disappear from the backend list when processed (they become
+ * active alerts), so every fetch replaces the whole list.
  */
 @Injectable({ providedIn: 'root' })
-export class ActiveAlertsService {
+export class PendingAlertsService {
   private readonly departmentIntersectionService = inject(DepartmentIntersectionService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly storage = inject(LocalStorageService);
 
-  private readonly showActiveSignal = signal<boolean>(
-    this.storage.getJson<AlertsVisibility>(STORAGE_KEYS.ALERTS_VISIBILITY)?.active ?? false,
+  private readonly showPendingSignal = signal<boolean>(
+    this.storage.getJson<AlertsVisibility>(STORAGE_KEYS.ALERTS_VISIBILITY)?.pending ?? false,
   );
-  private readonly activeAlertsSignal = signal<ReadonlyArray<ActiveAlert>>([]);
+  private readonly pendingAlertsSignal = signal<ReadonlyArray<PendingAlert>>([]);
   private readonly loadingSignal = signal<boolean>(false);
   private readonly shownDepartmentsSignal = signal<ReadonlyArray<Department>>([]);
-  private readonly shownDepartmentsAlertSignal = signal<ActiveAlert | null>(null);
+  private readonly shownDepartmentsAlertSignal = signal<PendingAlert | null>(null);
   private readonly hoveredDepartmentsSignal = signal<ReadonlyArray<string>>([]);
   private readonly hiddenIdsSignal = signal<ReadonlySet<number>>(new Set());
 
-  readonly showActive = this.showActiveSignal.asReadonly();
-  readonly activeAlerts = this.activeAlertsSignal.asReadonly();
+  readonly showPending = this.showPendingSignal.asReadonly();
+  readonly pendingAlerts = this.pendingAlertsSignal.asReadonly();
   readonly loading = this.loadingSignal.asReadonly();
   readonly shownDepartments = this.shownDepartmentsSignal.asReadonly();
   readonly shownDepartmentsAlert = this.shownDepartmentsAlertSignal.asReadonly();
   readonly hoveredDepartments = this.hoveredDepartmentsSignal.asReadonly();
   readonly hiddenIds = this.hiddenIdsSignal.asReadonly();
 
-  /** Monotonic cursor: highest alert id ever seen, independent of pruning. */
-  private lastSeenMaxId: number | undefined = undefined;
+  private etag: string | undefined = undefined;
   private timerId: number | undefined = undefined;
+  /**
+   * Guards against stale poll responses dropping a just-emitted alert: bumped
+   * on every emission, so a fetch that started before it can be discarded.
+   */
+  private emissionSeq = 0;
 
   constructor() {
     this.destroyRef.onDestroy(() => this.stopAutoRefresh());
 
-    if (this.showActiveSignal()) {
-      void this.fetch(undefined);
+    if (this.showPendingSignal()) {
+      void this.fetch();
       this.startAutoRefresh();
     }
   }
 
-  setShowActive(on: boolean): void {
-    if (on === this.showActiveSignal()) return;
-    this.showActiveSignal.set(on);
+  setShowPending(on: boolean): void {
+    if (on === this.showPendingSignal()) return;
+    this.showPendingSignal.set(on);
     const visibility = this.storage.getJson<AlertsVisibility>(STORAGE_KEYS.ALERTS_VISIBILITY);
     this.storage.setJson<AlertsVisibility>(STORAGE_KEYS.ALERTS_VISIBILITY, {
-      active: on,
-      pending: visibility?.pending ?? false,
+      active: visibility?.active ?? false,
+      pending: on,
     });
 
     if (on) {
-      this.lastSeenMaxId = undefined;
-      void this.fetch(undefined);
+      this.etag = undefined;
+      void this.fetch();
       this.startAutoRefresh();
     } else {
       this.stopAutoRefresh();
-      this.activeAlertsSignal.set([]);
-      this.lastSeenMaxId = undefined;
+      this.pendingAlertsSignal.set([]);
+      this.etag = undefined;
       this.hiddenIdsSignal.set(new Set());
       this.hideDepartments();
     }
+  }
+
+  /**
+   * Registers an alert just emitted via POST /alerts: it is inserted into the
+   * pending list immediately (the POST response carries the full pending shape)
+   * and the emitted view is turned on so the user sees it right away.
+   */
+  addEmitted(alert: PendingAlert): void {
+    this.emissionSeq++;
+    this.pendingAlertsSignal.update((alerts) => {
+      const others = alerts.filter((a) => a.alertId !== alert.alertId);
+      return [...others, alert].sort((a, b) => a.alertId - b.alertId);
+    });
+    // The cached ETag predates this emission; drop it so the next poll
+    // re-fetches the authoritative list.
+    this.etag = undefined;
+    this.setShowPending(true);
   }
 
   toggleHidden(alertId: number): void {
@@ -83,7 +109,7 @@ export class ActiveAlertsService {
     this.hiddenIdsSignal.set(next);
   }
 
-  async showDepartments(alert: ActiveAlert): Promise<void> {
+  async showDepartments(alert: PendingAlert): Promise<void> {
     this.shownDepartmentsAlertSignal.set(alert);
     try {
       const response = await firstValueFrom(
@@ -94,7 +120,7 @@ export class ActiveAlertsService {
       );
       this.shownDepartmentsSignal.set(response.departments);
     } catch (error) {
-      console.error('Error al cargar departamentos de la alerta:', error);
+      console.error('Error al cargar departamentos del aviso pendiente:', error);
       this.shownDepartmentsSignal.set([]);
     }
   }
@@ -119,44 +145,33 @@ export class ActiveAlertsService {
   }
 
   async refresh(): Promise<void> {
-    if (!this.showActiveSignal()) return;
-    await this.fetch(this.lastSeenMaxId);
+    if (!this.showPendingSignal()) return;
+    await this.fetch();
   }
 
-  private async fetch(sinceId: number | undefined): Promise<void> {
+  private async fetch(): Promise<void> {
+    const seqAtStart = this.emissionSeq;
     this.loadingSignal.set(true);
     try {
-      const responses = await firstValueFrom(this.departmentIntersectionService.getAlerts(sinceId));
-      const incoming = responses.map(toActiveAlert);
-      this.mergeAndPrune(incoming);
+      const result = await firstValueFrom(
+        this.departmentIntersectionService.getPendingAlerts(this.etag),
+      );
+      if (result.kind === 'not-modified') return;
+
+      if (seqAtStart !== this.emissionSeq) {
+        // Stale snapshot taken before the latest emission; keep the optimistic
+        // list and let the next poll (with no ETag) bring the fresh one.
+        return;
+      }
+
+      const baseUrl = environment.alertsService.baseUrl;
+      this.pendingAlertsSignal.set(result.alerts.map((res) => toPendingAlert(res, baseUrl)));
+      this.etag = result.etag;
     } catch (error) {
-      console.error('Error al obtener avisos activos:', error);
-      // Still prune locally so expired alerts disappear even if the fetch failed.
-      this.mergeAndPrune([]);
+      console.error('Error al obtener avisos pendientes:', error);
     } finally {
       this.loadingSignal.set(false);
     }
-  }
-
-  private mergeAndPrune(incoming: ReadonlyArray<ActiveAlert>): void {
-    const now = Date.now();
-    const byId = new Map<number, ActiveAlert>();
-
-    for (const alert of this.activeAlertsSignal()) {
-      byId.set(alert.alertId, alert);
-    }
-    for (const alert of incoming) {
-      byId.set(alert.alertId, alert);
-      if (this.lastSeenMaxId === undefined || alert.alertId > this.lastSeenMaxId) {
-        this.lastSeenMaxId = alert.alertId;
-      }
-    }
-
-    const merged = Array.from(byId.values())
-      .filter((alert) => alert.endDatetime.getTime() > now)
-      .sort((a, b) => a.alertId - b.alertId);
-
-    this.activeAlertsSignal.set(merged);
   }
 
   private startAutoRefresh(): void {

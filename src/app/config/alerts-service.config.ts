@@ -39,3 +39,18 @@ export function buildPhenomenaUrl(): string {
 export function buildAlertsUrl(): string {
   return `${ALERTS_SERVICE_BASE_URL}/alerts`;
 }
+
+/**
+ * Construye URL para el endpoint de listado de avisos pendientes
+ */
+export function buildPendingAlertsUrl(): string {
+  return `${ALERTS_SERVICE_BASE_URL}/alerts/pending`;
+}
+
+/**
+ * Construye URL para el endpoint de límites de generación de avisos
+ * (incluye `max_vertex_count`, la cantidad máxima de vértices por polígono)
+ */
+export function buildAlertsLimitsUrl(): string {
+  return `${ALERTS_SERVICE_BASE_URL}/alerts/limits`;
+}

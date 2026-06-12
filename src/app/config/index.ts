@@ -28,6 +28,8 @@ export {
   buildGenerateAlertsUrl,
   buildPhenomenaUrl,
   buildAlertsUrl,
+  buildPendingAlertsUrl,
+  buildAlertsLimitsUrl,
 } from './alerts-service.config';
 
 // Timing configuration (delays, tooltips, actions)

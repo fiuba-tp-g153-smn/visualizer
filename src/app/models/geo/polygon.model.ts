@@ -1,5 +1,5 @@
 import { Department } from './department.model';
-import { Alert } from './alert.model';
+import { PolygonStatus } from '../../constants';
 
 /**
  * Representa un polígono en el mapa
@@ -14,6 +14,11 @@ export interface Polygon {
    * Nombre descriptivo del polígono
    */
   name: string;
+
+  /**
+   * Número de borrador asignado al crear el polígono
+   */
+  draftNumber: number;
 
   /**
    * Coordenadas del polígono [lat, lng][]
@@ -51,9 +56,10 @@ export interface Polygon {
   originalCoordinates?: Array<[number, number]>;
 
   /**
-   * Información de las alertas meteorológicas generadas
+   * Estado transitorio del polígono (p. ej. generación de aviso en curso).
+   * Ausente para un borrador normal y editable.
    */
-  alerts?: Alert;
+  status?: PolygonStatus;
 }
 
 /**
@@ -74,5 +80,5 @@ export interface UpdatePolygonDto {
   departments?: Department[];
   departmentsVisible?: boolean;
   originalCoordinates?: Array<[number, number]>;
-  alerts?: Alert;
+  status?: PolygonStatus;
 }

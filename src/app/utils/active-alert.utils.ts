@@ -1,4 +1,12 @@
-import { ActiveAlert, ActiveAlertDepartment, ActiveAlertResponse } from '../models/geo';
+import {
+  ActiveAlert,
+  ActiveAlertDepartment,
+  ActiveAlertResponse,
+  Department,
+  PendingAlert,
+  PendingAlertResponse,
+} from '../models/geo';
+import { DepartmentListItem } from '../components/overlay/main-menu/alerts-panel/department-list/department-list';
 
 /**
  * Marker the backend uses when no departments fall inside the area.
@@ -83,6 +91,20 @@ export function parseAffectedDepartments(areaHtml: string): ActiveAlertDepartmen
   return departments.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * Attaches geometry to an alert's departments from the (lazily-fetched) shown
+ * departments list, so each item can be clicked to fly the map to it.
+ */
+export function withDepartmentGeometries(
+  departments: ReadonlyArray<ActiveAlertDepartment>,
+  shownDepartments: ReadonlyArray<Department>,
+): ReadonlyArray<DepartmentListItem> {
+  if (shownDepartments.length === 0) return departments;
+
+  const geometryByName = new Map(shownDepartments.map((d) => [d.name, d.geometry]));
+  return departments.map((dept) => ({ ...dept, geometry: geometryByName.get(dept.name) }));
+}
+
 export function toActiveAlert(res: ActiveAlertResponse): ActiveAlert {
   return {
     alertId: res.alert_id,
@@ -91,5 +113,16 @@ export function toActiveAlert(res: ActiveAlertResponse): ActiveAlert {
     coordinates: parseActiveAlertPolygon(res.polygon),
     startDatetime: new Date(res.start_datetime),
     endDatetime: new Date(res.end_datetime),
+  };
+}
+
+export function toPendingAlert(res: PendingAlertResponse, baseUrl: string): PendingAlert {
+  return {
+    alertId: res.alert_id,
+    phenomenon: res.phenomenon,
+    departments: parseAffectedDepartments(res.area),
+    coordinates: parseActiveAlertPolygon(res.polygon),
+    gifGralUrl: `${baseUrl}${res.gif_gral_url}`,
+    gifAreaUrl: `${baseUrl}${res.gif_area_url}`,
   };
 }
