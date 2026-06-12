@@ -1,4 +1,5 @@
 export * from './active-alert.model';
+export * from './coordinate.model';
 export * from './alerts-visibility.model';
 export * from './pending-alert.model';
 export * from './department.model';

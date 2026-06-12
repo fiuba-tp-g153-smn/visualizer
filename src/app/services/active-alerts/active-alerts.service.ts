@@ -3,7 +3,6 @@ import { firstValueFrom } from 'rxjs';
 import { DepartmentIntersectionService } from '../polygons/department-intersection.service';
 import { ActiveAlert, AlertsVisibility, Department } from '../../models/geo';
 import { toActiveAlert } from '../../utils/active-alert.utils';
-import { DEPARTMENTS_DETAIL_LEVEL } from '../../config/polygon.config';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { STORAGE_KEYS } from '../../constants';
 
@@ -87,10 +86,7 @@ export class ActiveAlertsService {
     this.shownDepartmentsAlertSignal.set(alert);
     try {
       const response = await firstValueFrom(
-        this.departmentIntersectionService.intersectDepartments(
-          [...alert.coordinates],
-          DEPARTMENTS_DETAIL_LEVEL,
-        ),
+        this.departmentIntersectionService.intersectDepartments([...alert.coordinates]),
       );
       this.shownDepartmentsSignal.set(response.departments);
     } catch (error) {

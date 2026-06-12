@@ -1,4 +1,6 @@
-export function isSimplePolygon(coordinates: Array<[number, number]>): boolean {
+import { LatLng } from '../models/geo';
+
+export function isSimplePolygon(coordinates: Array<LatLng>): boolean {
   if (coordinates.length < 3) return false;
 
   const segments = getSegments(coordinates);
@@ -16,10 +18,8 @@ export function isSimplePolygon(coordinates: Array<[number, number]>): boolean {
   return true;
 }
 
-function getSegments(
-  coordinates: Array<[number, number]>,
-): Array<[[number, number], [number, number]]> {
-  const segments: Array<[[number, number], [number, number]]> = [];
+function getSegments(coordinates: Array<LatLng>): Array<[LatLng, LatLng]> {
+  const segments: Array<[LatLng, LatLng]> = [];
 
   for (let i = 0; i < coordinates.length; i++) {
     const next = (i + 1) % coordinates.length;
@@ -29,10 +29,7 @@ function getSegments(
   return segments;
 }
 
-function segmentsIntersect(
-  seg1: [[number, number], [number, number]],
-  seg2: [[number, number], [number, number]],
-): boolean {
+function segmentsIntersect(seg1: [LatLng, LatLng], seg2: [LatLng, LatLng]): boolean {
   const [p1, p2] = seg1;
   const [p3, p4] = seg2;
 
@@ -58,11 +55,11 @@ function segmentsIntersect(
   return false;
 }
 
-function direction(p1: [number, number], p2: [number, number], p3: [number, number]): number {
+function direction(p1: LatLng, p2: LatLng, p3: LatLng): number {
   return (p3[0] - p1[0]) * (p2[1] - p1[1]) - (p2[0] - p1[0]) * (p3[1] - p1[1]);
 }
 
-function onSegment(p1: [number, number], p: [number, number], p2: [number, number]): boolean {
+function onSegment(p1: LatLng, p: LatLng, p2: LatLng): boolean {
   return (
     p[0] <= Math.max(p1[0], p2[0]) &&
     p[0] >= Math.min(p1[0], p2[0]) &&
@@ -71,7 +68,7 @@ function onSegment(p1: [number, number], p: [number, number], p2: [number, numbe
   );
 }
 
-function pointsEqual(p1: [number, number], p2: [number, number]): boolean {
+function pointsEqual(p1: LatLng, p2: LatLng): boolean {
   const epsilon = 1e-10;
   return Math.abs(p1[0] - p2[0]) < epsilon && Math.abs(p1[1] - p2[1]) < epsilon;
 }

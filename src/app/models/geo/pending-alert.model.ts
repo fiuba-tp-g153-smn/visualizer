@@ -7,6 +7,7 @@
  */
 
 import { ActiveAlertDepartment } from './active-alert.model';
+import { LatLng } from './coordinate.model';
 
 /**
  * Raw pending alert as returned by the backend (snake_case). POST /alerts
@@ -38,7 +39,7 @@ export interface PendingAlert {
   /** Affected departments parsed from the backend `area` HTML, sorted by name */
   departments: ReadonlyArray<ActiveAlertDepartment>;
   /** Polygon vertices as Leaflet [lat, lng] pairs */
-  coordinates: ReadonlyArray<[number, number]>;
+  coordinates: ReadonlyArray<LatLng>;
   /** Absolute URL to the full-country GIF */
   gifGralUrl: string;
   /** Absolute URL to the zoomed-area GIF */

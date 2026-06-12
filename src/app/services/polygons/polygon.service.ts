@@ -8,10 +8,7 @@ import {
 } from './department-intersection.service';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import {
-  DEPARTMENTS_DETAIL_LEVEL,
-  DEFAULT_MAX_POLYGON_VERTICES,
-} from '../../config/polygon.config';
+import { DEFAULT_MAX_POLYGON_VERTICES } from '../../config/polygon.config';
 import { POLYGON_STATUS, STORAGE_KEYS, buildStaleSubmissionWarning } from '../../constants';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { NotificationService } from '../notifications/notification.service';
@@ -262,10 +259,7 @@ export class PolygonService {
 
     try {
       const response = await firstValueFrom(
-        this.departmentIntersectionService.intersectDepartments(
-          polygon.coordinates,
-          DEPARTMENTS_DETAIL_LEVEL,
-        ),
+        this.departmentIntersectionService.intersectDepartments(polygon.coordinates),
       );
 
       this.updatePolygon(id, {

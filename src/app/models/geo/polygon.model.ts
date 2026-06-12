@@ -1,4 +1,5 @@
 import { Department } from './department.model';
+import { LatLng } from './coordinate.model';
 import { PolygonStatus } from '../../constants';
 
 /**
@@ -23,7 +24,7 @@ export interface Polygon {
   /**
    * Coordenadas del polígono [lat, lng][]
    */
-  coordinates: Array<[number, number]>;
+  coordinates: Array<LatLng>;
 
   /**
    * Indica si el polígono está visible en el mapa
@@ -53,7 +54,7 @@ export interface Polygon {
   /**
    * Coordenadas originales antes de recortar (para deshacer)
    */
-  originalCoordinates?: Array<[number, number]>;
+  originalCoordinates?: Array<LatLng>;
 
   /**
    * Estado transitorio del polígono (p. ej. generación de aviso en curso).
@@ -67,7 +68,7 @@ export interface Polygon {
  */
 export interface CreatePolygonDto {
   name: string;
-  coordinates: Array<[number, number]>;
+  coordinates: Array<LatLng>;
 }
 
 /**
@@ -75,10 +76,10 @@ export interface CreatePolygonDto {
  */
 export interface UpdatePolygonDto {
   name?: string;
-  coordinates?: Array<[number, number]>;
+  coordinates?: Array<LatLng>;
   visible?: boolean;
   departments?: Department[];
   departmentsVisible?: boolean;
-  originalCoordinates?: Array<[number, number]>;
+  originalCoordinates?: Array<LatLng>;
   status?: PolygonStatus;
 }

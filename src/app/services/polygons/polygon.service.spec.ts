@@ -6,8 +6,9 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { PolygonService } from './polygon.service';
 import { GenerateAlertsResponse } from './department-intersection.service';
 import { STORAGE_KEYS } from '../../constants';
+import { LatLng } from '../../models/geo';
 
-const COORDINATES: Array<[number, number]> = [
+const COORDINATES: Array<LatLng> = [
   [-34.6, -58.5],
   [-34.7, -58.4],
   [-34.8, -58.6],
@@ -42,6 +43,7 @@ describe('PolygonService', () => {
     });
     service = TestBed.inject(PolygonService);
     httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne((req) => req.url.endsWith('/alerts/limits')).flush({ max_vertex_count: 100 });
   });
 
   afterEach(() => {
@@ -96,6 +98,8 @@ describe('PolygonService', () => {
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
     const reloaded = TestBed.inject(PolygonService);
+    const reloadedHttpMock = TestBed.inject(HttpTestingController);
+    reloadedHttpMock.expectOne((req) => req.url.endsWith('/alerts/limits')).flush({ max_vertex_count: 100 });
 
     expect(reloaded.allPolygons().map((p) => p.id)).toEqual(['draft']);
   });

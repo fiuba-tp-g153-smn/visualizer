@@ -4,7 +4,6 @@ import { DepartmentIntersectionService } from '../polygons/department-intersecti
 import { AlertsVisibility, Department, PendingAlert } from '../../models/geo';
 import { toPendingAlert } from '../../utils/active-alert.utils';
 import { environment } from '../../../environments/environment';
-import { DEPARTMENTS_DETAIL_LEVEL } from '../../config/polygon.config';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { STORAGE_KEYS } from '../../constants';
 
@@ -113,10 +112,7 @@ export class PendingAlertsService {
     this.shownDepartmentsAlertSignal.set(alert);
     try {
       const response = await firstValueFrom(
-        this.departmentIntersectionService.intersectDepartments(
-          [...alert.coordinates],
-          DEPARTMENTS_DETAIL_LEVEL,
-        ),
+        this.departmentIntersectionService.intersectDepartments([...alert.coordinates]),
       );
       this.shownDepartmentsSignal.set(response.departments);
     } catch (error) {

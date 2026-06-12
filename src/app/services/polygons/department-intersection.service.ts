@@ -11,7 +11,12 @@ import {
   buildAlertsLimitsUrl,
   getProvinceNameFromDepartmentCode,
 } from '../../config';
-import { ActiveAlertResponse, DepartmentsResponse, PendingAlertResponse } from '../../models/geo';
+import {
+  ActiveAlertResponse,
+  DepartmentsResponse,
+  LatLng,
+  PendingAlertResponse,
+} from '../../models/geo';
 import { Phenomenon } from '../../models/phenomenon.model';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
 
@@ -62,10 +67,7 @@ export class DepartmentIntersectionService {
     return new HttpParams().set(HTTP_PARAMS.DETAIL_LEVEL, detailLevel.toString());
   }
 
-  intersectCountry(
-    coordinates: Array<[number, number]>,
-    detailLevel: number = 5,
-  ): Observable<Array<[number, number]>> {
+  intersectCountry(coordinates: Array<LatLng>, detailLevel: number = 5): Observable<Array<LatLng>> {
     const url = buildIntersectCountryUrl();
     const geoJson = coordinatesToGeoJSON(coordinates);
     const params = this.buildParams(detailLevel);
@@ -75,35 +77,29 @@ export class DepartmentIntersectionService {
       .pipe(map((response) => geoJSONToCoordinates(response)));
   }
 
-  intersectDepartments(
-    coordinates: Array<[number, number]>,
-    detailLevel: number = 5,
-  ): Observable<DepartmentsResponse> {
+  intersectDepartments(coordinates: Array<LatLng>): Observable<DepartmentsResponse> {
     const url = buildIntersectDepartmentsUrl();
     const geoJson = coordinatesToGeoJSON(coordinates);
-    const params = this.buildParams(detailLevel);
 
-    return this.http
-      .post<{ departments: DepartmentBackendResponse[] }>(url, geoJson, { params })
-      .pipe(
-        map((response) => ({
-          departments: response.departments
-            .map((dept) => {
-              const departmentCode = dept.properties?.['in1'];
-              return {
-                name: (dept.properties && dept.properties['nam']) || 'Desconocido',
-                province: getProvinceNameFromDepartmentCode(departmentCode),
-                geometry: dept.geometry,
-                intersection: dept.intersection,
-              };
-            })
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        })),
-      );
+    return this.http.post<{ departments: DepartmentBackendResponse[] }>(url, geoJson).pipe(
+      map((response) => ({
+        departments: response.departments
+          .map((dept) => {
+            const departmentCode = dept.properties?.['in1'];
+            return {
+              name: (dept.properties && dept.properties['nam']) || 'Desconocido',
+              province: getProvinceNameFromDepartmentCode(departmentCode),
+              geometry: dept.geometry,
+              intersection: dept.intersection,
+            };
+          })
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      })),
+    );
   }
 
   generateAlerts(
-    coordinates: Array<[number, number]>,
+    coordinates: Array<LatLng>,
     phenomenonCode: number,
   ): Observable<GenerateAlertsResponse> {
     const url = buildGenerateAlertsUrl();

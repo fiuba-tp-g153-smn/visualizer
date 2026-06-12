@@ -3,6 +3,7 @@ import {
   ActiveAlertDepartment,
   ActiveAlertResponse,
   Department,
+  LatLng,
   PendingAlert,
   PendingAlertResponse,
 } from '../models/geo';
@@ -45,8 +46,8 @@ export function formatActiveAlertRemaining(endDatetime: Date, now: number = Date
   return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}min`;
 }
 
-export function parseActiveAlertPolygon(polygon: string): Array<[number, number]> {
-  const coordinates: Array<[number, number]> = [];
+export function parseActiveAlertPolygon(polygon: string): Array<LatLng> {
+  const coordinates: Array<LatLng> = [];
   const pairRegex = /\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/g;
 
   for (const match of polygon.matchAll(pairRegex)) {
