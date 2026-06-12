@@ -8,9 +8,7 @@
     </mat-toolbar>
 
     <mat-card-content class="panel-content">
-      @if (activeComponent(); as panelComponent) {
-        <ng-container *ngComponentOutlet="panelComponent" />
-      }
+      <ng-container *ngComponentOutlet="section.component" />
     </mat-card-content>
   </mat-card>
 }

@@ -1,12 +1,13 @@
-import { Injectable, signal, Type } from '@angular/core';
-import { MenuPanelComponent, MenuSection } from './menu-section.model';
+import { Injectable, signal } from '@angular/core';
+import { MenuSection } from './menu-section.model';
+import { LayerListComponent } from './layer-list/layer-list';
+import { AlertsPanelComponent } from './alerts-panel/alerts-panel';
+import { MapToolsComponent } from './map-tools/tools';
+import { MapExplorerComponent } from './map-explorer/map-explorer';
+import { GeneralSettingsComponent } from './general-settings/general-settings';
 
 /**
  * Configuración de secciones del menú.
- *
- * Cada panel se carga perezosamente (`loadComponent`) — su código vive en un
- * chunk aparte y se descarga la primera vez que se abre la sección, en lugar de
- * viajar en el bundle inicial.
  */
 const MENU_SECTIONS: ReadonlyArray<MenuSection> = [
   {
@@ -14,37 +15,35 @@ const MENU_SECTIONS: ReadonlyArray<MenuSection> = [
     title: 'Capas del Mapa',
     icon: 'layers',
     tooltip: 'Capas del mapa',
-    loadComponent: () => import('./layer-list/layer-list').then((m) => m.LayerListComponent),
+    component: LayerListComponent,
   },
   {
-    id: 'polygons',
-    title: 'Avisos a Corto Plazo',
-    icon: 'polyline',
-    tooltip: 'Avisos a Corto Plazo',
-    loadComponent: () =>
-      import('./polygon-manager/polygon-manager').then((m) => m.PolygonManagerComponent),
+    id: 'alerts',
+    title: 'Avisos a corto plazo',
+    icon: 'warning',
+    tooltip: 'Avisos a corto plazo',
+    component: AlertsPanelComponent,
   },
   {
     id: 'map-tools',
     title: 'Herramientas del mapa',
     icon: 'handyman',
     tooltip: 'Herramientas del mapa',
-    loadComponent: () => import('./map-tools/tools').then((m) => m.MapToolsComponent),
+    component: MapToolsComponent,
   },
   {
     id: 'explore',
     title: 'Explorar mapa',
     icon: 'map',
     tooltip: 'Buscar lugares y elegir mapa base',
-    loadComponent: () => import('./map-explorer/map-explorer').then((m) => m.MapExplorerComponent),
+    component: MapExplorerComponent,
   },
   {
     id: 'settings',
     title: 'Configuración',
     icon: 'tune',
     tooltip: 'Configuración general',
-    loadComponent: () =>
-      import('./general-settings/general-settings').then((m) => m.GeneralSettingsComponent),
+    component: GeneralSettingsComponent,
   },
 ];
 
@@ -53,29 +52,12 @@ export class SidebarMenuService {
   readonly sections: ReadonlyArray<MenuSection> = MENU_SECTIONS;
   readonly activePanel = signal<string | null>(null);
 
-  // Componente del panel activo, resuelto perezosamente al abrir la sección.
-  // Es null mientras el chunk se descarga (o cuando no hay panel abierto).
-  readonly activeComponent = signal<Type<MenuPanelComponent> | null>(null);
-
-  constructor() {
-    // Eagerly prefetch every panel chunk on startup (this root service is
-    // constructed when the always-present sidebar buttons load), so the first
-    // open is always instant — no empty-panel flash. Chunks stay separate, so
-    // the initial bundle (and TBT) is unaffected; they just download up front.
-    for (const section of this.sections) {
-      section.loadComponent().catch(() => {
-        /* a failed prefetch is harmless — togglePanel will retry on open */
-      });
-    }
-  }
-
   getActiveSection(): MenuSection | undefined {
     return this.sections.find((s) => s.id === this.activePanel());
   }
 
   /**
    * Toggle del panel: abre si está cerrado, cierra si está abierto.
-   * Al abrir, dispara la carga perezosa del componente del panel.
    */
   togglePanel(panelId: string): void {
     if (this.activePanel() === panelId) {
@@ -84,22 +66,9 @@ export class SidebarMenuService {
     }
 
     this.activePanel.set(panelId);
-    this.activeComponent.set(null);
-
-    const section = this.sections.find((s) => s.id === panelId);
-    if (!section) return;
-
-    void section.loadComponent().then((component) => {
-      // Evita una condición de carrera: solo monta si el panel sigue activo
-      // (el usuario podría haber cambiado de sección mientras cargaba).
-      if (this.activePanel() === panelId) {
-        this.activeComponent.set(component);
-      }
-    });
   }
 
   closePanel(): void {
     this.activePanel.set(null);
-    this.activeComponent.set(null);
   }
 }

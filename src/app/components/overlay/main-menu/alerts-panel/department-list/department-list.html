@@ -1,0 +1,53 @@
+<app-detail-item icon="map" label="Departamentos:">
+  <app-detail-chip
+    [expanded]="expanded()"
+    [tooltip]="expanded() ? 'Ocultar lista' : 'Ver lista'"
+    (clicked)="toggle()"
+  >
+    {{ departments().length }}
+    <mat-icon class="chevron" [class.chevron--expanded]="expanded()">expand_more</mat-icon>
+  </app-detail-chip>
+</app-detail-item>
+
+@if (expanded()) {
+  <div class="department-groups">
+    @for (group of groups(); track group.province) {
+      <div class="province-group">
+        <button
+          class="province-header"
+          (click)="toggleProvince(group.province)"
+          (mouseenter)="onProvinceHover(group)"
+          (mouseleave)="onLeave()"
+          [attr.aria-expanded]="isProvinceExpanded(group.province)"
+        >
+          <mat-icon class="chevron" [class.chevron--expanded]="isProvinceExpanded(group.province)"
+            >expand_more</mat-icon
+          >
+          <span class="province-name">{{ group.province }}</span>
+          <span class="province-count">{{ group.departments.length }}</span>
+        </button>
+        @if (isProvinceExpanded(group.province)) {
+          <div class="department-grid">
+            @for (column of group.columns; track $index) {
+              <div class="department-column">
+                @for (dept of column; track dept.name) {
+                  <div
+                    class="department-item"
+                    [class.department-item--clickable]="!!dept.geometry"
+                    [matTooltip]="dept.name"
+                    matTooltipShowDelay="500"
+                    (mouseenter)="onHover(dept.name)"
+                    (mouseleave)="onLeave()"
+                    (click)="onClick(dept)"
+                  >
+                    {{ dept.name }}
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,45 @@
+@if (activeAlerts().length === 0) {
+  <p class="group-empty">Sin avisos activos en este momento.</p>
+} @else {
+  <div class="items">
+    @for (alert of activeAlerts(); track alert.alertId) {
+      <app-alert-list-item
+        mode="active"
+        [title]="'Aviso #' + alert.alertId"
+        [hidden]="isHidden(alert.alertId)"
+        [details]="getDetailRows(alert)"
+        (titleClick)="flyToAlert(alert)"
+      >
+        <div item-actions>
+          <button
+            mat-icon-button
+            (click)="toggleHidden(alert.alertId)"
+            [matTooltip]="isHidden(alert.alertId) ? 'Mostrar' : 'Ocultar'"
+          >
+            <mat-icon>{{ isHidden(alert.alertId) ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </div>
+
+        <mat-divider />
+
+        @if (alert.departments.length > 0) {
+          <app-department-list
+            [departments]="getDepartments(alert)"
+            (opened)="onDepartmentsOpened(alert)"
+            (closed)="onDepartmentsClosed(alert)"
+            (departmentHover)="onDepartmentHover($event)"
+            (provinceHover)="onProvinceHover($event)"
+            (departmentLeave)="onDepartmentLeave()"
+          />
+        } @else {
+          <app-detail-item icon="map" label="Departamentos:">
+            <span class="detail-value">Sin departamentos</span>
+          </app-detail-item>
+        }
+      </app-alert-list-item>
+      @if (!$last) {
+        <mat-divider />
+      }
+    }
+  </div>
+}

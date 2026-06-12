@@ -17,10 +17,5 @@ export interface MenuSection {
   title: string;
   icon: string;
   tooltip: string;
-  /**
-   * Carga perezosa del componente del panel. Devuelve el `Type` en un chunk
-   * aparte para que su código no entre en el bundle inicial — se descarga la
-   * primera vez que se abre la sección.
-   */
-  loadComponent: () => Promise<Type<MenuPanelComponent>>;
+  component: Type<MenuPanelComponent>;
 }

@@ -10,6 +10,8 @@ import { LayerControlService } from '../../../../../services/layers/layer-contro
 import { LayerGroup, LayerSelectionMode, LayerSubgroup } from '../../../../../models';
 import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
 
+const MIN_SEARCH_LENGTH = 2;
+
 @Component({
   selector: 'app-available-layers',
   standalone: true,
@@ -34,7 +36,7 @@ export class AvailableLayersComponent {
 
   searchText = signal('');
 
-  hasSearch = computed(() => this.searchText().trim().length > 0);
+  hasSearch = computed(() => this.searchText().trim().length >= MIN_SEARCH_LENGTH);
 
   private normalizeText(text: string): string {
     return text
@@ -44,7 +46,8 @@ export class AvailableLayersComponent {
   }
 
   filteredGroups = computed(() => {
-    const search = this.normalizeText(this.searchText().trim());
+    const trimmed = this.searchText().trim();
+    const search = trimmed.length >= MIN_SEARCH_LENGTH ? this.normalizeText(trimmed) : '';
     const baseGroups = this.layersService.getLayerGroups();
 
     return baseGroups

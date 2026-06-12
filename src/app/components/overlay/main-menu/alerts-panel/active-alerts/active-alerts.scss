@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}

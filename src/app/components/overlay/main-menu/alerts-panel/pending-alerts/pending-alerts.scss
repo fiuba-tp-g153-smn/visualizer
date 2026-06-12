@@ -1,0 +1,23 @@
+:host {
+  display: block;
+}
+
+.gif-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  gap: 4px;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
