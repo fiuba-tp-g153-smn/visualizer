@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
+import { AlertEmissionService } from './alert-emission.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
 import { Polygon } from '../../models/geo';
 import {
@@ -41,7 +42,9 @@ export interface PolygonContextMenuState {
   canUndoCut: boolean;
   isLoadingCut: boolean;
   isLoadingDepartments: boolean;
-  hasAlerts: boolean;
+  isLoadingAlerts: boolean;
+  exceedsMaxVertices: boolean;
+  maxVertices: number;
 }
 
 // Extended types for leaflet
@@ -56,6 +59,7 @@ declare module 'leaflet' {
 })
 export class MapPolygonsService {
   private polygonService = inject(PolygonService);
+  private alertEmissionService = inject(AlertEmissionService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private dialog = inject(MatDialog);
   private notificationService = inject(NotificationService);
@@ -74,7 +78,7 @@ export class MapPolygonsService {
 
   constructor() {
     effect(() => {
-      const hovered = this.polygonService.hoveredDepartment();
+      const hovered = this.polygonService.hoveredDepartments();
       this.updateDepartmentHighlight(hovered);
     });
   }
@@ -521,7 +525,9 @@ export class MapPolygonsService {
       canUndoCut: !!polygon.originalCoordinates,
       isLoadingCut: this.polygonService.isPolygonBeingCut(polygonId),
       isLoadingDepartments: this.polygonService.isDepartmentsLoading(polygonId),
-      hasAlerts: this.polygonService.hasAlerts(polygonId),
+      isLoadingAlerts: this.polygonService.isAlertsLoading(polygonId),
+      exceedsMaxVertices: this.polygonService.exceedsMaxVertices(polygon),
+      maxVertices: this.polygonService.maxVertices(),
     });
   }
 
@@ -562,6 +568,10 @@ export class MapPolygonsService {
 
         case PolygonContextMenuActionType.HIDE_DEPARTMENTS:
           this.polygonService.hideDepartments(action.polygonId);
+          break;
+
+        case PolygonContextMenuActionType.GENERATE_ALERT:
+          void this.alertEmissionService.emitAlert(action.polygonId);
           break;
       }
     }, ACTION_DELAYS.MENU_ACTION);
@@ -698,7 +708,7 @@ export class MapPolygonsService {
   }
 
   private updateDepartmentHighlight(
-    hovered: { polygonId: string; departmentName: string } | null,
+    hovered: { polygonId: string; departmentNames: ReadonlyArray<string> } | null,
   ): void {
     if (!this.map) return;
 
@@ -711,7 +721,7 @@ export class MapPolygonsService {
       return;
     }
 
-    const { polygonId, departmentName } = hovered;
+    const { polygonId, departmentNames } = hovered;
     const layersByName = this.departmentLayersByName.get(polygonId);
     if (!layersByName) return;
 
@@ -719,8 +729,9 @@ export class MapPolygonsService {
       entry.layer.setStyle(createDepartmentStyle(entry.baseColor));
     });
 
-    const hoveredEntry = layersByName.get(departmentName);
-    if (hoveredEntry) {
+    for (const departmentName of departmentNames) {
+      const hoveredEntry = layersByName.get(departmentName);
+      if (!hoveredEntry) continue;
       const highlightStyle = createDepartmentStyle(hoveredEntry.baseColor);
       highlightStyle.fillOpacity = (DEPARTMENT_STYLE.FILL_OPACITY || 0.2) * 2.5;
       highlightStyle.opacity = (DEPARTMENT_STYLE.OPACITY || 0.6) * 1.5;

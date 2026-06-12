@@ -10,13 +10,15 @@ import {
   PolygonDrawingService,
 } from '../../services/polygons/polygon-drawing.service';
 import { PolygonEditAction } from '../floating/polygon-edit-dock/polygon-edit-dock';
-import { PolygonContextMenuAction } from '../../models';
+import { EmittedAlertContextMenuAction, PolygonContextMenuAction } from '../../models';
 import { MapPolygonsService } from '../../services/polygons/map-polygons.service';
+import { ActiveAlertsMapService } from '../../services/active-alerts/active-alerts-map.service';
 import { PolygonEditDockComponent } from '../floating/polygon-edit-dock/polygon-edit-dock';
 import { MainMenuComponent } from './main-menu/main-menu';
 import { SidebarButtonsComponent } from './sidebar-buttons/sidebar-buttons';
 import { MapPolygonContextMenuComponent } from '../floating/polygon-context-menu/polygon-context-menu';
 import { SearchResultContextMenuComponent } from '../floating/search-result-context-menu/search-result-context-menu';
+import { EmittedAlertContextMenuComponent } from '../floating/emitted-alert-context-menu/emitted-alert-context-menu';
 import { MapPointValuesComponent, PointValuesLayoutMode } from './point-values/point-values';
 import { MapScaleToolsComponent } from './scale-tools/scale-tools';
 import { MapZoomControlsComponent } from './zoom-controls/zoom-controls';
@@ -33,6 +35,7 @@ import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
     PolygonEditDockComponent,
     MapPolygonContextMenuComponent,
     SearchResultContextMenuComponent,
+    EmittedAlertContextMenuComponent,
     MapPointValuesComponent,
     MapScaleToolsComponent,
     MapZoomControlsComponent,
@@ -50,6 +53,7 @@ export class MapOverlayComponent {
   private scaleToolsService = inject(ScaleToolsService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private polygonsService = inject(MapPolygonsService);
+  private activeAlertsMapService = inject(ActiveAlertsMapService);
   private mapInfoService = inject(MapInfoService);
 
   readonly drawingMode = this.polygonDrawingService.drawingMode;
@@ -116,6 +120,7 @@ export class MapOverlayComponent {
   );
 
   readonly contextMenuState = this.polygonsService.contextMenuState;
+  readonly emittedAlertContextMenuState = this.activeAlertsMapService.contextMenuState;
   readonly searchResultContextMenuState = this.mapInfoService.searchResultContextMenu;
 
   closeFloatingViewer(layerId: string): void {
@@ -162,6 +167,14 @@ export class MapOverlayComponent {
 
   handleContextMenuAction(action: PolygonContextMenuAction): void {
     this.polygonsService.handleContextMenuAction(action);
+  }
+
+  closeEmittedAlertContextMenu(): void {
+    this.activeAlertsMapService.closeContextMenu();
+  }
+
+  handleEmittedAlertContextMenuAction(action: EmittedAlertContextMenuAction): void {
+    this.activeAlertsMapService.handleContextMenuAction(action);
   }
 
   closeSearchResultContextMenu(): void {

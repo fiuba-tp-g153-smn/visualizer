@@ -1,20 +1,31 @@
-import { Injectable, effect, inject } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import {
+  DomEvent,
   FeatureGroup,
   GeoJSON,
   LatLngExpression,
+  LeafletMouseEvent,
   Map as LeafletMap,
   featureGroup,
   geoJSON,
   polygon as leafletPolygon,
 } from 'leaflet';
+import { MatDialog } from '@angular/material/dialog';
 import { ActiveAlertsService } from './active-alerts.service';
-import { ActiveAlert, Department } from '../../models/geo';
+import { PendingAlertsService } from './pending-alerts.service';
+import { ActiveAlert, Department, PendingAlert } from '../../models/geo';
+import {
+  EmittedAlertContextMenuAction,
+  EmittedAlertContextMenuState,
+} from '../../models/emitted-alert-context-menu.model';
 import {
   ACTIVE_ALERT_COLOR,
   ACTIVE_ALERT_POLYGON_OPTIONS,
+  PENDING_ALERT_COLOR,
+  PENDING_ALERT_POLYGON_OPTIONS,
 } from '../../config/map-active-alerts.config';
 import { DEPARTMENT_STYLE, Z_INDEX } from '../../config/map-polygons.config';
+import { ACTION_DELAYS } from '../../config/timing.config';
 import { MAP_PANES } from '../../constants/map-polygons.constants';
 import { createDepartmentStyle, lightenColor } from '../../utils/map-styles.utils';
 import {
@@ -22,6 +33,10 @@ import {
   formatActiveAlertRemaining,
 } from '../../utils/active-alert.utils';
 import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import {
+  GifPreviewDialogComponent,
+  GifPreviewDialogData,
+} from '../../components/floating/gif-preview-dialog/gif-preview-dialog';
 
 /** Normalizes a department name for matching (lowercase, trimmed, accent-free). */
 function normalizeName(name: string): string {
@@ -33,16 +48,24 @@ function normalizeName(name: string): string {
 }
 
 /**
- * Renders active alert polygons on the map in a dedicated layer group, plus the
- * affected departments of the alert whose list is currently open, with hover
- * highlighting. Read-only overlay, separate from the editable user polygons.
+ * Renders active and pending alert polygons on the map in dedicated layer
+ * groups, plus the affected departments of the alert whose list is currently
+ * open, with hover highlighting. Read-only overlays, separate from the
+ * editable user polygons. Also owns the right-click context menu for emitted
+ * alert polygons.
  */
 @Injectable({ providedIn: 'root' })
 export class ActiveAlertsMapService {
   private readonly activeAlertsService = inject(ActiveAlertsService);
+  private readonly pendingAlertsService = inject(PendingAlertsService);
+  private readonly dialog = inject(MatDialog);
 
   private map: LeafletMap | null = null;
   private readonly layerGroup: FeatureGroup = featureGroup();
+  private readonly pendingLayerGroup: FeatureGroup = featureGroup();
+
+  private readonly contextMenuStateSignal = signal<EmittedAlertContextMenuState | null>(null);
+  readonly contextMenuState = this.contextMenuStateSignal.asReadonly();
 
   // Lightened version of the shown alert's expiry color; updated on render.
   private departmentColor = lightenColor(ACTIVE_ALERT_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
@@ -57,25 +80,49 @@ export class ActiveAlertsMapService {
       if (show) {
         this.render(alerts, hiddenIds);
       } else {
-        this.clear();
+        this.layerGroup.clearLayers();
       }
     });
 
     effect(() => {
-      const departments = this.activeAlertsService.shownDepartments();
-      const alert = this.activeAlertsService.shownDepartmentsAlert();
+      const show = this.pendingAlertsService.showPending();
+      const alerts = this.pendingAlertsService.pendingAlerts();
+      const hiddenIds = this.pendingAlertsService.hiddenIds();
       if (!this.map) return;
-      if (alert) {
-        this.departmentColor = lightenColor(
-          activeAlertColorForExpiry(alert.endDatetime),
-          DEPARTMENT_STYLE.LIGHTEN_PERCENT,
-        );
+      if (show) {
+        this.renderPending(alerts, hiddenIds);
+      } else {
+        this.pendingLayerGroup.clearLayers();
       }
-      this.renderDepartments(departments);
+    });
+
+    // Departments overlay: at most one departments list is open at a time
+    // (active or pending), so exactly one source is non-empty.
+    effect(() => {
+      const activeDepartments = this.activeAlertsService.shownDepartments();
+      const activeAlert = this.activeAlertsService.shownDepartmentsAlert();
+      const pendingDepartments = this.pendingAlertsService.shownDepartments();
+      const pendingAlert = this.pendingAlertsService.shownDepartmentsAlert();
+      if (!this.map) return;
+
+      if (pendingAlert) {
+        this.departmentColor = lightenColor(PENDING_ALERT_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
+        this.renderDepartments(pendingDepartments);
+      } else {
+        if (activeAlert) {
+          this.departmentColor = lightenColor(
+            activeAlertColorForExpiry(activeAlert.endDatetime),
+            DEPARTMENT_STYLE.LIGHTEN_PERCENT,
+          );
+        }
+        this.renderDepartments(activeDepartments);
+      }
     });
 
     effect(() => {
-      const hovered = this.activeAlertsService.hoveredDepartment();
+      const activeHovered = this.activeAlertsService.hoveredDepartments();
+      const pendingHovered = this.pendingAlertsService.hoveredDepartments();
+      const hovered = activeHovered.length > 0 ? activeHovered : pendingHovered;
       if (!this.map) return;
       this.updateDepartmentHighlight(hovered);
     });
@@ -85,6 +132,106 @@ export class ActiveAlertsMapService {
   initialize(map: LeafletMap): void {
     this.map = map;
     this.layerGroup.addTo(map);
+    this.pendingLayerGroup.addTo(map);
+  }
+
+  closeContextMenu(): void {
+    this.contextMenuStateSignal.set(null);
+  }
+
+  handleContextMenuAction(action: EmittedAlertContextMenuAction): void {
+    const state = this.contextMenuStateSignal();
+    this.closeContextMenu();
+
+    // Without a delay the menu DOM is still visible when the action runs,
+    // which can interfere with dialogs and focus management.
+    setTimeout(() => {
+      switch (action.type) {
+        case 'toggleVisibility':
+          if (action.kind === 'pending') {
+            this.pendingAlertsService.toggleHidden(action.alertId);
+          } else {
+            this.activeAlertsService.toggleHidden(action.alertId);
+          }
+          break;
+
+        case 'toggleDepartments':
+          this.toggleDepartments(action);
+          break;
+
+        case 'viewGifArea':
+          if (state?.gifAreaUrl) {
+            this.openGif(`Aviso #${action.alertId} — Área`, state.gifAreaUrl);
+          }
+          break;
+
+        case 'viewGifGral':
+          if (state?.gifGralUrl) {
+            this.openGif(`Aviso #${action.alertId} — General`, state.gifGralUrl);
+          }
+          break;
+      }
+    }, ACTION_DELAYS.MENU_ACTION);
+  }
+
+  private toggleDepartments(action: EmittedAlertContextMenuAction): void {
+    if (action.kind === 'pending') {
+      const shown = this.pendingAlertsService.shownDepartmentsAlert();
+      if (shown?.alertId === action.alertId) {
+        this.pendingAlertsService.hideDepartments();
+        return;
+      }
+      const alert = this.pendingAlertsService
+        .pendingAlerts()
+        .find((a) => a.alertId === action.alertId);
+      if (!alert) return;
+      this.activeAlertsService.hideDepartments();
+      void this.pendingAlertsService.showDepartments(alert);
+    } else {
+      const shown = this.activeAlertsService.shownDepartmentsAlert();
+      if (shown?.alertId === action.alertId) {
+        this.activeAlertsService.hideDepartments();
+        return;
+      }
+      const alert = this.activeAlertsService
+        .activeAlerts()
+        .find((a) => a.alertId === action.alertId);
+      if (!alert) return;
+      this.pendingAlertsService.hideDepartments();
+      void this.activeAlertsService.showDepartments(alert);
+    }
+  }
+
+  private openGif(title: string, url: string): void {
+    this.dialog.open<GifPreviewDialogComponent, GifPreviewDialogData>(GifPreviewDialogComponent, {
+      data: { title, url },
+      maxWidth: '90vw',
+    });
+  }
+
+  private openContextMenuForActive(alert: ActiveAlert, event: LeafletMouseEvent): void {
+    this.contextMenuStateSignal.set({
+      x: event.containerPoint.x,
+      y: event.containerPoint.y,
+      kind: 'active',
+      alertId: alert.alertId,
+      hidden: this.activeAlertsService.hiddenIds().has(alert.alertId),
+      departmentsShown: this.activeAlertsService.shownDepartmentsAlert()?.alertId === alert.alertId,
+    });
+  }
+
+  private openContextMenuForPending(alert: PendingAlert, event: LeafletMouseEvent): void {
+    this.contextMenuStateSignal.set({
+      x: event.containerPoint.x,
+      y: event.containerPoint.y,
+      kind: 'pending',
+      alertId: alert.alertId,
+      hidden: this.pendingAlertsService.hiddenIds().has(alert.alertId),
+      departmentsShown:
+        this.pendingAlertsService.shownDepartmentsAlert()?.alertId === alert.alertId,
+      gifAreaUrl: alert.gifAreaUrl,
+      gifGralUrl: alert.gifGralUrl,
+    });
   }
 
   private render(alerts: ReadonlyArray<ActiveAlert>, hiddenIds: ReadonlySet<number>): void {
@@ -106,12 +253,30 @@ export class ActiveAlertsMapService {
       // `autoPan: false` — otherwise Leaflet recenters the map to fit the popup,
       // making a simple click on an alert feel like it's dragging the view.
       polygon.bindPopup(this.buildPopup(alert), { autoPan: false });
+      polygon.on('contextmenu', (e: LeafletMouseEvent) => {
+        DomEvent.stop(e.originalEvent);
+        this.openContextMenuForActive(alert, e);
+      });
       this.layerGroup.addLayer(polygon);
     }
   }
 
-  private clear(): void {
-    this.layerGroup.clearLayers();
+  private renderPending(alerts: ReadonlyArray<PendingAlert>, hiddenIds: ReadonlySet<number>): void {
+    this.pendingLayerGroup.clearLayers();
+
+    for (const alert of alerts) {
+      if (hiddenIds.has(alert.alertId)) continue;
+      if (alert.coordinates.length < 3) continue;
+
+      const latlngs = alert.coordinates.map(([lat, lng]) => [lat, lng] as LatLngExpression);
+      const polygon = leafletPolygon(latlngs, PENDING_ALERT_POLYGON_OPTIONS);
+      polygon.bindPopup(this.buildPendingPopup(alert), { autoPan: false });
+      polygon.on('contextmenu', (e: LeafletMouseEvent) => {
+        DomEvent.stop(e.originalEvent);
+        this.openContextMenuForPending(alert, e);
+      });
+      this.pendingLayerGroup.addLayer(polygon);
+    }
   }
 
   private renderDepartments(departments: ReadonlyArray<Department>): void {
@@ -142,21 +307,22 @@ export class ActiveAlertsMapService {
     this.departmentLayers.clear();
   }
 
-  private updateDepartmentHighlight(hovered: string | null): void {
+  private updateDepartmentHighlight(hovered: ReadonlyArray<string>): void {
     const base = createDepartmentStyle(this.departmentColor);
     this.departmentLayers.forEach((layer) => layer.setStyle(base));
 
-    if (!hovered) return;
-    const target = this.departmentLayers.get(normalizeName(hovered));
-    if (!target) return;
+    for (const name of hovered) {
+      const target = this.departmentLayers.get(normalizeName(name));
+      if (!target) continue;
 
-    target.setStyle({
-      ...base,
-      fillOpacity: DEPARTMENT_STYLE.FILL_OPACITY * 2.5,
-      opacity: DEPARTMENT_STYLE.OPACITY * 1.5,
-      weight: DEPARTMENT_STYLE.WEIGHT * 1.5,
-    });
-    target.bringToFront();
+      target.setStyle({
+        ...base,
+        fillOpacity: DEPARTMENT_STYLE.FILL_OPACITY * 2.5,
+        opacity: DEPARTMENT_STYLE.OPACITY * 1.5,
+        weight: DEPARTMENT_STYLE.WEIGHT * 1.5,
+      });
+      target.bringToFront();
+    }
   }
 
   private buildPopup(alert: ActiveAlert): string {
@@ -166,9 +332,17 @@ export class ActiveAlertsMapService {
     return `
       <strong>Aviso #${alert.alertId}</strong><br />
       ${alert.phenomenon}<br />
-      Inicio: ${start}<br />
-      Fin: ${end}<br />
+      Emisión: ${start}<br />
+      Cese: ${end}<br />
       Tiempo restante: ${remaining}
+    `;
+  }
+
+  private buildPendingPopup(alert: PendingAlert): string {
+    return `
+      <strong>Aviso #${alert.alertId}</strong><br />
+      ${alert.phenomenon}<br />
+      <em>Pendiente de confirmación</em>
     `;
   }
 }

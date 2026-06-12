@@ -9,6 +9,7 @@ export enum PolygonContextMenuActionType {
   UNDO_CUT = 'undoCut',
   TOGGLE_DEPARTMENTS = 'toggleDepartments',
   HIDE_DEPARTMENTS = 'hideDepartments',
+  GENERATE_ALERT = 'generateAlert',
 }
 
 /**

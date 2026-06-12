@@ -1,0 +1,32 @@
+// Material caps dialog content at 65vh with internal scrolling, which clips
+// the GIF; let the image itself bound the dialog instead.
+mat-dialog-content.gif-content {
+  max-height: none;
+  overflow: visible;
+}
+
+.gif-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 280px;
+  min-height: 200px;
+}
+
+.gif-image {
+  display: block;
+  max-width: 100%;
+  // Leave room for the dialog title and action bar within the viewport.
+  max-height: calc(90vh - 140px);
+  border-radius: 4px;
+  cursor: pointer;
+
+  &--hidden {
+    display: none;
+  }
+}
+
+.gif-error {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0;
+}

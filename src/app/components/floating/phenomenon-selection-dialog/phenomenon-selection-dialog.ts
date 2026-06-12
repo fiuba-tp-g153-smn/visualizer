@@ -6,7 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner';
-import { AlertsService } from '../../../services/polygons/alerts.service';
+import { DepartmentIntersectionService } from '../../../services/polygons/department-intersection.service';
 import { Phenomenon } from '../../../models/phenomenon.model';
 import { PHENOMENON_CODES } from '../../../constants';
 
@@ -27,7 +27,7 @@ import { PHENOMENON_CODES } from '../../../constants';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhenomenonSelectionDialogComponent implements OnInit {
-  private readonly alertsService = inject(AlertsService);
+  private readonly departmentIntersectionService = inject(DepartmentIntersectionService);
   readonly dialogRef = inject(MatDialogRef<PhenomenonSelectionDialogComponent>);
 
   readonly selectedCode = signal<number | null>(null);
@@ -43,7 +43,7 @@ export class PhenomenonSelectionDialogComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
 
-    this.alertsService.getPhenomena().subscribe({
+    this.departmentIntersectionService.getPhenomena().subscribe({
       next: (phenomena) => {
         const validPhenomena = phenomena.filter((p) => p.description !== null);
         this.phenomenonCodes.set(validPhenomena);

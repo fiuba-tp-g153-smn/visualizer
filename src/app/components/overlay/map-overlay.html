@@ -88,6 +88,12 @@
   (action)="handleContextMenuAction($event)"
 />
 
+<app-emitted-alert-context-menu
+  [state]="emittedAlertContextMenuState()"
+  (close)="closeEmittedAlertContextMenu()"
+  (action)="handleEmittedAlertContextMenuAction($event)"
+/>
+
 <app-search-result-context-menu
   [state]="searchResultContextMenuState()"
   (close)="closeSearchResultContextMenu()"
