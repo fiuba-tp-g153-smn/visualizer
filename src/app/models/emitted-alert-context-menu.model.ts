@@ -16,6 +16,11 @@ export interface EmittedAlertContextMenuState {
   readonly hidden: boolean;
   /** Whether this alert's departments overlay is currently shown */
   readonly departmentsShown: boolean;
+  /** Phenomenon name, shown in the menu header */
+  readonly phenomenon: string;
+  /** Issue/expiry timestamps — only available for active alerts */
+  readonly startDatetime?: Date;
+  readonly endDatetime?: Date;
   /** GIF URLs — only available for pending alerts */
   readonly gifAreaUrl?: string;
   readonly gifGralUrl?: string;

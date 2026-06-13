@@ -6,34 +6,67 @@
       [style.top.px]="menuState.y"
       (click)="onMenuClick($event)"
     >
-      <mat-nav-list class="emitted-alert-context-menu">
-        <mat-list-item (click)="emit('toggleVisibility')">
-          <mat-icon matListItemIcon>{{
-            menuState.hidden ? 'visibility' : 'visibility_off'
-          }}</mat-icon>
-          <span matListItemTitle>{{ menuState.hidden ? 'Mostrar' : 'Ocultar' }}</span>
-        </mat-list-item>
+      <div class="emitted-alert-context-menu">
+        <div class="menu-header">
+          <span class="menu-title">Aviso #{{ menuState.alertId }}</span>
+          @if (menuState.kind === 'pending') {
+            <span class="menu-status menu-status--pending">Pendiente</span>
+          } @else {
+            <span
+              class="menu-status menu-status--active"
+              [style.background-color]="expiryBackgroundColor(menuState.endDatetime!)"
+              [style.color]="expiryTextColor(menuState.endDatetime!)"
+              >{{ remaining(menuState.endDatetime!) }}</span
+            >
+          }
+        </div>
 
-        <mat-list-item (click)="emit('toggleDepartments')">
-          <mat-icon matListItemIcon>{{
-            menuState.departmentsShown ? 'visibility_off' : 'map'
-          }}</mat-icon>
-          <span matListItemTitle>{{
-            menuState.departmentsShown ? 'Ocultar departamentos' : 'Mostrar departamentos'
-          }}</span>
-        </mat-list-item>
+        <div class="menu-details">
+          <app-detail-item icon="warning" label="Fenómeno:">
+            <span class="detail-value">{{ menuState.phenomenon }}</span>
+          </app-detail-item>
 
-        @if (menuState.kind === 'pending') {
-          <mat-list-item (click)="emit('viewGifArea')">
-            <mat-icon matListItemIcon>zoom_in</mat-icon>
-            <span matListItemTitle>Ver imagen del área</span>
+          @if (menuState.kind === 'active') {
+            <app-detail-item icon="schedule" label="Emisión:">
+              <span class="detail-value">{{ formatDate(menuState.startDatetime!) }}</span>
+            </app-detail-item>
+            <app-detail-item icon="event_busy" label="Cese:">
+              <span class="detail-value">{{ formatDate(menuState.endDatetime!) }}</span>
+            </app-detail-item>
+          }
+        </div>
+
+        <mat-divider />
+
+        <mat-nav-list class="menu-actions">
+          <mat-list-item (click)="emit('toggleVisibility')">
+            <mat-icon matListItemIcon>{{
+              menuState.hidden ? 'visibility' : 'visibility_off'
+            }}</mat-icon>
+            <span matListItemTitle>{{ menuState.hidden ? 'Mostrar' : 'Ocultar' }}</span>
           </mat-list-item>
-          <mat-list-item (click)="emit('viewGifGral')">
-            <mat-icon matListItemIcon>public</mat-icon>
-            <span matListItemTitle>Ver imagen general</span>
+
+          <mat-list-item (click)="emit('toggleDepartments')">
+            <mat-icon matListItemIcon>{{
+              menuState.departmentsShown ? 'visibility_off' : 'map'
+            }}</mat-icon>
+            <span matListItemTitle>{{
+              menuState.departmentsShown ? 'Ocultar departamentos' : 'Mostrar departamentos'
+            }}</span>
           </mat-list-item>
-        }
-      </mat-nav-list>
+
+          @if (menuState.kind === 'pending') {
+            <mat-list-item (click)="emit('viewGifArea')">
+              <mat-icon matListItemIcon>zoom_in</mat-icon>
+              <span matListItemTitle>Ver imagen del área</span>
+            </mat-list-item>
+            <mat-list-item (click)="emit('viewGifGral')">
+              <mat-icon matListItemIcon>public</mat-icon>
+              <span matListItemTitle>Ver imagen general</span>
+            </mat-list-item>
+          }
+        </mat-nav-list>
+      </div>
     </div>
   </div>
 }

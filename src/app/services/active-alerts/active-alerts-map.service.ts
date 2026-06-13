@@ -28,11 +28,7 @@ import { DEPARTMENT_STYLE, Z_INDEX } from '../../config/map-polygons.config';
 import { ACTION_DELAYS } from '../../config/timing.config';
 import { MAP_PANES } from '../../constants/map-polygons.constants';
 import { createDepartmentStyle, lightenColor } from '../../utils/map-styles.utils';
-import {
-  activeAlertColorForExpiry,
-  formatActiveAlertRemaining,
-} from '../../utils/active-alert.utils';
-import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import { activeAlertColorForExpiry } from '../../utils/active-alert.utils';
 import {
   GifPreviewDialogComponent,
   GifPreviewDialogData,
@@ -217,6 +213,9 @@ export class ActiveAlertsMapService {
       alertId: alert.alertId,
       hidden: this.activeAlertsService.hiddenIds().has(alert.alertId),
       departmentsShown: this.activeAlertsService.shownDepartmentsAlert()?.alertId === alert.alertId,
+      phenomenon: alert.phenomenon,
+      startDatetime: alert.startDatetime,
+      endDatetime: alert.endDatetime,
     });
   }
 
@@ -229,6 +228,7 @@ export class ActiveAlertsMapService {
       hidden: this.pendingAlertsService.hiddenIds().has(alert.alertId),
       departmentsShown:
         this.pendingAlertsService.shownDepartmentsAlert()?.alertId === alert.alertId,
+      phenomenon: alert.phenomenon,
       gifAreaUrl: alert.gifAreaUrl,
       gifGralUrl: alert.gifGralUrl,
     });
@@ -250,9 +250,6 @@ export class ActiveAlertsMapService {
         color,
         fillColor: color,
       });
-      // `autoPan: false` — otherwise Leaflet recenters the map to fit the popup,
-      // making a simple click on an alert feel like it's dragging the view.
-      polygon.bindPopup(this.buildPopup(alert), { autoPan: false });
       polygon.on('contextmenu', (e: LeafletMouseEvent) => {
         DomEvent.stop(e.originalEvent);
         this.openContextMenuForActive(alert, e);
@@ -270,7 +267,6 @@ export class ActiveAlertsMapService {
 
       const latlngs = alert.coordinates.map(([lat, lng]) => [lat, lng] as LatLngExpression);
       const polygon = leafletPolygon(latlngs, PENDING_ALERT_POLYGON_OPTIONS);
-      polygon.bindPopup(this.buildPendingPopup(alert), { autoPan: false });
       polygon.on('contextmenu', (e: LeafletMouseEvent) => {
         DomEvent.stop(e.originalEvent);
         this.openContextMenuForPending(alert, e);
@@ -325,24 +321,4 @@ export class ActiveAlertsMapService {
     }
   }
 
-  private buildPopup(alert: ActiveAlert): string {
-    const start = formatDateTimeLocalized(alert.startDatetime);
-    const end = formatDateTimeLocalized(alert.endDatetime);
-    const remaining = formatActiveAlertRemaining(alert.endDatetime);
-    return `
-      <strong>Aviso #${alert.alertId}</strong><br />
-      ${alert.phenomenon}<br />
-      Emisión: ${start}<br />
-      Cese: ${end}<br />
-      Tiempo restante: ${remaining}
-    `;
-  }
-
-  private buildPendingPopup(alert: PendingAlert): string {
-    return `
-      <strong>Aviso #${alert.alertId}</strong><br />
-      ${alert.phenomenon}<br />
-      <em>Pendiente de confirmación</em>
-    `;
-  }
 }
