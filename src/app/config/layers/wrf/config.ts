@@ -200,6 +200,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/JetCapasBajas',
       productId: 'JetCapasBajas',
       name: 'Jet capas bajas',
+      pointQueryLabel: 'Componente meridional 850 hPa',
       description:
         'Componente meridional del viento 850 hPa (kt) — WRF-ARG4K. Barbas de viento. Contornos de cizalladura 850–700 hPa (6/10/14 kt). Máscara marrón en cordillera y zona sur.',
       scale: WRF_JETCAPASBAJAS_SCALE,
@@ -222,6 +223,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/CortanteNivelesBajos',
       productId: 'CortanteNivelesBajos',
       name: 'Cortante niveles bajos',
+      pointQueryLabel: 'Intensidad cortante niveles bajos',
       description: 'Cortante sigma1-sigma2 (kt) — WRF-ARG4K',
       scale: WRF_CORTANTE_SCALE,
       secondaryRenders: [barbsRender('CortanteNivelesBajos', false)],
@@ -231,6 +233,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/CAPE_BRN',
       productId: 'CAPE_BRN',
       name: 'CAPE-BRN',
+      pointQueryLabel: 'CAPE',
       description:
         'CAPE máximo + Bulk Richardson Number — WRF-ARG4K. Contornos BRN (niveles 10 y 45).',
       scale: WRF_CAPE_BRN_SCALE,
@@ -252,6 +255,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/Granizo',
       productId: 'Granizo',
       name: 'Granizo',
+      pointQueryLabel: 'SHIP',
       description:
         'Severe Hail Parameter + diámetro Hailcast — WRF-ARG4K. Contornos de diámetro de granizo (0.5/3/5 cm). Máscara marrón en cordillera y zona sur.',
       scale: WRF_GRANIZO_SCALE,
