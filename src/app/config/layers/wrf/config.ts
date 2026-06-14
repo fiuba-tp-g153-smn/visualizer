@@ -125,7 +125,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf/Colmax',
       productId: 'Colmax',
-      name: 'Reflectividad máxima columna',
+      name: 'Colmax',
       description: 'Reflectividad máxima en la columna (dBZ) — WRF-ARG4K',
       scale: SHARED_DBZH_SCALE,
     },
@@ -229,7 +229,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf/CAPE_BRN',
       productId: 'CAPE_BRN',
-      name: 'CAPE + BRN',
+      name: 'CAPE-BRN',
       description:
         'CAPE máximo + Bulk Richardson Number — WRF-ARG4K. Contornos BRN (niveles 10 y 45).',
       scale: WRF_CAPE_BRN_SCALE,
@@ -250,7 +250,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf/Granizo',
       productId: 'Granizo',
-      name: 'Granizo (SHIP)',
+      name: 'Granizo',
       description:
         'Severe Hail Parameter + diámetro Hailcast — WRF-ARG4K. Contornos de diámetro de granizo (0.5/3/5 cm). Máscara marrón en cordillera y zona sur.',
       scale: WRF_GRANIZO_SCALE,
