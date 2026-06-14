@@ -105,6 +105,7 @@ const STAGE_COLORS: Readonly<Record<string, string>> = {
   geojson: '#2e9b51',
   tiling: '#d23b4e',
   upload: '#a31626',
+  list: '#5b6bbd', // ECMWF producer existence-check — indigo, distinct from georef/reproject
 };
 
 function hashString(value: string): number {

@@ -36,6 +36,7 @@ export const STAGE_LABELS: Readonly<Record<string, string>> = {
   geojson: 'GeoJSON',
   tiling: 'Teselado',
   upload: 'Subida',
+  list: 'Verif. existentes', // ECMWF producer: S3 existence-check (GRIB/COG HEADs)
 };
 
 export const PRODUCT_TERMS: Readonly<Record<string, string>> = {

@@ -96,6 +96,12 @@ describe('buildStagePieChart', () => {
     expect(buildStagePieChart(STAGES, null, true).labels).not.toContain('Descarga');
     expect(buildStagePieChart(STAGES, 0, true).labels).not.toContain('Descarga');
   });
+
+  it('labels the ECMWF producer "list" stage "Verif. existentes" with its own color', () => {
+    const opts = buildStagePieChart({ upload: 0.8, list: 4.1 }, null, false);
+    expect(opts.labels).toEqual(['Subida', 'Verif. existentes']);
+    expect(opts.colors[opts.labels.indexOf('Verif. existentes')]).toBe('#5b6bbd');
+  });
 });
 
 describe('buildStageAreaChart', () => {
