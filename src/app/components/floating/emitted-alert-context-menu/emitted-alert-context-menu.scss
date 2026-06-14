@@ -1,0 +1,104 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+:host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.context-menu-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.context-menu-positioner {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.emitted-alert-context-menu {
+  @include overlaySurface.floating-surface();
+
+  overflow: hidden;
+  border-radius: 28px;
+  padding: 8px;
+  min-width: 260px;
+}
+
+.menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px 4px;
+
+  .menu-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .menu-status {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+
+    &--pending {
+      color: var(--mat-sys-on-surface-variant);
+      background-color: var(--mat-sys-surface-container-high);
+    }
+  }
+}
+
+.menu-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 12px 8px;
+  font-size: 13px;
+
+  .detail-value {
+    color: var(--mat-sys-on-surface);
+    flex: 1;
+    text-align: right;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+}
+
+mat-divider {
+  margin: 4px 4px;
+}
+
+.menu-actions {
+  padding: 4px 0 0;
+}
+
+mat-list-item {
+  --mat-list-list-item-trailing-space: 0;
+  --mat-list-list-item-hover-state-layer-opacity: 0;
+
+  cursor: pointer;
+  border-radius: 24px;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  &:active {
+    background-color: var(--mat-sys-surface-container-highest);
+  }
+
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  span {
+    color: var(--mat-sys-on-surface);
+    font-size: 14px;
+  }
+}

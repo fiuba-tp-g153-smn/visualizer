@@ -154,6 +154,7 @@ export class MapContainer implements OnInit, OnDestroy {
       maxBoundsViscosity: MAP_CONFIG.maxBoundsViscosity,
       zoomControl: false,
       attributionControl: false,
+      fadeAnimation: false, // Disable Leaflet's default fade animation to prevent flashes during playback; CSS transitions can be used for smoother effects if desired.
       doubleClickZoom: true, // Will be disabled during polygon drawing
       // Note: `editable: true` is intentionally omitted — leaflet-editable is
       // loaded on demand (see MapPolygonsService.ensureEditTools), so editTools

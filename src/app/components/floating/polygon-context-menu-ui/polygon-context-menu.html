@@ -1,5 +1,5 @@
 <mat-nav-list class="polygon-context-menu">
-  <mat-list-item (click)="!hasAlerts && onEdit()" [class.disabled]="hasAlerts">
+  <mat-list-item (click)="!isLoadingAlerts && onEdit()" [class.disabled]="isLoadingAlerts">
     <mat-icon matListItemIcon>edit_location</mat-icon>
     <span matListItemTitle>Editar geometría</span>
   </mat-list-item>
@@ -38,24 +38,38 @@
 
   @if (!canUndoCut) {
     <mat-list-item
-      (click)="!isLoadingCut && !hasAlerts && onCut()"
-      [class.disabled]="isLoadingCut || hasAlerts"
+      (click)="!isLoadingCut && !isLoadingAlerts && onCut()"
+      [class.disabled]="isLoadingCut || isLoadingAlerts"
     >
       @if (isLoadingCut) {
         <mat-icon matListItemIcon class="spinning">autorenew</mat-icon>
       } @else {
-        <mat-icon matListItemIcon>content_cut</mat-icon>
+        <mat-icon matListItemIcon>crop</mat-icon>
       }
       <span matListItemTitle>{{ isLoadingCut ? 'Recortando...' : 'Recortar con Argentina' }}</span>
     </mat-list-item>
   } @else {
-    <mat-list-item (click)="!hasAlerts && onUndoCut()" [class.disabled]="hasAlerts">
+    <mat-list-item (click)="!isLoadingAlerts && onUndoCut()" [class.disabled]="isLoadingAlerts">
       <mat-icon matListItemIcon>undo</mat-icon>
       <span matListItemTitle>Deshacer recorte</span>
     </mat-list-item>
   }
 
-  <mat-list-item (click)="onDelete()">
+  <mat-list-item
+    (click)="!isLoadingAlerts && !exceedsMaxVertices && onGenerateAlert()"
+    [class.disabled]="isLoadingAlerts || exceedsMaxVertices"
+    [matTooltip]="'Supera el máximo de ' + maxVertices + ' vértices permitidos'"
+    [matTooltipDisabled]="!exceedsMaxVertices"
+  >
+    @if (isLoadingAlerts) {
+      <mat-icon matListItemIcon class="spinning">autorenew</mat-icon>
+    } @else {
+      <mat-icon matListItemIcon>warning</mat-icon>
+    }
+    <span matListItemTitle>{{ isLoadingAlerts ? 'Generando aviso...' : 'Generar aviso' }}</span>
+  </mat-list-item>
+
+  <mat-list-item (click)="!isLoadingAlerts && onDelete()" [class.disabled]="isLoadingAlerts">
     <mat-icon matListItemIcon color="warn">delete</mat-icon>
     <span matListItemTitle>Eliminar</span>
   </mat-list-item>

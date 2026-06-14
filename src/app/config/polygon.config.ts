@@ -4,8 +4,7 @@
 export const POLYGON_COLOR = '#FF7F00'; // Naranja
 
 /**
- * Nivel de simplificación fijo para cargar departamentos (0-10)
- * 0 = sin simplificación (máximo detalle)
- * 10 = máxima simplificación
+ * Valor inicial de la cantidad máxima de vértices por polígono, usado hasta
+ * que se obtiene el valor real desde el backend de alertas.
  */
-export const DEPARTMENTS_SIMPLIFICATION_LEVEL = 3;
+export const DEFAULT_MAX_POLYGON_VERTICES = 650;

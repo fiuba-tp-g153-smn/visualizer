@@ -1,18 +1,14 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSliderModule } from '@angular/material/slider';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
-import { firstValueFrom } from 'rxjs';
 import { PolygonService } from '../../../../services/polygons/polygon.service';
+import { AlertEmissionService } from '../../../../services/polygons/alert-emission.service';
 import {
   DrawingMode,
   PolygonDrawingService,
@@ -23,43 +19,63 @@ import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../../floating/confirm-dialog/confirm-dialog';
-import { PhenomenonSelectionDialogComponent } from '../../../floating/phenomenon-selection-dialog/phenomenon-selection-dialog';
 import { formatDateTimeLocalized } from '../../../../utils/tileset-timestamp';
-import { ActiveAlertsComponent } from './active-alerts/active-alerts';
+import { formatWithThousandsSeparator } from '../../../../utils/number-format.utils';
+import { EmittedAlertsComponent } from './emitted-alerts/emitted-alerts';
+import { DepartmentListComponent } from './department-list/department-list';
+import { AlertListItemComponent } from './alert-list-item/alert-list-item';
+import { AlertsPanelStateService } from './alerts-panel-state.service';
+import { DetailItemComponent } from '../../../shared/detail-item/detail-item';
+import { DetailChipComponent } from '../../../shared/detail-chip/detail-chip';
+import { DetailRowConfig } from './alert-list-item/alert-list-item';
+import { MapInfoService } from '../../../../services/layers/map-info.service';
 
 @Component({
-  selector: 'app-polygon-manager',
+  selector: 'app-alerts-panel',
   standalone: true,
   imports: [
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatListModule,
-    MatInputModule,
-    MatFormFieldModule,
     MatTooltipModule,
     MatDividerModule,
     MatSliderModule,
-    MatMenuModule,
     MatTabsModule,
-    ActiveAlertsComponent,
+    EmittedAlertsComponent,
+    DepartmentListComponent,
+    AlertListItemComponent,
+    DetailItemComponent,
+    DetailChipComponent,
   ],
-  templateUrl: './polygon-manager.html',
-  styleUrl: './polygon-manager.scss',
+  templateUrl: './alerts-panel.html',
+  styleUrl: './alerts-panel.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PolygonManagerComponent implements MenuPanelComponent {
+export class AlertsPanelComponent implements MenuPanelComponent {
   private readonly polygonService = inject(PolygonService);
+  private readonly alertEmissionService = inject(AlertEmissionService);
+  private readonly panelState = inject(AlertsPanelStateService);
   private readonly drawingService = inject(PolygonDrawingService);
   private readonly dialog = inject(MatDialog);
+  private readonly mapInfoService = inject(MapInfoService);
 
   readonly polygons = this.polygonService.allPolygons;
   readonly polygonCount = this.polygonService.polygonCount;
   readonly drawingMode = this.drawingService.drawingMode;
-  readonly simplificationLevel = this.polygonService.simplificationLevel;
+  readonly detailLevel = this.polygonService.detailLevel;
 
-  editingNameId: string | null = null;
+  readonly selectedTabIndex = this.panelState.selectedTabIndex;
+  readonly maxVertices = this.polygonService.maxVertices;
 
   onPanelOpen(): void {}
+
+  flyToPolygon(polygon: Polygon): void {
+    this.mapInfoService.flyToCoordinates(polygon.coordinates);
+  }
+
+  onTabIndexChange(index: number): void {
+    this.selectedTabIndex.set(index);
+  }
 
   toggleDrawMode(): void {
     this.drawingService.toggleDrawMode(DrawingMode.DRAW);
@@ -128,32 +144,17 @@ export class PolygonManagerComponent implements MenuPanelComponent {
     });
   }
 
-  startEditingName(id: string): void {
-    this.editingNameId = id;
-  }
-
-  finishEditingName(polygon: Polygon, newName: string): void {
-    if (newName.trim()) {
-      this.polygonService.updatePolygon(polygon.id, { name: newName.trim() });
-    }
-    this.editingNameId = null;
-  }
-
-  cancelEditingName(): void {
-    this.editingNameId = null;
-  }
-
-  onSimplificationChange(value: number): void {
-    this.polygonService.setSimplificationLevel(value);
+  onDetailLevelChange(value: number): void {
+    this.polygonService.setDetailLevel(value);
   }
 
   formatDate(date: Date): string {
     return formatDateTimeLocalized(new Date(date));
   }
 
-  getPolygonArea(polygon: Polygon): number {
+  getPolygonArea(polygon: Polygon): string {
     const coords = polygon.coordinates;
-    if (coords.length < 3) return 0;
+    if (coords.length < 3) return formatWithThousandsSeparator(0);
 
     const R = 6371; // Radio de la Tierra en km
     const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -170,15 +171,34 @@ export class PolygonManagerComponent implements MenuPanelComponent {
     }
 
     area = (Math.abs(area) * R * R) / 2;
-    return Math.round(area);
+    return formatWithThousandsSeparator(Math.round(area));
   }
 
   getCoordinatesCount(polygon: Polygon): number {
     return polygon.coordinates.length;
   }
 
-  getDepartmentsCount(polygon: Polygon): number {
-    return polygon.departments?.length || 0;
+  getDetailRows(polygon: Polygon): DetailRowConfig[] {
+    const exceedsMax = this.exceedsMaxVertices(polygon);
+
+    return [
+      {
+        icon: 'timeline',
+        label: 'Vértices:',
+        value: String(this.getCoordinatesCount(polygon)),
+        dividerBefore: true,
+        warn: exceedsMax,
+        tooltip: exceedsMax
+          ? `Supera el máximo de ${this.maxVertices()} vértices. Simplificá el polígono para poder generar el aviso.`
+          : undefined,
+      },
+      { icon: 'square_foot', label: 'Área:', value: `${this.getPolygonArea(polygon)} km²` },
+      { icon: 'schedule', label: 'Modificado:', value: this.formatDate(polygon.updatedAt) },
+    ];
+  }
+
+  exceedsMaxVertices(polygon: Polygon): boolean {
+    return this.polygonService.exceedsMaxVertices(polygon);
   }
 
   hasDepartments(polygon: Polygon): boolean {
@@ -209,37 +229,20 @@ export class PolygonManagerComponent implements MenuPanelComponent {
     return !!(polygon.originalCoordinates && polygon.originalCoordinates.length > 0);
   }
 
-  hasAlerts(polygon: Polygon): boolean {
-    return this.polygonService.hasAlerts(polygon.id);
-  }
-
   isLoadingAlerts(polygon: Polygon): boolean {
     return this.polygonService.isAlertsLoading(polygon.id);
   }
 
   async generateAlerts(polygonId: string): Promise<void> {
-    const dialogRef = this.dialog.open<PhenomenonSelectionDialogComponent, void, number | null>(
-      PhenomenonSelectionDialogComponent,
-      {
-        width: '500px',
-      },
-    );
-
-    const selectedCode = await firstValueFrom(dialogRef.afterClosed());
-
-    if (selectedCode === null || selectedCode === undefined) {
-      return;
-    }
-
-    const success = await this.polygonService.generateAlerts(polygonId, selectedCode);
-
-    if (!success) {
-      console.error('Error al generar alertas');
-    }
+    await this.alertEmissionService.emitAlert(polygonId);
   }
 
   onDepartmentHover(polygonId: string, departmentName: string): void {
     this.polygonService.setHoveredDepartment(polygonId, departmentName);
+  }
+
+  onProvinceHover(polygonId: string, names: ReadonlyArray<string>): void {
+    this.polygonService.setHoveredDepartments(polygonId, names);
   }
 
   onDepartmentLeave(): void {

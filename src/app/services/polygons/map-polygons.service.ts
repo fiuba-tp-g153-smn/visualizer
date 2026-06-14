@@ -4,8 +4,9 @@ import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
 import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
+import { AlertEmissionService } from './alert-emission.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
-import { Polygon } from '../../models/geo';
+import { LatLng, Polygon } from '../../models/geo';
 import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
@@ -41,7 +42,9 @@ export interface PolygonContextMenuState {
   canUndoCut: boolean;
   isLoadingCut: boolean;
   isLoadingDepartments: boolean;
-  hasAlerts: boolean;
+  isLoadingAlerts: boolean;
+  exceedsMaxVertices: boolean;
+  maxVertices: number;
 }
 
 // Extended types for leaflet
@@ -56,6 +59,7 @@ declare module 'leaflet' {
 })
 export class MapPolygonsService {
   private polygonService = inject(PolygonService);
+  private alertEmissionService = inject(AlertEmissionService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private dialog = inject(MatDialog);
   private notificationService = inject(NotificationService);
@@ -68,13 +72,13 @@ export class MapPolygonsService {
     Map<string, { layer: L.GeoJSON; baseColor: string }>
   >(); // polygonId -> (departmentName -> layer)
   private currentDrawingPolygon: L.Polygon | null = null;
-  private originalCoordinates: Array<[number, number]> | null = null;
+  private originalCoordinates: Array<LatLng> | null = null;
   private currentEditingPolygonId: string | null = null;
   readonly contextMenuState = signal<PolygonContextMenuState | null>(null);
 
   constructor() {
     effect(() => {
-      const hovered = this.polygonService.hoveredDepartment();
+      const hovered = this.polygonService.hoveredDepartments();
       this.updateDepartmentHighlight(hovered);
     });
   }
@@ -258,7 +262,7 @@ export class MapPolygonsService {
     if (!layer) return;
 
     const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-    const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
+    const coordinates: Array<LatLng> = latlngs.map((ll) => [ll.lat, ll.lng]);
 
     if (!isSimplePolygon(coordinates)) {
       if (this.map && this.map.hasLayer(layer)) {
@@ -457,10 +461,7 @@ export class MapPolygonsService {
     }
 
     if (coordsChanged) {
-      const latlngs: L.LatLngExpression[] = newCoords.map((coord: [number, number]) => [
-        coord[0],
-        coord[1],
-      ]);
+      const latlngs: L.LatLngExpression[] = newCoords.map((coord: LatLng) => [coord[0], coord[1]]);
       existingLayer.setLatLngs(latlngs);
     }
 
@@ -469,7 +470,7 @@ export class MapPolygonsService {
     }
   }
 
-  private buildPolygonLayer(polygon: Polygon, coordinates: Array<[number, number]>): L.Polygon {
+  private buildPolygonLayer(polygon: Polygon, coordinates: Array<LatLng>): L.Polygon {
     const latlngs: L.LatLngExpression[] = coordinates.map((coord) => [coord[0], coord[1]]);
     const layer = L.polygon(latlngs, { ...POLYGON_OPTIONS, polygonId: polygon.id });
     layer.on(LEAFLET_EDITABLE_EVENTS.CONTEXT_MENU, (e: L.LeafletMouseEvent) => {
@@ -489,7 +490,7 @@ export class MapPolygonsService {
     layer.addTo(this.map);
   }
 
-  private recreatePolygonLayer(polygonId: string, coordinates: Array<[number, number]>): void {
+  private recreatePolygonLayer(polygonId: string, coordinates: Array<LatLng>): void {
     if (!this.map) return;
 
     const existing = this.polygonLayers.get(polygonId);
@@ -521,7 +522,9 @@ export class MapPolygonsService {
       canUndoCut: !!polygon.originalCoordinates,
       isLoadingCut: this.polygonService.isPolygonBeingCut(polygonId),
       isLoadingDepartments: this.polygonService.isDepartmentsLoading(polygonId),
-      hasAlerts: this.polygonService.hasAlerts(polygonId),
+      isLoadingAlerts: this.polygonService.isAlertsLoading(polygonId),
+      exceedsMaxVertices: this.polygonService.exceedsMaxVertices(polygon),
+      maxVertices: this.polygonService.maxVertices(),
     });
   }
 
@@ -562,6 +565,10 @@ export class MapPolygonsService {
 
         case PolygonContextMenuActionType.HIDE_DEPARTMENTS:
           this.polygonService.hideDepartments(action.polygonId);
+          break;
+
+        case PolygonContextMenuActionType.GENERATE_ALERT:
+          void this.alertEmissionService.emitAlert(action.polygonId);
           break;
       }
     }, ACTION_DELAYS.MENU_ACTION);
@@ -618,7 +625,7 @@ export class MapPolygonsService {
     const layer = this.polygonLayers.get(editingPolygonId);
     if (layer) {
       const latlngs = layer.getLatLngs()[0] as L.LatLng[];
-      const coordinates: Array<[number, number]> = latlngs.map((ll) => [ll.lat, ll.lng]);
+      const coordinates: Array<LatLng> = latlngs.map((ll) => [ll.lat, ll.lng]);
 
       if (!isSimplePolygon(coordinates)) {
         if (this.originalCoordinates && this.originalCoordinates.length > 0) {
@@ -698,7 +705,7 @@ export class MapPolygonsService {
   }
 
   private updateDepartmentHighlight(
-    hovered: { polygonId: string; departmentName: string } | null,
+    hovered: { polygonId: string; departmentNames: ReadonlyArray<string> } | null,
   ): void {
     if (!this.map) return;
 
@@ -711,7 +718,7 @@ export class MapPolygonsService {
       return;
     }
 
-    const { polygonId, departmentName } = hovered;
+    const { polygonId, departmentNames } = hovered;
     const layersByName = this.departmentLayersByName.get(polygonId);
     if (!layersByName) return;
 
@@ -719,8 +726,9 @@ export class MapPolygonsService {
       entry.layer.setStyle(createDepartmentStyle(entry.baseColor));
     });
 
-    const hoveredEntry = layersByName.get(departmentName);
-    if (hoveredEntry) {
+    for (const departmentName of departmentNames) {
+      const hoveredEntry = layersByName.get(departmentName);
+      if (!hoveredEntry) continue;
       const highlightStyle = createDepartmentStyle(hoveredEntry.baseColor);
       highlightStyle.fillOpacity = (DEPARTMENT_STYLE.FILL_OPACITY || 0.2) * 2.5;
       highlightStyle.opacity = (DEPARTMENT_STYLE.OPACITY || 0.6) * 1.5;

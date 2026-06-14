@@ -1,0 +1,33 @@
+:host {
+  display: contents;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+
+  .detail-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  .detail-label {
+    font-weight: 500;
+  }
+}
+
+// Projected content (the value/action passed via ng-content) is part of the
+// parent's view, so it needs ::ng-deep to be reached from this component's
+// scoped styles.
+::ng-deep {
+  .detail-value {
+    color: var(--mat-sys-on-surface);
+    flex: 1;
+    text-align: right;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+}

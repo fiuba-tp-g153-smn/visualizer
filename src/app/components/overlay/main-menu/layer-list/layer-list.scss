@@ -13,6 +13,10 @@
 }
 
 .tab-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   padding: 0;
 }
 
@@ -42,11 +46,14 @@
   }
 
   ::ng-deep .mat-mdc-tab-body {
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   ::ng-deep .mat-mdc-tab-body-content {
-    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
   }
 }
 

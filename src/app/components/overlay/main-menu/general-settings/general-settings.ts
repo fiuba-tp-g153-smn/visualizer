@@ -48,7 +48,6 @@ export class GeneralSettingsComponent implements MenuPanelComponent {
   readonly TEMPERATURE_UNITS = TEMPERATURE_UNITS;
   readonly WIND_SPEED_UNITS = WIND_SPEED_UNITS;
   readonly TIMEZONE_MODES = TIMEZONE_MODES;
-  readonly localUtcOffsetShort = this.getLocalUtcOffsetShort();
   readonly localTimezoneTooltip = this.buildLocalTimezoneTooltip();
 
   /** True iff the user (not the env var fallback) has provided a key. */
@@ -101,21 +100,6 @@ export class GeneralSettingsComponent implements MenuPanelComponent {
     ) {
       input.value = this.unitsSettings.decimalPrecision().toString();
     }
-  }
-
-  private getLocalUtcOffsetShort(): string {
-    const now = new Date();
-    const offsetMinutes = -now.getTimezoneOffset();
-    const sign = offsetMinutes >= 0 ? '+' : '-';
-    const absoluteMinutes = Math.abs(offsetMinutes);
-    const hours = Math.floor(absoluteMinutes / MINUTES_PER_HOUR);
-    const minutes = absoluteMinutes % MINUTES_PER_HOUR;
-
-    if (minutes === 0) {
-      return `${sign}${hours}`;
-    }
-
-    return `${sign}${hours}:${String(minutes).padStart(OFFSET_PADDING, '0')}`;
   }
 
   private buildLocalTimezoneTooltip(): string {

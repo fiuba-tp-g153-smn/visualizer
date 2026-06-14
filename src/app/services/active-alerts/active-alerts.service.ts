@@ -1,9 +1,10 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { AlertsService } from '../polygons/alerts.service';
-import { ActiveAlert, Department } from '../../models/geo';
+import { DepartmentIntersectionService } from '../polygons/department-intersection.service';
+import { ActiveAlert, AlertsVisibility, Department } from '../../models/geo';
 import { toActiveAlert } from '../../utils/active-alert.utils';
-import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
+import { LocalStorageService } from '../storage/local-storage.service';
+import { STORAGE_KEYS } from '../../constants';
 
 /** Auto-refresh cadence for active alerts (matches layer auto-refresh). */
 const AUTO_REFRESH_INTERVAL_MS = 10_000;
@@ -14,15 +15,18 @@ const AUTO_REFRESH_INTERVAL_MS = 10_000;
  */
 @Injectable({ providedIn: 'root' })
 export class ActiveAlertsService {
-  private readonly alertsService = inject(AlertsService);
+  private readonly departmentIntersectionService = inject(DepartmentIntersectionService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly storage = inject(LocalStorageService);
 
-  private readonly showActiveSignal = signal<boolean>(false);
+  private readonly showActiveSignal = signal<boolean>(
+    this.storage.getJson<AlertsVisibility>(STORAGE_KEYS.ALERTS_VISIBILITY)?.active ?? false,
+  );
   private readonly activeAlertsSignal = signal<ReadonlyArray<ActiveAlert>>([]);
   private readonly loadingSignal = signal<boolean>(false);
   private readonly shownDepartmentsSignal = signal<ReadonlyArray<Department>>([]);
   private readonly shownDepartmentsAlertSignal = signal<ActiveAlert | null>(null);
-  private readonly hoveredDepartmentSignal = signal<string | null>(null);
+  private readonly hoveredDepartmentsSignal = signal<ReadonlyArray<string>>([]);
   private readonly hiddenIdsSignal = signal<ReadonlySet<number>>(new Set());
 
   readonly showActive = this.showActiveSignal.asReadonly();
@@ -30,7 +34,7 @@ export class ActiveAlertsService {
   readonly loading = this.loadingSignal.asReadonly();
   readonly shownDepartments = this.shownDepartmentsSignal.asReadonly();
   readonly shownDepartmentsAlert = this.shownDepartmentsAlertSignal.asReadonly();
-  readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
+  readonly hoveredDepartments = this.hoveredDepartmentsSignal.asReadonly();
   readonly hiddenIds = this.hiddenIdsSignal.asReadonly();
 
   /** Monotonic cursor: highest alert id ever seen, independent of pruning. */
@@ -39,11 +43,21 @@ export class ActiveAlertsService {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.stopAutoRefresh());
+
+    if (this.showActiveSignal()) {
+      void this.fetch(undefined);
+      this.startAutoRefresh();
+    }
   }
 
   setShowActive(on: boolean): void {
     if (on === this.showActiveSignal()) return;
     this.showActiveSignal.set(on);
+    const visibility = this.storage.getJson<AlertsVisibility>(STORAGE_KEYS.ALERTS_VISIBILITY);
+    this.storage.setJson<AlertsVisibility>(STORAGE_KEYS.ALERTS_VISIBILITY, {
+      active: on,
+      pending: visibility?.pending ?? false,
+    });
 
     if (on) {
       this.lastSeenMaxId = undefined;
@@ -72,10 +86,7 @@ export class ActiveAlertsService {
     this.shownDepartmentsAlertSignal.set(alert);
     try {
       const response = await firstValueFrom(
-        this.alertsService.intersectDepartments(
-          [...alert.coordinates],
-          DEPARTMENTS_SIMPLIFICATION_LEVEL,
-        ),
+        this.departmentIntersectionService.intersectDepartments([...alert.coordinates]),
       );
       this.shownDepartmentsSignal.set(response.departments);
     } catch (error) {
@@ -87,15 +98,20 @@ export class ActiveAlertsService {
   hideDepartments(): void {
     this.shownDepartmentsSignal.set([]);
     this.shownDepartmentsAlertSignal.set(null);
-    this.hoveredDepartmentSignal.set(null);
+    this.hoveredDepartmentsSignal.set([]);
   }
 
   setHoveredDepartment(name: string): void {
-    this.hoveredDepartmentSignal.set(name);
+    this.hoveredDepartmentsSignal.set([name]);
+  }
+
+  /** Highlights several departments at once (e.g. hovering a whole province). */
+  setHoveredDepartments(names: ReadonlyArray<string>): void {
+    this.hoveredDepartmentsSignal.set(names);
   }
 
   clearHoveredDepartment(): void {
-    this.hoveredDepartmentSignal.set(null);
+    this.hoveredDepartmentsSignal.set([]);
   }
 
   async refresh(): Promise<void> {
@@ -106,7 +122,7 @@ export class ActiveAlertsService {
   private async fetch(sinceId: number | undefined): Promise<void> {
     this.loadingSignal.set(true);
     try {
-      const responses = await firstValueFrom(this.alertsService.getAlerts(sinceId));
+      const responses = await firstValueFrom(this.departmentIntersectionService.getAlerts(sinceId));
       const incoming = responses.map(toActiveAlert);
       this.mergeAndPrune(incoming);
     } catch (error) {

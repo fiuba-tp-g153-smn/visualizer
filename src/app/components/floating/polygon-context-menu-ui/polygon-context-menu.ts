@@ -2,6 +2,7 @@ import { Component, EventEmitter, Output, Input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
@@ -10,7 +11,7 @@ import {
 @Component({
   selector: 'app-polygon-context-menu',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatListModule],
+  imports: [MatButtonModule, MatIconModule, MatListModule, MatTooltipModule],
   templateUrl: './polygon-context-menu.html',
   styleUrl: './polygon-context-menu.scss',
 })
@@ -22,7 +23,9 @@ export class PolygonContextMenuComponent {
   @Input() canUndoCut: boolean = false;
   @Input() isLoadingCut: boolean = false;
   @Input() isLoadingDepartments: boolean = false;
-  @Input() hasAlerts: boolean = false;
+  @Input() isLoadingAlerts: boolean = false;
+  @Input() exceedsMaxVertices: boolean = false;
+  @Input() maxVertices: number = 0;
   @Output() action = new EventEmitter<PolygonContextMenuAction>();
 
   onEdit(): void {
@@ -58,6 +61,13 @@ export class PolygonContextMenuComponent {
   onHideDepartments(): void {
     this.action.emit({
       type: PolygonContextMenuActionType.HIDE_DEPARTMENTS,
+      polygonId: this.polygonId,
+    });
+  }
+
+  onGenerateAlert(): void {
+    this.action.emit({
+      type: PolygonContextMenuActionType.GENERATE_ALERT,
       polygonId: this.polygonId,
     });
   }

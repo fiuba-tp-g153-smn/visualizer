@@ -42,3 +42,17 @@ export function lightenColor(hex: string, percent: number): string {
 
   return '#' + [newR, newG, newB].map((x) => x.toString(16).padStart(2, '0')).join('');
 }
+
+export function darkenColor(hex: string, percent: number): string {
+  const color = hex.replace('#', '');
+
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+
+  const newR = Math.max(0, Math.floor(r * (1 - percent / 100)));
+  const newG = Math.max(0, Math.floor(g * (1 - percent / 100)));
+  const newB = Math.max(0, Math.floor(b * (1 - percent / 100)));
+
+  return '#' + [newR, newG, newB].map((x) => x.toString(16).padStart(2, '0')).join('');
+}

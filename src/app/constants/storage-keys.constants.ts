@@ -15,8 +15,11 @@ export const STORAGE_KEYS = {
   UNITS_SETTINGS: buildStorageKey('units-settings'),
   TIMEZONE_SETTINGS: buildStorageKey('timezone-settings'),
   POLYGONS: buildStorageKey('polygons'),
-  POLYGON_SIMPLIFICATION_LEVEL: buildStorageKey('polygon-simplification-level'),
+  POLYGON_DETAIL_LEVEL: buildStorageKey('polygon-detail-level'),
+  POLYGON_NEXT_DRAFT_NUMBER: buildStorageKey('polygon-next-draft-number'),
   WEATHER_STATIONS_SHARED_CONTROLS: buildStorageKey('weather-stations-shared-controls'),
   WEATHER_STATIONS_API_KEY: buildStorageKey('weather-stations-api-key'),
   PLACE_SEARCH_CONFIG: buildStorageKey('place-search-config'),
+  EMITTED_ALERTS_SECTIONS: buildStorageKey('emitted-alerts-sections'),
+  ALERTS_VISIBILITY: buildStorageKey('alerts-visibility'),
 } as const;

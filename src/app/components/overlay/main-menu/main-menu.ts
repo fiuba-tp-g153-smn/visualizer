@@ -19,8 +19,6 @@ export class MainMenuComponent {
 
   readonly activeSection = computed(() => this.sidebarMenuService.getActiveSection());
 
-  readonly activeComponent = this.sidebarMenuService.activeComponent;
-
   closePanel(): void {
     this.sidebarMenuService.closePanel();
   }

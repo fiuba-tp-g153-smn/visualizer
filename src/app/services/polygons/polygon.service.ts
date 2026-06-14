@@ -1,31 +1,43 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/geo';
-import { AlertsService } from './alerts.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Polygon, CreatePolygonDto, UpdatePolygonDto, PendingAlert } from '../../models/geo';
+import { toPendingAlert } from '../../utils/active-alert.utils';
+import {
+  AlertsLimitsResponse,
+  DepartmentIntersectionService,
+} from './department-intersection.service';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { DEPARTMENTS_SIMPLIFICATION_LEVEL } from '../../config/polygon.config';
-import { STORAGE_KEYS } from '../../constants';
+import { DEFAULT_MAX_POLYGON_VERTICES } from '../../config/polygon.config';
+import { POLYGON_STATUS, STORAGE_KEYS, buildStaleSubmissionWarning } from '../../constants';
 import { LocalStorageService } from '../storage/local-storage.service';
+import { NotificationService } from '../notifications/notification.service';
+
+const HTTP_STATUS_PAYLOAD_TOO_LARGE = 413;
 
 @Injectable({
   providedIn: 'root',
 })
 export class PolygonService {
   private readonly polygons = signal<Polygon[]>([]);
-  private readonly alertsService = inject(AlertsService);
+  private readonly departmentIntersectionService = inject(DepartmentIntersectionService);
   private readonly storage = inject(LocalStorageService);
+  private readonly notifications = inject(NotificationService);
 
   private readonly loadingCut = signal<Set<string>>(new Set());
   private readonly loadingDepartments = signal<Set<string>>(new Set());
   private readonly loadingAlerts = signal<Set<string>>(new Set());
 
-  private readonly hoveredDepartmentSignal = signal<{
+  private readonly hoveredDepartmentsSignal = signal<{
     polygonId: string;
-    departmentName: string;
+    departmentNames: ReadonlyArray<string>;
   } | null>(null);
-  readonly hoveredDepartment = this.hoveredDepartmentSignal.asReadonly();
+  readonly hoveredDepartments = this.hoveredDepartmentsSignal.asReadonly();
 
-  readonly simplificationLevel = signal<number>(5);
+  readonly detailLevel = signal<number>(5);
+
+  private readonly maxVerticesSignal = signal<number>(DEFAULT_MAX_POLYGON_VERTICES);
+  readonly maxVertices = this.maxVerticesSignal.asReadonly();
 
   readonly allPolygons = this.polygons.asReadonly();
 
@@ -49,14 +61,21 @@ export class PolygonService {
     return this.loadingAlerts().has(id);
   }
 
-  hasAlerts(id: string): boolean {
-    const polygon = this.getPolygonById(id);
-    return !!(polygon?.alerts?.gifAreaUrl || polygon?.alerts?.gifGralUrl);
-  }
-
   constructor() {
     this.loadFromStorage();
-    this.loadSimplificationLevelFromStorage();
+    this.loadDetailLevelFromStorage();
+    this.loadMaxVertices();
+    this.flagStaleSubmissions();
+  }
+
+  private loadMaxVertices(): void {
+    this.departmentIntersectionService.getMaxPolygonVertices().subscribe((max) => {
+      this.maxVerticesSignal.set(max);
+    });
+  }
+
+  exceedsMaxVertices(polygon: Polygon): boolean {
+    return polygon.coordinates.length > this.maxVerticesSignal();
   }
 
   getPolygonById(id: string): Polygon | undefined {
@@ -67,7 +86,8 @@ export class PolygonService {
     const now = new Date();
     const polygon: Polygon = {
       id: this.generateId(),
-      name: dto.name || this.generateDefaultName(),
+      name: dto.name,
+      draftNumber: this.takeNextDraftNumber(),
       coordinates: dto.coordinates,
       visible: true,
       createdAt: now,
@@ -158,15 +178,19 @@ export class PolygonService {
     return `polygon_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 
-  private generateDefaultName(): string {
-    return 'Polígono sin nombrar';
+  private takeNextDraftNumber(): number {
+    const stored = this.storage.getString(STORAGE_KEYS.POLYGON_NEXT_DRAFT_NUMBER);
+    const next = stored !== null ? parseInt(stored, 10) : 1;
+    const current = isNaN(next) ? 1 : next;
+    this.storage.setString(STORAGE_KEYS.POLYGON_NEXT_DRAFT_NUMBER, (current + 1).toString());
+    return current;
   }
 
-  setSimplificationLevel(level: number): void {
-    // Asegurarse de que el valor esté entre 0 y 10
-    const clampedLevel = Math.max(0, Math.min(10, Math.round(level)));
-    this.simplificationLevel.set(clampedLevel);
-    this.saveSimplificationLevelToStorage(clampedLevel);
+  setDetailLevel(level: number): void {
+    // Asegurarse de que el valor esté entre 1 y 5
+    const clampedLevel = Math.max(1, Math.min(5, Math.round(level)));
+    this.detailLevel.set(clampedLevel);
+    this.saveDetailLevelToStorage(clampedLevel);
   }
 
   async cutPolygon(id: string): Promise<boolean> {
@@ -181,7 +205,10 @@ export class PolygonService {
 
     try {
       const cutCoordinates = await firstValueFrom(
-        this.alertsService.intersectCountry(polygon.coordinates, this.simplificationLevel()),
+        this.departmentIntersectionService.intersectCountry(
+          polygon.coordinates,
+          this.detailLevel(),
+        ),
       );
 
       if (cutCoordinates.length === 0) {
@@ -232,10 +259,7 @@ export class PolygonService {
 
     try {
       const response = await firstValueFrom(
-        this.alertsService.intersectDepartments(
-          polygon.coordinates,
-          DEPARTMENTS_SIMPLIFICATION_LEVEL,
-        ),
+        this.departmentIntersectionService.intersectDepartments(polygon.coordinates),
       );
 
       this.updatePolygon(id, {
@@ -256,9 +280,14 @@ export class PolygonService {
     }
   }
 
-  async generateAlerts(id: string, phenomenonCode: number): Promise<boolean> {
+  /**
+   * Emits an alert for the polygon. On success the draft is deleted (the alert
+   * becomes backend-owned and shows up as a pending alert) and the mapped
+   * PendingAlert is returned; on failure the draft is kept and null is returned.
+   */
+  async generateAlerts(id: string, phenomenonCode: number): Promise<PendingAlert | null> {
     const polygon = this.getPolygonById(id);
-    if (!polygon) return false;
+    if (!polygon) return null;
 
     this.loadingAlerts.update((set) => {
       const newSet = new Set(set);
@@ -266,30 +295,42 @@ export class PolygonService {
       return newSet;
     });
 
+    console.log('[PolygonService] generateAlerts: marking as submitting', id);
+    this.updatePolygon(id, { status: POLYGON_STATUS.SUBMITTING });
+    console.log(
+      '[PolygonService] generateAlerts: status after update',
+      this.getPolygonById(id)?.status,
+    );
+    console.log(
+      '[PolygonService] generateAlerts: storage after update',
+      this.storage.getJson(STORAGE_KEYS.POLYGONS),
+    );
+
     try {
       const response = await firstValueFrom(
-        this.alertsService.generateAlerts(polygon.coordinates, phenomenonCode),
+        this.departmentIntersectionService.generateAlerts(polygon.coordinates, phenomenonCode),
       );
 
-      const baseUrl = environment.alertsService.baseUrl;
+      this.deletePolygon(id);
 
-      this.updatePolygon(id, {
-        alerts: {
-          alertId: response.alert_id,
-          timestamp: response.timestamp,
-          phenomenonCode: response.phenomenon_code,
-          phenomenon: response.phenomenon,
-          gifAreaUrl: `${baseUrl}${response.gif_area_url}`,
-          gifGralUrl: `${baseUrl}${response.gif_gral_url}`,
-          affectedDepartmentsCount: response.affected_departments_count,
-          generatedAt: new Date(),
-        },
-      });
-
-      return true;
+      return toPendingAlert(response, environment.alertsService.baseUrl);
     } catch (error) {
+      console.log('[PolygonService] generateAlerts: error, clearing submitting status', error);
+      this.updatePolygon(id, { status: undefined });
+
+      if (error instanceof HttpErrorResponse && error.status === HTTP_STATUS_PAYLOAD_TOO_LARGE) {
+        const maxVertexCount = (error.error as AlertsLimitsResponse | null)?.max_vertex_count;
+        if (maxVertexCount) {
+          this.maxVerticesSignal.set(maxVertexCount);
+        }
+        this.notifications.error(
+          `El polígono supera el máximo de ${this.maxVerticesSignal()} vértices permitidos. Simplificá el polígono para poder generar el aviso.`,
+        );
+        return null;
+      }
+
       console.error('Error al generar alertas:', error);
-      return false;
+      return null;
     } finally {
       this.loadingAlerts.update((set) => {
         const newSet = new Set(set);
@@ -322,31 +363,67 @@ export class PolygonService {
   }
 
   private loadFromStorage(): void {
-    const parsed = this.storage.getJson<Polygon[]>(STORAGE_KEYS.POLYGONS);
+    const parsed = this.storage.getJson<Array<Polygon & { alerts?: unknown }>>(
+      STORAGE_KEYS.POLYGONS,
+    );
     if (!parsed) return;
     this.polygons.set(
-      parsed.map((p) => ({ ...p, createdAt: new Date(p.createdAt), updatedAt: new Date(p.updatedAt) })),
+      parsed
+        // Legacy entries kept after emission are backend-owned now (they live in
+        // the pending/active alert lists); drop them to avoid duplication.
+        .filter((p) => p.alerts === undefined)
+        .map((p) => ({
+          ...p,
+          draftNumber: p.draftNumber ?? this.takeNextDraftNumber(),
+          createdAt: new Date(p.createdAt),
+          updatedAt: new Date(p.updatedAt),
+        })),
     );
   }
 
-  private saveSimplificationLevelToStorage(level: number): void {
-    this.storage.setString(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL, level.toString());
+  /**
+   * Detecta borradores que quedaron marcados como `submitting` de una sesión
+   * anterior (la respuesta del POST /alerts se perdió al recargar). Los
+   * revierte a borradores normales y avisa al usuario para que verifique
+   * manualmente si el aviso llegó a generarse.
+   */
+  private flagStaleSubmissions(): void {
+    console.log(
+      '[PolygonService] flagStaleSubmissions: polygons on load',
+      this.polygons().map((p) => ({ id: p.id, name: p.name, status: p.status })),
+    );
+    const staleDrafts = this.polygons().filter((p) => p.status === POLYGON_STATUS.SUBMITTING);
+    console.log('[PolygonService] flagStaleSubmissions: stale drafts found', staleDrafts.length);
+
+    for (const draft of staleDrafts) {
+      this.updatePolygon(draft.id, { status: undefined });
+      this.notifications.error(buildStaleSubmissionWarning(draft.name));
+    }
   }
 
-  private loadSimplificationLevelFromStorage(): void {
-    const data = this.storage.getString(STORAGE_KEYS.POLYGON_SIMPLIFICATION_LEVEL);
+  private saveDetailLevelToStorage(level: number): void {
+    this.storage.setString(STORAGE_KEYS.POLYGON_DETAIL_LEVEL, level.toString());
+  }
+
+  private loadDetailLevelFromStorage(): void {
+    const data = this.storage.getString(STORAGE_KEYS.POLYGON_DETAIL_LEVEL);
     if (data === null) return;
     const level = parseInt(data, 10);
     if (!isNaN(level)) {
-      this.simplificationLevel.set(Math.max(0, Math.min(10, level)));
+      this.detailLevel.set(Math.max(1, Math.min(5, level)));
     }
   }
 
   setHoveredDepartment(polygonId: string, departmentName: string): void {
-    this.hoveredDepartmentSignal.set({ polygonId, departmentName });
+    this.hoveredDepartmentsSignal.set({ polygonId, departmentNames: [departmentName] });
+  }
+
+  /** Highlights several departments at once (e.g. hovering a whole province). */
+  setHoveredDepartments(polygonId: string, departmentNames: ReadonlyArray<string>): void {
+    this.hoveredDepartmentsSignal.set({ polygonId, departmentNames });
   }
 
   clearHoveredDepartment(): void {
-    this.hoveredDepartmentSignal.set(null);
+    this.hoveredDepartmentsSignal.set(null);
   }
 }

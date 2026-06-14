@@ -1,5 +1,6 @@
 import { Department } from './department.model';
-import { Alert } from './alert.model';
+import { LatLng } from './coordinate.model';
+import { PolygonStatus } from '../../constants';
 
 /**
  * Representa un polígono en el mapa
@@ -16,9 +17,14 @@ export interface Polygon {
   name: string;
 
   /**
+   * Número de borrador asignado al crear el polígono
+   */
+  draftNumber: number;
+
+  /**
    * Coordenadas del polígono [lat, lng][]
    */
-  coordinates: Array<[number, number]>;
+  coordinates: Array<LatLng>;
 
   /**
    * Indica si el polígono está visible en el mapa
@@ -48,12 +54,13 @@ export interface Polygon {
   /**
    * Coordenadas originales antes de recortar (para deshacer)
    */
-  originalCoordinates?: Array<[number, number]>;
+  originalCoordinates?: Array<LatLng>;
 
   /**
-   * Información de las alertas meteorológicas generadas
+   * Estado transitorio del polígono (p. ej. generación de aviso en curso).
+   * Ausente para un borrador normal y editable.
    */
-  alerts?: Alert;
+  status?: PolygonStatus;
 }
 
 /**
@@ -61,7 +68,7 @@ export interface Polygon {
  */
 export interface CreatePolygonDto {
   name: string;
-  coordinates: Array<[number, number]>;
+  coordinates: Array<LatLng>;
 }
 
 /**
@@ -69,10 +76,10 @@ export interface CreatePolygonDto {
  */
 export interface UpdatePolygonDto {
   name?: string;
-  coordinates?: Array<[number, number]>;
+  coordinates?: Array<LatLng>;
   visible?: boolean;
   departments?: Department[];
   departmentsVisible?: boolean;
-  originalCoordinates?: Array<[number, number]>;
-  alerts?: Alert;
+  originalCoordinates?: Array<LatLng>;
+  status?: PolygonStatus;
 }

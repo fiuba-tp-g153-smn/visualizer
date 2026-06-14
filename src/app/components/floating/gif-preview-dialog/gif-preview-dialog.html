@@ -1,0 +1,33 @@
+<h1 mat-dialog-title>{{ data.title }}</h1>
+<mat-dialog-content class="gif-content">
+  <div class="gif-container">
+    @if (!loaded()) {
+      <app-loading-spinner [diameter]="40" />
+    }
+    @if (failed()) {
+      <p class="gif-error">No se pudo cargar la imagen.</p>
+    } @else {
+      <a
+        [href]="data.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        matTooltip="Abrir en pestaña nueva"
+      >
+        <img
+          [src]="data.url"
+          [alt]="data.title"
+          class="gif-image"
+          [class.gif-image--hidden]="!loaded()"
+          (load)="onLoad()"
+          (error)="onError()"
+        />
+      </a>
+    }
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <a mat-button [href]="data.url" target="_blank" rel="noopener noreferrer">
+    Abrir en pestaña nueva
+  </a>
+  <button mat-flat-button color="primary" mat-dialog-close cdkFocusInitial>Cerrar</button>
+</mat-dialog-actions>

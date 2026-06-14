@@ -1,0 +1,97 @@
+<div class="emitted-alerts">
+  <div class="section">
+    <div class="section-header">
+      <mat-checkbox [checked]="showPending()" (change)="onTogglePending($event.checked)">
+        Pendientes
+      </mat-checkbox>
+      @if (showPending()) {
+        <span class="section-count">{{ pendingAlerts().length }}</span>
+      }
+
+      <span class="section-spacer"></span>
+
+      @if (showPending()) {
+        <button
+          mat-icon-button
+          class="reload-btn"
+          (click)="refreshPending()"
+          [disabled]="pendingLoading()"
+          [matTooltip]="
+            pendingLoading()
+              ? 'Actualizando avisos pendientes...'
+              : 'Actualizar (se actualiza automáticamente cada 10 segundos)'
+          "
+        >
+          @if (pendingLoading()) {
+            <app-loading-spinner [diameter]="18" />
+          } @else {
+            <mat-icon>refresh</mat-icon>
+          }
+        </button>
+        <button
+          mat-icon-button
+          (click)="togglePendingExpanded()"
+          [matTooltip]="pendingExpanded() ? 'Contraer sección' : 'Expandir sección'"
+          [attr.aria-expanded]="pendingExpanded()"
+        >
+          <mat-icon class="chevron" [class.chevron--expanded]="pendingExpanded()"
+            >expand_more</mat-icon
+          >
+        </button>
+      }
+    </div>
+
+    @if (showPending() && pendingExpanded()) {
+      <app-pending-alerts />
+    }
+  </div>
+
+  <mat-divider />
+
+  <div class="section">
+    <div class="section-header">
+      <mat-checkbox [checked]="showActive()" (change)="onToggleActive($event.checked)">
+        Activos
+      </mat-checkbox>
+      @if (showActive()) {
+        <span class="section-count">{{ activeAlerts().length }}</span>
+      }
+
+      <span class="section-spacer"></span>
+
+      @if (showActive()) {
+        <button
+          mat-icon-button
+          class="reload-btn"
+          (click)="refreshActive()"
+          [disabled]="activeLoading()"
+          [matTooltip]="
+            activeLoading()
+              ? 'Actualizando avisos activos...'
+              : 'Actualizar (se actualiza automáticamente cada 10 segundos)'
+          "
+        >
+          @if (activeLoading()) {
+            <app-loading-spinner [diameter]="18" />
+          } @else {
+            <mat-icon>refresh</mat-icon>
+          }
+        </button>
+        <button
+          mat-icon-button
+          (click)="toggleActiveExpanded()"
+          [matTooltip]="activeExpanded() ? 'Contraer sección' : 'Expandir sección'"
+          [attr.aria-expanded]="activeExpanded()"
+        >
+          <mat-icon class="chevron" [class.chevron--expanded]="activeExpanded()"
+            >expand_more</mat-icon
+          >
+        </button>
+      }
+    </div>
+
+    @if (showActive() && activeExpanded()) {
+      <app-active-alerts />
+    }
+  </div>
+</div>

@@ -1,0 +1,44 @@
+<div class="alert-item" [class]="'alert-item--' + mode()" [class.hidden]="hidden()">
+  <div class="item-header">
+    <span
+      class="item-title item-title--clickable"
+      matTooltip="Centrar mapa en el polígono"
+      matTooltipShowDelay="500"
+      (click)="titleClick.emit()"
+      >{{ title() }}</span
+    >
+    <div class="item-actions">
+      <ng-content select="[item-actions]" />
+    </div>
+  </div>
+
+  <div class="item-rows">
+    @for (row of details(); track row.label) {
+      @if (row.dividerBefore) {
+        <mat-divider />
+      }
+      <app-detail-item [icon]="row.icon" [label]="row.label">
+        <span
+          class="detail-value"
+          [class]="row.valueClass"
+          [class.warn]="row.warn"
+          [style.color]="row.valueColor"
+          [matTooltip]="row.tooltip ?? ''"
+          [matTooltipDisabled]="!row.tooltip"
+          >{{ row.value }}</span
+        >
+        @if (row.warn) {
+          <mat-icon
+            class="warn-icon"
+            [matTooltip]="row.tooltip ?? ''"
+            [matTooltipDisabled]="!row.tooltip"
+            >warning</mat-icon
+          >
+        }
+      </app-detail-item>
+    }
+    <ng-content />
+  </div>
+
+  <ng-content select="[item-footer]" />
+</div>

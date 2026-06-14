@@ -1,0 +1,9 @@
+<button
+  class="detail-chip"
+  [disabled]="disabled()"
+  [matTooltip]="tooltip()"
+  [attr.aria-expanded]="expanded()"
+  (click)="clicked.emit()"
+>
+  <ng-content />
+</button>

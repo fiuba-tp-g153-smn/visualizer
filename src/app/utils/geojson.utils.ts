@@ -1,3 +1,5 @@
+import { LatLng } from '../models/geo';
+
 export enum GeoJSONGeometryType {
   POINT = 'Point',
   LINE_STRING = 'LineString',
@@ -22,7 +24,7 @@ export const COORDINATE_INDEX = {
   SECOND: 1,
 } as const;
 
-export function coordinatesToGeoJSON(coordinates: Array<[number, number]>): GeoJSON.Polygon {
+export function coordinatesToGeoJSON(coordinates: Array<LatLng>): GeoJSON.Polygon {
   const geoJsonCoords = coordinates.map(([lat, lng]) => [lng, lat]);
 
   const first = geoJsonCoords[COORDINATE_INDEX.FIRST];
@@ -80,10 +82,10 @@ export function extractCoordinates(geometry: GeoJSON.Geometry): GeoJSON.Position
 
 export function geoJSONToCoordinates(
   geoJson: GeoJSON.FeatureCollection | GeoJSON.Feature | GeoJSON.Geometry,
-): Array<[number, number]> {
+): Array<LatLng> {
   const geometry = extractGeometry(geoJson);
   if (!geometry) return [];
 
   const coords = extractCoordinates(geometry);
-  return coords.map(([lng, lat]) => [lat, lng] as [number, number]);
+  return coords.map(([lng, lat]) => [lat, lng] as LatLng);
 }

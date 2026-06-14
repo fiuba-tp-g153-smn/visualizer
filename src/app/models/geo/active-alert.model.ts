@@ -1,3 +1,5 @@
+import { LatLng } from './coordinate.model';
+
 /**
  * Active alert read from the alert-service GET /alerts endpoint.
  */
@@ -41,7 +43,7 @@ export interface ActiveAlert {
   /** Affected departments parsed from the backend `area` HTML, sorted by name */
   departments: ReadonlyArray<ActiveAlertDepartment>;
   /** Polygon vertices as Leaflet [lat, lng] pairs */
-  coordinates: ReadonlyArray<[number, number]>;
+  coordinates: ReadonlyArray<LatLng>;
   /** Start datetime */
   startDatetime: Date;
   /** End datetime */

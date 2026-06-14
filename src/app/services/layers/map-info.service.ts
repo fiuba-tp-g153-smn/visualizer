@@ -12,6 +12,7 @@ import {
   PolylineOptions,
   divIcon,
   geoJSON,
+  latLngBounds,
   layerGroup,
   marker,
   polyline,
@@ -475,10 +476,38 @@ export class MapInfoService {
 
     const targetZoom = zoom ?? Math.max(this.map.getZoom(), MAP_CONFIG.initialZoom);
     if (animate) {
-      this.map.flyTo([lat, lon], targetZoom);
+      this.map.flyTo([lat, lon], targetZoom, { duration: 0.5, easeLinearity: 0.5 });
     } else {
       this.map.setView([lat, lon], targetZoom, { animate: false });
     }
+  }
+
+  /** Pans/zooms the map to fit the given geometry's bounds (e.g. a department outline). */
+  flyToGeometry(geometry: Geometry): void {
+    if (!this.map) return;
+
+    const bounds = geoJSON(geometry).getBounds();
+    if (!bounds.isValid()) return;
+
+    this.map.flyToBounds(bounds, {
+      maxZoom: SEARCH_POLYGON_FIT_MAX_ZOOM,
+      duration: 0.5,
+      easeLinearity: 0.5,
+    });
+  }
+
+  /** Pans/zooms the map to fit the given polygon coordinates (e.g. a draft/alert polygon). */
+  flyToCoordinates(coordinates: ReadonlyArray<LatLngExpression>): void {
+    if (!this.map || coordinates.length === 0) return;
+
+    const bounds = latLngBounds(coordinates as LatLngExpression[]);
+    if (!bounds.isValid()) return;
+
+    this.map.flyToBounds(bounds, {
+      maxZoom: SEARCH_POLYGON_FIT_MAX_ZOOM,
+      duration: 0.5,
+      easeLinearity: 0.5,
+    });
   }
 
   destroy(): void {
