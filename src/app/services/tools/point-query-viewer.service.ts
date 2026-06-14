@@ -254,6 +254,10 @@ export class PointQueryViewerService {
         const wrfControls = controls as WrfLayerControls;
         const selectedForecasts = wrfControls.forecast.selectedForecastTimestamps;
         const baseName = this.layersService.getLayerFullName(wrfLayer);
+        const modelName = baseName.split(' - ')[0] || 'WRF';
+        const primaryName = wrfLayer.pointQueryLabel
+          ? `${modelName} - ${wrfLayer.pointQueryLabel}`
+          : baseName;
 
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
           const forecastDate = parseWrfInitTag(forecastTs);
@@ -266,7 +270,7 @@ export class PointQueryViewerService {
             items.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
-              layerName: `${baseName} - corrida ${forecastLabel}`,
+              layerName: `${primaryName} - corrida ${forecastLabel}`,
               forecastTs,
               layer: wrfLayer,
               controls: wrfControls,

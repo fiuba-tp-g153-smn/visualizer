@@ -161,6 +161,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       id: 'wrf/Precipitacion1h',
       productId: 'Precipitacion1h',
       name: 'Precipitación 1h',
+      pointQueryLabel: 'Precipitación acumulada 1 hora',
       description:
         'Precipitación acumulada 1 hora (mm) — WRF-ARG4K. Barbas de viento. Isobaras de presión a nivel del mar (976/984/992/1000/1008/1016 hPa).',
       scale: WRF_PRECIPITACION1H_SCALE,

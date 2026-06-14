@@ -134,6 +134,13 @@ export interface WrfTileLayer extends TileLayer {
   /** Períodos disponibles (cantidad de últimos pasos a mostrar). */
   availablePeriods?: readonly number[];
   /**
+   * Etiqueta del valor primario en el dato puntual. Si se omite, usa el `name`
+   * de la capa. Permite un nombre más descriptivo en el point query sin alargar
+   * el label del menú (ej. menú "Precipitación 1h" → query "Precipitación
+   * acumulada 1 hora").
+   */
+  pointQueryLabel?: string;
+  /**
    * Renders vectoriales secundarios (barbas, contornos) atados a esta capa.
    * Cada uno se anima con el primary tile, comparte timeline y forecast run.
    * A diferencia de ECMWF (un único secondary), WRF puede traer N overlays
