@@ -4,7 +4,7 @@ import type { Feature, FeatureCollection, Point } from 'geojson';
 import { buildWrfBarbTileUrl } from '../../config/backend.config';
 import { renderBarbGlyphMarkup } from '../../config/layers/wrf/wrf-overlay-styles';
 
-const BARB_NATIVE_ZOOMS = [2, 4, 6, 8, 10, 12] as const;
+const BARB_NATIVE_ZOOMS = [2, 4, 6, 8] as const;
 const TILE_SIZE = 256;
 
 function snapBarbZoom(z: number): number {
@@ -37,11 +37,12 @@ export interface WrfBarbGridLayerOptions extends GridLayerOptions {
 /**
  * Capa custom de tiles vectoriales para barbas WRF.
  *
- * Backend emite GeoJSONs solo en zooms nativos `{2, 4, 6, 8, 10, 12}`. Para
- * cualquier zoom intermedio (3, 5, 7, 9, ...) snappea al nativo más cercano
- * hacia abajo, fetcha ese tile (con cache por instancia) y filtra/proyecta
- * features al pixel-en-tile que Leaflet realmente pidió. Render = 1 `<svg>`
- * por tile con N glyphs adentro (sin DOM por barba).
+ * Backend emite GeoJSONs solo en zooms nativos `{2, 4, 6, 8}`. Para cualquier
+ * zoom >= 8 (8, 9, ..., 18) snappea a 8 y reusa (overzoom) ese tile nativo;
+ * para zooms intermedios menores snappea al nativo más cercano hacia abajo.
+ * Fetcha ese tile (con cache por instancia) y filtra/proyecta features al
+ * pixel-en-tile que Leaflet realmente pidió. Render = 1 `<svg>` por tile con
+ * N glyphs adentro (sin DOM por barba).
  */
 export class WrfBarbGridLayer extends GridLayer {
   private readonly opts: WrfBarbGridLayerOptions;
