@@ -57,6 +57,13 @@ import {
 const JOBS_PAGE = 50;
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
 
+// Cotas del rango personalizado del panel "por tipo de trabajo" (en horas).
+// El backend acepta cualquier `hours` >= 0; acá limitamos a [1, 720] (30 días)
+// para evitar entradas absurdas. "todo" (0) ya cubre el histórico completo.
+const SUMMARY_CUSTOM_MIN_HOURS = 1;
+const SUMMARY_CUSTOM_MAX_HOURS = 720;
+const SUMMARY_CUSTOM_DEFAULT_HOURS = 48;
+
 /**
  * Página del panel de rendimiento (ruta `/dashboard`). Es el único dueño del
  * estado: mantiene los controles y los datos en signals, los refresca contra
@@ -105,6 +112,21 @@ export class DashboardComponent {
   readonly tpWindowHours = signal<TenMinWindowHours>(6);
   /** Ventana propia de la tabla "por tipo de trabajo", independiente de la global. */
   readonly summaryTableWindowHours = signal<WindowHours>(168);
+  /** Modo "personalizado" del rango del panel: muestra un input de horas a medida. */
+  readonly summaryTableCustom = signal<boolean>(false);
+  /** Valor del input personalizado (horas), usado solo cuando summaryTableCustom() es true. */
+  readonly summaryTableCustomHours = signal<number>(SUMMARY_CUSTOM_DEFAULT_HOURS);
+  /** Horas efectivas que se envían al API: preset fijo o valor personalizado. */
+  readonly summaryTableEffectiveHours = computed<number>(() =>
+    this.summaryTableCustom() ? this.summaryTableCustomHours() : this.summaryTableWindowHours(),
+  );
+  /** Valor que muestra el <select> del panel ('custom' en modo personalizado). */
+  readonly summaryTableSelectValue = computed<string>(() =>
+    this.summaryTableCustom() ? 'custom' : String(this.summaryTableWindowHours()),
+  );
+  // Cotas expuestas al template para los atributos min/max del input.
+  protected readonly SUMMARY_CUSTOM_MIN_HOURS = SUMMARY_CUSTOM_MIN_HOURS;
+  protected readonly SUMMARY_CUSTOM_MAX_HOURS = SUMMARY_CUSTOM_MAX_HOURS;
   /** Modo del panel de throughput: 'total' (línea agregada, por defecto) o 'byType' (desglose). */
   readonly tpMode = signal<'total' | 'byType'>('total');
 
@@ -233,8 +255,36 @@ export class DashboardComponent {
   }
 
   onSummaryTableWindowChange(event: Event): void {
-    this.summaryTableWindowHours.set(this.numberValue(event) as WindowHours);
+    // El valor del <select> es string: 'custom' no es numérico, así que se
+    // ramifica antes de cualquier Number() (numberValue daría NaN).
+    const value = this.stringValue(event);
+    if (value === 'custom') {
+      this.summaryTableCustom.set(true); // revela el input; carga con las horas personalizadas
+    } else {
+      this.summaryTableCustom.set(false);
+      this.summaryTableWindowHours.set(Number(value) as WindowHours);
+    }
     void this.loadSummaryTable();
+  }
+
+  /** Commit del input personalizado (Enter / blur): valida, recorta y recarga. */
+  onSummaryTableCustomHoursChange(input: HTMLInputElement): void {
+    const clamped = this.clampSummaryCustomHours(input.value);
+    // Reescribe el campo para que nunca quede mostrando un valor inválido o
+    // fuera de rango aunque la señal no cambie (mismo enfoque que el input de
+    // precisión en general-settings).
+    input.value = String(clamped);
+    this.summaryTableCustomHours.set(clamped);
+    void this.loadSummaryTable();
+  }
+
+  /** Recorta a [MIN, MAX] horas; conserva el último valor válido si la entrada es basura/<MIN. */
+  private clampSummaryCustomHours(raw: string): number {
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n) || n < SUMMARY_CUSTOM_MIN_HOURS) {
+      return this.summaryTableCustomHours();
+    }
+    return Math.min(n, SUMMARY_CUSTOM_MAX_HOURS);
   }
 
   onTimelineWindowChange(event: Event): void {
@@ -403,7 +453,7 @@ export class DashboardComponent {
 
   private async loadSummaryTable(): Promise<void> {
     this.summaryTable.set(
-      await firstValueFrom(this.metrics.getSummary(this.summaryTableWindowHours())),
+      await firstValueFrom(this.metrics.getSummary(this.summaryTableEffectiveHours())),
     );
   }
 

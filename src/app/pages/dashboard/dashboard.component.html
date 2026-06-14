@@ -168,13 +168,27 @@
           <label panelActions class="dash__ctl"
             >rango
             <select
-              [value]="summaryTableWindowHours()"
+              [value]="summaryTableSelectValue()"
               (change)="onSummaryTableWindowChange($event)"
             >
               <option value="24">24h</option>
               <option value="168">7d</option>
               <option value="0">todo</option>
+              <option value="custom">personalizado</option>
             </select>
+            @if (summaryTableCustom()) {
+              <input
+                type="number"
+                class="dash__ctl-input"
+                [value]="summaryTableCustomHours()"
+                (change)="onSummaryTableCustomHoursChange($any($event.target))"
+                [attr.min]="SUMMARY_CUSTOM_MIN_HOURS"
+                [attr.max]="SUMMARY_CUSTOM_MAX_HOURS"
+                step="1"
+                aria-label="Horas personalizadas"
+              />
+              <span class="dash__ctl-suffix">h</span>
+            }
           </label>
           <div class="dash__scroll-x">
             <app-job-type-summary-table
