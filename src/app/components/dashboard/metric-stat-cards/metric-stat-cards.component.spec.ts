@@ -38,8 +38,8 @@ describe('MetricStatCardsComponent', () => {
     const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
     expect(byLabel.get('Trabajos finalizados')?.value).toBe('20');
     expect(byLabel.get('Éxitos')?.value).toBe('13');
-    // 13 ÷ 15 concluyentes (excluye 2 reencolados + 3 omitidos)
-    expect(byLabel.get('Tasa de éxito')?.value).toBe('86.7%');
+    // 13 ÷ 18 (éxitos + fallos + omitidos; excluye 2 reencolados)
+    expect(byLabel.get('Tasa de éxito')?.value).toBe('72.2%');
     expect(byLabel.get('Fallos')?.value).toBe('2');
     expect(byLabel.get('Fallos')?.accent).toBe('orange');
     expect(byLabel.get('Descartes (DLQ)')?.value).toBe('1');
@@ -49,14 +49,15 @@ describe('MetricStatCardsComponent', () => {
     expect(byLabel.get('Tipos')?.value).toBe('2');
   });
 
-  it('excludes reencolados/omitidos from the success rate denominator', () => {
+  it('includes omitidos but excludes reencolados in the success rate denominator', () => {
     const fixture = TestBed.createComponent(MetricStatCardsComponent);
     fixture.componentRef.setInput('summary', [
-      makeSummary('a', { success: 9, error: 1, requeued: 50, skipped: 50 }),
+      makeSummary('a', { success: 9, error: 1, requeued: 50, skipped: 10 }),
     ]);
     const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
-    // 9 ÷ 10 concluyentes (los 100 reencolados/omitidos no diluyen la tasa)
-    expect(byLabel.get('Tasa de éxito')?.value).toBe('90.0%');
+    // denom = 9 éxitos + 1 fallo + 10 omitidos = 20; los 50 reencolados se excluyen
+    // 9/20 = 45.0%
+    expect(byLabel.get('Tasa de éxito')?.value).toBe('45.0%');
   });
 
   it('shows an em dash for the success rate when there are no jobs', () => {
@@ -67,10 +68,18 @@ describe('MetricStatCardsComponent', () => {
     expect(byLabel.get('Fallos')?.accent).toBe('');
   });
 
-  it('shows an em dash when there are only reencolados/omitidos (no conclusive jobs)', () => {
+  it('shows an em dash when there are only reencolados (excluded from the rate)', () => {
     const fixture = TestBed.createComponent(MetricStatCardsComponent);
-    fixture.componentRef.setInput('summary', [makeSummary('a', { requeued: 4, skipped: 6 })]);
+    fixture.componentRef.setInput('summary', [makeSummary('a', { requeued: 4 })]);
     const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
     expect(byLabel.get('Tasa de éxito')?.value).toBe('—');
+  });
+
+  it('reports 0.0% when there are only omitidos (counted in the denominator)', () => {
+    const fixture = TestBed.createComponent(MetricStatCardsComponent);
+    fixture.componentRef.setInput('summary', [makeSummary('a', { skipped: 6 })]);
+    const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
+    // 0 éxitos ÷ 6 omitidos = 0.0% (omitidos sí pesan en la tasa)
+    expect(byLabel.get('Tasa de éxito')?.value).toBe('0.0%');
   });
 });

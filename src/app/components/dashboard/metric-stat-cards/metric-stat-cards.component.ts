@@ -63,14 +63,14 @@ export class MetricStatCardsComponent {
       totals.skipped += entry.counts.skipped;
     }
     const failures = totals.error + totals.dlq;
-    // La tasa de éxito sólo contempla resultados concluyentes (éxitos + fallos);
-    // reencolados y omitidos no son fallos (se reintentan), así que se excluyen
-    // del denominador para no diluir la tasa.
-    const decided = totals.success + failures;
-    const successRate = decided ? totals.success / decided : null;
-    const rateText = decided
-      ? `${totals.success} éxitos ÷ ${decided} concluyentes (éxitos + fallos) = ${pct(successRate)}. Excluye reencolados y omitidos (no son fallos).`
-      : 'Sin trabajos concluyentes (éxitos o fallos) en la ventana.';
+    // La tasa de éxito contempla éxitos, fallos y omitidos; los reencolados son
+    // reintentos transitorios (no un resultado terminal), así que se excluyen del
+    // denominador para no diluir la tasa.
+    const rateBase = totals.success + failures + totals.skipped;
+    const successRate = rateBase ? totals.success / rateBase : null;
+    const rateText = rateBase
+      ? `${totals.success} éxitos ÷ ${rateBase} (éxitos + fallos + omitidos) = ${pct(successRate)}. Excluye reencolados (reintentos transitorios).`
+      : 'Sin trabajos en la ventana.';
     const typeLines = this.summary()
       .map((entry) => prod(entry.product_label ?? entry.job_type))
       .sort((a, b) => a.localeCompare(b))
@@ -100,7 +100,7 @@ export class MetricStatCardsComponent {
       },
       {
         label: 'Tasa de éxito',
-        value: decided ? pct(successRate) : '—',
+        value: rateBase ? pct(successRate) : '—',
         tooltip: rateText,
         accent: '',
       },
