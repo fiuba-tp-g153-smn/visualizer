@@ -52,7 +52,7 @@ export class RedisInfoCardsComponent {
         accent: '',
       },
       {
-        label: 'Max',
+        label: 'Max alcanzado',
         value: formatBytes(i.used_memory_peak),
         tooltip: 'Máximo histórico de used_memory desde el arranque (used_memory_peak).',
         accent: '',

@@ -11,6 +11,8 @@ export interface StatCard {
   readonly accent: StatCardAccent;
   /** Optional trailing text rendered muted (never accented), e.g. " / 240.000". */
   readonly suffix?: string;
+  /** Columnas que ocupa en la grilla (default 1); súbelo para valores más largos. */
+  readonly span?: number;
 }
 
 /**
@@ -26,7 +28,7 @@ export interface StatCard {
   template: `
     <div class="cards">
       @for (card of cards(); track card.label) {
-        <div class="card">
+        <div class="card" [style.grid-column]="card.span ? 'span ' + card.span : null">
           <div class="card__label">
             <span class="card__label-text">{{ card.label }}</span>
             <mat-icon

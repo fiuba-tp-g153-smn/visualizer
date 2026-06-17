@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 import type { DataMetricsSummary } from '../../../models/metrics/data-metrics.models';
 import { formatBytes } from '../../../services/metrics/data-metrics-chart.util';
+import { domainLabel } from '../../../services/metrics/data-metrics-labels';
 import { ago } from '../../../services/metrics/metrics-format.util';
 import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.component';
 
@@ -15,6 +16,8 @@ import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.comp
 })
 export class DataStatCardsComponent {
   readonly summary = input<DataMetricsSummary | null>(null);
+  /** Nombres de los dominios de sync; alimentan el tooltip de "Dominios de sync". */
+  readonly domains = input<readonly string[]>([]);
 
   readonly cards = computed<StatCard[]>(() => {
     const s = this.summary();
@@ -24,6 +27,11 @@ export class DataStatCardsComponent {
     const topDomain = s.top_domain
       ? `${s.top_domain} · ${formatBytes(s.top_domain_bytes)}`
       : '—';
+    const domainLines = this.domains()
+      .map((d) => domainLabel(d))
+      .sort((a, b) => a.localeCompare(b))
+      .map((label) => `• ${label}`)
+      .join('\n');
     return [
       {
         label: 'Memoria Redis usada',
@@ -44,6 +52,8 @@ export class DataStatCardsComponent {
         tooltip:
           'Dominio que más memoria consume y cuántos bytes ocupa.\nFuente: SCAN + MEMORY USAGE por prefijo de clave, ~15 min.',
         accent: 'orange',
+        // Valor más largo ("dominio · NNN MB"): ocupa dos columnas para no romperse.
+        span: 2,
       },
       {
         label: 'Memoria por dominios',
@@ -55,14 +65,9 @@ export class DataStatCardsComponent {
       {
         label: 'Dominios de sync',
         value: String(s.active_sync_domains),
-        tooltip: 'Dominios con al menos un ciclo registrado en la tabla sync_cycles (SQLite).',
-        accent: '',
-      },
-      {
-        label: 'Ciclos de sync',
-        value: s.sync_total_cycles.toLocaleString('es-AR'),
-        tooltip:
-          'Ciclos completados del loop combinado (satélite + radar + ECMWF + WRF).\nFuente: hash sync:status en Redis, actualizado cada ciclo (~60 s).',
+        tooltip: domainLines
+          ? `Dominios con al menos un ciclo registrado (tabla sync_cycles):\n${domainLines}`
+          : 'Dominios con al menos un ciclo registrado en la tabla sync_cycles (SQLite).',
         accent: '',
       },
       {
