@@ -38,7 +38,8 @@ describe('MetricStatCardsComponent', () => {
     const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
     expect(byLabel.get('Trabajos finalizados')?.value).toBe('20');
     expect(byLabel.get('Éxitos')?.value).toBe('13');
-    expect(byLabel.get('Tasa de éxito')?.value).toBe('65.0%'); // 13/20
+    // 13 ÷ 15 concluyentes (excluye 2 reencolados + 3 omitidos)
+    expect(byLabel.get('Tasa de éxito')?.value).toBe('86.7%');
     expect(byLabel.get('Fallos')?.value).toBe('2');
     expect(byLabel.get('Fallos')?.accent).toBe('orange');
     expect(byLabel.get('Descartes (DLQ)')?.value).toBe('1');
@@ -48,11 +49,28 @@ describe('MetricStatCardsComponent', () => {
     expect(byLabel.get('Tipos')?.value).toBe('2');
   });
 
+  it('excludes reencolados/omitidos from the success rate denominator', () => {
+    const fixture = TestBed.createComponent(MetricStatCardsComponent);
+    fixture.componentRef.setInput('summary', [
+      makeSummary('a', { success: 9, error: 1, requeued: 50, skipped: 50 }),
+    ]);
+    const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
+    // 9 ÷ 10 concluyentes (los 100 reencolados/omitidos no diluyen la tasa)
+    expect(byLabel.get('Tasa de éxito')?.value).toBe('90.0%');
+  });
+
   it('shows an em dash for the success rate when there are no jobs', () => {
     const fixture = TestBed.createComponent(MetricStatCardsComponent);
     fixture.componentRef.setInput('summary', []);
     const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
     expect(byLabel.get('Tasa de éxito')?.value).toBe('—');
     expect(byLabel.get('Fallos')?.accent).toBe('');
+  });
+
+  it('shows an em dash when there are only reencolados/omitidos (no conclusive jobs)', () => {
+    const fixture = TestBed.createComponent(MetricStatCardsComponent);
+    fixture.componentRef.setInput('summary', [makeSummary('a', { requeued: 4, skipped: 6 })]);
+    const byLabel = new Map(fixture.componentInstance.cards().map((c) => [c.label, c]));
+    expect(byLabel.get('Tasa de éxito')?.value).toBe('—');
   });
 });

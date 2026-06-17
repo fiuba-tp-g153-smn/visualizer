@@ -111,7 +111,7 @@ export class DashboardComponent {
   readonly refreshSecs = signal<RefreshSeconds>(10);
   readonly tpWindowHours = signal<TenMinWindowHours>(6);
   /** Ventana propia de la tabla "por tipo de trabajo", independiente de la global. */
-  readonly summaryTableWindowHours = signal<WindowHours>(168);
+  readonly summaryTableWindowHours = signal<WindowHours>(24);
   /** Modo "personalizado" del rango del panel: muestra un input de horas a medida. */
   readonly summaryTableCustom = signal<boolean>(false);
   /** Valor del input personalizado (horas), usado solo cuando summaryTableCustom() es true. */

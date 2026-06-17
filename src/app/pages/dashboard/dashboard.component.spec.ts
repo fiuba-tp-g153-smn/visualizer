@@ -51,9 +51,9 @@ describe('DashboardComponent — rango personalizado del panel "por tipo de trab
 
   afterEach(() => fixture.destroy());
 
-  it('por defecto no está en modo personalizado y el <select> muestra el preset (7d)', () => {
+  it('por defecto no está en modo personalizado y el <select> muestra el preset (24h)', () => {
     expect(component.summaryTableCustom()).toBe(false);
-    expect(component.summaryTableSelectValue()).toBe('168');
+    expect(component.summaryTableSelectValue()).toBe('24');
   });
 
   it('elegir "personalizado" activa el modo y recarga con las horas por defecto (48)', () => {
