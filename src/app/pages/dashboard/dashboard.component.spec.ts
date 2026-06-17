@@ -113,3 +113,98 @@ describe('DashboardComponent — rango personalizado del panel "por tipo de trab
     expect(getSummary).toHaveBeenLastCalledWith(12);
   });
 });
+
+describe('DashboardComponent — rango personalizado del panel de throughput', () => {
+  let fixture: ComponentFixture<DashboardComponent>;
+  let component: DashboardComponent;
+  let getThroughput: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    getThroughput = vi.fn(() => of([]));
+    const metricsMock = {
+      getSummary: vi.fn(() => of([])),
+      getJobs: vi.fn(() => of([])),
+      getThroughput,
+      getTimeSeries: vi.fn(() => of([])),
+      getLive: vi.fn(() => of({})),
+    } as unknown as MetricsService;
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: MetricsService, useValue: metricsMock },
+        { provide: MatDialog, useValue: { open: vi.fn() } },
+        { provide: TimezoneSettingsService, useValue: { mode: () => 'local' } },
+      ],
+    });
+
+    fixture = TestBed.createComponent(DashboardComponent);
+    component = fixture.componentInstance;
+    // El constructor ya disparó getThroughput (loadTp10 + loadCharts); limpiamos
+    // para asertar solo las llamadas de cada test. El panel de 10 min usa '10min'.
+    getThroughput.mockClear();
+  });
+
+  afterEach(() => fixture.destroy());
+
+  it('por defecto no está en modo personalizado y el <select> muestra el preset (6h)', () => {
+    expect(component.tpCustom()).toBe(false);
+    expect(component.tpSelectValue()).toBe('6');
+  });
+
+  it('elegir "personalizado" activa el modo y recarga con las horas por defecto (12)', () => {
+    component.onTpWindowChange(selectEvent('custom'));
+
+    expect(component.tpCustom()).toBe(true);
+    expect(component.tpSelectValue()).toBe('custom');
+    expect(getThroughput).toHaveBeenLastCalledWith('10min', 12);
+  });
+
+  it('confirmar un valor válido consulta el throughput con ese número de horas', () => {
+    component.onTpWindowChange(selectEvent('custom'));
+    const el = inputEl('5');
+
+    component.onTpCustomHoursChange(el);
+
+    expect(component.tpCustomHours()).toBe(5);
+    expect(el.value).toBe('5');
+    expect(getThroughput).toHaveBeenLastCalledWith('10min', 5);
+  });
+
+  it('recorta por arriba a 48 (2 días) y reescribe el campo', () => {
+    component.onTpWindowChange(selectEvent('custom'));
+    const el = inputEl('9999');
+
+    component.onTpCustomHoursChange(el);
+
+    expect(component.tpCustomHours()).toBe(48);
+    expect(el.value).toBe('48');
+    expect(getThroughput).toHaveBeenLastCalledWith('10min', 48);
+  });
+
+  it('entradas inválidas (0, negativos, basura, vacío) conservan el último valor válido', () => {
+    component.onTpWindowChange(selectEvent('custom'));
+    component.onTpCustomHoursChange(inputEl('8')); // último válido = 8
+
+    for (const bad of ['0', '-5', 'abc', '']) {
+      const el = inputEl(bad);
+      component.onTpCustomHoursChange(el);
+      expect(component.tpCustomHours()).toBe(8);
+      expect(el.value).toBe('8'); // el campo se corrige al último válido
+    }
+    expect(getThroughput).toHaveBeenLastCalledWith('10min', 8);
+  });
+
+  it('volver a un preset desactiva el modo y conserva el valor personalizado', () => {
+    component.onTpWindowChange(selectEvent('custom'));
+    component.onTpCustomHoursChange(inputEl('5'));
+
+    component.onTpWindowChange(selectEvent('3'));
+    expect(component.tpCustom()).toBe(false);
+    expect(component.tpSelectValue()).toBe('3');
+    expect(getThroughput).toHaveBeenLastCalledWith('10min', 3);
+
+    // Re-elegir "personalizado" reusa el último valor (5), no el default.
+    component.onTpWindowChange(selectEvent('custom'));
+    expect(getThroughput).toHaveBeenLastCalledWith('10min', 5);
+  });
+});

@@ -12,7 +12,9 @@ import {
   type SortState,
 } from '../sortable-table/sortable-table.models';
 
-const INITIAL_SORT: SortState = { key: 'n', dir: 'desc' };
+// Por defecto: por tiempo promedio, el más largo primero. Los tipos sin trabajos
+// exitosos (prom = null) quedan al final (el comparador manda los null abajo en desc).
+const INITIAL_SORT: SortState = { key: 'avg', dir: 'desc' };
 
 const COLUMNS: ReadonlyArray<ColumnSpec<JobTypeSummary>> = [
   {

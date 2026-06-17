@@ -83,26 +83,42 @@ describe('buildEchartsOption', () => {
     expect(laneById.get(3)).toBe(1);
   });
 
-  it('draws each bar with a thin separator stroke so dense bars stay distinct', () => {
+  type RenderApiMock = {
+    value: (d: number) => number;
+    coord: (pt: [number, number]) => [number, number];
+    size: () => [number, number];
+  };
+  type RenderItem = (
+    p: { dataIndex: number },
+    api: RenderApiMock,
+  ) => { type: string; shape: { width: number }; style: { fill: string; stroke: string; lineWidth: number } };
+
+  it('draws a full separator stroke on wide bars so dense runs stay distinct', () => {
     const o = buildEchartsOption([job({})], { utc: true, colorBy: 'outcome' });
-    const renderItem = o.option.series[0]['renderItem'] as (
-      p: { dataIndex: number },
-      api: {
-        value: (d: number) => number;
-        coord: (pt: [number, number]) => [number, number];
-        size: () => [number, number];
-      },
-    ) => { type: string; style: { fill: string; stroke: string; lineWidth: number } };
-    const api = {
-      value: (dim: number) => [0, 1000, 2000][dim],
-      coord: ([x]: [number, number]): [number, number] => [x / 10, 50],
-      size: (): [number, number] => [0, 20],
+    const renderItem = o.option.series[0]['renderItem'] as RenderItem;
+    const api: RenderApiMock = {
+      value: (dim) => [0, 1000, 2000][dim],
+      coord: ([x]) => [x / 10, 50], // width = (2000-1000)/10 = 100px → barra ancha
+      size: () => [0, 20],
     };
     const rect = renderItem({ dataIndex: 0 }, api);
     expect(rect.type).toBe('rect');
     expect(rect.style.fill).toBe(data(o)[0].color);
     expect(rect.style.stroke).toBe('#ffffff');
     expect(rect.style.lineWidth).toBe(1);
+  });
+
+  it('drops the separator stroke on narrow bars (zoomed out) so runs don’t wash white', () => {
+    const o = buildEchartsOption([job({})], { utc: true, colorBy: 'outcome' });
+    const renderItem = o.option.series[0]['renderItem'] as RenderItem;
+    const api: RenderApiMock = {
+      value: (dim) => [0, 1000, 1000][dim], // inicio == fin → barra colapsa a 1px
+      coord: ([x]) => [x, 50],
+      size: () => [0, 20],
+    };
+    const rect = renderItem({ dataIndex: 0 }, api);
+    expect(rect.shape.width).toBe(1);
+    expect(rect.style.lineWidth).toBe(0); // sin trazo: relleno sólido, no blanco
   });
 
   it('colors by outcome and by type', () => {

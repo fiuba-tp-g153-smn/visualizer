@@ -126,6 +126,15 @@
 // Por tipo) a la vez. Densidad reducida para caber compacto en la cabecera.
 .dash__tp-toggle {
   @include mat.button-toggle-density(-3);
+  // El estado seleccionado por defecto usa el contenedor "secondary" del tema
+  // (amarillo, #fcbf49). Lo reapuntamos al celeste primario de la página, con
+  // texto on-primary para contraste; el override queda acotado a este toggle.
+  @include mat.button-toggle-overrides(
+    (
+      selected-state-background-color: var(--mat-sys-primary, #0090d0),
+      selected-state-text-color: var(--mat-sys-on-primary, #ffffff),
+    )
+  );
   font-size: 11px;
 }
 
@@ -184,7 +193,7 @@
 .dash__content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .dash__scroll-x {

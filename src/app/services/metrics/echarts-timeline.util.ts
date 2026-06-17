@@ -110,16 +110,19 @@ export function buildEchartsOption(
     const bandHeight = api.size([0, 1])[1];
     const height = bandHeight * 0.6;
     const width = Math.max(end[0] - start[0], 1);
+    // El separador (trazo blanco centrado en el borde) distingue barras contiguas
+    // del mismo color. Pero con zoom-out las barras se vuelven angostas y el trazo
+    // las taparía de blanco; por eso se afina con el ancho: full (1px) desde ~3px,
+    // baja a 0 hacia ~2px y desaparece más angosto (a esa escala no se distinguen
+    // igual y conviene un bloque sólido a uno blanco).
+    const separatorWidth = Math.min(1, Math.max(0, width - 2));
     return {
       type: 'rect',
       shape: { x: start[0], y: start[1] - height / 2, width, height, r: 1 },
       style: {
         fill: data[params.dataIndex].color,
-        // Separa barras contiguas del mismo color (si no, una ráfaga densa se ve
-        // como una sola barra sólida); el trazo va centrado en el borde, así que
-        // dos barras pegadas comparten una línea de ~1px.
         stroke: BAR_SEPARATOR_COLOR,
-        lineWidth: 1,
+        lineWidth: separatorWidth,
       },
     };
   };

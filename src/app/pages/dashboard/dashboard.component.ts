@@ -64,6 +64,13 @@ const SUMMARY_CUSTOM_MIN_HOURS = 1;
 const SUMMARY_CUSTOM_MAX_HOURS = 720;
 const SUMMARY_CUSTOM_DEFAULT_HOURS = 48;
 
+// Cotas del rango personalizado del panel "throughput · cada 10 min" (en horas).
+// El tope se mantiene bajo (48h = 288 buckets de 10 min) porque es un panel de
+// ventana corta; los presets llegan hasta 12h.
+const TP_CUSTOM_MIN_HOURS = 1;
+const TP_CUSTOM_MAX_HOURS = 48;
+const TP_CUSTOM_DEFAULT_HOURS = 12;
+
 /**
  * Página del panel de rendimiento (ruta `/dashboard`). Es el único dueño del
  * estado: mantiene los controles y los datos en signals, los refresca contra
@@ -110,6 +117,20 @@ export class DashboardComponent {
   readonly bucket = signal<Bucket>('hour');
   readonly refreshSecs = signal<RefreshSeconds>(10);
   readonly tpWindowHours = signal<TenMinWindowHours>(6);
+  /** Modo "personalizado" del rango de throughput: muestra un input de horas a medida. */
+  readonly tpCustom = signal<boolean>(false);
+  /** Valor del input personalizado (horas), usado solo cuando tpCustom() es true. */
+  readonly tpCustomHours = signal<number>(TP_CUSTOM_DEFAULT_HOURS);
+  /** Horas efectivas que se envían al API de throughput: preset fijo o valor personalizado. */
+  readonly tpEffectiveHours = computed<number>(() =>
+    this.tpCustom() ? this.tpCustomHours() : this.tpWindowHours(),
+  );
+  /** Valor que muestra el <select> de throughput ('custom' en modo personalizado). */
+  readonly tpSelectValue = computed<string>(() =>
+    this.tpCustom() ? 'custom' : String(this.tpWindowHours()),
+  );
+  protected readonly TP_CUSTOM_MIN_HOURS = TP_CUSTOM_MIN_HOURS;
+  protected readonly TP_CUSTOM_MAX_HOURS = TP_CUSTOM_MAX_HOURS;
   /** Ventana propia de la tabla "por tipo de trabajo", independiente de la global. */
   readonly summaryTableWindowHours = signal<WindowHours>(24);
   /** Modo "personalizado" del rango del panel: muestra un input de horas a medida. */
@@ -250,8 +271,33 @@ export class DashboardComponent {
   }
 
   onTpWindowChange(event: Event): void {
-    this.tpWindowHours.set(this.numberValue(event) as TenMinWindowHours);
+    // 'custom' no es numérico, así que se ramifica antes de cualquier Number().
+    const value = this.stringValue(event);
+    if (value === 'custom') {
+      this.tpCustom.set(true); // revela el input; carga con las horas personalizadas
+    } else {
+      this.tpCustom.set(false);
+      this.tpWindowHours.set(Number(value) as TenMinWindowHours);
+    }
     void this.loadTp10();
+  }
+
+  /** Commit del input personalizado de throughput (Enter / blur): valida, recorta y recarga. */
+  onTpCustomHoursChange(input: HTMLInputElement): void {
+    const clamped = this.clampTpCustomHours(input.value);
+    // Reescribe el campo para que nunca quede mostrando un valor inválido o fuera de rango.
+    input.value = String(clamped);
+    this.tpCustomHours.set(clamped);
+    void this.loadTp10();
+  }
+
+  /** Recorta a [MIN, MAX] horas; conserva el último valor válido si la entrada es basura/<MIN. */
+  private clampTpCustomHours(raw: string): number {
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n) || n < TP_CUSTOM_MIN_HOURS) {
+      return this.tpCustomHours();
+    }
+    return Math.min(n, TP_CUSTOM_MAX_HOURS);
   }
 
   onSummaryTableWindowChange(event: Event): void {
@@ -448,7 +494,7 @@ export class DashboardComponent {
   }
 
   private async loadTp10(): Promise<void> {
-    this.tp10.set(await firstValueFrom(this.metrics.getThroughput('10min', this.tpWindowHours())));
+    this.tp10.set(await firstValueFrom(this.metrics.getThroughput('10min', this.tpEffectiveHours())));
   }
 
   private async loadSummaryTable(): Promise<void> {

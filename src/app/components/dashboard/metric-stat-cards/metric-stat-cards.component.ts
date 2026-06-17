@@ -99,6 +99,13 @@ export class MetricStatCardsComponent {
         accent: failures > 0 ? 'orange' : '',
       },
       {
+        label: 'Omitidos',
+        value: String(totals.skipped),
+        tooltip:
+          'Trabajos omitidos porque el dato aún no estaba disponible; se reintentan en el próximo ciclo. No son fallos.',
+        accent: '',
+      },
+      {
         label: 'Tasa de éxito',
         value: rateBase ? pct(successRate) : '—',
         tooltip: rateText,
@@ -116,13 +123,6 @@ export class MetricStatCardsComponent {
         value: String(totals.requeued),
         tooltip:
           'Trabajos reencolados por un error transitorio de descarga para reintentarse. No son fallos.',
-        accent: '',
-      },
-      {
-        label: 'Omitidos',
-        value: String(totals.skipped),
-        tooltip:
-          'Trabajos omitidos porque el dato aún no estaba disponible; se reintentan en el próximo ciclo. No son fallos.',
         accent: '',
       },
       {

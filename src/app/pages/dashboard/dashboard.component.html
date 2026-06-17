@@ -138,12 +138,26 @@
           </mat-button-toggle-group>
           <label panelActions class="dash__ctl"
             >rango
-            <select [value]="tpWindowHours()" (change)="onTpWindowChange($event)">
+            <select [value]="tpSelectValue()" (change)="onTpWindowChange($event)">
               <option value="1">1h</option>
               <option value="3">3h</option>
               <option value="6">6h</option>
               <option value="12">12h</option>
+              <option value="custom">personalizado</option>
             </select>
+            @if (tpCustom()) {
+              <input
+                type="number"
+                class="dash__ctl-input"
+                [value]="tpCustomHours()"
+                (change)="onTpCustomHoursChange($any($event.target))"
+                [attr.min]="TP_CUSTOM_MIN_HOURS"
+                [attr.max]="TP_CUSTOM_MAX_HOURS"
+                step="1"
+                aria-label="Horas personalizadas"
+              />
+              <span class="dash__ctl-suffix">h</span>
+            }
           </label>
           <div class="dash__tp10">
             @if (tp10Options(); as opts) {
