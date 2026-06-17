@@ -5,7 +5,7 @@
  * dashboard del tiles-processor.
  */
 
-export type SyncBucket = 'hour' | 'day';
+export type SyncBucket = 'hour' | 'day' | '10min';
 
 /** Último ciclo de un dominio de sync (su estado en vivo). */
 export interface DataSyncDomainStatus {

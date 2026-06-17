@@ -100,7 +100,7 @@
       >
         <app-metric-panel heading="Resumen general" [tip]="tips.summary">
           <span panelActions class="dash__stamp">{{ summaryStamp() }}</span>
-          <app-data-stat-cards [summary]="summary()" />
+          <app-data-stat-cards [summary]="summary()" [domains]="syncDomainNames()" />
         </app-metric-panel>
 
         <app-metric-panel heading="Redis · INFO" [tip]="tips.info">
@@ -135,6 +135,50 @@
               <app-metric-chart [options]="opts" />
             } @else {
               <div class="dash__note">Sin historial de memoria en esta ventana.</div>
+            }
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel heading="Throughput de sync · cada 10 min" [tip]="tips.throughput10">
+          <mat-button-toggle-group
+            panelActions
+            class="dash__tp-toggle"
+            [value]="syncTpMode()"
+            (change)="syncTpMode.set($event.value)"
+            hideSingleSelectionIndicator
+            aria-label="Modo de throughput de sync"
+          >
+            <mat-button-toggle value="total">Total</mat-button-toggle>
+            <mat-button-toggle value="byType">Por tipo</mat-button-toggle>
+          </mat-button-toggle-group>
+          <label panelActions class="dash__ctl"
+            >rango
+            <select [value]="syncTpSelectValue()" (change)="onSyncTpWindowChange($event)">
+              <option value="1">1h</option>
+              <option value="3">3h</option>
+              <option value="6">6h</option>
+              <option value="12">12h</option>
+              <option value="custom">personalizado</option>
+            </select>
+            @if (syncTpCustom()) {
+              <input
+                type="number"
+                class="dash__ctl-input"
+                [value]="syncTpCustomHours()"
+                (change)="onSyncTpCustomHoursChange($any($event.target))"
+                [attr.min]="SYNC_TP_CUSTOM_MIN_HOURS"
+                [attr.max]="SYNC_TP_CUSTOM_MAX_HOURS"
+                step="1"
+                aria-label="Horas personalizadas"
+              />
+              <span class="dash__ctl-suffix">h</span>
+            }
+          </label>
+          <div class="dash__chart">
+            @if (syncTp10Options(); as opts) {
+              <app-metric-chart [options]="opts" />
+            } @else {
+              <div class="dash__note">Sin ciclos de sync en este rango.</div>
             }
           </div>
         </app-metric-panel>

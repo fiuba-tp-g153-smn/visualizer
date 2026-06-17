@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material/tooltip';
@@ -38,6 +39,7 @@ import {
   buildMemoryBarChart,
   buildSyncErrorsChart,
   buildSyncThroughputChart,
+  buildSyncTp10Chart,
 } from '../../services/metrics/data-metrics-chart.util';
 import { domainLabel } from '../../services/metrics/data-metrics-labels';
 import { DataMetricsService } from '../../services/metrics/data-metrics.service';
@@ -126,6 +128,10 @@ const PANEL_TIPS = {
     'Ítems descargados por intervalo y dominio.\n' +
     '• Agrega sync_cycles por bucket (hora/día)\n' +
     '• Tiles S3→Redis, obs. del SMN, tiles de mapa base',
+  throughput10:
+    'Ítems descargados en buckets de 10 minutos (ventana corta).\n' +
+    '• "Total" agrega todos los dominios; "Por tipo" abre uno por dominio\n' +
+    '• Rango propio (1–12 h o personalizado), independiente de la ventana global',
   errors:
     'Errores por intervalo y dominio.\n' +
     '• Agrega sync_cycles por bucket\n' +
@@ -150,6 +156,12 @@ function stampAgo(iso: string | null | undefined): string {
   return iso ? 'muestreado ' + ago(iso) : '';
 }
 
+// Cotas del rango personalizado del throughput de sync a 10 min (en horas).
+// Tope bajo (48h = 288 buckets de 10 min) porque es un panel de ventana corta.
+const SYNC_TP_CUSTOM_MIN_HOURS = 1;
+const SYNC_TP_CUSTOM_MAX_HOURS = 48;
+const SYNC_TP_CUSTOM_DEFAULT_HOURS = 12;
+
 /**
  * Panel de estado y memoria del data-service (pestaña "Caché" del shell
  * `/status`). Dueño del estado: mantiene controles y datos en signals, los
@@ -173,6 +185,7 @@ function stampAgo(iso: string | null | undefined): string {
     RedisInfoCardsComponent,
     DataSyncCyclesTableComponent,
     JobTimelineEchartsComponent,
+    MatButtonToggleModule,
   ],
   providers: [
     {
@@ -192,11 +205,25 @@ export class DataDashboardComponent {
   readonly tips = PANEL_TIPS;
 
   // Controles
-  readonly windowHours = signal<WindowHours>(168);
+  readonly windowHours = signal<WindowHours>(24);
   readonly bucket = signal<SyncBucket>('hour');
   readonly refreshSecs = signal<RefreshSeconds>(30);
   // Tope de filas de "Ciclos recientes" (crece con "cargar 50 más").
   readonly cyclesLimit = signal<number>(50);
+
+  // Throughput de sync a 10 min: modo Total/Por tipo + rango propio (estilo tiles).
+  readonly syncTpMode = signal<'total' | 'byType'>('total');
+  readonly syncTpWindowHours = signal<number>(6);
+  readonly syncTpCustom = signal<boolean>(false);
+  readonly syncTpCustomHours = signal<number>(SYNC_TP_CUSTOM_DEFAULT_HOURS);
+  readonly syncTpEffectiveHours = computed<number>(() =>
+    this.syncTpCustom() ? this.syncTpCustomHours() : this.syncTpWindowHours(),
+  );
+  readonly syncTpSelectValue = computed<string>(() =>
+    this.syncTpCustom() ? 'custom' : String(this.syncTpWindowHours()),
+  );
+  protected readonly SYNC_TP_CUSTOM_MIN_HOURS = SYNC_TP_CUSTOM_MIN_HOURS;
+  protected readonly SYNC_TP_CUSTOM_MAX_HOURS = SYNC_TP_CUSTOM_MAX_HOURS;
 
   // Datos
   readonly summary = signal<DataMetricsSummary | null>(null);
@@ -206,6 +233,8 @@ export class DataDashboardComponent {
   readonly syncHistory = signal<readonly DataSyncHistoryPoint[]>([]);
   readonly info = signal<RedisInfo | null>(null);
   readonly cycles = signal<readonly DataSyncCycle[]>([]);
+  /** Datos del throughput de sync a 10 min (ventana propia del panel). */
+  readonly syncTp10 = signal<readonly DataSyncHistoryPoint[]>([]);
 
   readonly updatedAt = signal<string>('—');
   readonly errorMsg = signal<string | null>(null);
@@ -228,6 +257,11 @@ export class DataDashboardComponent {
 
   /** Hay más ciclos por traer si la API devolvió una página completa. */
   readonly cyclesHasMore = computed<boolean>(() => this.cycles().length >= this.cyclesLimit());
+
+  /** Nombres de los dominios de sync; alimentan el tooltip de "Dominios de sync". */
+  readonly syncDomainNames = computed<readonly string[]>(
+    () => this.syncStatus()?.domains.map((d) => d.domain) ?? [],
+  );
 
   // ── Línea de tiempo de sincronización (carga aparte del auto-refresh) ──────
   readonly timelineRange = signal<TimelineRange>(24);
@@ -288,6 +322,11 @@ export class DataDashboardComponent {
     return rows.length ? buildSyncErrorsChart(rows, this.utc) : null;
   });
 
+  readonly syncTp10Options = computed<MetricsChartOptions | null>(() => {
+    const rows = this.syncTp10();
+    return rows.length ? buildSyncTp10Chart(rows, this.syncTpMode(), this.utc) : null;
+  });
+
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
@@ -313,6 +352,35 @@ export class DataDashboardComponent {
   onBucketChange(event: Event): void {
     this.bucket.set(this.stringValue(event) as SyncBucket);
     void this.refresh(true);
+  }
+
+  onSyncTpWindowChange(event: Event): void {
+    // 'custom' no es numérico, así que se ramifica antes de cualquier Number().
+    const value = this.stringValue(event);
+    if (value === 'custom') {
+      this.syncTpCustom.set(true);
+    } else {
+      this.syncTpCustom.set(false);
+      this.syncTpWindowHours.set(Number(value));
+    }
+    void this.loadSyncTp10();
+  }
+
+  /** Commit del input personalizado del throughput de sync (Enter / blur). */
+  onSyncTpCustomHoursChange(input: HTMLInputElement): void {
+    const clamped = this.clampSyncTpCustomHours(input.value);
+    input.value = String(clamped);
+    this.syncTpCustomHours.set(clamped);
+    void this.loadSyncTp10();
+  }
+
+  /** Recorta a [MIN, MAX] horas; conserva el último valor válido si la entrada es basura/<MIN. */
+  private clampSyncTpCustomHours(raw: string): number {
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n) || n < SYNC_TP_CUSTOM_MIN_HOURS) {
+      return this.syncTpCustomHours();
+    }
+    return Math.min(n, SYNC_TP_CUSTOM_MAX_HOURS);
   }
 
   onRefreshChange(event: Event): void {
@@ -429,7 +497,7 @@ export class DataDashboardComponent {
     }
     try {
       const hours = this.windowHours();
-      const [summary, syncStatus, memory, memoryHistory, syncHistory, info, cycles] =
+      const [summary, syncStatus, memory, memoryHistory, syncHistory, info, cycles, syncTp10] =
         await Promise.all([
           firstValueFrom(this.metrics.getSummary()),
           firstValueFrom(this.metrics.getSyncStatus()),
@@ -438,6 +506,7 @@ export class DataDashboardComponent {
           firstValueFrom(this.metrics.getSyncHistory(hours, this.bucket())),
           firstValueFrom(this.metrics.getRedisInfo()),
           firstValueFrom(this.metrics.getSyncCycles(hours, undefined, this.cyclesLimit())),
+          firstValueFrom(this.metrics.getSyncHistory(this.syncTpEffectiveHours(), '10min')),
         ]);
       this.summary.set(summary);
       this.syncStatus.set(syncStatus);
@@ -446,6 +515,7 @@ export class DataDashboardComponent {
       this.syncHistory.set(syncHistory);
       this.info.set(info);
       this.cycles.set(cycles);
+      this.syncTp10.set(syncTp10);
       this.updatedAt.set(new Date().toLocaleTimeString());
       this.errorMsg.set(null);
       this.hasLoaded.set(true);
@@ -455,6 +525,13 @@ export class DataDashboardComponent {
       this.loading.set(false);
       this.reloading.set(false);
     }
+  }
+
+  /** Recarga solo el throughput de sync a 10 min (cambio de su rango propio). */
+  private async loadSyncTp10(): Promise<void> {
+    this.syncTp10.set(
+      await firstValueFrom(this.metrics.getSyncHistory(this.syncTpEffectiveHours(), '10min')),
+    );
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────

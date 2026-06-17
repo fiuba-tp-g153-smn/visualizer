@@ -1,3 +1,5 @@
+@use '@angular/material' as mat;
+
 // Tokens de color de estado + chrome del dashboard, compartidos por las pestañas
 // de caché (`DataDashboardComponent`) y de mapa base (`BasemapDashboardComponent`)
 // del shell `/status`.
@@ -164,6 +166,20 @@
     padding: 18px;
     font-size: 12px;
     color: var(--mat-sys-on-surface-variant, #5f6368);
+  }
+
+  // Toggle Total/Por tipo de los paneles de throughput. El estado seleccionado por
+  // defecto usa el contenedor "secondary" del tema (amarillo); lo reapuntamos al
+  // celeste primario de la página, con texto on-primary para contraste.
+  .dash__tp-toggle {
+    @include mat.button-toggle-density(-3);
+    @include mat.button-toggle-overrides(
+      (
+        selected-state-background-color: var(--mat-sys-primary, #0090d0),
+        selected-state-text-color: var(--mat-sys-on-primary, #ffffff),
+      )
+    );
+    font-size: 11px;
   }
 
   .dash__error {

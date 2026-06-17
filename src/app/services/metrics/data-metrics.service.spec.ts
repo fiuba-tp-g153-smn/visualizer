@@ -52,6 +52,15 @@ describe('DataMetricsService', () => {
     req.flush(rows);
   });
 
+  it('supports the 10min bucket for sync history', () => {
+    service.getSyncHistory(6, '10min').subscribe();
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/metrics/sync/history'));
+    expect(req.request.params.get('hours')).toBe('6');
+    expect(req.request.params.get('bucket')).toBe('10min');
+    req.flush([]);
+  });
+
   it('omits the domain param when not provided on sync cycles', () => {
     service.getSyncCycles(48).subscribe();
 

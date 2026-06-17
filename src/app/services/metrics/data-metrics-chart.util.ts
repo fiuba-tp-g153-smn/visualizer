@@ -13,6 +13,8 @@ import type {
 } from '../../models/metrics/data-metrics.models';
 import { domainLabel } from './data-metrics-labels';
 import {
+  buildLineChart,
+  buildTotalThroughputChart,
   buildTypeColorMap,
   isolatedPointMarkers,
   pivot,
@@ -245,6 +247,30 @@ export function buildSyncThroughputChart(
     plotOptions: { bar: { columnWidth: '70%', borderRadius: 2 } },
     markers: { size: 0 },
   };
+}
+
+/**
+ * Throughput de sync a 10 min (estilo "Throughput · cada 10 min" del tiles-processor):
+ * grafica los items descargados por bucket. `total` agrega una sola línea; `byType`
+ * dibuja una línea por dominio. Reutiliza los builders genéricos mapeando el dominio a
+ * `job_type` (sin etiqueta) para que los colores coincidan con el resto de gráficos de
+ * sync, que también colorean por dominio crudo.
+ */
+export function buildSyncTp10Chart(
+  history: readonly DataSyncHistoryPoint[],
+  mode: 'total' | 'byType',
+  utc = true,
+): MetricsChartOptions {
+  const rows = history.map((p) => ({
+    bucket: p.bucket,
+    job_type: p.domain,
+    count: p.downloaded,
+  }));
+  if (mode === 'total') {
+    return buildTotalThroughputChart(rows, 260, utc);
+  }
+  const colorFor = buildTypeColorMap(rows.map((r) => r.job_type));
+  return buildLineChart(rows, 'count', 'count', 260, colorFor, utc);
 }
 
 /** Lines of sync errors per time bucket and domain. */
