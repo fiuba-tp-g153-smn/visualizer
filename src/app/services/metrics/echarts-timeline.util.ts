@@ -16,6 +16,9 @@ import {
  */
 export const PLOT_BOTTOM_RESERVE = 40;
 
+/** Borde fino entre barras contiguas para que no se fundan en una sola. */
+const BAR_SEPARATOR_COLOR = '#ffffff';
+
 /** Un dato del gráfico: `value`=[carril, inicioMs, finMs] + metadatos. */
 export interface EchartsTimelineDatum {
   value: [number, number, number];
@@ -110,7 +113,14 @@ export function buildEchartsOption(
     return {
       type: 'rect',
       shape: { x: start[0], y: start[1] - height / 2, width, height, r: 1 },
-      style: { fill: data[params.dataIndex].color },
+      style: {
+        fill: data[params.dataIndex].color,
+        // Separa barras contiguas del mismo color (si no, una ráfaga densa se ve
+        // como una sola barra sólida); el trazo va centrado en el borde, así que
+        // dos barras pegadas comparten una línea de ~1px.
+        stroke: BAR_SEPARATOR_COLOR,
+        lineWidth: 1,
+      },
     };
   };
 

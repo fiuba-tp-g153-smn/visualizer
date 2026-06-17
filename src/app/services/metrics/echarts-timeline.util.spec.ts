@@ -83,6 +83,28 @@ describe('buildEchartsOption', () => {
     expect(laneById.get(3)).toBe(1);
   });
 
+  it('draws each bar with a thin separator stroke so dense bars stay distinct', () => {
+    const o = buildEchartsOption([job({})], { utc: true, colorBy: 'outcome' });
+    const renderItem = o.option.series[0]['renderItem'] as (
+      p: { dataIndex: number },
+      api: {
+        value: (d: number) => number;
+        coord: (pt: [number, number]) => [number, number];
+        size: () => [number, number];
+      },
+    ) => { type: string; style: { fill: string; stroke: string; lineWidth: number } };
+    const api = {
+      value: (dim: number) => [0, 1000, 2000][dim],
+      coord: ([x]: [number, number]): [number, number] => [x / 10, 50],
+      size: (): [number, number] => [0, 20],
+    };
+    const rect = renderItem({ dataIndex: 0 }, api);
+    expect(rect.type).toBe('rect');
+    expect(rect.style.fill).toBe(data(o)[0].color);
+    expect(rect.style.stroke).toBe('#ffffff');
+    expect(rect.style.lineWidth).toBe(1);
+  });
+
   it('colors by outcome and by type', () => {
     const byOutcome = buildEchartsOption([job({ outcome: 'dlq' })], { utc: true, colorBy: 'outcome' });
     expect(data(byOutcome)[0].color).toBe(outcomeColor('dlq'));
