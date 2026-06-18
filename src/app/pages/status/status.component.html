@@ -4,49 +4,46 @@
       <mat-icon>arrow_back</mat-icon>
     </button>
     <div class="status__tabs" role="tablist" aria-label="Paneles de estado">
-      <button
+      <a
         class="status__tab"
         role="tab"
-        type="button"
-        [class.status__tab--active]="tab() === 'processing'"
-        [attr.aria-selected]="tab() === 'processing'"
-        (click)="setTab('processing')"
+        routerLink="processing"
+        routerLinkActive="status__tab--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        #rlaProcessing="routerLinkActive"
+        [attr.aria-selected]="rlaProcessing.isActive"
       >
         <mat-icon>assessment</mat-icon>
         <span>Procesamiento</span>
-      </button>
-      <button
+      </a>
+      <a
         class="status__tab"
         role="tab"
-        type="button"
-        [class.status__tab--active]="tab() === 'cache'"
-        [attr.aria-selected]="tab() === 'cache'"
-        (click)="setTab('cache')"
+        routerLink="cache"
+        routerLinkActive="status__tab--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        #rlaCache="routerLinkActive"
+        [attr.aria-selected]="rlaCache.isActive"
       >
         <mat-icon>save_clock</mat-icon>
         <span>Caché</span>
-      </button>
-      <button
+      </a>
+      <a
         class="status__tab"
         role="tab"
-        type="button"
-        [class.status__tab--active]="tab() === 'basemap'"
-        [attr.aria-selected]="tab() === 'basemap'"
-        (click)="setTab('basemap')"
+        routerLink="basemap"
+        routerLinkActive="status__tab--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        #rlaBasemap="routerLinkActive"
+        [attr.aria-selected]="rlaBasemap.isActive"
       >
         <mat-icon>layers</mat-icon>
         <span>Mapas base</span>
-      </button>
+      </a>
     </div>
   </header>
 
   <div class="status__body">
-    @if (tab() === 'processing') {
-      <app-dashboard />
-    } @else if (tab() === 'cache') {
-      <app-data-dashboard />
-    } @else {
-      <app-basemap-dashboard />
-    }
+    <router-outlet />
   </div>
 </div>

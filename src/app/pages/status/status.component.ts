@@ -1,20 +1,17 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Router } from '@angular/router';
-
-import { BasemapDashboardComponent } from '../basemap-dashboard/basemap-dashboard.component';
-import { DashboardComponent } from '../dashboard/dashboard.component';
-import { DataDashboardComponent } from '../data-dashboard/data-dashboard.component';
-
-type StatusTab = 'processing' | 'cache' | 'basemap';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 /**
  * Shell de la ruta `/status`: una barra superior (volver + tres pestañas) y, en
- * el cuerpo, uno de los tres paneles. Solo se instancia el panel de la pestaña
- * activa (`@if`), así nada más uno hace polling a la vez; cambiar de pestaña
- * destruye el anterior (corta su intervalo) y monta el otro con datos frescos.
+ * el cuerpo, un `<router-outlet>` con el panel de la ruta hija activa
+ * (`processing` | `cache` | `basemap`). Las pestañas son anclas `routerLink`, así
+ * el navegador puede abrirlas en una pestaña nueva (click central / Ctrl-click).
+ * El outlet solo instancia el panel activo, de modo que nada más uno hace polling
+ * a la vez; navegar destruye el anterior (corta su intervalo) y monta el otro con
+ * datos frescos.
  */
 @Component({
   selector: 'app-status',
@@ -24,20 +21,15 @@ type StatusTab = 'processing' | 'cache' | 'basemap';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    DashboardComponent,
-    DataDashboardComponent,
-    BasemapDashboardComponent,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
   ],
   templateUrl: './status.component.html',
   styleUrl: './status.component.scss',
 })
 export class StatusComponent {
   private readonly router = inject(Router);
-  readonly tab = signal<StatusTab>('processing');
-
-  setTab(tab: StatusTab): void {
-    this.tab.set(tab);
-  }
 
   goBack(): void {
     void this.router.navigate(['/']);

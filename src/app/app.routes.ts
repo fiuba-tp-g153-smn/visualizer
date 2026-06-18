@@ -29,7 +29,31 @@ export const routes: Routes = [
     path: 'status',
     loadComponent: () =>
       import('./pages/status/status.component').then((m) => m.StatusComponent),
-    data: STATUS_SEO,
+    children: [
+      { path: '', redirectTo: 'processing', pathMatch: 'full' },
+      {
+        path: 'processing',
+        loadComponent: () =>
+          import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+        data: STATUS_SEO,
+      },
+      {
+        path: 'cache',
+        loadComponent: () =>
+          import('./pages/data-dashboard/data-dashboard.component').then(
+            (m) => m.DataDashboardComponent,
+          ),
+        data: STATUS_SEO,
+      },
+      {
+        path: 'basemap',
+        loadComponent: () =>
+          import('./pages/basemap-dashboard/basemap-dashboard.component').then(
+            (m) => m.BasemapDashboardComponent,
+          ),
+        data: STATUS_SEO,
+      },
+    ],
   },
   { path: '**', redirectTo: '' },
 ];
