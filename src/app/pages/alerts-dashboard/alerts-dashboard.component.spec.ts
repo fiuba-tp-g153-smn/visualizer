@@ -150,4 +150,61 @@ describe('AlertsDashboardComponent', () => {
     expect(data.job).toBe(JOB);
     expect(data.phenomenon).toBe('TORMENTAS');
   });
+
+  it('builds the failures table with all columns sortable', () => {
+    component.summary.set(SUMMARY);
+    const t = component.failuresTable();
+    expect(t.headers.map((h) => h.key)).toEqual(['motivo', 'cantidad']);
+    expect(t.headers.every((h) => h.sortable)).toBe(true);
+    expect(t.tableRows[0].sortValues[1]).toBe(1); // count is numeric-sortable
+  });
+
+  it('builds the jobs table with sortable columns, row keys and numeric sort values', () => {
+    component.jobs.set([JOB]);
+    const t = component.jobsTable();
+    expect(t.headers.map((h) => h.key)).toEqual([
+      'hora',
+      'fenomeno',
+      'resultado',
+      'deptos',
+      'duracion',
+    ]);
+    expect(t.headers.every((h) => h.sortable)).toBe(true);
+    expect(t.tableRows[0].key).toBe('abc');
+    expect(t.tableRows[0].sortValues[4]).toBe(1500); // duration sorts by raw ms
+  });
+
+  it('onJobRowClick opens the dialog for the matching job', () => {
+    component.jobs.set([JOB]);
+    component.onJobRowClick('abc');
+    expect(dialogMock.open).toHaveBeenCalledTimes(1);
+    expect(dialogMock.open.mock.calls[0][1].data.job).toBe(JOB);
+  });
+
+  it('adapts alert jobs to the timeline RecentJob shape', () => {
+    component.phenomena.set(new Map([[1, 'TORMENTAS']]));
+    component.timelineJobs.set([JOB]);
+    const rj = component.timelineRecentJobs()[0];
+    expect(rj.work_unit_id).toBe('abc'); // carries the real id for click-back
+    expect(rj.outcome).toBe('success'); // done → success (green)
+    expect(rj.job_type).toBe('1'); // phenomenon code
+    expect(rj.product_label).toBe('TORMENTAS');
+    expect(rj.total_s).toBe(1.5); // 1500 ms
+    // started_at = finished_at − duration_ms
+    expect(Date.parse(rj.started_at)).toBe(Date.parse(JOB.finished_at) - 1500);
+  });
+
+  it('onTimelineJobClick opens the dialog for the matching alert job', () => {
+    component.timelineJobs.set([JOB]);
+    component.onTimelineJobClick({ work_unit_id: 'abc' } as never);
+    expect(dialogMock.open).toHaveBeenCalledTimes(1);
+    expect(dialogMock.open.mock.calls[0][1].data.job).toBe(JOB);
+  });
+
+  it('onTimelineRangeChange refetches all jobs in the range (limit 0)', () => {
+    metricsMock.getJobs.mockClear();
+    component.onTimelineRangeChange(selectEvent('720'));
+    expect(component.timelineHours()).toBe(720);
+    expect(metricsMock.getJobs).toHaveBeenCalledWith(720, 0);
+  });
 });

@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -17,9 +16,17 @@ import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material
 import { firstValueFrom } from 'rxjs';
 
 import { AlertJobDetailDialogComponent } from '../../components/dashboard/alert-job-detail-dialog/alert-job-detail-dialog.component';
+import { JobTimelineEchartsComponent } from '../../components/dashboard/job-timeline-echarts/job-timeline-echarts.component';
 import { MetricChartComponent } from '../../components/dashboard/metric-chart/metric-chart.component';
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
 import { StagePieChartComponent } from '../../components/dashboard/stage-pie-chart/stage-pie-chart.component';
+import { SortableTableComponent } from '../../components/dashboard/sortable-table/sortable-table.component';
+import {
+  buildTable,
+  pillCell,
+  textCell,
+  type SortState,
+} from '../../components/dashboard/sortable-table/sortable-table.models';
 import {
   StatCardsComponent,
   type StatCard,
@@ -31,6 +38,7 @@ import type {
   RefreshSeconds,
   WindowHours,
 } from '../../models/metrics/alerts-metrics.models';
+import type { RecentJob } from '../../models/metrics/metrics.models';
 import {
   buildLineChart,
   type MetricsChartOptions,
@@ -71,6 +79,13 @@ function formatMs(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
 }
 
+/** Local "dd/MM HH:mm:ss" (the sortable table needs a pre-rendered string). */
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 /**
  * Panel "Alertas" del shell `/status`: estado de generación de avisos. Dueño del
  * estado (signals), refresca contra el API de métricas del alerts-service y lo
@@ -81,7 +96,6 @@ function formatMs(ms: number): string {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -89,7 +103,9 @@ function formatMs(ms: number): string {
     MetricPanelComponent,
     MetricChartComponent,
     StagePieChartComponent,
+    SortableTableComponent,
     StatCardsComponent,
+    JobTimelineEchartsComponent,
   ],
   providers: [
     {
@@ -116,6 +132,12 @@ export class AlertsDashboardComponent {
   readonly jobs = signal<readonly AlertJobMetric[]>([]);
   readonly activity = signal<readonly AlertsJobHistoryPoint[]>([]);
   readonly phenomena = signal<ReadonlyMap<number, string>>(new Map());
+
+  // Timeline panel: its own range + raw jobs; reloadKey bumps only on a fresh
+  // load (range change / manual refresh) so the auto-refresh preserves zoom/pan.
+  readonly timelineHours = signal<ActivityHours>(24);
+  readonly timelineJobs = signal<readonly AlertJobMetric[]>([]);
+  readonly timelineReloadKey = signal<number>(0);
 
   readonly updatedAt = signal<string>('—');
   readonly errorMsg = signal<string | null>(null);
@@ -201,6 +223,64 @@ export class AlertsDashboardComponent {
       .sort((a, b) => b.count - a.count);
   });
 
+  readonly failuresSort: SortState = { key: 'cantidad', dir: 'desc' };
+  readonly jobsSort: SortState = { key: 'hora', dir: 'desc' };
+
+  /** "Fallos por motivo" projected to the generic sortable table. */
+  readonly failuresTable = computed(() =>
+    buildTable<FailureRow>(
+      [
+        {
+          header: { key: 'motivo', label: 'Motivo', align: 'left', sortable: true },
+          cell: (r) => textCell(r.label),
+          sortValue: (r) => r.label,
+        },
+        {
+          header: { key: 'cantidad', label: 'Cantidad', align: 'right', sortable: true },
+          cell: (r) => textCell(String(r.count)),
+          sortValue: (r) => r.count,
+        },
+      ],
+      this.failureRows(),
+    ),
+  );
+
+  /** "Trabajos recientes" projected to the generic sortable table (row → dialog). */
+  readonly jobsTable = computed(() =>
+    buildTable<AlertJobMetric>(
+      [
+        {
+          header: { key: 'hora', label: 'Hora', align: 'left', sortable: true },
+          cell: (j) => textCell(fmtTime(j.finished_at)),
+          sortValue: (j) => Date.parse(j.finished_at),
+        },
+        {
+          header: { key: 'fenomeno', label: 'Fenómeno', align: 'left', sortable: true },
+          cell: (j) => textCell(this.phenomenonLabel(j.phenomenon_code)),
+          sortValue: (j) => j.phenomenon_code,
+        },
+        {
+          header: { key: 'resultado', label: 'Resultado', align: 'left', sortable: true },
+          cell: (j) =>
+            pillCell(j.outcome === 'done' ? 'success' : 'error', j.outcome === 'done' ? 'OK' : 'Falló'),
+          sortValue: (j) => j.outcome,
+        },
+        {
+          header: { key: 'deptos', label: 'Deptos.', align: 'right', sortable: true },
+          cell: (j) => textCell(j.affected_departments?.toString() ?? '—'),
+          sortValue: (j) => j.affected_departments ?? -1,
+        },
+        {
+          header: { key: 'duracion', label: 'Duración', align: 'right', sortable: true },
+          cell: (j) => textCell(this.formatDuration(j.duration_ms)),
+          sortValue: (j) => j.duration_ms ?? -1,
+        },
+      ],
+      this.jobs(),
+      (j) => j.job_id,
+    ),
+  );
+
   /** Línea de tiempo Exitosas/Fallidas (reusa el builder genérico por "tipo"). */
   readonly activityChart = computed<MetricsChartOptions | null>(() => {
     const rows = this.activity();
@@ -248,6 +328,22 @@ export class AlertsDashboardComponent {
 
   readonly hasAvgStages = computed<boolean>(() => Object.keys(this.avgStages()).length > 0);
 
+  /** Alert jobs adapted to the shared timeline's `RecentJob` shape. */
+  readonly timelineRecentJobs = computed<RecentJob[]>(() =>
+    this.timelineJobs().map((j) => this.toRecentJob(j)),
+  );
+
+  /** Custom timeline tooltip (avoids the processing default's worker line). */
+  readonly timelineTooltip = (rj: RecentJob): string => {
+    const outcome = rj.outcome === 'success' ? 'OK' : 'Falló';
+    const dur = rj.total_s == null ? '—' : `${rj.total_s.toFixed(1)} s`;
+    return (
+      `<div style="font-weight:600;margin-bottom:2px">${rj.product_label ?? rj.job_type}</div>` +
+      `<div>Duración: ${dur}</div>` +
+      `<div>Resultado: ${outcome}</div>`
+    );
+  };
+
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
@@ -261,6 +357,7 @@ export class AlertsDashboardComponent {
     this.destroyRef.onDestroy(() => this.clearTimer());
     void this.loadPhenomena();
     void this.refresh(true);
+    void this.loadTimeline();
   }
 
   onWindowChange(event: Event): void {
@@ -277,12 +374,31 @@ export class AlertsDashboardComponent {
     void this.loadActivity();
   }
 
+  onTimelineRangeChange(event: Event): void {
+    this.timelineHours.set(this.numberValue(event) as ActivityHours);
+    void this.loadTimeline();
+  }
+
+  onTimelineJobClick(rj: RecentJob): void {
+    const job = this.timelineJobs().find((j) => j.job_id === rj.work_unit_id);
+    if (job) {
+      this.openJob(job);
+    }
+  }
+
   refreshNow(): void {
     void this.refresh(true);
+    void this.loadTimeline();
   }
 
   phenomenonName(code: number): string {
     return this.phenomena().get(code) ?? '';
+  }
+
+  /** "<code> — <name>", or just the code when the name isn't known yet. */
+  phenomenonLabel(code: number): string {
+    const name = this.phenomenonName(code);
+    return name ? `${code} — ${name}` : String(code);
   }
 
   errorCodeLabel(code: string | null): string {
@@ -291,6 +407,13 @@ export class AlertsDashboardComponent {
 
   formatDuration(ms: number | null): string {
     return ms == null ? '—' : formatMs(ms);
+  }
+
+  onJobRowClick(key: string | number): void {
+    const job = this.jobs().find((j) => j.job_id === key);
+    if (job) {
+      this.openJob(job);
+    }
   }
 
   openJob(job: AlertJobMetric): void {
@@ -337,6 +460,45 @@ export class AlertsDashboardComponent {
     const hours = this.activityHours();
     const bucket = hours <= 48 ? 'hour' : 'day';
     this.activity.set(await firstValueFrom(this.metrics.getJobsHistory(hours, bucket)));
+  }
+
+  /** Fresh load of the timeline (limit 0 = all jobs in the range); bumps reloadKey. */
+  private async loadTimeline(): Promise<void> {
+    const jobs = await firstValueFrom(this.metrics.getJobs(this.timelineHours(), 0));
+    this.timelineJobs.set(jobs);
+    this.timelineReloadKey.update((key) => key + 1);
+  }
+
+  /**
+   * Project an alert job onto the shared timeline's `RecentJob` shape. Only a few
+   * fields drive the timeline (start/end, outcome→color, job_type/label, total_s);
+   * the rest are neutral defaults. `work_unit_id` carries the real id for click-back.
+   */
+  private toRecentJob(j: AlertJobMetric): RecentJob {
+    const finishedMs = Date.parse(j.finished_at);
+    const startedMs = finishedMs - (j.duration_ms ?? 0);
+    const name = this.phenomenonName(j.phenomenon_code);
+    return {
+      id: 0,
+      work_unit_id: j.job_id,
+      image_id: '',
+      data_source_id: '',
+      processor_id: null,
+      band_id: null,
+      job_type: String(j.phenomenon_code),
+      product_label: name || `Fenómeno ${j.phenomenon_code}`,
+      image_timestamp: null,
+      outcome: j.outcome === 'done' ? 'success' : 'error',
+      worker_host: null,
+      started_at: new Date(startedMs).toISOString(),
+      finished_at: j.finished_at,
+      retry_count: 0,
+      error_message: j.error_code,
+      download_s: null,
+      process_s: null,
+      total_s: (j.duration_ms ?? 0) / 1000,
+      stage_timings: {},
+    };
   }
 
   private async loadPhenomena(): Promise<void> {

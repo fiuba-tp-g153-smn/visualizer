@@ -49,64 +49,39 @@
     color: var(--mat-sys-on-surface-variant, #9aa0a6);
     font-size: 13px;
   }
+}
 
-  &__code {
-    display: inline-block;
-    min-width: 22px;
-    padding: 0 5px;
-    margin-right: 4px;
-    border-radius: 4px;
-    background: var(--mat-sys-surface-container, #eceff1);
-    color: var(--mat-sys-on-surface-variant, #5f6368);
-    font-variant-numeric: tabular-nums;
-    text-align: center;
+// ── Side-by-side row (timeline + stage-average pie) ──────────────────────────
+.dash__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+
+  .dash__row-grow {
+    flex: 2 1 0;
+    min-width: 0; // let the ECharts canvas shrink instead of overflowing
   }
 
-  &__row {
-    cursor: pointer;
-
-    &:hover {
-      background: var(--mat-sys-surface-container, #f3f3f5);
-    }
+  .dash__row-side {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
-  &__chev {
-    width: 28px;
-    text-align: center;
-    color: var(--mat-sys-outline, #9aa0a6);
+  @media (max-width: 900px) {
+    flex-direction: column;
 
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+    .dash__row-grow,
+    .dash__row-side {
+      width: 100%;
     }
   }
 }
 
-.badge {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-
-  &--ok {
-    background: var(--metric-success-bg, #e6f4ec);
-    color: var(--metric-success, #2e9b51);
-  }
-
-  &--err {
-    background: var(--metric-error-bg, #fdeee5);
-    color: var(--metric-error, #e8702a);
-  }
-}
-
-// ── Stage averages (chart + numbers) ─────────────────────────────────────────
+// ── Stage averages (pie over the numbers; fits the narrow side column) ────────
 .stages {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
   padding: 8px 10px;
 
   &__chart {
@@ -118,9 +93,5 @@
     td {
       white-space: nowrap;
     }
-  }
-
-  @media (max-width: 700px) {
-    grid-template-columns: 1fr;
   }
 }

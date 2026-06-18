@@ -94,7 +94,58 @@
           <app-stat-cards [cards]="cards()" />
         </app-metric-panel>
 
-        <!-- 3 · Actividad por hora -->
+        <!-- 3 · Tiempo promedio por etapa + Línea de tiempo de trabajos (lado a lado) -->
+        <div class="dash__row">
+          <app-metric-panel
+            class="dash__row-side"
+            heading="Tiempo promedio por etapa"
+            tip="Promedio de cada etapa de generación (intersección, filtrado, render, guardado) en la ventana."
+          >
+            @if (hasAvgStages()) {
+              <div class="stages">
+                <div class="stages__chart">
+                  <app-stage-pie-chart [stages]="avgStages()" [height]="240" />
+                </div>
+                <table class="tbl stages__table">
+                  <tbody>
+                    @for (row of avgStageRows(); track row.label) {
+                      <tr>
+                        <td>{{ row.label }}</td>
+                        <td class="tbl__num">{{ row.value }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <p class="tbl__empty">Sin datos de etapas en la ventana.</p>
+            }
+          </app-metric-panel>
+
+          <app-metric-panel
+            class="dash__row-grow"
+            heading="Línea de tiempo de trabajos"
+            tip="Cada alerta es una barra sobre su duración. Rueda para zoom, arrastrá para seleccionar un rango, clic en una barra para el desglose por etapa."
+          >
+            <label panelActions class="dash__ctl">
+              rango
+              <select [value]="timelineHours()" (change)="onTimelineRangeChange($event)">
+                <option value="24">24h</option>
+                <option value="168">7d</option>
+                <option value="720">30d</option>
+              </select>
+            </label>
+            <app-job-timeline-echarts
+              [jobs]="timelineRecentJobs()"
+              [reloadKey]="timelineReloadKey()"
+              [tooltip]="timelineTooltip"
+              typeLabel="fenómeno"
+              (jobClick)="onTimelineJobClick($event)"
+            />
+          </app-metric-panel>
+        </div>
+
+        <!-- 4 · Actividad por hora -->
         <app-metric-panel
           heading="Actividad"
           tip="Alertas generadas con éxito vs. fallidas por intervalo de tiempo."
@@ -116,104 +167,33 @@
           </div>
         </app-metric-panel>
 
-        <!-- 4 · Fallos por motivo -->
+        <!-- 5 · Fallos por motivo -->
         <app-metric-panel
           heading="Fallos por motivo"
-          tip="Desglose de los trabajos fallidos por código de error."
+          tip="Desglose de los trabajos fallidos por código de error. Clic en un encabezado para ordenar."
         >
-          @if (failureRows().length) {
-            <table class="tbl">
-              <thead>
-                <tr>
-                  <th>Motivo</th>
-                  <th class="tbl__num">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of failureRows(); track row.label) {
-                  <tr>
-                    <td>{{ row.label }}</td>
-                    <td class="tbl__num">{{ row.count }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          } @else {
-            <p class="tbl__empty">Sin fallos en la ventana.</p>
-          }
+          <app-sortable-table
+            [headers]="failuresTable().headers"
+            [rows]="failuresTable().tableRows"
+            [initialSort]="failuresSort"
+            emptyText="Sin fallos en la ventana."
+          />
         </app-metric-panel>
 
-        <!-- 5 · Trabajos recientes -->
+        <!-- 6 · Trabajos recientes -->
         <app-metric-panel
           heading="Trabajos recientes"
-          tip="Últimas alertas generadas (más nuevas primero). Clic en una fila para ver el desglose por etapa."
+          tip="Últimas alertas generadas. Clic en un encabezado para ordenar, o en una fila para ver el desglose por etapa."
         >
-          <div class="dash__scroll-x tbl-wrap">
-            <table class="tbl">
-              <thead>
-                <tr>
-                  <th>Hora</th>
-                  <th>Fenómeno</th>
-                  <th>Resultado</th>
-                  <th class="tbl__num">Deptos.</th>
-                  <th class="tbl__num">Duración</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (job of jobs(); track job.job_id) {
-                  <tr class="tbl__row" (click)="openJob(job)">
-                    <td>{{ job.finished_at | date: 'dd/MM HH:mm:ss' }}</td>
-                    <td>
-                      <span class="tbl__code">{{ job.phenomenon_code }}</span>
-                      {{ phenomenonName(job.phenomenon_code) }}
-                    </td>
-                    <td>
-                      <span
-                        class="badge"
-                        [class.badge--ok]="job.outcome === 'done'"
-                        [class.badge--err]="job.outcome === 'failed'"
-                        >{{ job.outcome === 'done' ? 'OK' : 'Falló' }}</span
-                      >
-                    </td>
-                    <td class="tbl__num">{{ job.affected_departments ?? '—' }}</td>
-                    <td class="tbl__num">{{ formatDuration(job.duration_ms) }}</td>
-                    <td class="tbl__chev"><mat-icon>chevron_right</mat-icon></td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="6" class="tbl__empty">Sin trabajos en la ventana.</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+          <div class="tbl-wrap">
+            <app-sortable-table
+              [headers]="jobsTable().headers"
+              [rows]="jobsTable().tableRows"
+              [initialSort]="jobsSort"
+              emptyText="Sin trabajos en la ventana."
+              (rowClick)="onJobRowClick($event)"
+            />
           </div>
-        </app-metric-panel>
-
-        <!-- 6 · Tiempo promedio por etapa -->
-        <app-metric-panel
-          heading="Tiempo promedio por etapa"
-          tip="Promedio de cada etapa de generación (intersección, filtrado, render, guardado) en la ventana."
-        >
-          @if (hasAvgStages()) {
-            <div class="stages">
-              <div class="stages__chart">
-                <app-stage-pie-chart [stages]="avgStages()" [height]="260" />
-              </div>
-              <table class="tbl stages__table">
-                <tbody>
-                  @for (row of avgStageRows(); track row.label) {
-                    <tr>
-                      <td>{{ row.label }}</td>
-                      <td class="tbl__num">{{ row.value }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          } @else {
-            <p class="tbl__empty">Sin datos de etapas en la ventana.</p>
-          }
         </app-metric-panel>
       </div>
 
