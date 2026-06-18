@@ -124,7 +124,7 @@ export class AlertsDashboardComponent {
 
   // Controles
   readonly windowHours = signal<WindowHours>(24);
-  readonly refreshSecs = signal<RefreshSeconds>(10);
+  readonly refreshSecs = signal<RefreshSeconds>(30);
   readonly activityHours = signal<ActivityHours>(24);
 
   // Datos

@@ -115,7 +115,7 @@ export class DashboardComponent {
   // Controles
   readonly windowHours = signal<WindowHours>(24);
   readonly bucket = signal<Bucket>('hour');
-  readonly refreshSecs = signal<RefreshSeconds>(10);
+  readonly refreshSecs = signal<RefreshSeconds>(30);
   readonly tpWindowHours = signal<TenMinWindowHours>(6);
   /** Modo "personalizado" del rango de throughput: muestra un input de horas a medida. */
   readonly tpCustom = signal<boolean>(false);
