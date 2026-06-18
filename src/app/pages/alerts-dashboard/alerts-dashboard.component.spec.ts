@@ -1,10 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
 
 import { AlertsDashboardComponent } from './alerts-dashboard.component';
 import { AlertsMetricsService } from '../../services/metrics/alerts-metrics.service';
+import { DepartmentIntersectionService } from '../../services/polygons/department-intersection.service';
 import type { AlertsSummary } from '../../models/metrics/alerts-metrics.models';
+
+// Tests are synchronous and drive signals directly (never awaiting the
+// constructor's refresh), so the ApexCharts panels never mount — mirrors the
+// Procesamiento dashboard spec and avoids needing a DOM ResizeObserver.
 
 const SUMMARY: AlertsSummary = {
   window_hours: 24,
@@ -16,11 +22,13 @@ const SUMMARY: AlertsSummary = {
     avg_duration_ms: 1500,
     p95_duration_ms: 3000,
     avg_intersection_ms: 40,
+    avg_filter_ms: 20,
     avg_render_ms: 900,
+    avg_persist_ms: 10,
   },
   processor: {
-    sampled_at: '2026-06-17T10:00:00+00:00',
-    queue_depth: 1,
+    sampled_at: '2026-06-18T10:00:00+00:00',
+    queue_depth: 0,
     workers: 2,
     respawns: 0,
     jobs_queued_total: 3,
@@ -30,11 +38,24 @@ const SUMMARY: AlertsSummary = {
   },
 };
 
+const JOB = {
+  job_id: 'abc',
+  phenomenon_code: 1,
+  finished_at: '2026-06-18T10:00:00+00:00',
+  duration_ms: 1500,
+  outcome: 'done' as const,
+  error_code: null,
+  affected_departments: 5,
+  intersection_ms: 40,
+  filter_ms: 20,
+  render_ms: 900,
+  persist_ms: 10,
+  polygon_vertices: 10,
+};
+
 function selectEvent(value: string): Event {
   return { target: { value } } as unknown as Event;
 }
-
-const settle = () => new Promise((r) => setTimeout(r, 0));
 
 describe('AlertsDashboardComponent', () => {
   let fixture: ComponentFixture<AlertsDashboardComponent>;
@@ -43,20 +64,25 @@ describe('AlertsDashboardComponent', () => {
     getSummary: ReturnType<typeof vi.fn>;
     getJobs: ReturnType<typeof vi.fn>;
     getJobsHistory: ReturnType<typeof vi.fn>;
-    getProcessorHistory: ReturnType<typeof vi.fn>;
-    getLayers: ReturnType<typeof vi.fn>;
   };
+  let dialogMock: { open: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     metricsMock = {
       getSummary: vi.fn(() => of(SUMMARY)),
-      getJobs: vi.fn(() => of([])),
+      getJobs: vi.fn(() => of([JOB])),
       getJobsHistory: vi.fn(() => of([])),
-      getProcessorHistory: vi.fn(() => of([])),
-      getLayers: vi.fn(() => of([])),
+    };
+    dialogMock = { open: vi.fn() };
+    const deptMock = {
+      getPhenomena: vi.fn(() => of([{ code: 1, description: 'TORMENTAS' }])),
     };
     TestBed.configureTestingModule({
-      providers: [{ provide: AlertsMetricsService, useValue: metricsMock }],
+      providers: [
+        { provide: AlertsMetricsService, useValue: metricsMock },
+        { provide: DepartmentIntersectionService, useValue: deptMock },
+        { provide: MatDialog, useValue: dialogMock },
+      ],
     });
     fixture = TestBed.createComponent(AlertsDashboardComponent);
     component = fixture.componentInstance;
@@ -64,26 +90,64 @@ describe('AlertsDashboardComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('loads metrics on init and derives cards + failure rows', async () => {
-    await settle();
-    expect(component.hasLoaded()).toBe(true);
-    expect(component.summary()?.jobs.total).toBe(3);
-    expect(component.cards().length).toBeGreaterThan(0);
+  it('builds separator cards (feminine labels, no "En cola")', () => {
+    component.summary.set(SUMMARY);
+    const labels = component.cards().map((c) => c.label);
+    expect(labels).toContain('Alertas generadas');
+    expect(labels).toContain('Exitosas');
+    expect(labels).toContain('Fallidas');
+    expect(labels).toContain('Pendientes');
+    expect(labels).not.toContain('En cola');
+  });
+
+  it('derives the failure breakdown rows', () => {
+    component.summary.set(SUMMARY);
     expect(component.failureRows()).toEqual([
       { label: 'Tiempo de generación agotado', count: 1 },
     ]);
   });
 
-  it('onWindowChange updates the window and refetches', async () => {
-    await settle();
+  it('builds the average-stage seconds dict for the pie', () => {
+    component.summary.set(SUMMARY);
+    expect(component.avgStages()).toEqual({
+      intersect: 0.04,
+      filter: 0.02,
+      render: 0.9,
+      persist: 0.01,
+    });
+  });
+
+  it('resolves the phenomenon name from the loaded map', () => {
+    component.phenomena.set(new Map([[1, 'TORMENTAS']]));
+    expect(component.phenomenonName(1)).toBe('TORMENTAS');
+  });
+
+  it('onWindowChange updates the window and refetches', () => {
+    component.loading.set(false); // clear the constructor's in-flight guard
     metricsMock.getSummary.mockClear();
     component.onWindowChange(selectEvent('168'));
     expect(component.windowHours()).toBe(168);
     expect(metricsMock.getSummary).toHaveBeenCalledWith(168);
   });
 
+  it('onActivityRangeChange switches to a day bucket for long ranges', () => {
+    metricsMock.getJobsHistory.mockClear();
+    component.onActivityRangeChange(selectEvent('720'));
+    expect(component.activityHours()).toBe(720);
+    expect(metricsMock.getJobsHistory).toHaveBeenCalledWith(720, 'day');
+  });
+
   it('onRefreshChange updates the auto-refresh interval', () => {
     component.onRefreshChange(selectEvent('60'));
     expect(component.refreshSecs()).toBe(60);
+  });
+
+  it('openJob opens the detail dialog with the job + phenomenon', () => {
+    component.phenomena.set(new Map([[1, 'TORMENTAS']]));
+    component.openJob(JOB);
+    expect(dialogMock.open).toHaveBeenCalledTimes(1);
+    const data = dialogMock.open.mock.calls[0][1].data;
+    expect(data.job).toBe(JOB);
+    expect(data.phenomenon).toBe('TORMENTAS');
   });
 });

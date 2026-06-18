@@ -37,6 +37,11 @@ export const STAGE_LABELS: Readonly<Record<string, string>> = {
   tiling: 'Teselado',
   upload: 'Subida',
   list: 'Verif. existentes', // ECMWF producer: S3 existence-check (GRIB/COG HEADs)
+  // Alert-generation stages (alerts-service dashboard).
+  intersect: 'Intersección',
+  filter: 'Filtrado deptos.',
+  render: 'Render (GIF)',
+  persist: 'Guardado',
 };
 
 export const PRODUCT_TERMS: Readonly<Record<string, string>> = {

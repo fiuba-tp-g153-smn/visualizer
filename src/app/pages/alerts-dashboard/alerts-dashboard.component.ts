@@ -1,4 +1,4 @@
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -10,34 +10,46 @@ import {
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
 
+import { AlertJobDetailDialogComponent } from '../../components/dashboard/alert-job-detail-dialog/alert-job-detail-dialog.component';
+import { MetricChartComponent } from '../../components/dashboard/metric-chart/metric-chart.component';
 import { MetricPanelComponent } from '../../components/dashboard/metric-panel/metric-panel.component';
+import { StagePieChartComponent } from '../../components/dashboard/stage-pie-chart/stage-pie-chart.component';
+import {
+  StatCardsComponent,
+  type StatCard,
+} from '../../components/data-dashboard/stat-cards/stat-cards.component';
 import type {
   AlertJobMetric,
   AlertsJobHistoryPoint,
-  AlertsLayerRun,
-  AlertsProcessorSample,
   AlertsSummary,
   RefreshSeconds,
   WindowHours,
 } from '../../models/metrics/alerts-metrics.models';
+import {
+  buildLineChart,
+  type MetricsChartOptions,
+} from '../../services/metrics/metrics-chart.util';
 import { AlertsMetricsService } from '../../services/metrics/alerts-metrics.service';
-
-interface StatCard {
-  readonly label: string;
-  readonly value: string;
-  readonly tooltip: string;
-  readonly accent: '' | 'green' | 'orange' | 'red';
-}
+import { DepartmentIntersectionService } from '../../services/polygons/department-intersection.service';
 
 interface FailureRow {
   readonly label: string;
   readonly count: number;
 }
+
+interface AvgStageRow {
+  readonly label: string;
+  readonly value: string;
+}
+
+/** Range options for the "Actividad por hora" panel (hours). */
+type ActivityHours = 24 | 168 | 720;
 
 /** Human labels for the backend `error_code` values. */
 const ERROR_CODE_LABELS: Record<string, string> = {
@@ -45,6 +57,11 @@ const ERROR_CODE_LABELS: Record<string, string> = {
   area_too_large: 'Área afectada demasiado grande',
   generation_failed: 'Error de generación',
   unknown: 'Desconocido',
+};
+
+const OUTCOME_COLORS: Record<string, string> = {
+  Exitosas: '#2e9b51',
+  Fallidas: '#d23b4e',
 };
 
 function formatMs(ms: number): string {
@@ -55,9 +72,9 @@ function formatMs(ms: number): string {
 }
 
 /**
- * Panel "Alertas" del shell `/status`. Dueño del estado: mantiene controles y
- * datos en signals, los refresca contra el API de métricas del alerts-service y
- * los reparte a paneles de presentación.
+ * Panel "Alertas" del shell `/status`: estado de generación de avisos. Dueño del
+ * estado (signals), refresca contra el API de métricas del alerts-service y lo
+ * reparte a paneles de presentación.
  */
 @Component({
   selector: 'app-alerts-dashboard',
@@ -65,12 +82,14 @@ function formatMs(ms: number): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
-    DecimalPipe,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MetricPanelComponent,
+    MetricChartComponent,
+    StagePieChartComponent,
+    StatCardsComponent,
   ],
   providers: [
     {
@@ -83,18 +102,20 @@ function formatMs(ms: number): string {
 })
 export class AlertsDashboardComponent {
   private readonly metrics = inject(AlertsMetricsService);
+  private readonly departments = inject(DepartmentIntersectionService);
+  private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
 
   // Controles
   readonly windowHours = signal<WindowHours>(24);
-  readonly refreshSecs = signal<RefreshSeconds>(30);
+  readonly refreshSecs = signal<RefreshSeconds>(10);
+  readonly activityHours = signal<ActivityHours>(24);
 
   // Datos
   readonly summary = signal<AlertsSummary | null>(null);
   readonly jobs = signal<readonly AlertJobMetric[]>([]);
-  readonly jobsHistory = signal<readonly AlertsJobHistoryPoint[]>([]);
-  readonly processorHistory = signal<readonly AlertsProcessorSample[]>([]);
-  readonly layers = signal<readonly AlertsLayerRun[]>([]);
+  readonly activity = signal<readonly AlertsJobHistoryPoint[]>([]);
+  readonly phenomena = signal<ReadonlyMap<number, string>>(new Map());
 
   readonly updatedAt = signal<string>('—');
   readonly errorMsg = signal<string | null>(null);
@@ -111,7 +132,7 @@ export class AlertsDashboardComponent {
     return this.hasLoaded() ? true : null;
   });
 
-  /** Tarjetas KPI derivadas del resumen. */
+  /** Tarjetas KPI (estilo separadores) derivadas del resumen. */
   readonly cards = computed<StatCard[]>(() => {
     const s = this.summary();
     if (!s) {
@@ -122,46 +143,40 @@ export class AlertsDashboardComponent {
     const successRate = rateBase ? (jobs.done / rateBase) * 100 : null;
     return [
       {
-        label: 'Trabajos',
+        label: 'Alertas generadas',
         value: String(jobs.total),
-        tooltip: 'Trabajos de generación finalizados en la ventana (exitosos + fallidos).',
+        tooltip: 'Alertas finalizadas en la ventana (exitosas + fallidas).',
         accent: '',
       },
       {
-        label: 'Exitosos',
+        label: 'Exitosas',
         value: String(jobs.done),
-        tooltip: 'Avisos generados correctamente (intersección + GIFs + guardado).',
+        tooltip: 'Alertas generadas correctamente (intersección + GIFs + guardado).',
         accent: 'green',
       },
       {
-        label: 'Fallidos',
+        label: 'Fallidas',
         value: String(jobs.failed),
-        tooltip: 'Trabajos que terminaron en error (ver desglose por motivo).',
+        tooltip: 'Alertas que terminaron en error (ver desglose por motivo).',
         accent: jobs.failed > 0 ? 'orange' : '',
       },
       {
         label: 'Tasa de éxito',
         value: successRate === null ? '—' : `${successRate.toFixed(0)}%`,
-        tooltip: 'Exitosos ÷ (exitosos + fallidos) en la ventana.',
+        tooltip: 'Exitosas ÷ (exitosas + fallidas) en la ventana.',
         accent: '',
       },
       {
         label: 'Duración prom.',
         value: formatMs(jobs.avg_duration_ms),
-        tooltip: 'Duración media de los trabajos exitosos.',
+        tooltip: 'Duración media de las alertas generadas con éxito.',
         accent: '',
       },
       {
         label: 'Duración p95',
         value: formatMs(jobs.p95_duration_ms),
-        tooltip: 'Percentil 95 de la duración de trabajos exitosos.',
+        tooltip: 'Percentil 95 de la duración de las alertas exitosas.',
         accent: '',
-      },
-      {
-        label: 'En cola',
-        value: String(processor.queue_depth),
-        tooltip: 'Trabajos esperando en la cola del procesador (último muestreo).',
-        accent: processor.queue_depth > 0 ? 'orange' : '',
       },
       {
         label: 'Workers',
@@ -172,19 +187,66 @@ export class AlertsDashboardComponent {
       {
         label: 'Pendientes',
         value: String(processor.pending_alerts),
-        tooltip: 'Avisos pendientes (generados, aún no sincronizados) en el último muestreo.',
+        tooltip: 'Avisos generados que aún no se sincronizaron a la tabla activa.',
         accent: '',
       },
     ];
   });
 
-  /** Filas del desglose de fallos por motivo. */
+  /** Desglose de fallos por motivo. */
   readonly failureRows = computed<FailureRow[]>(() => {
     const breakdown = this.summary()?.jobs.failure_breakdown ?? {};
     return Object.entries(breakdown)
       .map(([code, count]) => ({ label: ERROR_CODE_LABELS[code] ?? code, count }))
       .sort((a, b) => b.count - a.count);
   });
+
+  /** Línea de tiempo Exitosas/Fallidas (reusa el builder genérico por "tipo"). */
+  readonly activityChart = computed<MetricsChartOptions | null>(() => {
+    const rows = this.activity();
+    if (!rows.length) {
+      return null;
+    }
+    const lineRows = rows.flatMap((p) => [
+      { bucket: p.bucket, job_type: 'Exitosas', count: p.done },
+      { bucket: p.bucket, job_type: 'Fallidas', count: p.failed },
+    ]);
+    return buildLineChart(lineRows, 'count', 'count', 280, (t) => OUTCOME_COLORS[t] ?? '#8e8e8e');
+  });
+
+  /** Promedio por etapa (segundos) para la torta de la sección 6. */
+  readonly avgStages = computed<Record<string, number>>(() => {
+    const j = this.summary()?.jobs;
+    if (!j) {
+      return {};
+    }
+    const out: Record<string, number> = {};
+    const add = (key: string, ms: number) => {
+      if (ms > 0) {
+        out[key] = ms / 1000;
+      }
+    };
+    add('intersect', j.avg_intersection_ms);
+    add('filter', j.avg_filter_ms);
+    add('render', j.avg_render_ms);
+    add('persist', j.avg_persist_ms);
+    return out;
+  });
+
+  readonly avgStageRows = computed<AvgStageRow[]>(() => {
+    const j = this.summary()?.jobs;
+    if (!j) {
+      return [];
+    }
+    return [
+      { label: 'Intersección', value: formatMs(j.avg_intersection_ms) },
+      { label: 'Filtrado deptos.', value: formatMs(j.avg_filter_ms) },
+      { label: 'Render (GIF)', value: formatMs(j.avg_render_ms) },
+      { label: 'Guardado', value: formatMs(j.avg_persist_ms) },
+    ];
+  });
+
+  readonly hasAvgStages = computed<boolean>(() => Object.keys(this.avgStages()).length > 0);
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -197,6 +259,7 @@ export class AlertsDashboardComponent {
       }
     });
     this.destroyRef.onDestroy(() => this.clearTimer());
+    void this.loadPhenomena();
     void this.refresh(true);
   }
 
@@ -209,16 +272,37 @@ export class AlertsDashboardComponent {
     this.refreshSecs.set(this.numberValue(event) as RefreshSeconds);
   }
 
+  onActivityRangeChange(event: Event): void {
+    this.activityHours.set(this.numberValue(event) as ActivityHours);
+    void this.loadActivity();
+  }
+
   refreshNow(): void {
     void this.refresh(true);
+  }
+
+  phenomenonName(code: number): string {
+    return this.phenomena().get(code) ?? '';
   }
 
   errorCodeLabel(code: string | null): string {
     return code ? (ERROR_CODE_LABELS[code] ?? code) : '—';
   }
 
-  formatDuration(ms: number): string {
-    return formatMs(ms);
+  formatDuration(ms: number | null): string {
+    return ms == null ? '—' : formatMs(ms);
+  }
+
+  openJob(job: AlertJobMetric): void {
+    this.dialog.open(AlertJobDetailDialogComponent, {
+      data: {
+        job,
+        phenomenon: this.phenomenonName(job.phenomenon_code),
+        errorLabel: job.outcome === 'failed' ? this.errorCodeLabel(job.error_code) : null,
+      },
+      width: '520px',
+      autoFocus: false,
+    });
   }
 
   private async refresh(foreground = false): Promise<void> {
@@ -231,18 +315,13 @@ export class AlertsDashboardComponent {
     }
     const hours = this.windowHours();
     try {
-      const [summary, jobs, jobsHistory, processorHistory, layers] = await Promise.all([
+      const [summary, jobs] = await Promise.all([
         firstValueFrom(this.metrics.getSummary(hours)),
         firstValueFrom(this.metrics.getJobs(hours, 200)),
-        firstValueFrom(this.metrics.getJobsHistory(hours, 'hour')),
-        firstValueFrom(this.metrics.getProcessorHistory(hours)),
-        firstValueFrom(this.metrics.getLayers(20)),
+        this.loadActivity(),
       ]);
       this.summary.set(summary);
       this.jobs.set(jobs);
-      this.jobsHistory.set(jobsHistory);
-      this.processorHistory.set(processorHistory);
-      this.layers.set(layers);
       this.updatedAt.set(new Date().toLocaleTimeString());
       this.errorMsg.set(null);
       this.hasLoaded.set(true);
@@ -251,6 +330,21 @@ export class AlertsDashboardComponent {
     } finally {
       this.loading.set(false);
       this.reloading.set(false);
+    }
+  }
+
+  private async loadActivity(): Promise<void> {
+    const hours = this.activityHours();
+    const bucket = hours <= 48 ? 'hour' : 'day';
+    this.activity.set(await firstValueFrom(this.metrics.getJobsHistory(hours, bucket)));
+  }
+
+  private async loadPhenomena(): Promise<void> {
+    try {
+      const list = await firstValueFrom(this.departments.getPhenomena());
+      this.phenomena.set(new Map(list.map((p) => [p.code, p.description ?? ''])));
+    } catch {
+      // Non-fatal: the table just shows codes without names.
     }
   }
 

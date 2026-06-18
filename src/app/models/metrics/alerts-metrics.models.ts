@@ -13,7 +13,9 @@ export interface AlertsJobsAggregate {
   readonly avg_duration_ms: number;
   readonly p95_duration_ms: number;
   readonly avg_intersection_ms: number;
+  readonly avg_filter_ms: number;
   readonly avg_render_ms: number;
+  readonly avg_persist_ms: number;
 }
 
 /** Último snapshot del procesador de trabajos en segundo plano. */
@@ -45,7 +47,9 @@ export interface AlertJobMetric {
   readonly error_code: string | null;
   readonly affected_departments: number | null;
   readonly intersection_ms: number | null;
+  readonly filter_ms: number | null;
   readonly render_ms: number | null;
+  readonly persist_ms: number | null;
   readonly polygon_vertices: number | null;
 }
 

@@ -106,6 +106,11 @@ const STAGE_COLORS: Readonly<Record<string, string>> = {
   tiling: '#d23b4e',
   upload: '#a31626',
   list: '#5b6bbd', // ECMWF producer existence-check — indigo, distinct from georef/reproject
+  // Alert-generation stages (alerts-service dashboard).
+  intersect: '#0090d0',
+  filter: '#1f9aa0',
+  render: '#9b5bbd',
+  persist: '#2e9b51',
 };
 
 function hashString(value: string): number {
