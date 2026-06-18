@@ -16,6 +16,7 @@ const JOB: AlertJobMetric = {
   duration_ms: 1500,
   outcome: 'done',
   error_code: null,
+  error_message: null,
   affected_departments: 5,
   intersection_ms: 40,
   filter_ms: 20,
@@ -26,8 +27,12 @@ const JOB: AlertJobMetric = {
   gif_gral_filename: 'avi_gral_260618100000.gif',
 };
 
-function build(job: AlertJobMetric, dialogMock: { open: ReturnType<typeof vi.fn> }) {
-  const data: AlertJobDialogData = { job, phenomenon: 'TORMENTAS', errorLabel: null };
+function buildFixture(
+  job: AlertJobMetric,
+  dialogMock: { open: ReturnType<typeof vi.fn> },
+  errorLabel: string | null = null,
+) {
+  const data: AlertJobDialogData = { job, phenomenon: 'TORMENTAS', errorLabel };
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [{ provide: MAT_DIALOG_DATA, useValue: data }],
@@ -38,7 +43,11 @@ function build(job: AlertJobMetric, dialogMock: { open: ReturnType<typeof vi.fn>
   TestBed.overrideComponent(AlertJobDetailDialogComponent, {
     add: { providers: [{ provide: MatDialog, useValue: dialogMock }] },
   });
-  return TestBed.createComponent(AlertJobDetailDialogComponent).componentInstance;
+  return TestBed.createComponent(AlertJobDetailDialogComponent);
+}
+
+function build(job: AlertJobMetric, dialogMock: { open: ReturnType<typeof vi.fn> }) {
+  return buildFixture(job, dialogMock).componentInstance;
 }
 
 describe('AlertJobDetailDialogComponent', () => {
@@ -71,5 +80,27 @@ describe('AlertJobDetailDialogComponent', () => {
     const [component, config] = dialogMock.open.mock.calls[0];
     expect(component).toBe(GifPreviewDialogComponent);
     expect(config.data.url).toMatch(/\/alerts\/aviso_260618100000\.gif$/);
+  });
+
+  it('renders the category label and full error message for a failed job', () => {
+    // No stage timings / no GIFs → no chart or buttons render, so detectChanges
+    // is safe (avoids mounting ApexCharts in the test DOM).
+    const failed: AlertJobMetric = {
+      ...JOB,
+      outcome: 'failed',
+      error_code: 'area_too_large',
+      error_message: 'Affected-area HTML is 2443 characters, exceeds 2000.',
+      intersection_ms: null,
+      filter_ms: null,
+      render_ms: null,
+      persist_ms: null,
+      gif_area_filename: null,
+      gif_gral_filename: null,
+    };
+    const fixture = buildFixture(failed, dialogMock, 'Área afectada demasiado grande');
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Área afectada demasiado grande');
+    expect(text).toContain('Affected-area HTML is 2443 characters, exceeds 2000.');
   });
 });

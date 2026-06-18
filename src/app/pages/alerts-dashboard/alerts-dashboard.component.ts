@@ -262,7 +262,13 @@ export class AlertsDashboardComponent {
         {
           header: { key: 'resultado', label: 'Resultado', align: 'left', sortable: true },
           cell: (j) =>
-            pillCell(j.outcome === 'done' ? 'success' : 'error', j.outcome === 'done' ? 'OK' : 'Falló'),
+            pillCell(
+              j.outcome === 'done' ? 'success' : 'error',
+              j.outcome === 'done' ? 'OK' : 'Falló',
+              undefined,
+              // Hover the failed pill to read the full message without opening the dialog.
+              j.outcome === 'failed' ? (j.error_message ?? undefined) : undefined,
+            ),
           sortValue: (j) => j.outcome,
         },
         {

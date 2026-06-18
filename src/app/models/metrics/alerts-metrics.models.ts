@@ -45,6 +45,8 @@ export interface AlertJobMetric {
   readonly duration_ms: number;
   readonly outcome: 'done' | 'failed';
   readonly error_code: string | null;
+  /** Full failure message (e.g. the DB-limit detail); null on success. */
+  readonly error_message: string | null;
   readonly affected_departments: number | null;
   readonly intersection_ms: number | null;
   readonly filter_ms: number | null;

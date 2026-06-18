@@ -45,6 +45,7 @@ const JOB = {
   duration_ms: 1500,
   outcome: 'done' as const,
   error_code: null,
+  error_message: null,
   affected_departments: 5,
   intersection_ms: 40,
   filter_ms: 20,

@@ -61,10 +61,15 @@ function ms(value: number | null): string {
         }
       </dl>
 
-      @if (data.job.outcome === 'failed' && data.errorLabel) {
+      @if (data.job.outcome === 'failed') {
         <div class="ajd__error">
           <mat-icon>error</mat-icon>
-          <span>{{ data.errorLabel }}</span>
+          <div class="ajd__error-body">
+            <div class="ajd__error-label">{{ data.errorLabel }}</div>
+            @if (data.job.error_message) {
+              <div class="ajd__error-msg">{{ data.job.error_message }}</div>
+            }
+          </div>
         </div>
       }
 
@@ -126,13 +131,24 @@ function ms(value: number | null): string {
     }
     .ajd__error {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
       padding: 8px 12px;
       border-radius: 6px;
       background: var(--metric-error-bg, #fdeee5);
       color: var(--metric-error, #e8702a);
       font-size: 13px;
+    }
+    .ajd__error-label {
+      font-weight: 600;
+    }
+    .ajd__error-msg {
+      margin-top: 2px;
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--mat-sys-on-surface, #1f1f1f);
     }
     .ajd__subtitle {
       font-size: 13px;
