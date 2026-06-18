@@ -88,9 +88,13 @@ export class ActiveAlertsService {
       const response = await firstValueFrom(
         this.departmentIntersectionService.intersectDepartments([...alert.coordinates]),
       );
+      // Discard a stale response if the user closed/switched the departments
+      // view (or the alert expired) while this request was in flight.
+      if (this.shownDepartmentsAlertSignal()?.alertId !== alert.alertId) return;
       this.shownDepartmentsSignal.set(response.departments);
     } catch (error) {
       console.error('Error al cargar departamentos de la alerta:', error);
+      if (this.shownDepartmentsAlertSignal()?.alertId !== alert.alertId) return;
       this.shownDepartmentsSignal.set([]);
     }
   }
@@ -153,6 +157,11 @@ export class ActiveAlertsService {
       .sort((a, b) => a.alertId - b.alertId);
 
     this.activeAlertsSignal.set(merged);
+
+    const shownAlertId = this.shownDepartmentsAlertSignal()?.alertId;
+    if (shownAlertId !== undefined && !merged.some((alert) => alert.alertId === shownAlertId)) {
+      this.hideDepartments();
+    }
   }
 
   private startAutoRefresh(): void {

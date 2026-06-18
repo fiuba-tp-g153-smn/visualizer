@@ -99,18 +99,28 @@ export class ActiveAlertsMapService {
       const activeAlert = this.activeAlertsService.shownDepartmentsAlert();
       const pendingDepartments = this.pendingAlertsService.shownDepartments();
       const pendingAlert = this.pendingAlertsService.shownDepartmentsAlert();
+      const activeHiddenIds = this.activeAlertsService.hiddenIds();
+      const pendingHiddenIds = this.pendingAlertsService.hiddenIds();
       if (!this.map) return;
 
       if (pendingAlert) {
+        if (pendingHiddenIds.has(pendingAlert.alertId)) {
+          this.renderDepartments([]);
+          return;
+        }
         this.departmentColor = lightenColor(PENDING_ALERT_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
         this.renderDepartments(pendingDepartments);
-      } else {
-        if (activeAlert) {
-          this.departmentColor = lightenColor(
-            activeAlertColorForExpiry(activeAlert.endDatetime),
-            DEPARTMENT_STYLE.LIGHTEN_PERCENT,
-          );
+      } else if (activeAlert) {
+        if (activeHiddenIds.has(activeAlert.alertId)) {
+          this.renderDepartments([]);
+          return;
         }
+        this.departmentColor = lightenColor(
+          activeAlertColorForExpiry(activeAlert.endDatetime),
+          DEPARTMENT_STYLE.LIGHTEN_PERCENT,
+        );
+        this.renderDepartments(activeDepartments);
+      } else {
         this.renderDepartments(activeDepartments);
       }
     });

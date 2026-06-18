@@ -20,6 +20,7 @@ function pendingAlertResponse(id: number): PendingAlertResponse {
 }
 
 const pendingRequest = (req: { url: string }) => req.url.endsWith('/alerts/pending');
+const departmentsRequest = (req: { url: string }) => req.url.endsWith('/intersect/departments');
 
 describe('PendingAlertsService', () => {
   let service: PendingAlertsService;
@@ -140,6 +141,47 @@ describe('PendingAlertsService', () => {
     await tick();
 
     expect(service.pendingAlerts().map((a) => a.alertId)).toEqual([9]);
+  });
+
+  it('hides the departments overlay when the shown alert is processed and disappears from a refresh', async () => {
+    service.setShowPending(true);
+    httpMock.expectOne(pendingRequest).flush([pendingAlertResponse(1)]);
+    await tick();
+
+    const showPromise = service.showDepartments(service.pendingAlerts()[0]);
+    httpMock.expectOne(departmentsRequest).flush({ departments: [] });
+    await showPromise;
+    expect(service.shownDepartmentsAlert()?.alertId).toBe(1);
+
+    const refreshPromise = service.refresh();
+    httpMock.expectOne(pendingRequest).flush([]); // alert 1 was processed (became active)
+    await refreshPromise;
+
+    expect(service.shownDepartmentsAlert()).toBeNull();
+  });
+
+  it('discards a stale departments response if the shown alert changed meanwhile', async () => {
+    service.setShowPending(true);
+    httpMock
+      .expectOne(pendingRequest)
+      .flush([pendingAlertResponse(1), pendingAlertResponse(2)]);
+    await tick();
+    const [alert1, alert2] = service.pendingAlerts();
+
+    const firstShowPromise = service.showDepartments(alert1);
+    const firstReq = httpMock.expectOne(departmentsRequest);
+
+    // The user switches to alert 2 before alert 1's request resolves.
+    const secondShowPromise = service.showDepartments(alert2);
+    const secondReq = httpMock.expectOne(departmentsRequest);
+    secondReq.flush({ departments: [{ properties: { nam: 'Dept2' }, geometry: {}, intersection: {} }] });
+    await secondShowPromise;
+
+    firstReq.flush({ departments: [{ properties: { nam: 'Dept1' }, geometry: {}, intersection: {} }] });
+    await firstShowPromise;
+
+    expect(service.shownDepartmentsAlert()?.alertId).toBe(2);
+    expect(service.shownDepartments().map((d) => d.name)).toEqual(['Dept2']);
   });
 
   it('clears state when disabled', async () => {

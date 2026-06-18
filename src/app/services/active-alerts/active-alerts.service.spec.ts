@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -23,6 +23,7 @@ function activeAlert(id: number, end: string): ActiveAlertResponse {
 }
 
 const alertsRequest = (req: { url: string }) => req.url.endsWith('/alerts');
+const departmentsRequest = (req: { url: string }) => req.url.endsWith('/intersect/departments');
 
 describe('ActiveAlertsService', () => {
   let service: ActiveAlertsService;
@@ -40,6 +41,7 @@ describe('ActiveAlertsService', () => {
   afterEach(() => {
     service.setShowActive(false); // stop polling
     httpMock.verify();
+    vi.useRealTimers();
   });
 
   it('fetches all active alerts when enabled and prunes expired ones', async () => {
@@ -77,5 +79,50 @@ describe('ActiveAlertsService', () => {
     service.setShowActive(false);
     expect(service.activeAlerts()).toEqual([]);
     expect(service.showActive()).toBe(false);
+  });
+
+  it('hides the departments overlay when the shown alert expires on refresh', async () => {
+    vi.useFakeTimers();
+    service.setShowActive(true);
+    httpMock
+      .expectOne(alertsRequest)
+      .flush([activeAlert(1, new Date(Date.now() + 1_000).toISOString())]);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const showPromise = service.showDepartments(service.activeAlerts()[0]);
+    httpMock.expectOne(departmentsRequest).flush({ departments: [] });
+    await showPromise;
+    expect(service.shownDepartmentsAlert()?.alertId).toBe(1);
+
+    vi.setSystemTime(Date.now() + 2_000); // alert 1 is now expired
+    const refreshPromise = service.refresh();
+    httpMock.expectOne(alertsRequest).flush([]);
+    await refreshPromise;
+
+    expect(service.shownDepartmentsAlert()).toBeNull();
+  });
+
+  it('discards a stale departments response if the shown alert changed meanwhile', async () => {
+    service.setShowActive(true);
+    httpMock
+      .expectOne(alertsRequest)
+      .flush([activeAlert(1, futureIso()), activeAlert(2, futureIso())]);
+    await tick();
+    const [alert1, alert2] = service.activeAlerts();
+
+    const firstShowPromise = service.showDepartments(alert1);
+    const firstReq = httpMock.expectOne(departmentsRequest);
+
+    // The user switches to alert 2 before alert 1's request resolves.
+    const secondShowPromise = service.showDepartments(alert2);
+    const secondReq = httpMock.expectOne(departmentsRequest);
+    secondReq.flush({ departments: [{ properties: { nam: 'Dept2' }, geometry: {}, intersection: {} }] });
+    await secondShowPromise;
+
+    firstReq.flush({ departments: [{ properties: { nam: 'Dept1' }, geometry: {}, intersection: {} }] });
+    await firstShowPromise;
+
+    expect(service.shownDepartmentsAlert()?.alertId).toBe(2);
+    expect(service.shownDepartments().map((d) => d.name)).toEqual(['Dept2']);
   });
 });

@@ -114,9 +114,13 @@ export class PendingAlertsService {
       const response = await firstValueFrom(
         this.departmentIntersectionService.intersectDepartments([...alert.coordinates]),
       );
+      // Discard a stale response if the user closed/switched the departments
+      // view while this request was in flight.
+      if (this.shownDepartmentsAlertSignal()?.alertId !== alert.alertId) return;
       this.shownDepartmentsSignal.set(response.departments);
     } catch (error) {
       console.error('Error al cargar departamentos del aviso pendiente:', error);
+      if (this.shownDepartmentsAlertSignal()?.alertId !== alert.alertId) return;
       this.shownDepartmentsSignal.set([]);
     }
   }
@@ -161,8 +165,14 @@ export class PendingAlertsService {
       }
 
       const baseUrl = environment.alertsService.baseUrl;
-      this.pendingAlertsSignal.set(result.alerts.map((res) => toPendingAlert(res, baseUrl)));
+      const alerts = result.alerts.map((res) => toPendingAlert(res, baseUrl));
+      this.pendingAlertsSignal.set(alerts);
       this.etag = result.etag;
+
+      const shownAlertId = this.shownDepartmentsAlertSignal()?.alertId;
+      if (shownAlertId !== undefined && !alerts.some((alert) => alert.alertId === shownAlertId)) {
+        this.hideDepartments();
+      }
     } catch (error) {
       console.error('Error al obtener avisos pendientes:', error);
     } finally {
