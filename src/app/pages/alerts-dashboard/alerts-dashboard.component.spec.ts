@@ -51,6 +51,8 @@ const JOB = {
   render_ms: 900,
   persist_ms: 10,
   polygon_vertices: 10,
+  gif_area_filename: 'aviso_260618100000.gif',
+  gif_gral_filename: 'avi_gral_260618100000.gif',
 };
 
 function selectEvent(value: string): Event {

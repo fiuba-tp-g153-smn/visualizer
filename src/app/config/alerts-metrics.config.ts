@@ -31,3 +31,8 @@ export function buildAlertsProcessorHistoryUrl(): string {
 export function buildAlertsLayersUrl(): string {
   return `${ALERTS_METRICS_BASE_URL}/layers`;
 }
+
+/** URL pública de un GIF de aviso (montaje estático `/alerts/{filename}`). */
+export function buildAlertImageUrl(filename: string): string {
+  return `${environment.alertsService.baseUrl}/alerts/${filename}`;
+}

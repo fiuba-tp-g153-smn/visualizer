@@ -51,6 +51,9 @@ export interface AlertJobMetric {
   readonly render_ms: number | null;
   readonly persist_ms: number | null;
   readonly polygon_vertices: number | null;
+  /** Basenames of the two generated GIFs (null on failed jobs). */
+  readonly gif_area_filename: string | null;
+  readonly gif_gral_filename: string | null;
 }
 
 /** Un bucket de `GET /metrics/jobs/history`. */

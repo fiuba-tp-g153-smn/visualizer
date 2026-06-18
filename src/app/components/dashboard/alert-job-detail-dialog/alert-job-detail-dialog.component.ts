@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 
+import { buildAlertImageUrl } from '../../../config/alerts-metrics.config';
 import type { AlertJobMetric } from '../../../models/metrics/alerts-metrics.models';
+import { GifPreviewDialogComponent } from '../../floating/gif-preview-dialog/gif-preview-dialog';
 import { StagePieChartComponent } from '../stage-pie-chart/stage-pie-chart.component';
 
 /** Data passed in by the dashboard: the job row + its resolved phenomenon text. */
@@ -17,6 +19,13 @@ export interface AlertJobDialogData {
 interface DetailRow {
   readonly label: string;
   readonly value: string;
+}
+
+interface AlertImage {
+  readonly label: string;
+  readonly title: string;
+  readonly filename: string;
+  readonly icon: string;
 }
 
 function ms(value: number | null): string {
@@ -62,6 +71,17 @@ function ms(value: number | null): string {
       @if (hasStages()) {
         <h2 class="ajd__subtitle">Desglose por etapa</h2>
         <app-stage-pie-chart [stages]="stageSeconds()" />
+      }
+
+      @if (images().length) {
+        <h2 class="ajd__subtitle">Imágenes</h2>
+        <div class="ajd__images">
+          @for (img of images(); track img.filename) {
+            <button mat-stroked-button type="button" (click)="openImage(img)">
+              <mat-icon>{{ img.icon }}</mat-icon> {{ img.label }}
+            </button>
+          }
+        </div>
       }
     </mat-dialog-content>
 
@@ -119,10 +139,48 @@ function ms(value: number | null): string {
       font-weight: 600;
       margin: 12px 0 4px;
     }
+    .ajd__images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   `,
 })
 export class AlertJobDetailDialogComponent {
   readonly data = inject<AlertJobDialogData>(MAT_DIALOG_DATA);
+  private readonly dialog = inject(MatDialog);
+
+  /** The (up to two) generated GIFs that exist for this job. */
+  readonly images = computed<AlertImage[]>(() => {
+    const j = this.data.job;
+    const out: AlertImage[] = [];
+    if (j.gif_area_filename) {
+      out.push({
+        label: 'Imagen del área',
+        title: `${this.data.phenomenon} — área`,
+        filename: j.gif_area_filename,
+        icon: 'zoom_in',
+      });
+    }
+    if (j.gif_gral_filename) {
+      out.push({
+        label: 'Imagen general',
+        title: `${this.data.phenomenon} — general`,
+        filename: j.gif_gral_filename,
+        icon: 'public',
+      });
+    }
+    return out;
+  });
+
+  /** Open one GIF in the shared preview (which shows a message if it 404s). */
+  openImage(img: AlertImage): void {
+    this.dialog.open(GifPreviewDialogComponent, {
+      data: { title: img.title, url: buildAlertImageUrl(img.filename) },
+      width: '640px',
+      autoFocus: false,
+    });
+  }
 
   readonly rows = computed<DetailRow[]>(() => {
     const j = this.data.job;
