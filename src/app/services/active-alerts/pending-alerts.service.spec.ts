@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { PendingAlertsService } from './pending-alerts.service';
-import { PendingAlert, PendingAlertResponse } from '../../models/geo';
+import { PendingAlertResponse } from '../../models/geo';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
@@ -16,21 +16,6 @@ function pendingAlertResponse(id: number): PendingAlertResponse {
     polygon: '[-34.60,-58.50],[-34.70,-58.40],[-34.80,-58.60]',
     gif_gral_url: `/alerts/gral_${id}.gif`,
     gif_area_url: `/alerts/zoom_${id}.gif`,
-  };
-}
-
-function pendingAlert(id: number): PendingAlert {
-  return {
-    alertId: id,
-    phenomenon: 'TORMENTAS',
-    departments: [{ name: 'La Matanza', province: 'BUENOS AIRES' }],
-    coordinates: [
-      [-34.6, -58.5],
-      [-34.7, -58.4],
-      [-34.8, -58.6],
-    ],
-    gifGralUrl: `http://localhost/alerts/gral_${id}.gif`,
-    gifAreaUrl: `http://localhost/alerts/zoom_${id}.gif`,
   };
 }
 
@@ -110,32 +95,48 @@ describe('PendingAlertsService', () => {
     expect(service.pendingAlerts().map((a) => a.alertId)).toEqual([2]);
   });
 
-  it('addEmitted inserts the alert immediately and enables the emitted view', async () => {
+  it('refreshNow enables the emitted view and fetches the fresh list', async () => {
     expect(service.showPending()).toBe(false);
 
-    service.addEmitted(pendingAlert(5));
+    await service.refreshNow();
 
     expect(service.showPending()).toBe(true);
-    expect(service.pendingAlerts().map((a) => a.alertId)).toEqual([5]);
-
-    // Enabling triggers an immediate authoritative fetch.
     const req = httpMock.expectOne(pendingRequest);
+    expect(req.request.headers.has('If-None-Match')).toBe(false);
     req.flush([pendingAlertResponse(5)]);
     await tick();
     expect(service.pendingAlerts().map((a) => a.alertId)).toEqual([5]);
   });
 
-  it('discards a stale snapshot fetched before the latest emission', async () => {
+  it('refreshNow ignores the cached ETag when already enabled', async () => {
+    service.setShowPending(true);
+    httpMock.expectOne(pendingRequest).flush([pendingAlertResponse(1)], {
+      headers: { ETag: '"1-1"' },
+    });
+    await tick();
+
+    const refreshPromise = service.refreshNow();
+    const req = httpMock.expectOne(pendingRequest);
+    // ETag was cleared, so the forced refresh is unconditional (no If-None-Match).
+    expect(req.request.headers.has('If-None-Match')).toBe(false);
+    req.flush([pendingAlertResponse(1), pendingAlertResponse(2)]);
+    await refreshPromise;
+
+    expect(service.pendingAlerts().map((a) => a.alertId)).toEqual([1, 2]);
+  });
+
+  it('discards a stale snapshot fetched before a forced refresh', async () => {
     service.setShowPending(true);
     const staleReq = httpMock.expectOne(pendingRequest);
 
-    // Emission happens while the first fetch is still in flight.
-    service.addEmitted(pendingAlert(9));
-    await tick();
+    // A forced refresh starts while the first fetch is still in flight.
+    const refreshPromise = service.refreshNow();
+    const freshReq = httpMock.expectOne(pendingRequest);
+    freshReq.flush([pendingAlertResponse(9)]);
+    await refreshPromise;
 
-    // The stale snapshot (taken before the emission) does not contain #9 and
-    // must not drop it from the list.
-    staleReq.flush([]);
+    // The stale snapshot (taken before the refresh) must not clobber the fresh one.
+    staleReq.flush([pendingAlertResponse(1)]);
     await tick();
 
     expect(service.pendingAlerts().map((a) => a.alertId)).toEqual([9]);

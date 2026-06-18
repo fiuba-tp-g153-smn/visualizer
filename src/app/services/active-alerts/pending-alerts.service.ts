@@ -82,20 +82,20 @@ export class PendingAlertsService {
   }
 
   /**
-   * Registers an alert just emitted via POST /alerts: it is inserted into the
-   * pending list immediately (the POST response carries the full pending shape)
-   * and the emitted view is turned on so the user sees it right away.
+   * Forces a fresh, authoritative fetch of the pending list (ignoring the
+   * cached ETag) and turns the emitted view on. Called right after a background
+   * alert generation job completes so the new alert shows up immediately
+   * instead of waiting for the next 10 s poll. Bumping `emissionSeq` discards
+   * any in-flight poll that started before this refresh.
    */
-  addEmitted(alert: PendingAlert): void {
+  async refreshNow(): Promise<void> {
     this.emissionSeq++;
-    this.pendingAlertsSignal.update((alerts) => {
-      const others = alerts.filter((a) => a.alertId !== alert.alertId);
-      return [...others, alert].sort((a, b) => a.alertId - b.alertId);
-    });
-    // The cached ETag predates this emission; drop it so the next poll
-    // re-fetches the authoritative list.
     this.etag = undefined;
-    this.setShowPending(true);
+    if (!this.showPendingSignal()) {
+      this.setShowPending(true); // enables the view, which clears the ETag and fetches
+      return;
+    }
+    await this.fetch();
   }
 
   toggleHidden(alertId: number): void {

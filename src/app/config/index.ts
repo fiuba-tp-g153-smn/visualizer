@@ -26,6 +26,7 @@ export {
   buildIntersectCountryUrl,
   buildIntersectDepartmentsUrl,
   buildGenerateAlertsUrl,
+  buildAlertJobUrl,
   buildPhenomenaUrl,
   buildAlertsUrl,
   buildPendingAlertsUrl,

@@ -5,6 +5,7 @@ import {
   buildIntersectCountryUrl,
   buildIntersectDepartmentsUrl,
   buildGenerateAlertsUrl,
+  buildAlertJobUrl,
   buildPhenomenaUrl,
   buildAlertsUrl,
   buildPendingAlertsUrl,
@@ -35,18 +36,26 @@ export interface AlertsLimitsResponse {
   max_vertex_count: number;
 }
 
-export interface GenerateAlertsResponse {
-  alert_id: number;
-  timestamp: string;
+/** Body returned by `POST /alerts` (202): the alert is generated in background. */
+export interface AlertJobAccepted {
+  job_id: string;
   phenomenon_code: number;
   phenomenon: string;
-  /** Affected area as HTML grouped by province (same shape as pending alerts) */
-  area: string;
   /** Polygon vertices serialized as "[lat,lon],[lat,lon],..." */
   polygon: string;
-  gif_area_url: string;
-  gif_gral_url: string;
-  affected_departments_count: number;
+}
+
+/** Status of a background alert generation job (`GET /alerts/jobs/{id}`). */
+export interface AlertJobStatus {
+  job_id: string;
+  /** queued | processing | done | failed (plus client-only "timeout"). */
+  status: string;
+  /** Present on `done`: the generated alert id (IdAviso_temporal). */
+  alert_id: number | null;
+  /** Present on `failed`: stable reason code, e.g. "area_too_large". */
+  error_code: string | null;
+  /** Present on `failed`: human-readable message. */
+  error: string | null;
 }
 
 /**
@@ -101,14 +110,19 @@ export class DepartmentIntersectionService {
   generateAlerts(
     coordinates: Array<LatLng>,
     phenomenonCode: number,
-  ): Observable<GenerateAlertsResponse> {
+  ): Observable<AlertJobAccepted> {
     const url = buildGenerateAlertsUrl();
     const geojson = coordinatesToGeoJSON(coordinates);
 
-    return this.http.post<GenerateAlertsResponse>(url, {
+    return this.http.post<AlertJobAccepted>(url, {
       phenomenon_code: phenomenonCode,
       geojson,
     });
+  }
+
+  /** Fetches the status of a background alert generation job. */
+  getAlertJob(jobId: string): Observable<AlertJobStatus> {
+    return this.http.get<AlertJobStatus>(buildAlertJobUrl(jobId));
   }
 
   /** Cantidad máxima de vértices permitidos por polígono al generar un aviso. */

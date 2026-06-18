@@ -27,6 +27,14 @@ export function buildGenerateAlertsUrl(): string {
 }
 
 /**
+ * Construye URL para consultar el estado de un trabajo de generación de aviso
+ * (`GET /alerts/jobs/{jobId}`).
+ */
+export function buildAlertJobUrl(jobId: string): string {
+  return `${ALERTS_SERVICE_BASE_URL}/alerts/jobs/${encodeURIComponent(jobId)}`;
+}
+
+/**
  * Construye URL para el endpoint de fenómenos disponibles
  */
 export function buildPhenomenaUrl(): string {

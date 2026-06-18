@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import { PolygonService } from './polygon.service';
-import { GenerateAlertsResponse } from './department-intersection.service';
+import { AlertJobAccepted } from './department-intersection.service';
 import { STORAGE_KEYS } from '../../constants';
 import { LatLng } from '../../models/geo';
 
@@ -14,17 +14,12 @@ const COORDINATES: Array<LatLng> = [
   [-34.8, -58.6],
 ];
 
-function generateAlertsResponse(id: number): GenerateAlertsResponse {
+function alertJobAccepted(jobId: string): AlertJobAccepted {
   return {
-    alert_id: id,
-    timestamp: '260611120000',
+    job_id: jobId,
     phenomenon_code: 10,
     phenomenon: 'TORMENTAS',
-    area: '<b>BUENOS AIRES:</b> La Matanza.',
     polygon: '[-34.60,-58.50],[-34.70,-58.40],[-34.80,-58.60]',
-    gif_area_url: `/alerts/zoom_${id}.gif`,
-    gif_gral_url: `/alerts/gral_${id}.gif`,
-    affected_departments_count: 1,
   };
 }
 
@@ -51,20 +46,22 @@ describe('PolygonService', () => {
     localStorage.clear();
   });
 
-  it('deletes the draft and returns the pending alert when emission succeeds', async () => {
+  it('returns the accepted job and keeps the draft while it generates', async () => {
     const polygon = service.createPolygon({ name: 'Test', coordinates: COORDINATES });
 
     const resultPromise = service.generateAlerts(polygon.id, 10);
-    httpMock.expectOne(generateRequest).flush(generateAlertsResponse(7));
+    httpMock
+      .expectOne(generateRequest)
+      .flush(alertJobAccepted('job-7'), { status: 202, statusText: 'Accepted' });
     const result = await resultPromise;
 
-    expect(result).not.toBeNull();
-    expect(result?.alertId).toBe(7);
-    expect(result?.gifAreaUrl).toContain('/alerts/zoom_7.gif');
-    expect(service.allPolygons()).toEqual([]);
+    expect(result?.job_id).toBe('job-7');
+    // The draft is deleted only once the job completes (via finishEmission).
+    expect(service.allPolygons().map((p) => p.id)).toEqual([polygon.id]);
+    expect(service.isAlertsLoading(polygon.id)).toBe(true);
   });
 
-  it('keeps the draft and returns null when emission fails', async () => {
+  it('keeps the draft and returns null when the request fails', async () => {
     const polygon = service.createPolygon({ name: 'Test', coordinates: COORDINATES });
 
     const resultPromise = service.generateAlerts(polygon.id, 10);
@@ -75,6 +72,16 @@ describe('PolygonService', () => {
 
     expect(result).toBeNull();
     expect(service.allPolygons().map((p) => p.id)).toEqual([polygon.id]);
+    expect(service.isAlertsLoading(polygon.id)).toBe(false);
+  });
+
+  it('finishEmission deletes the draft and clears loading', () => {
+    const polygon = service.createPolygon({ name: 'Test', coordinates: COORDINATES });
+
+    service.finishEmission(polygon.id);
+
+    expect(service.allPolygons()).toEqual([]);
+    expect(service.isAlertsLoading(polygon.id)).toBe(false);
   });
 
   it('drops legacy emitted polygons (with alerts) from storage on load', () => {

@@ -1,13 +1,12 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Polygon, CreatePolygonDto, UpdatePolygonDto, PendingAlert } from '../../models/geo';
-import { toPendingAlert } from '../../utils/active-alert.utils';
+import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/geo';
 import {
+  AlertJobAccepted,
   AlertsLimitsResponse,
   DepartmentIntersectionService,
 } from './department-intersection.service';
 import { firstValueFrom } from 'rxjs';
-import { environment } from '../../../environments/environment';
 import { DEFAULT_MAX_POLYGON_VERTICES } from '../../config/polygon.config';
 import { POLYGON_STATUS, STORAGE_KEYS, buildStaleSubmissionWarning } from '../../constants';
 import { LocalStorageService } from '../storage/local-storage.service';
@@ -281,42 +280,28 @@ export class PolygonService {
   }
 
   /**
-   * Emits an alert for the polygon. On success the draft is deleted (the alert
-   * becomes backend-owned and shows up as a pending alert) and the mapped
-   * PendingAlert is returned; on failure the draft is kept and null is returned.
+   * Queues background generation of an alert for the polygon. Returns the
+   * accepted job (the draft stays marked as submitting while it generates) or
+   * null on a synchronous failure (invalid/oversized polygon), in which case
+   * the draft is reverted and the user is notified.
+   *
+   * The caller must drive the job to completion and then call `finishEmission`
+   * (on success) or `cancelEmission` (on failure/timeout).
    */
-  async generateAlerts(id: string, phenomenonCode: number): Promise<PendingAlert | null> {
+  async generateAlerts(id: string, phenomenonCode: number): Promise<AlertJobAccepted | null> {
     const polygon = this.getPolygonById(id);
     if (!polygon) return null;
 
-    this.loadingAlerts.update((set) => {
-      const newSet = new Set(set);
-      newSet.add(id);
-      return newSet;
-    });
-
-    console.log('[PolygonService] generateAlerts: marking as submitting', id);
+    this.setAlertsLoading(id, true);
     this.updatePolygon(id, { status: POLYGON_STATUS.SUBMITTING });
-    console.log(
-      '[PolygonService] generateAlerts: status after update',
-      this.getPolygonById(id)?.status,
-    );
-    console.log(
-      '[PolygonService] generateAlerts: storage after update',
-      this.storage.getJson(STORAGE_KEYS.POLYGONS),
-    );
 
     try {
-      const response = await firstValueFrom(
+      // The draft and loading state are kept; the job runs in the background.
+      return await firstValueFrom(
         this.departmentIntersectionService.generateAlerts(polygon.coordinates, phenomenonCode),
       );
-
-      this.deletePolygon(id);
-
-      return toPendingAlert(response, environment.alertsService.baseUrl);
     } catch (error) {
-      console.log('[PolygonService] generateAlerts: error, clearing submitting status', error);
-      this.updatePolygon(id, { status: undefined });
+      this.cancelEmission(id);
 
       if (error instanceof HttpErrorResponse && error.status === HTTP_STATUS_PAYLOAD_TOO_LARGE) {
         const maxVertexCount = (error.error as AlertsLimitsResponse | null)?.max_vertex_count;
@@ -330,14 +315,39 @@ export class PolygonService {
       }
 
       console.error('Error al generar alertas:', error);
+      this.notifications.error('No se pudo generar el aviso. Intentá de nuevo.');
       return null;
-    } finally {
-      this.loadingAlerts.update((set) => {
-        const newSet = new Set(set);
-        newSet.delete(id);
-        return newSet;
-      });
     }
+  }
+
+  /**
+   * Completes a successful emission: the alert is now backend-owned (it shows
+   * up as a pending alert), so the draft is deleted and loading is cleared.
+   */
+  finishEmission(id: string): void {
+    this.setAlertsLoading(id, false);
+    this.deletePolygon(id);
+  }
+
+  /**
+   * Aborts an in-progress emission, keeping the draft so the user can retry:
+   * reverts the submitting status and clears the loading state.
+   */
+  cancelEmission(id: string): void {
+    this.updatePolygon(id, { status: undefined });
+    this.setAlertsLoading(id, false);
+  }
+
+  private setAlertsLoading(id: string, loading: boolean): void {
+    this.loadingAlerts.update((set) => {
+      const newSet = new Set(set);
+      if (loading) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
   }
 
   toggleDepartmentsVisibility(id: string): boolean {
