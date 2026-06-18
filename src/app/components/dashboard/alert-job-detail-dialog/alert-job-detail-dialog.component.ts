@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -44,7 +43,7 @@ function ms(value: number | null): string {
   selector: 'app-alert-job-detail-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, MatButtonModule, MatDialogModule, MatIconModule, StagePieChartComponent],
+  imports: [MatButtonModule, MatDialogModule, MatIconModule, StagePieChartComponent],
   template: `
     <h1 mat-dialog-title class="ajd__title">
       <span class="ajd__name">{{ data.phenomenon }}</span>

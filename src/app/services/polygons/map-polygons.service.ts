@@ -85,6 +85,10 @@ export class MapPolygonsService {
 
   initialize(map: L.Map): void {
     this.map = map;
+    // This service is a root singleton but the map is torn down and recreated on
+    // every navigation away from and back to the map view. editTools is wired to
+    // the previous map instance, so reset the guard to re-create it on the new map.
+    this.editToolsReady = false;
     this.initPolygonDrawing();
   }
 
