@@ -15,9 +15,13 @@ const ALERTS_PANEL_ID = 'alerts';
 const AREA_TOO_LARGE_MESSAGE =
   'El área afectada por el polígono es demasiado grande. Reducí el tamaño del ' +
   'polígono e intentá de nuevo.';
-const TIMEOUT_MESSAGE =
+// Client gave up waiting; the alert may still be generating in the background.
+const CLIENT_TIMEOUT_MESSAGE =
   'La generación del aviso está tardando más de lo esperado. Revisá la sección ' +
   'Pendientes en unos minutos.';
+// Backend cancelled the job for exceeding its time limit; nothing was produced.
+const BACKEND_TIMEOUT_MESSAGE =
+  'La generación del aviso tardó demasiado y se canceló. Intentá de nuevo.';
 const GENERIC_FAILURE_MESSAGE = 'No se pudo generar el aviso. Intentá de nuevo.';
 
 /**
@@ -74,8 +78,9 @@ export class AlertEmissionService {
   }
 
   private failureMessage(status: AlertJobStatus): string {
-    if (status.status === JOB_TIMEOUT) return TIMEOUT_MESSAGE;
+    if (status.status === JOB_TIMEOUT) return CLIENT_TIMEOUT_MESSAGE;
     if (status.error_code === 'area_too_large') return AREA_TOO_LARGE_MESSAGE;
+    if (status.error_code === 'timeout') return BACKEND_TIMEOUT_MESSAGE;
     return GENERIC_FAILURE_MESSAGE;
   }
 }

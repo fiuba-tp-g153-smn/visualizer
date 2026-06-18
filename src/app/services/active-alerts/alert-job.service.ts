@@ -8,8 +8,12 @@ import {
 
 /** How often the job status is polled while generation is in progress. */
 const POLL_INTERVAL_MS = 2_000;
-/** Upper bound on how long we wait before giving up on a job. */
-const POLL_TIMEOUT_MS = 150_000;
+/**
+ * Upper bound on how long we wait before giving up on a job. Kept above the
+ * backend per-job timeout (150 s) so we reliably receive its definitive
+ * `failed` (e.g. error_code "timeout") rather than guessing client-side.
+ */
+const POLL_TIMEOUT_MS = 180_000;
 const HTTP_STATUS_NOT_FOUND = 404;
 
 /** Client-only terminal statuses layered on top of the backend ones. */
