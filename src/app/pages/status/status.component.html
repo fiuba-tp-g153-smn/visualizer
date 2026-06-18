@@ -40,6 +40,18 @@
         <mat-icon>layers</mat-icon>
         <span>Mapas base</span>
       </a>
+      <a
+        class="status__tab"
+        role="tab"
+        routerLink="alerts"
+        routerLinkActive="status__tab--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        #rlaAlerts="routerLinkActive"
+        [attr.aria-selected]="rlaAlerts.isActive"
+      >
+        <mat-icon>warning</mat-icon>
+        <span>Alertas</span>
+      </a>
     </div>
   </header>
 

@@ -1,0 +1,311 @@
+<div class="dash">
+  <header class="dash__head">
+    <span class="dash__brand">
+      <span
+        class="dash__status"
+        [class.dash__status--up]="online() === true"
+        [class.dash__status--down]="online() === false"
+        [matTooltip]="
+          online() === false
+            ? 'Servicio de alertas sin conexión'
+            : online() === true
+              ? 'Servicio de alertas operativo'
+              : 'Conectando…'
+        "
+      ></span>
+      <span class="dash__title">Panel de estado del servicio de alertas</span>
+    </span>
+    <span class="dash__spacer"></span>
+
+    <label class="dash__ctl">
+      <span
+        class="dash__ctl-title"
+        matTooltipClass="nav-tip"
+        matTooltip="Ventana de tiempo de los datos mostrados (24h, 7 días o todo el histórico)."
+        >ventana</span
+      >
+      <select [value]="windowHours()" (change)="onWindowChange($event)">
+        <option value="24">24h</option>
+        <option value="168">7d</option>
+        <option value="0">todo</option>
+      </select>
+    </label>
+    <label class="dash__ctl">
+      <span
+        class="dash__ctl-title"
+        matTooltipClass="nav-tip"
+        matTooltip="Frecuencia del refresco automático. 'no' lo desactiva."
+        >Actualización cada</span
+      >
+      <select [value]="refreshSecs()" (change)="onRefreshChange($event)">
+        <option value="0">no</option>
+        <option value="10">10s</option>
+        <option value="30">30s</option>
+        <option value="60">60s</option>
+      </select>
+    </label>
+    <div class="dash__refresh-wrap">
+      <button
+        mat-stroked-button
+        class="dash__refresh"
+        (click)="refreshNow()"
+        [disabled]="loading()"
+        matTooltip="Refresca los datos ahora."
+        matTooltipClass="nav-tip"
+      >
+        <span class="dash__refresh-glyph">
+          @if (loading()) {
+            <mat-spinner diameter="16" />
+          } @else {
+            <mat-icon>refresh</mat-icon>
+          }
+        </span>
+        Actualizar
+      </button>
+      <span class="dash__updated">Actualizado {{ updatedAt() }}</span>
+    </div>
+  </header>
+
+  <main class="dash__body">
+    @if (errorMsg(); as err) {
+      <div class="dash__error" role="alert">
+        <mat-icon>error</mat-icon>
+        <span>No se pudieron actualizar las métricas: {{ err }}</span>
+        <button mat-button (click)="refreshNow()" [disabled]="loading()">Reintentar</button>
+      </div>
+    }
+
+    @if (firstLoad()) {
+      <div class="dash__loading">
+        <mat-spinner diameter="40" />
+        <span>Cargando métricas…</span>
+      </div>
+    } @else {
+      <div
+        class="dash__content"
+        [class.dash__content--busy]="reloading()"
+        [attr.aria-busy]="reloading()"
+      >
+        <app-metric-panel
+          heading="Resumen"
+          tip="Totales de generación de avisos y salud del procesador en la ventana."
+        >
+          <div class="cards">
+            @for (card of cards(); track card.label) {
+              <div class="card">
+                <div class="card__label">
+                  <span>{{ card.label }}</span>
+                  <mat-icon
+                    class="card__info"
+                    [matTooltip]="card.tooltip"
+                    matTooltipPosition="above"
+                    >info</mat-icon
+                  >
+                </div>
+                <div
+                  class="card__value"
+                  [class.card__value--green]="card.accent === 'green'"
+                  [class.card__value--orange]="card.accent === 'orange'"
+                  [class.card__value--red]="card.accent === 'red'"
+                >
+                  {{ card.value }}
+                </div>
+              </div>
+            } @empty {
+              <span class="muted">Sin datos en la ventana.</span>
+            }
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel
+          heading="Fallos por motivo"
+          tip="Desglose de los trabajos fallidos por código de error."
+        >
+          @if (failureRows().length) {
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Motivo</th>
+                  <th class="tbl__num">Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of failureRows(); track row.label) {
+                  <tr>
+                    <td>{{ row.label }}</td>
+                    <td class="tbl__num">{{ row.count }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <span class="muted">Sin fallos en la ventana.</span>
+          }
+        </app-metric-panel>
+
+        <app-metric-panel
+          heading="Trabajos recientes"
+          tip="Últimos trabajos de generación finalizados (más nuevos primero)."
+        >
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th class="tbl__num">Fenómeno</th>
+                  <th>Resultado</th>
+                  <th>Motivo</th>
+                  <th class="tbl__num">Deptos.</th>
+                  <th class="tbl__num">Vértices</th>
+                  <th class="tbl__num">Duración</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (job of jobs(); track job.job_id) {
+                  <tr>
+                    <td>{{ job.finished_at | date: 'dd/MM HH:mm:ss' }}</td>
+                    <td class="tbl__num">{{ job.phenomenon_code }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.badge--ok]="job.outcome === 'done'"
+                        [class.badge--err]="job.outcome === 'failed'"
+                        >{{ job.outcome === 'done' ? 'OK' : 'Falló' }}</span
+                      >
+                    </td>
+                    <td>{{ job.outcome === 'failed' ? errorCodeLabel(job.error_code) : '—' }}</td>
+                    <td class="tbl__num">{{ job.affected_departments ?? '—' }}</td>
+                    <td class="tbl__num">{{ job.polygon_vertices ?? '—' }}</td>
+                    <td class="tbl__num">{{ formatDuration(job.duration_ms) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="muted">Sin trabajos en la ventana.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel
+          heading="Actividad por hora"
+          tip="Conteo de trabajos exitosos/fallidos y duración media por hora."
+        >
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Intervalo</th>
+                  <th class="tbl__num">Exitosos</th>
+                  <th class="tbl__num">Fallidos</th>
+                  <th class="tbl__num">Duración prom.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (point of jobsHistory(); track point.bucket) {
+                  <tr>
+                    <td>{{ point.bucket }}</td>
+                    <td class="tbl__num">{{ point.done }}</td>
+                    <td class="tbl__num">{{ point.failed }}</td>
+                    <td class="tbl__num">{{ formatDuration(point.avg_duration_ms) }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="muted">Sin actividad en la ventana.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel
+          heading="Cola y workers (histórico)"
+          tip="Muestreos periódicos de la cola del procesador y avisos pendientes."
+        >
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Muestra</th>
+                  <th class="tbl__num">En cola</th>
+                  <th class="tbl__num">Workers</th>
+                  <th class="tbl__num">Pendientes</th>
+                  <th class="tbl__num">Hechos</th>
+                  <th class="tbl__num">Fallidos</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (sample of processorHistory(); track sample.sampled_at) {
+                  <tr>
+                    <td>{{ sample.sampled_at | date: 'dd/MM HH:mm' }}</td>
+                    <td class="tbl__num">{{ sample.queue_depth }}</td>
+                    <td class="tbl__num">{{ sample.workers }}</td>
+                    <td class="tbl__num">{{ sample.pending_alerts }}</td>
+                    <td class="tbl__num">{{ sample.jobs_done_total }}</td>
+                    <td class="tbl__num">{{ sample.jobs_failed_total }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="muted">Sin muestras todavía.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </app-metric-panel>
+
+        <app-metric-panel
+          heading="Refrescos de capas"
+          tip="Últimas corridas del refresco de capas geográficas (scheduler)."
+        >
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Cuándo</th>
+                  <th>Estado</th>
+                  <th class="tbl__num">Archivos</th>
+                  <th class="tbl__num">Duración</th>
+                  <th>Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (run of layers(); track $index) {
+                  <tr>
+                    <td>{{ run.run_at ? (run.run_at | date: 'dd/MM HH:mm') : '—' }}</td>
+                    <td>
+                      <span
+                        class="badge"
+                        [class.badge--ok]="run.status === 'success'"
+                        [class.badge--err]="run.status !== 'success'"
+                        >{{ run.status }}</span
+                      >
+                    </td>
+                    <td class="tbl__num">{{ run.files.length }}</td>
+                    <td class="tbl__num">
+                      {{ run.duration_sec !== null ? (run.duration_sec | number: '1.0-1') + 's' : '—' }}
+                    </td>
+                    <td class="tbl__err">{{ run.error ?? '—' }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="muted">Sin corridas registradas.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </app-metric-panel>
+      </div>
+
+      @if (reloading()) {
+        <div class="dash__overlay" role="status" aria-live="polite">
+          <mat-spinner diameter="40" />
+          <span>Cargando métricas…</span>
+        </div>
+      }
+    }
+  </main>
+</div>

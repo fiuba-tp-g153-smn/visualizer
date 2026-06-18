@@ -53,6 +53,14 @@ export const routes: Routes = [
           ),
         data: STATUS_SEO,
       },
+      {
+        path: 'alerts',
+        loadComponent: () =>
+          import('./pages/alerts-dashboard/alerts-dashboard.component').then(
+            (m) => m.AlertsDashboardComponent,
+          ),
+        data: STATUS_SEO,
+      },
     ],
   },
   { path: '**', redirectTo: '' },
