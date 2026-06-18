@@ -45,6 +45,12 @@ export interface AlertJobAccepted {
   polygon: string;
 }
 
+/** Stable `error_code` values the backend may set on a `failed` job. */
+export const ALERT_JOB_ERROR_CODE = {
+  AREA_TOO_LARGE: 'area_too_large',
+  TIMEOUT: 'timeout',
+} as const;
+
 /** Status of a background alert generation job (`GET /alerts/jobs/{id}`). */
 export interface AlertJobStatus {
   job_id: string;

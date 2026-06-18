@@ -2,9 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
 import { PolygonService } from './polygon.service';
-import { AlertJobStatus } from './department-intersection.service';
+import { ALERT_JOB_ERROR_CODE, AlertJobStatus } from './department-intersection.service';
 import { PendingAlertsService } from '../active-alerts/pending-alerts.service';
-import { AlertJobService, JOB_TIMEOUT } from '../active-alerts/alert-job.service';
+import { AlertJobService, JOB_DONE, JOB_TIMEOUT } from '../active-alerts/alert-job.service';
 import { NotificationService } from '../notifications/notification.service';
 import { PhenomenonSelectionDialogComponent } from '../../components/floating/phenomenon-selection-dialog/phenomenon-selection-dialog';
 import { SidebarMenuService } from '../../components/overlay/main-menu/sidebar-menu.service';
@@ -29,7 +29,8 @@ const GENERIC_FAILURE_MESSAGE = 'No se pudo generar el aviso. Intentá de nuevo.
  * used by both the panel button and the map context menu. Generation is
  * asynchronous: POST returns a job id, the draft is kept (marked as submitting)
  * while the job runs, and on success it is deleted and the Pendientes section
- * is refreshed; on failure the draft is kept and the user is told why.
+ * is refreshed; on failure the draft is kept and the user is told why. Jobs
+ * still running when the page reloads are resumed instead of re-submitted.
  */
 @Injectable({ providedIn: 'root' })
 export class AlertEmissionService {
@@ -40,6 +41,14 @@ export class AlertEmissionService {
   private readonly sidebarMenuService = inject(SidebarMenuService);
   private readonly panelState = inject(AlertsPanelStateService);
   private readonly dialog = inject(MatDialog);
+
+  constructor() {
+    // Drafts whose job survived a page reload: resume polling instead of
+    // re-submitting, which would create a duplicate alert.
+    for (const { id, jobId } of this.polygonService.getResumableJobs()) {
+      void this.followJob(id, jobId);
+    }
+  }
 
   async emitAlert(polygonId: string): Promise<void> {
     if (this.polygonService.isAlertsLoading(polygonId)) return;
@@ -57,9 +66,13 @@ export class AlertEmissionService {
     const accepted = await this.polygonService.generateAlerts(polygonId, selectedCode);
     if (!accepted) return;
 
-    const status = await this.alertJobService.poll(accepted.job_id);
+    await this.followJob(polygonId, accepted.job_id);
+  }
 
-    if (status.status === 'done') {
+  private async followJob(polygonId: string, jobId: string): Promise<void> {
+    const status = await this.alertJobService.poll(jobId);
+
+    if (status.status === JOB_DONE) {
       this.handleSuccess(polygonId);
       return;
     }
@@ -79,8 +92,8 @@ export class AlertEmissionService {
 
   private failureMessage(status: AlertJobStatus): string {
     if (status.status === JOB_TIMEOUT) return CLIENT_TIMEOUT_MESSAGE;
-    if (status.error_code === 'area_too_large') return AREA_TOO_LARGE_MESSAGE;
-    if (status.error_code === 'timeout') return BACKEND_TIMEOUT_MESSAGE;
+    if (status.error_code === ALERT_JOB_ERROR_CODE.AREA_TOO_LARGE) return AREA_TOO_LARGE_MESSAGE;
+    if (status.error_code === ALERT_JOB_ERROR_CODE.TIMEOUT) return BACKEND_TIMEOUT_MESSAGE;
     return GENERIC_FAILURE_MESSAGE;
   }
 }

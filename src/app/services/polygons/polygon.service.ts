@@ -8,7 +8,7 @@ import {
 } from './department-intersection.service';
 import { firstValueFrom } from 'rxjs';
 import { DEFAULT_MAX_POLYGON_VERTICES } from '../../config/polygon.config';
-import { POLYGON_STATUS, STORAGE_KEYS, buildStaleSubmissionWarning } from '../../constants';
+import { POLYGON_STATUS, STORAGE_KEYS } from '../../constants';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { NotificationService } from '../notifications/notification.service';
 
@@ -64,7 +64,7 @@ export class PolygonService {
     this.loadFromStorage();
     this.loadDetailLevelFromStorage();
     this.loadMaxVertices();
-    this.flagStaleSubmissions();
+    this.restoreSubmittingState();
   }
 
   private loadMaxVertices(): void {
@@ -297,9 +297,13 @@ export class PolygonService {
 
     try {
       // The draft and loading state are kept; the job runs in the background.
-      return await firstValueFrom(
+      const accepted = await firstValueFrom(
         this.departmentIntersectionService.generateAlerts(polygon.coordinates, phenomenonCode),
       );
+      // Persisted so the job can be resumed (polled to completion) if the page
+      // reloads while it's still running.
+      this.updatePolygon(id, { jobId: accepted.job_id });
+      return accepted;
     } catch (error) {
       this.cancelEmission(id);
 
@@ -334,8 +338,19 @@ export class PolygonService {
    * reverts the submitting status and clears the loading state.
    */
   cancelEmission(id: string): void {
-    this.updatePolygon(id, { status: undefined });
+    this.updatePolygon(id, { status: undefined, jobId: undefined });
     this.setAlertsLoading(id, false);
+  }
+
+  /**
+   * Drafts whose background job survived a page reload (`status: 'submitting'`
+   * with a persisted `jobId`), so the caller can resume polling them to
+   * completion instead of re-submitting (which would duplicate the alert).
+   */
+  getResumableJobs(): ReadonlyArray<{ id: string; jobId: string }> {
+    return this.polygons()
+      .filter((p) => p.status === POLYGON_STATUS.SUBMITTING && p.jobId !== undefined)
+      .map((p) => ({ id: p.id, jobId: p.jobId as string }));
   }
 
   private setAlertsLoading(id: string, loading: boolean): void {
@@ -392,22 +407,20 @@ export class PolygonService {
   }
 
   /**
-   * Detecta borradores que quedaron marcados como `submitting` de una sesión
-   * anterior (la respuesta del POST /alerts se perdió al recargar). Los
-   * revierte a borradores normales y avisa al usuario para que verifique
-   * manualmente si el aviso llegó a generarse.
+   * Restores `submitting` drafts on load. Those with a `jobId` are kept
+   * blocked (loading) so `AlertEmissionService` can resume polling them;
+   * orphans (no `jobId`, the POST response was lost before this session's
+   * code persisted it) are silently reverted to normal, editable drafts.
    */
-  private flagStaleSubmissions(): void {
-    console.log(
-      '[PolygonService] flagStaleSubmissions: polygons on load',
-      this.polygons().map((p) => ({ id: p.id, name: p.name, status: p.status })),
-    );
-    const staleDrafts = this.polygons().filter((p) => p.status === POLYGON_STATUS.SUBMITTING);
-    console.log('[PolygonService] flagStaleSubmissions: stale drafts found', staleDrafts.length);
+  private restoreSubmittingState(): void {
+    for (const polygon of this.polygons()) {
+      if (polygon.status !== POLYGON_STATUS.SUBMITTING) continue;
 
-    for (const draft of staleDrafts) {
-      this.updatePolygon(draft.id, { status: undefined });
-      this.notifications.error(buildStaleSubmissionWarning(draft.name));
+      if (polygon.jobId !== undefined) {
+        this.setAlertsLoading(polygon.id, true);
+      } else {
+        this.updatePolygon(polygon.id, { status: undefined });
+      }
     }
   }
 

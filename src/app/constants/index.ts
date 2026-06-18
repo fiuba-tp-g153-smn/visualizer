@@ -14,7 +14,6 @@ export {
   LEAFLET_EDITABLE_EVENTS,
   POLYGON_STATUS,
   type PolygonStatus,
-  buildStaleSubmissionWarning,
 } from './map-polygons.constants';
 
 // Códigos de fenómenos meteorológicos para alertas

@@ -16,6 +16,10 @@ const POLL_INTERVAL_MS = 2_000;
 const POLL_TIMEOUT_MS = 180_000;
 const HTTP_STATUS_NOT_FOUND = 404;
 
+/** Terminal statuses returned by the backend. */
+export const JOB_DONE = 'done';
+export const JOB_FAILED = 'failed';
+
 /** Client-only terminal statuses layered on top of the backend ones. */
 export const JOB_TIMEOUT = 'timeout';
 export const JOB_UNKNOWN = 'unknown';
@@ -40,7 +44,7 @@ export class AlertJobService {
         const status = await firstValueFrom(
           this.departmentIntersectionService.getAlertJob(jobId),
         );
-        if (status.status === 'done' || status.status === 'failed') {
+        if (status.status === JOB_DONE || status.status === JOB_FAILED) {
           return status;
         }
       } catch (error: unknown) {

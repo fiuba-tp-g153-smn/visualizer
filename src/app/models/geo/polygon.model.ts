@@ -61,6 +61,13 @@ export interface Polygon {
    * Ausente para un borrador normal y editable.
    */
   status?: PolygonStatus;
+
+  /**
+   * Id del background job de generación de aviso en curso (presente junto a
+   * `status: 'submitting'`). Persiste en localStorage para poder reanudar el
+   * polling si la página se recarga.
+   */
+  jobId?: string;
 }
 
 /**
@@ -82,4 +89,5 @@ export interface UpdatePolygonDto {
   departmentsVisible?: boolean;
   originalCoordinates?: Array<LatLng>;
   status?: PolygonStatus;
+  jobId?: string;
 }
