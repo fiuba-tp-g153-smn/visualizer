@@ -106,10 +106,11 @@ export const VISIBILITY_SCALE = buildScaleFromThresholds({
   subTickCount: 1,
 });
 
-// Viento: 0–120 km/h con refuerzo cromático violeta en 90–120 km/h. El dominio
-// se mantiene en km/h (unidad de origen SMN); la leyenda y la etiqueta del marker
-// se reexpresan en la unidad elegida por el usuario (nudos por defecto) vía el
-// toggle de unidades, sin tocar estos valores.
+// Viento: 0–150 km/h en pasos uniformes de 15 km/h, con refuerzo cromático
+// violeta en 90–150 km/h. El dominio se mantiene en km/h (unidad de origen
+// SMN); la leyenda y la etiqueta del marker se reexpresan en la unidad
+// elegida por el usuario (nudos por defecto) vía el toggle de unidades, sin
+// tocar estos valores.
 export const WIND_SPEED_SCALE = buildScaleFromThresholds({
   unit: WEATHER_STATION_UNITS.WIND_SPEED,
   scaleDisplayName: 'Velocidad del viento',
@@ -121,14 +122,12 @@ export const WIND_SPEED_SCALE = buildScaleFromThresholds({
     { value: 60, color: '#fee08b' },
     { value: 75, color: '#fdae61' },
     { value: 90, color: '#7b3294' },
-    { value: 95, color: '#6a1b9a' },
-    { value: 100, color: '#5e35b1' },
-    { value: 105, color: '#512da8' },
-    { value: 110, color: '#4527a0' },
-    { value: 115, color: '#311b92' },
-    { value: 120, color: '#1a237e' },
+    { value: 105, color: '#5e35b1' },
+    { value: 120, color: '#4527a0' },
+    { value: 135, color: '#311b92' },
+    { value: 150, color: '#1a237e' },
   ],
-  labelValues: [0, 15, 30, 45, 60, 75, 90, 100, 110, 120],
-  labelCount: 10,
+  labelValues: [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150],
+  labelCount: 11,
   subTickCount: 2,
 });
