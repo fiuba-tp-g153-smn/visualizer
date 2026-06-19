@@ -1135,8 +1135,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   toggleScale(): void {
     if (!this.scaleTools.enabled()) {
       this.scaleTools.setEnabled(true);
+    } else {
+      this.scaleTools.toggleLayerSelection(this.layer.id);
     }
-    this.scaleTools.toggleLayerSelection(this.layer.id);
 
     if (this.isWeatherStationsLayer()) {
       this.controlService.setWeatherStationsScaleVisible(

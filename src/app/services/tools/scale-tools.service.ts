@@ -153,11 +153,6 @@ export class ScaleToolsService {
           this.selectedLayerIdsOrdered.set(updatedSelection);
         }
 
-        // Default behavior: when a new layer is activated, show its palette.
-        if (newLayerIds.length > 0 && !this.enabled()) {
-          this.enabled.set(true);
-        }
-
         this.previousDisplayLayerIds = activeLayerIds;
 
         if (isInitialSync) {
