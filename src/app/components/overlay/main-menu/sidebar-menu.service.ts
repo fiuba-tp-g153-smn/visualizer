@@ -33,7 +33,7 @@ const MENU_SECTIONS: ReadonlyArray<MenuSection> = [
   },
   {
     id: 'explore',
-    title: 'Explorar mapa',
+    title: 'Explorador',
     icon: 'map',
     tooltip: 'Buscar lugares y elegir mapa base',
     component: MapExplorerComponent,
