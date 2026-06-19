@@ -144,7 +144,7 @@ export class PointQueryViewerService {
   private restoredSelectionFromStorage = false;
   private hasSyncedDisplayItems = false;
 
-  readonly enabled = signal<boolean>(false);
+  readonly enabled = signal<boolean>(true);
   readonly selectedLayerIdsOrdered = signal<string[]>([]);
   readonly manuallyDeselectedLayerIds = signal<Set<string>>(new Set());
   readonly lastClickCoordinates = signal<MouseCoordinates | null>(null);
@@ -355,7 +355,7 @@ export class PointQueryViewerService {
 
     effect(() => {
       // When active layers change, keep only selected layer IDs that still exist.
-      // Auto-select newly activated layers, but keep the tool itself disabled by default.
+      // Auto-select newly activated layers; this doesn't affect the tool's enabled state.
       const allItems = this.displayItems();
       const allLayerIds = new Set(allItems.map((item) => item.layerId));
       const isInitialSync = !this.hasSyncedDisplayItems;
@@ -1225,7 +1225,7 @@ export class PointQueryViewerService {
     if (!parsed) return false;
     const showMarker = parsed.showMarker ?? false;
     const panelMode = parsed.panelMode ?? POINT_QUERY_PANEL_MODES.FIXED;
-    this.enabled.set(parsed.enabled ?? false);
+    this.enabled.set(parsed.enabled ?? true);
     this.selectedLayerIdsOrdered.set(parsed.selectedLayerIdsOrdered ?? []);
     this.manuallyDeselectedLayerIds.set(new Set(parsed.manuallyDeselectedLayerIds ?? []));
     this.showMarker.set(showMarker);
