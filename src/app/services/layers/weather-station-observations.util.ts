@@ -1,6 +1,7 @@
 import { TEMPERATURE_UNITS, WEATHER_STATION_UNITS } from '../../constants';
 import { convertValueForDisplay, getDisplayUnit } from '../../utils/unit-conversion.utils';
 import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import { formatStationValue } from '../../utils/number-format.utils';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import { StationSeries } from '../../models/geo/weather-station-series.model';
 
@@ -19,14 +20,15 @@ export interface ObservationRow {
 function fmt(
   value: number | null,
   sourceUnit: string,
-  decimals: number,
+  minDecimals: number,
   units: UnitsSettingsService,
 ): string {
   if (value === null) {
     return '—';
   }
   const unit = getDisplayUnit(sourceUnit, units);
-  return `${convertValueForDisplay(value, sourceUnit, units).toFixed(decimals)} ${unit}`.trim();
+  const displayValue = convertValueForDisplay(value, sourceUnit, units);
+  return `${formatStationValue(displayValue, units.decimalPrecision(), minDecimals)} ${unit}`.trim();
 }
 
 /**

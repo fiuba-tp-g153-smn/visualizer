@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { STORAGE_KEYS, TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../constants';
 import { LocalStorageService } from '../storage/local-storage.service';
 
@@ -23,13 +23,6 @@ export class UnitsSettingsService {
   readonly temperatureUnit = signal<TemperatureUnit>(TEMPERATURE_UNITS.CELSIUS);
   readonly windSpeedUnit = signal<WindSpeedUnit>(WIND_SPEED_UNITS.KNOTS);
   readonly decimalPrecision = signal<DecimalPrecision>(2);
-
-  readonly numberFormatter = computed(() => {
-    return new Intl.NumberFormat('es-AR', {
-      minimumFractionDigits: this.decimalPrecision(),
-      maximumFractionDigits: this.decimalPrecision(),
-    });
-  });
 
   constructor() {
     this.loadFromStorage();

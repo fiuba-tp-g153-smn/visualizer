@@ -1,5 +1,6 @@
 import { TEMPERATURE_UNITS, WEATHER_STATION_UNITS } from '../../constants';
 import { convertValueForDisplay, getDisplayUnit } from '../../utils/unit-conversion.utils';
+import { formatStationValue } from '../../utils/number-format.utils';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import { StationSeries, StationSeriesPoint } from '../../models/geo/weather-station-series.model';
 
@@ -114,7 +115,11 @@ export function buildSeriesSummary(
       title: `${metric.title} (${unit})`,
       rows: metric.stats.map((stat) => ({
         label: STAT_LABELS[stat],
-        value: statValue(ys, stat).toFixed(metric.decimals),
+        value: formatStationValue(
+          statValue(ys, stat),
+          unitsSettings.decimalPrecision(),
+          metric.decimals,
+        ),
       })),
     });
   }

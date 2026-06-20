@@ -15,6 +15,7 @@ import type {
 import { TEMPERATURE_UNITS } from '../../constants';
 import { WeatherStationVariable } from '../../models/layers/models';
 import { convertValueForDisplay, getDisplayUnit } from '../../utils/unit-conversion.utils';
+import { formatStationValue } from '../../utils/number-format.utils';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import {
   SERIES_VARIABLES,
@@ -130,7 +131,9 @@ function buildOverlayChart(
       x: { format: 'dd MMM HH:mm' },
       y: {
         formatter: (val: number) =>
-          val === null || val === undefined ? '—' : `${val.toFixed(decimals)} ${unit}`.trim(),
+          val === null || val === undefined
+            ? '—'
+            : `${formatStationValue(val, unitsSettings.decimalPrecision(), decimals)} ${unit}`.trim(),
       },
     },
     xaxis: {
@@ -350,7 +353,11 @@ function buildVariableChart(
   const latestText =
     latestRaw === null
       ? '—'
-      : `${convertValueForDisplay(latestRaw, variable.sourceUnit, unitsSettings).toFixed(variable.decimals)} ${unit}`.trim();
+      : `${formatStationValue(
+          convertValueForDisplay(latestRaw, variable.sourceUnit, unitsSettings),
+          unitsSettings.decimalPrecision(),
+          variable.decimals,
+        )} ${unit}`.trim();
 
   return {
     variable,
@@ -399,7 +406,8 @@ function buildVariableChart(
           if (val === null || val === undefined) {
             return '—';
           }
-          const text = `${val.toFixed(variable.decimals)} ${unit}`.trim();
+          const text =
+            `${formatStationValue(val, unitsSettings.decimalPrecision(), variable.decimals)} ${unit}`.trim();
           // The wind chart also shows the bearing the wind comes from (e.g. "Norte").
           if (!isWind) {
             return text;
@@ -423,7 +431,9 @@ function buildVariableChart(
       ...(yRange ? { min: yRange.min, max: yRange.max } : {}),
       labels: {
         formatter: (val: number) =>
-          val === null || val === undefined ? '' : val.toFixed(variable.decimals),
+          val === null || val === undefined
+            ? ''
+            : formatStationValue(val, unitsSettings.decimalPrecision(), variable.decimals),
       },
     },
   };

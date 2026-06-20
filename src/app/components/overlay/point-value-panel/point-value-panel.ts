@@ -7,7 +7,7 @@ import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel
 import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '../../../models';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
-import { impliedMinFractionDigits } from '../../../utils/number-format.utils';
+import { formatPointQueryValue } from '../../../utils/number-format.utils';
 
 @Component({
   selector: 'app-point-value-panel',
@@ -62,19 +62,6 @@ export class PointValuePanelComponent {
   }
 
   private formatNumber(value: number): string {
-    const minFractionDigits = impliedMinFractionDigits(value);
-    if (minFractionDigits === 0) {
-      return this.unitsSettings.numberFormatter().format(value);
-    }
-
-    const effectiveFractionDigits = Math.max(
-      this.unitsSettings.decimalPrecision(),
-      minFractionDigits,
-    );
-
-    return new Intl.NumberFormat('es-AR', {
-      minimumFractionDigits: effectiveFractionDigits,
-      maximumFractionDigits: effectiveFractionDigits,
-    }).format(value);
+    return formatPointQueryValue(value, this.unitsSettings.decimalPrecision());
   }
 }

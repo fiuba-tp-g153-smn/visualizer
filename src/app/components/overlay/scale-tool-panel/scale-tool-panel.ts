@@ -18,7 +18,7 @@ import {
   getDisplayUnit,
   isKelvinUnit,
 } from '../../../utils/unit-conversion.utils';
-import { impliedMinFractionDigits } from '../../../utils/number-format.utils';
+import { formatScaleLabel } from '../../../utils/number-format.utils';
 
 @Component({
   selector: 'app-scale-tool-panel',
@@ -137,7 +137,7 @@ export class ScaleToolPanelComponent {
 
   get continuousLabelSizerText(): string {
     return this.continuousLabelEntries.reduce(
-      (longest, entry) => entry.text.length > longest.length ? entry.text : longest,
+      (longest, entry) => (entry.text.length > longest.length ? entry.text : longest),
       '',
     );
   }
@@ -367,20 +367,7 @@ export class ScaleToolPanelComponent {
 
   private formatValue(value: number): string {
     const displayValue = convertValueForDisplay(value, this.entry.scale.unit, this.unitsSettings);
-    const minFractionDigits = impliedMinFractionDigits(displayValue);
-    if (minFractionDigits === 0) {
-      return this.unitsSettings.numberFormatter().format(displayValue);
-    }
-
-    const effectiveFractionDigits = Math.max(
-      this.unitsSettings.decimalPrecision(),
-      minFractionDigits,
-    );
-
-    return new Intl.NumberFormat('es-AR', {
-      minimumFractionDigits: effectiveFractionDigits,
-      maximumFractionDigits: effectiveFractionDigits,
-    }).format(displayValue);
+    return formatScaleLabel(displayValue, this.unitsSettings.decimalPrecision());
   }
 
   private getConfiguredLabelCount(): number {
