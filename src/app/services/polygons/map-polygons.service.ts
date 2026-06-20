@@ -1,5 +1,5 @@
 /// <reference types="leaflet-editable" />
-import { Injectable, inject, effect, signal } from '@angular/core';
+import { Injectable, inject, effect, signal, computed } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
 import 'leaflet-editable';
@@ -74,7 +74,35 @@ export class MapPolygonsService {
   private currentDrawingPolygon: L.Polygon | null = null;
   private originalCoordinates: Array<LatLng> | null = null;
   private currentEditingPolygonId: string | null = null;
-  readonly contextMenuState = signal<PolygonContextMenuState | null>(null);
+  private readonly contextMenuAnchor = signal<{ x: number; y: number; polygonId: string } | null>(
+    null,
+  );
+
+  // Derived (not a snapshot) so loading flags and disabled states stay live while
+  // the menu is open, and the menu auto-closes if the polygon is removed mid-action
+  // (e.g. a draft is deleted once its alert finishes emitting).
+  readonly contextMenuState = computed<PolygonContextMenuState | null>(() => {
+    const anchor = this.contextMenuAnchor();
+    if (!anchor) return null;
+
+    const polygon = this.polygonService.getPolygonById(anchor.polygonId);
+    if (!polygon) return null;
+
+    return {
+      x: anchor.x,
+      y: anchor.y,
+      polygonId: anchor.polygonId,
+      polygonVisible: polygon.visible,
+      hasDepartments: !!polygon.departments && polygon.departments.length > 0,
+      departmentsVisible: polygon.departmentsVisible || false,
+      canUndoCut: !!polygon.originalCoordinates,
+      isLoadingCut: this.polygonService.isPolygonBeingCut(anchor.polygonId),
+      isLoadingDepartments: this.polygonService.isDepartmentsLoading(anchor.polygonId),
+      isLoadingAlerts: this.polygonService.isAlertsLoading(anchor.polygonId),
+      exceedsMaxVertices: this.polygonService.exceedsMaxVertices(polygon),
+      maxVertices: this.polygonService.maxVertices(),
+    };
+  });
 
   constructor() {
     effect(() => {
@@ -512,28 +540,17 @@ export class MapPolygonsService {
   }
 
   private showPolygonContextMenu(polygonId: string, point: L.Point): void {
+    if (this.polygonDrawingService.drawingMode() !== DrawingMode.NONE) return;
+
     const polygon = this.polygonService.getPolygonById(polygonId);
 
     if (!polygon || !this.map) return;
 
-    this.contextMenuState.set({
-      x: point.x,
-      y: point.y,
-      polygonId,
-      polygonVisible: polygon.visible,
-      hasDepartments: !!polygon.departments && polygon.departments.length > 0,
-      departmentsVisible: polygon.departmentsVisible || false,
-      canUndoCut: !!polygon.originalCoordinates,
-      isLoadingCut: this.polygonService.isPolygonBeingCut(polygonId),
-      isLoadingDepartments: this.polygonService.isDepartmentsLoading(polygonId),
-      isLoadingAlerts: this.polygonService.isAlertsLoading(polygonId),
-      exceedsMaxVertices: this.polygonService.exceedsMaxVertices(polygon),
-      maxVertices: this.polygonService.maxVertices(),
-    });
+    this.contextMenuAnchor.set({ x: point.x, y: point.y, polygonId });
   }
 
   closeContextMenu(): void {
-    this.contextMenuState.set(null);
+    this.contextMenuAnchor.set(null);
   }
 
   handleContextMenuAction(action: PolygonContextMenuAction): void {
