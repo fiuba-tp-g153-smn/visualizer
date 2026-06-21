@@ -13,7 +13,7 @@ import {
 import { MatDialog } from '@angular/material/dialog';
 import { ActiveAlertsService } from './active-alerts.service';
 import { PendingAlertsService } from './pending-alerts.service';
-import { ActiveAlert, Department, PendingAlert } from '../../models/geo';
+import { ActiveAlert, Department, DepartmentRef, PendingAlert } from '../../models/geo';
 import {
   EmittedAlertContextMenuAction,
   EmittedAlertContextMenuState,
@@ -28,20 +28,12 @@ import { DEPARTMENT_STYLE, Z_INDEX } from '../../config/map-polygons.config';
 import { ACTION_DELAYS } from '../../config/timing.config';
 import { MAP_PANES } from '../../constants/map-polygons.constants';
 import { createDepartmentStyle, lightenColor } from '../../utils/map-styles.utils';
+import { departmentKey } from '../../utils/department-key.utils';
 import { activeAlertColorForExpiry } from '../../utils/active-alert.utils';
 import {
   GifPreviewDialogComponent,
   GifPreviewDialogData,
 } from '../../components/floating/gif-preview-dialog/gif-preview-dialog';
-
-/** Normalizes a department name for matching (lowercase, trimmed, accent-free). */
-function normalizeName(name: string): string {
-  return name
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // strip combining diacritical marks
-    .trim()
-    .toLowerCase();
-}
 
 /**
  * Renders active and pending alert polygons on the map in dedicated layer
@@ -65,7 +57,11 @@ export class ActiveAlertsMapService {
 
   // Lightened version of the shown alert's expiry color; updated on render.
   private departmentColor = lightenColor(ACTIVE_ALERT_COLOR, DEPARTMENT_STYLE.LIGHTEN_PERCENT);
-  private readonly departmentLayers = new Map<string, GeoJSON>(); // normalized name -> layer
+  // Department names repeat across provinces (e.g. "General San Martín"), so a
+  // name can map to several layers — both lists must be kept to avoid orphaning
+  // a layer that a same-named collision overwrote.
+  private departmentLayers: GeoJSON[] = [];
+  private readonly departmentLayersByName = new Map<string, GeoJSON[]>(); // departmentKey() -> layers
 
   constructor() {
     effect(() => {
@@ -304,30 +300,41 @@ export class ActiveAlertsMapService {
       const tooltip = dept.province ? `${dept.name} (${dept.province})` : dept.name;
       layer.bindTooltip(tooltip, { direction: 'center', className: 'department-tooltip' });
       layer.addTo(this.map);
-      this.departmentLayers.set(normalizeName(dept.name), layer);
+
+      const key = departmentKey(dept);
+      const existing = this.departmentLayersByName.get(key);
+      if (existing) {
+        existing.push(layer);
+      } else {
+        this.departmentLayersByName.set(key, [layer]);
+      }
+      this.departmentLayers.push(layer);
     }
   }
 
   private clearDepartments(): void {
     this.departmentLayers.forEach((layer) => layer.remove());
-    this.departmentLayers.clear();
+    this.departmentLayers = [];
+    this.departmentLayersByName.clear();
   }
 
-  private updateDepartmentHighlight(hovered: ReadonlyArray<string>): void {
+  private updateDepartmentHighlight(hovered: ReadonlyArray<DepartmentRef>): void {
     const base = createDepartmentStyle(this.departmentColor);
     this.departmentLayers.forEach((layer) => layer.setStyle(base));
 
-    for (const name of hovered) {
-      const target = this.departmentLayers.get(normalizeName(name));
-      if (!target) continue;
+    for (const ref of hovered) {
+      const targets = this.departmentLayersByName.get(departmentKey(ref));
+      if (!targets) continue;
 
-      target.setStyle({
-        ...base,
-        fillOpacity: DEPARTMENT_STYLE.FILL_OPACITY * 2.5,
-        opacity: DEPARTMENT_STYLE.OPACITY * 1.5,
-        weight: DEPARTMENT_STYLE.WEIGHT * 1.5,
-      });
-      target.bringToFront();
+      for (const target of targets) {
+        target.setStyle({
+          ...base,
+          fillOpacity: DEPARTMENT_STYLE.FILL_OPACITY * 2.5,
+          opacity: DEPARTMENT_STYLE.OPACITY * 1.5,
+          weight: DEPARTMENT_STYLE.WEIGHT * 1.5,
+        });
+        target.bringToFront();
+      }
     }
   }
 

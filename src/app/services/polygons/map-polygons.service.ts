@@ -6,7 +6,7 @@ import 'leaflet-editable';
 import { PolygonService } from './polygon.service';
 import { AlertEmissionService } from './alert-emission.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
-import { LatLng, Polygon } from '../../models/geo';
+import { LatLng, Polygon, DepartmentRef } from '../../models/geo';
 import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
@@ -29,6 +29,7 @@ import {
   lightenColor,
 } from '../../utils/map-styles.utils';
 import { isSimplePolygon } from '../../utils/polygon-validation.utils';
+import { departmentKey } from '../../utils/department-key.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
 import { NotificationService } from '../notifications/notification.service';
 
@@ -445,7 +446,7 @@ export class MapPolygonsService {
         className: 'department-tooltip',
       });
 
-      layersByName.set(dept.name, { layer: geoJsonLayer, baseColor: departmentColor });
+      layersByName.set(departmentKey(dept), { layer: geoJsonLayer, baseColor: departmentColor });
       geoJsonLayer.addTo(this.map);
       layers.push(geoJsonLayer);
     }
@@ -726,7 +727,7 @@ export class MapPolygonsService {
   }
 
   private updateDepartmentHighlight(
-    hovered: { polygonId: string; departmentNames: ReadonlyArray<string> } | null,
+    hovered: { polygonId: string; departments: ReadonlyArray<DepartmentRef> } | null,
   ): void {
     if (!this.map) return;
 
@@ -739,7 +740,7 @@ export class MapPolygonsService {
       return;
     }
 
-    const { polygonId, departmentNames } = hovered;
+    const { polygonId, departments } = hovered;
     const layersByName = this.departmentLayersByName.get(polygonId);
     if (!layersByName) return;
 
@@ -747,8 +748,8 @@ export class MapPolygonsService {
       entry.layer.setStyle(createDepartmentStyle(entry.baseColor));
     });
 
-    for (const departmentName of departmentNames) {
-      const hoveredEntry = layersByName.get(departmentName);
+    for (const department of departments) {
+      const hoveredEntry = layersByName.get(departmentKey(department));
       if (!hoveredEntry) continue;
       const highlightStyle = createDepartmentStyle(hoveredEntry.baseColor);
       highlightStyle.fillOpacity = (DEPARTMENT_STYLE.FILL_OPACITY || 0.2) * 2.5;

@@ -13,7 +13,7 @@ import {
   DrawingMode,
   PolygonDrawingService,
 } from '../../../../services/polygons/polygon-drawing.service';
-import { Polygon } from '../../../../models/geo';
+import { Polygon, DepartmentRef } from '../../../../models/geo';
 import { MenuPanelComponent } from '../menu-section.model';
 import {
   ConfirmDialogComponent,
@@ -237,12 +237,12 @@ export class AlertsPanelComponent implements MenuPanelComponent {
     await this.alertEmissionService.emitAlert(polygonId);
   }
 
-  onDepartmentHover(polygonId: string, departmentName: string): void {
-    this.polygonService.setHoveredDepartment(polygonId, departmentName);
+  onDepartmentHover(polygonId: string, department: DepartmentRef): void {
+    this.polygonService.setHoveredDepartment(polygonId, department);
   }
 
-  onProvinceHover(polygonId: string, names: ReadonlyArray<string>): void {
-    this.polygonService.setHoveredDepartments(polygonId, names);
+  onProvinceHover(polygonId: string, departments: ReadonlyArray<DepartmentRef>): void {
+    this.polygonService.setHoveredDepartments(polygonId, departments);
   }
 
   onDepartmentLeave(): void {

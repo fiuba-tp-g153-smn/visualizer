@@ -41,14 +41,12 @@ export const INDEC_PROVINCE_CODES: Readonly<Record<string, string>> = {
 /**
  * Extrae el nombre de la provincia a partir del código de departamento INDEC
  * @param departmentCode - Código INDEC del departamento (5 dígitos, los primeros 2 son el código de provincia)
- * @returns Nombre de la provincia o undefined si no se encuentra
+ * @returns Nombre de la provincia, o cadena vacía si no se encuentra
  */
-export function getProvinceNameFromDepartmentCode(
-  departmentCode: string | undefined,
-): string | undefined {
+export function getProvinceNameFromDepartmentCode(departmentCode: string | undefined): string {
   if (!departmentCode || departmentCode.length < 2) {
-    return undefined;
+    return '';
   }
   const provinceCode = departmentCode.substring(0, 2);
-  return INDEC_PROVINCE_CODES[provinceCode];
+  return INDEC_PROVINCE_CODES[provinceCode] ?? '';
 }

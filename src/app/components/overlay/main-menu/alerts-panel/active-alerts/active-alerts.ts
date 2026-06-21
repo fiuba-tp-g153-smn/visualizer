@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { ActiveAlertsService } from '../../../../../services/active-alerts/active-alerts.service';
-import { ActiveAlert } from '../../../../../models/geo';
+import { ActiveAlert, DepartmentRef } from '../../../../../models/geo';
 import { formatDateTimeLocalized } from '../../../../../utils/tileset-timestamp';
 import {
   activeAlertColorForExpiry,
@@ -67,12 +67,12 @@ export class ActiveAlertsComponent {
     }
   }
 
-  onDepartmentHover(name: string): void {
-    this.activeAlertsService.setHoveredDepartment(name);
+  onDepartmentHover(department: DepartmentRef): void {
+    this.activeAlertsService.setHoveredDepartment(department);
   }
 
-  onProvinceHover(names: ReadonlyArray<string>): void {
-    this.activeAlertsService.setHoveredDepartments(names);
+  onProvinceHover(departments: ReadonlyArray<DepartmentRef>): void {
+    this.activeAlertsService.setHoveredDepartments(departments);
   }
 
   onDepartmentLeave(): void {

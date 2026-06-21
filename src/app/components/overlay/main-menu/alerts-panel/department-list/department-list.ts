@@ -14,11 +14,12 @@ import type { Geometry } from 'geojson';
 import { DetailItemComponent } from '../../../../shared/detail-item/detail-item';
 import { DetailChipComponent } from '../../../../shared/detail-chip/detail-chip';
 import { MapInfoService } from '../../../../../services/layers/map-info.service';
+import { DepartmentRef } from '../../../../../models/geo';
 
 /** Minimal department shape shared by drafts (Department) and alerts (ActiveAlertDepartment). */
 export interface DepartmentListItem {
   readonly name: string;
-  readonly province?: string;
+  readonly province: string;
   readonly geometry?: Geometry;
 }
 
@@ -50,9 +51,9 @@ export class DepartmentListComponent {
 
   readonly opened = output<void>();
   readonly closed = output<void>();
-  readonly departmentHover = output<string>();
-  /** Hovering a province emits the names of all its departments. */
-  readonly provinceHover = output<ReadonlyArray<string>>();
+  readonly departmentHover = output<DepartmentRef>();
+  /** Hovering a province emits refs for all its departments. */
+  readonly provinceHover = output<ReadonlyArray<DepartmentRef>>();
   readonly departmentLeave = output<void>();
 
   readonly expanded = signal<boolean>(false);
@@ -61,7 +62,7 @@ export class DepartmentListComponent {
   readonly groups = computed<ReadonlyArray<ProvinceGroup>>(() => {
     const byProvince = new Map<string, DepartmentListItem[]>();
     for (const dept of this.departments()) {
-      const province = dept.province?.trim() || NO_PROVINCE_LABEL;
+      const province = dept.province.trim() || NO_PROVINCE_LABEL;
       const group = byProvince.get(province);
       if (group) {
         group.push(dept);
@@ -110,8 +111,8 @@ export class DepartmentListComponent {
     this.expandedProvinces.set(next);
   }
 
-  onHover(name: string): void {
-    this.departmentHover.emit(name);
+  onHover(dept: DepartmentListItem): void {
+    this.departmentHover.emit({ name: dept.name, province: dept.province });
   }
 
   onClick(dept: DepartmentListItem): void {
@@ -121,7 +122,9 @@ export class DepartmentListComponent {
   }
 
   onProvinceHover(group: ProvinceGroup): void {
-    this.provinceHover.emit(group.departments.map((d) => d.name));
+    this.provinceHover.emit(
+      group.departments.map((d) => ({ name: d.name, province: d.province })),
+    );
   }
 
   onLeave(): void {

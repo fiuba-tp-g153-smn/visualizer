@@ -5,7 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { PendingAlertsService } from '../../../../../services/active-alerts/pending-alerts.service';
-import { PendingAlert } from '../../../../../models/geo';
+import { PendingAlert, DepartmentRef } from '../../../../../models/geo';
 import { withDepartmentGeometries } from '../../../../../utils/active-alert.utils';
 import {
   GifPreviewDialogComponent,
@@ -68,12 +68,12 @@ export class PendingAlertsComponent {
     }
   }
 
-  onDepartmentHover(name: string): void {
-    this.pendingAlertsService.setHoveredDepartment(name);
+  onDepartmentHover(department: DepartmentRef): void {
+    this.pendingAlertsService.setHoveredDepartment(department);
   }
 
-  onProvinceHover(names: ReadonlyArray<string>): void {
-    this.pendingAlertsService.setHoveredDepartments(names);
+  onProvinceHover(departments: ReadonlyArray<DepartmentRef>): void {
+    this.pendingAlertsService.setHoveredDepartments(departments);
   }
 
   onDepartmentLeave(): void {

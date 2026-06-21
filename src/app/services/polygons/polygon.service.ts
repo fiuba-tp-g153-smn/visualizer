@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Polygon, CreatePolygonDto, UpdatePolygonDto } from '../../models/geo';
+import { Polygon, CreatePolygonDto, UpdatePolygonDto, DepartmentRef } from '../../models/geo';
 import {
   AlertJobAccepted,
   AlertsLimitsResponse,
@@ -29,7 +29,7 @@ export class PolygonService {
 
   private readonly hoveredDepartmentsSignal = signal<{
     polygonId: string;
-    departmentNames: ReadonlyArray<string>;
+    departments: ReadonlyArray<DepartmentRef>;
   } | null>(null);
   readonly hoveredDepartments = this.hoveredDepartmentsSignal.asReadonly();
 
@@ -437,13 +437,13 @@ export class PolygonService {
     }
   }
 
-  setHoveredDepartment(polygonId: string, departmentName: string): void {
-    this.hoveredDepartmentsSignal.set({ polygonId, departmentNames: [departmentName] });
+  setHoveredDepartment(polygonId: string, department: DepartmentRef): void {
+    this.hoveredDepartmentsSignal.set({ polygonId, departments: [department] });
   }
 
   /** Highlights several departments at once (e.g. hovering a whole province). */
-  setHoveredDepartments(polygonId: string, departmentNames: ReadonlyArray<string>): void {
-    this.hoveredDepartmentsSignal.set({ polygonId, departmentNames });
+  setHoveredDepartments(polygonId: string, departments: ReadonlyArray<DepartmentRef>): void {
+    this.hoveredDepartmentsSignal.set({ polygonId, departments });
   }
 
   clearHoveredDepartment(): void {

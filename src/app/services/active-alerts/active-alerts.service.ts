@@ -1,7 +1,7 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { DepartmentIntersectionService } from '../polygons/department-intersection.service';
-import { ActiveAlert, AlertsVisibility, Department } from '../../models/geo';
+import { ActiveAlert, AlertsVisibility, Department, DepartmentRef } from '../../models/geo';
 import { toActiveAlert } from '../../utils/active-alert.utils';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { STORAGE_KEYS } from '../../constants';
@@ -26,7 +26,7 @@ export class ActiveAlertsService {
   private readonly loadingSignal = signal<boolean>(false);
   private readonly shownDepartmentsSignal = signal<ReadonlyArray<Department>>([]);
   private readonly shownDepartmentsAlertSignal = signal<ActiveAlert | null>(null);
-  private readonly hoveredDepartmentsSignal = signal<ReadonlyArray<string>>([]);
+  private readonly hoveredDepartmentsSignal = signal<ReadonlyArray<DepartmentRef>>([]);
   private readonly hiddenIdsSignal = signal<ReadonlySet<number>>(new Set());
 
   readonly showActive = this.showActiveSignal.asReadonly();
@@ -105,13 +105,13 @@ export class ActiveAlertsService {
     this.hoveredDepartmentsSignal.set([]);
   }
 
-  setHoveredDepartment(name: string): void {
-    this.hoveredDepartmentsSignal.set([name]);
+  setHoveredDepartment(department: DepartmentRef): void {
+    this.hoveredDepartmentsSignal.set([department]);
   }
 
   /** Highlights several departments at once (e.g. hovering a whole province). */
-  setHoveredDepartments(names: ReadonlyArray<string>): void {
-    this.hoveredDepartmentsSignal.set(names);
+  setHoveredDepartments(departments: ReadonlyArray<DepartmentRef>): void {
+    this.hoveredDepartmentsSignal.set(departments);
   }
 
   clearHoveredDepartment(): void {
