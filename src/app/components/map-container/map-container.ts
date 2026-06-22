@@ -205,7 +205,7 @@ export class MapContainer implements OnInit, OnDestroy {
     };
 
     const checkAndApply = () => {
-      applyEventBlocking('.main-menu-wrapper');
+      applyEventBlocking('.menu-panel');
       applyEventBlocking('.zoom-controls');
       applyEventBlocking('.scale-tools-container');
     };
