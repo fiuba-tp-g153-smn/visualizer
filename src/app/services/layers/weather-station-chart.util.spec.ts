@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
+import type { ApexYAxis } from 'ng-apexcharts';
 
 import { buildSeriesCharts, buildTabChart, buildTempDewChart } from './weather-station-chart.util';
 import { WeatherStationVariable } from '../../models/layers/models';
+import { WIND_SPEED_UNITS } from '../../constants';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import type {
   StationSeries,
@@ -162,5 +164,90 @@ describe('buildSeriesCharts', () => {
     expect(charts[0].xaxis.labels?.show).toBe(true);
     expect(charts[charts.length - 1].xaxis.labels?.show).toBe(true);
     expect(charts[1].xaxis.labels?.show).toBe(false); // middle hidden
+  });
+});
+
+// ----------------------------------------------- round reference y-axis labels
+
+function fullPoint(t: string, values: Partial<StationSeriesPoint>): StationSeriesPoint {
+  return {
+    t: Date.parse(t),
+    observedAt: t,
+    temperature: null,
+    feelsLike: null,
+    humidity: null,
+    pressure: null,
+    visibility: null,
+    dewPoint: null,
+    condition: null,
+    windSpeed: null,
+    windDeg: null,
+    windDirection: null,
+    ...values,
+  };
+}
+
+const RICH_SERIES: StationSeries = {
+  stationId: 2,
+  stationName: 'Y',
+  province: 'P',
+  hours: 48,
+  points: [
+    fullPoint('2026-05-30T12:00:00Z', { humidity: 52, visibility: 6, pressure: 1011, windSpeed: 10 }),
+    fullPoint('2026-05-30T15:00:00Z', { humidity: 93, visibility: 10, pressure: 1018, windSpeed: 20 }),
+    fullPoint('2026-05-30T18:00:00Z', { humidity: 65, visibility: 8, pressure: 1014, windSpeed: 30 }),
+  ],
+  latest: fullPoint('2026-05-30T18:00:00Z', {
+    humidity: 65,
+    visibility: 8,
+    pressure: 1014,
+    windSpeed: 30,
+  }),
+};
+
+function yLabels(yaxis: ApexYAxis): string[] {
+  const labels = yaxis.labels as { formatter?: (val: number) => string } | undefined;
+  const formatter = labels?.formatter;
+  const min = Number(yaxis.min);
+  const ticks = Number(yaxis.tickAmount ?? 0);
+  const step = ticks > 0 ? (Number(yaxis.max) - min) / ticks : 0;
+  return Array.from({ length: ticks + 1 }, (_, i) => String(formatter?.(min + i * step) ?? ''));
+}
+
+describe('buildSeriesCharts — round reference labels', () => {
+  beforeEach(() => TestBed.configureTestingModule({}));
+
+  it('renders whole-number humidity references despite the global decimal precision', () => {
+    const u = units();
+    u.setDecimalPrecision(2); // would otherwise force 2-decimal labels
+    const charts = buildSeriesCharts(RICH_SERIES, u, { group: 'g', utc: true, height: 200 });
+    const humidity = charts.find((c) => c.variable.id === 'humidity')!;
+    expect(yLabels(humidity.yaxis).every((l) => !l.includes('.'))).toBe(true);
+  });
+
+  it('floors the visibility axis at 0', () => {
+    const charts = buildSeriesCharts(RICH_SERIES, units(), { group: 'g', utc: true, height: 200 });
+    const visibility = charts.find((c) => c.variable.id === 'visibility')!;
+    expect(Number(visibility.yaxis.min)).toBe(0);
+    expect(yLabels(visibility.yaxis).every((l) => !l.includes('.'))).toBe(true);
+  });
+
+  it('uses 0.5-granularity wind references in knots', () => {
+    const u = units();
+    u.setWindSpeedUnit(WIND_SPEED_UNITS.KNOTS);
+    const charts = buildSeriesCharts(RICH_SERIES, u, { group: 'g', utc: true, height: 200 });
+    const wind = charts.find((c) => c.variable.id === 'windSpeed')!;
+    // Every reference is a multiple of 0.5 (no finer-than-.5 fractions).
+    expect(Number.isInteger(Number(wind.yaxis.min) * 2)).toBe(true);
+    expect(Number.isInteger(Number(wind.yaxis.max) * 2)).toBe(true);
+    expect(yLabels(wind.yaxis).every((l) => /^\d+(\.5)?$/.test(l))).toBe(true);
+  });
+
+  it('uses whole-number wind references in km/h', () => {
+    const u = units();
+    u.setWindSpeedUnit(WIND_SPEED_UNITS.KILOMETERS_PER_HOUR);
+    const charts = buildSeriesCharts(RICH_SERIES, u, { group: 'g', utc: true, height: 200 });
+    const wind = charts.find((c) => c.variable.id === 'windSpeed')!;
+    expect(yLabels(wind.yaxis).every((l) => !l.includes('.'))).toBe(true);
   });
 });

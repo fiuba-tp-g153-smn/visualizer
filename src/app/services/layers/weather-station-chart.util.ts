@@ -12,10 +12,11 @@ import type {
   ApexYAxis,
 } from 'ng-apexcharts';
 
-import { TEMPERATURE_UNITS } from '../../constants';
+import { TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../constants';
 import { WeatherStationVariable } from '../../models/layers/models';
 import { convertValueForDisplay, getDisplayUnit } from '../../utils/unit-conversion.utils';
 import { formatStationValue } from '../../utils/number-format.utils';
+import { axisTickFormatter, niceAxis } from '../../utils/chart-axis.utils';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import {
   SERIES_VARIABLES,
@@ -62,6 +63,10 @@ interface OverlayLine {
   sourceUnit: string;
   decimals: number;
   accessor: (point: StationSeriesPoint) => number | null;
+  /** Axis policy (read from the first line): pin the y-axis bottom at 0. */
+  floorAtZero?: boolean;
+  /** Axis policy (read from the first line): smallest gridline step, 0.5 for knots. */
+  minStep?: number;
 }
 
 /**
@@ -95,9 +100,12 @@ function buildOverlayChart(
     .map((d) => d.y)
     .filter((y): y is number => y !== null);
   const hasData = ys.length > 0;
-  const minY = hasData ? Math.min(...ys) : 0;
-  const maxY = hasData ? Math.max(...ys) : 0;
-  const span = maxY - minY || Math.max(Math.abs(maxY) * 0.1, 1);
+  // Snap to round reference labels; the small popover keeps a low tick count.
+  const axis = niceAxis(ys, {
+    minStep: lines[0].minStep ?? 1,
+    floorAtZero: lines[0].floorAtZero ?? false,
+    maxTicks: 4,
+  });
 
   return {
     hasData,
@@ -144,10 +152,11 @@ function buildOverlayChart(
       tooltip: { enabled: false },
     },
     yaxis: {
-      ...(hasData ? { min: minY - span * 0.1, max: maxY + span * 0.1 } : {}),
-      tickAmount: 4,
+      ...(axis ? { min: axis.min, max: axis.max, tickAmount: axis.tickAmount } : {}),
       labels: {
-        formatter: (val: number) => (val === null || val === undefined ? '' : val.toFixed(0)),
+        formatter: axis
+          ? axisTickFormatter(axis.step)
+          : (val: number) => (val === null || val === undefined ? '' : String(val)),
       },
     },
   };
@@ -223,6 +232,12 @@ export function buildTabChart(
         sourceUnit: variable.sourceUnit,
         decimals: variable.decimals,
         accessor: variable.accessor,
+        floorAtZero: variable.id === 'visibility',
+        minStep:
+          variable.id === 'windSpeed' &&
+          unitsSettings.windSpeedUnit() === WIND_SPEED_UNITS.KNOTS
+            ? 0.5
+            : 1,
       },
     ],
     unitsSettings,
@@ -256,17 +271,6 @@ export interface BuildChartsOptions {
   group: string;
   utc: boolean;
   height: number;
-}
-
-/** Tight y-range (data min/max + small padding) so the line fills the height. */
-function tightYRange(ys: number[]): { min: number; max: number } | undefined {
-  if (!ys.length) {
-    return undefined;
-  }
-  const maxY = Math.max(...ys);
-  const minY = Math.min(...ys);
-  const base = maxY - minY || Math.max(Math.abs(maxY) * 0.1, 1);
-  return { min: minY - base * 0.08, max: maxY + base * 0.12 };
 }
 
 type XAxisLabels = 'top' | 'bottom' | 'hidden';
@@ -339,7 +343,15 @@ function buildVariableChart(
 
   const ys = [...data, ...(dewData ?? [])].map((d) => d.y).filter((y): y is number => y !== null);
   const hasData = ys.length > 0;
-  const yRange = tightYRange(ys);
+  // Snap the y-axis to round reference labels. Visibility is floored at 0; wind in
+  // knots steps in 0.5s, every other variable in whole numbers.
+  const axis = niceAxis(ys, {
+    minStep:
+      variable.id === 'windSpeed' && unitsSettings.windSpeedUnit() === WIND_SPEED_UNITS.KNOTS
+        ? 0.5
+        : 1,
+    floorAtZero: variable.id === 'visibility',
+  });
 
   // The wind chart uses triangle markers rotated to each reading's bearing.
   const isWind = variable.id === 'windSpeed';
@@ -428,12 +440,11 @@ function buildVariableChart(
       tooltip: { enabled: false },
     },
     yaxis: {
-      ...(yRange ? { min: yRange.min, max: yRange.max } : {}),
+      ...(axis ? { min: axis.min, max: axis.max, tickAmount: axis.tickAmount } : {}),
       labels: {
-        formatter: (val: number) =>
-          val === null || val === undefined
-            ? ''
-            : formatStationValue(val, unitsSettings.decimalPrecision(), variable.decimals),
+        formatter: axis
+          ? axisTickFormatter(axis.step)
+          : (val: number) => (val === null || val === undefined ? '' : String(val)),
       },
     },
   };
