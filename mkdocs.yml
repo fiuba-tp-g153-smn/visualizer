@@ -26,11 +26,14 @@ theme:
   name: material
   language: es
   favicon: assets/favicon.ico
+  logo: assets/smn-logo.png
   palette:
-    # Matches the app's Angular Material primary.
+    # `custom` leaves the palette variables undefined so embed.css can set the
+    # SMN colours from the app's own theme; a named colour would define them at
+    # equal specificity and turn this into a load-order coin flip.
     - scheme: default
-      primary: blue
-      accent: blue
+      primary: custom
+      accent: custom
   features:
     - navigation.top
     - navigation.footer # Anterior/Siguiente links at the foot of every page

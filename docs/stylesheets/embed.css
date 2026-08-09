@@ -1,9 +1,14 @@
-/* Embedded-in-the-app presentation: Material's header stays, because it holds
- * the search field and the drawer toggle, but its logo and site title would
- * repeat the header the Angular shell already draws above this frame. */
-.md-header__title,
-.md-header .md-logo {
-  display: none;
+/* SMN branding, taken from the app's own Angular Material theme
+ * (src/styles.scss → mat.theme-overrides). `primary: custom` in mkdocs.yml
+ * leaves these undefined, so there is nothing to out-specify. */
+:root {
+  --md-primary-fg-color: #0090d0;
+  --md-primary-fg-color--light: #33a6d9;
+  --md-primary-fg-color--dark: #0073a6;
+  --md-primary-bg-color: #fff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
+  --md-accent-fg-color: #0073a6;
+  --md-accent-fg-color--transparent: rgba(0, 144, 208, 0.1);
 }
 
 /* Screenshots: replaces the per-image inline styles the MDX carried. */
