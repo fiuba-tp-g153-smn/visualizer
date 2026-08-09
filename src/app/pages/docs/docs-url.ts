@@ -10,6 +10,21 @@ export interface DocsRoute {
   readonly fragment?: string;
 }
 
+/**
+ * URL to point the iframe at for a docs page.
+ *
+ * The trailing slash is load-bearing: MkDocs builds directory URLs, so every
+ * asset path inside a page is written relative to `<page>/`. Without it the
+ * browser resolves them one level too high and the page renders unstyled.
+ * Production only papers over this because nginx redirects the slash on.
+ */
+export function docsPageUrl(base: string, path: string, fragment: string | null): string {
+  const page = path.replace(/^\/+|\/+$/g, '');
+  const url = page ? `${base}/${page}/` : `${base}/`;
+
+  return fragment ? `${url}#${fragment}` : url;
+}
+
 export function docsRouteFor(base: string, pathname: string, hash: string): DocsRoute {
   const relative = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
 

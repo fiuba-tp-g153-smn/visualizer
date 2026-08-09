@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinnerComponent } from '../../components/shared/loading-spinner/loading-spinner';
-import { docsRouteFor } from './docs-url';
+import { docsPageUrl, docsRouteFor } from './docs-url';
 
 /**
  * MkDocs Material publishes `document$` on its own window: it emits once per
@@ -95,7 +95,7 @@ export class DocsComponent implements OnInit, OnDestroy {
 
     // The fragment rides along in the URL, so the browser scrolls to the heading
     // by itself — the shell never has to ask the docs page to do it.
-    const url = `${baseUrl}/${path}${fragment ? `#${fragment}` : ''}`;
+    const url = docsPageUrl(baseUrl, path, fragment);
     this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
   }
 

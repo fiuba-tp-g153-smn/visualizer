@@ -1,8 +1,30 @@
 import { describe, it, expect } from 'vitest';
 
-import { docsRouteFor } from './docs-url';
+import { docsPageUrl, docsRouteFor } from './docs-url';
 
 const BASE = '/docs-site';
+
+describe('docsPageUrl', () => {
+  it('ends a page URL with a slash so relative assets resolve inside the page directory', () => {
+    expect(docsPageUrl(BASE, 'productos-meteorologicos', null)).toBe(
+      '/docs-site/productos-meteorologicos/',
+    );
+  });
+
+  it('points at the docs root when there is no page', () => {
+    expect(docsPageUrl(BASE, '', null)).toBe('/docs-site/');
+  });
+
+  it('keeps a single slash when the path already carries one', () => {
+    expect(docsPageUrl(BASE, '/uso-general/', null)).toBe('/docs-site/uso-general/');
+  });
+
+  it('appends the fragment after the trailing slash', () => {
+    expect(docsPageUrl(BASE, 'arquitectura', 'introducción')).toBe(
+      '/docs-site/arquitectura/#introducción',
+    );
+  });
+});
 
 describe('docsRouteFor', () => {
   it('maps the docs index to the bare /docs route', () => {
