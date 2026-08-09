@@ -116,6 +116,3 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 .angular
-
-# Documentation Service
-docs-service/

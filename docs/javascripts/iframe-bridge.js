@@ -1,10 +1,10 @@
 /**
- * Keeps the Angular shell's URL in sync while the docs run inside its iframe.
- * Replaces docs-service/src/clientModules/notifyParent.ts (Docusaurus).
+ * Keeps the Angular shell's URL in sync while the docs run inside its iframe,
+ * and scrolls to an anchor when the shell asks for one.
  *
- * `document$` is Material's per-page observable — it emits on first load and
- * again after every instant-navigation swap, which is exactly where Docusaurus
- * used onRouteDidUpdate.
+ * `document$` is Material's per-page observable: it emits on first load and
+ * again after every instant-navigation swap, so it fires exactly once per page
+ * the reader actually sees.
  */
 (function () {
   'use strict';

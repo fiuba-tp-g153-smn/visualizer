@@ -104,7 +104,7 @@ export class DocsComponent implements OnInit, OnDestroy {
   onIframeLoad(): void {
     this.isLoading = false;
 
-    // After iframe loads, tell Docusaurus to scroll to anchor if needed
+    // After the iframe loads, ask the docs page to scroll to the anchor
     if (this.pendingFragment) {
       const iframe = document.querySelector('iframe') as HTMLIFrameElement;
       if (iframe?.contentWindow) {
