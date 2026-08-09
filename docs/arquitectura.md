@@ -25,7 +25,7 @@ En este artículo recorremos la arquitectura completa del sistema: desde la desc
 
 ## El Flujo Principal: De AWS a tu Navegador
 
-![Diagrama de flujo principal desde AWS hasta el navegador](./imgs/arquitectura/main-flow.png){ .doc-figure style="max-height: 400px" }
+![Diagrama de flujo principal desde AWS hasta el navegador](./imgs/arquitectura/main-flow.png){ .doc-figure loading=lazy style="max-height: 400px" }
 
 El ciclo de vida de un dato meteorológico en el sistema atraviesa cuatro componentes principales, cada uno con una responsabilidad bien definida.
 
@@ -53,7 +53,7 @@ El resultado combinado es que, una vez que las tiles se cargan para un nivel de 
 
 El tiles-processor es el corazón del pipeline de datos. Su diseño interno sigue un patrón productor-consumidor con una cola de mensajes, lo que permite escalar el procesamiento de forma horizontal y controlar la concurrencia para no saturar los recursos del servidor.
 
-![Flujo de trabajo principal del Tiles Processor usando RabbitMQ](./imgs/arquitectura/tiles-processor-main-flow.png){ .doc-figure style="max-height: 500px" }
+![Flujo de trabajo principal del Tiles Processor usando RabbitMQ](./imgs/arquitectura/tiles-processor-main-flow.png){ .doc-figure loading=lazy style="max-height: 500px" }
 
 El componente **producer** monitorea periódicamente el bucket de AWS S3 del GOES-19 en busca de nuevas imágenes. Como los canales satelitales se publican aproximadamente cada 10 minutos, el producer hace polling cada 5 minutos. Antes de encolar una nueva tarea, verifica contra MinIO si los tiles correspondientes ya fueron generados (evitando trabajo duplicado).
 
@@ -65,7 +65,7 @@ La ventaja fundamental de usar RabbitMQ es el **control del paralelismo**. Sin l
 
 ### Arquitectura Completa con Gestión de Estado
 
-![Arquitectura completa del Tiles Processor con gestión de estado en SQLite](./imgs/arquitectura/tiles-processor-full.png){ .doc-figure style="max-height: 500px" }
+![Arquitectura completa del Tiles Processor con gestión de estado en SQLite](./imgs/arquitectura/tiles-processor-full.png){ .doc-figure loading=lazy style="max-height: 500px" }
 
 El diagrama completo del tiles-processor revela un componente adicional clave: la gestión de estado a través de un volumen Docker compartido con una base de datos **SQLite3**.
 
@@ -75,7 +75,7 @@ Cada worker, al tomar una tarea de la cola, registra en la base SQLite3 que esos
 
 ### Control de Tiles en Progreso
 
-![Coordinación de estado entre Producer y Workers](./imgs/arquitectura/tiles-processor-in-progress.png){ .doc-figure style="max-height: 350px" }
+![Coordinación de estado entre Producer y Workers](./imgs/arquitectura/tiles-processor-in-progress.png){ .doc-figure loading=lazy style="max-height: 350px" }
 
 Este diagrama detalla específicamente la coordinación de estado entre el producer y los workers. El mecanismo es intencionalmente liviano pero efectivo: SQLite3 provee transacciones ACID sin necesidad de un servidor de base de datos adicional, y al vivir en un volumen Docker compartido, todos los contenedores del tiles-processor pueden acceder a él de forma consistente.
 
@@ -95,7 +95,7 @@ El sistema se despliega sobre dos servidores en **Hetzner Cloud**, gestionados a
 
 ### Servidor Central (centralsv)
 
-![Esquema de despliegue del Servidor Central](./imgs/arquitectura/deployment-centralsv.png){ .doc-figure style="max-height: 500px" }
+![Esquema de despliegue del Servidor Central](./imgs/arquitectura/deployment-centralsv.png){ .doc-figure loading=lazy style="max-height: 500px" }
 
 El servidor central (`centralsv-ubuntu-4gb-fsn1-1`) se ubica en la IP `5.75.229.87` y atiende todas las peticiones dirigidas a `*.mapasmn.com`. Caddy recibe el tráfico y lo distribuye entre cuatro contenedores:
 
@@ -108,7 +108,7 @@ Con 4 GB de RAM, este servidor está dimensionado para la capa de presentación 
 
 ### Servidor Worker (worker1)
 
-![Esquema de despliegue del Servidor Worker1](./imgs/arquitectura/deployment-worker1.png){ .doc-figure style="max-height: 500px" }
+![Esquema de despliegue del Servidor Worker1](./imgs/arquitectura/deployment-worker1.png){ .doc-figure loading=lazy style="max-height: 500px" }
 
 El servidor worker (`worker1-ubuntu-8gb-fsn1-1`) está en la IP `49.13.137.92` y responde a `*.w1.mapasmn.com`. Aquí se concentra la carga de procesamiento pesado:
 
@@ -123,7 +123,7 @@ Con 8 GB de RAM y 4 vCPUs, este servidor tiene el doble de recursos que el centr
 
 ### Stack de Monitoreo con Prometheus y Grafana
 
-![Stack de monitoreo distribuido con Prometheus y Grafana](./imgs/arquitectura/monitoring.png){ .doc-figure style="max-height: 400px" }
+![Stack de monitoreo distribuido con Prometheus y Grafana](./imgs/arquitectura/monitoring.png){ .doc-figure loading=lazy style="max-height: 400px" }
 
 La observabilidad del sistema se construye sobre **Prometheus** y **Grafana**, implementados de forma distribuida para cubrir ambos servidores.
 
@@ -135,7 +135,7 @@ Esta arquitectura de monitoreo distribuido es especialmente importante dado que 
 
 ### Monitoreo de Disponibilidad con Uptime Kuma
 
-![Dashboard de disponibilidad en Uptime Kuma](./imgs/arquitectura/uptime.png){ .doc-figure style="max-height: 400px" }
+![Dashboard de disponibilidad en Uptime Kuma](./imgs/arquitectura/uptime.png){ .doc-figure loading=lazy style="max-height: 400px" }
 
 Complementando las métricas de rendimiento, **Uptime Kuma** realiza healthchecks cada minuto sobre todos los servicios críticos del sistema: visualizer, data-service, tiles-processor, ambas instancias de Coolify, Grafana y ambas instancias de Prometheus.
 

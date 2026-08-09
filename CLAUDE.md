@@ -19,10 +19,20 @@ Markdown in `docs/`, built by MkDocs Material into `public/docs-site` (gitignore
 and served by the app's own nginx at `/docs-site/`; the `/docs` route embeds it in
 an iframe. Nav is explicit in `mkdocs.yml`. Builds are `--strict`.
 
+Because the docs are same-origin, `DocsComponent` keeps the shell's URL in sync by
+subscribing to the frame's own `document$` (Material's per-page observable, which
+also covers `navigation.instant` swaps) — no script is injected into the docs.
+`docs-url.ts` holds the base-stripping that turns `/docs-site/x/` into `/docs/x`.
+
+Media is deferred: images carry `loading=lazy` in their `attr_list`, and videos use
+`preload="none"` with a `-poster.webp` frame (regenerate with `ffmpeg -ss 0.5 -i
+video.webm -frames:v 1 -vf "scale='min(1280,iw)':-2" out.webp`).
+
 Two constraints are easy to break: raw HTML in a page is emitted verbatim, so any
-`src` in it must be written relative to that page's own URL depth (MkDocs only
-rewrites Markdown-syntax paths); and `toc.slugify` must stay the unicode-preserving
-pymdownx one, or accented heading anchors like `#introducción` break.
+`src` or `poster` in it must be written relative to that page's own URL depth
+(MkDocs only rewrites Markdown-syntax paths); and `toc.slugify` must stay the
+unicode-preserving pymdownx one, or accented heading anchors like `#introducción`
+break.
 
 ## Architecture
 
