@@ -11,7 +11,10 @@ FROM squidfunk/mkdocs-material:9.7.7 AS docs
 COPY mkdocs.yml /docs/mkdocs.yml
 COPY docs /docs/docs
 
-RUN mkdocs build --strict -d /site
+# Material ships source maps for its own bundle. A reader never fetches them,
+# so they are 1.2 MB of the image nobody downloads. Local `make docs` keeps them.
+RUN mkdocs build --strict -d /site \
+    && find /site -name '*.map' -delete
 
 ################################
 # Stage 2: Builder
