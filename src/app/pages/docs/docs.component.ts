@@ -39,7 +39,7 @@ interface DocsNavigationMessage {
           [src]="safeUrl"
           (load)="onIframeLoad()"
           frameborder="0"
-          title="Documentación Docusaurus"
+          title="Documentación"
         ></iframe>
 
         <div class="loading-overlay" *ngIf="isLoading">
@@ -87,6 +87,12 @@ export class DocsComponent implements OnInit, OnDestroy {
   }
 
   private handleMessage(event: MessageEvent): void {
+    // The docs are served from this same origin (public/docs-site), so anything
+    // arriving from elsewhere is not ours to act on.
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+
     const data = event.data as DocsNavigationMessage;
     if (data?.type === 'docs-navigation' && data.path) {
       const newPath = data.path.startsWith('/') ? data.path.slice(1) : data.path;
@@ -104,7 +110,7 @@ export class DocsComponent implements OnInit, OnDestroy {
       if (iframe?.contentWindow) {
         iframe.contentWindow.postMessage(
           { type: 'scroll-to-anchor', anchor: this.pendingFragment },
-          '*',
+          window.location.origin,
         );
       }
       this.pendingFragment = null;

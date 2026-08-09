@@ -12,7 +12,10 @@ module.exports = {
         ),
         SMN_API_PROMPT_FOR_TOKEN: JSON.stringify(process.env.SMN_API_PROMPT_FOR_TOKEN || 'true'),
         APP_HOST_PORT: JSON.stringify(process.env.APP_HOST_PORT || '4200'),
-        DOCS_URL: JSON.stringify(process.env.DOCS_URL || 'https://docs.mapasmn.com/visualizer/'),
+        // Same-origin by default: the MkDocs site is built into public/docs-site
+        // and served by the app's own nginx. Override to point at an external
+        // docs host instead.
+        DOCS_URL: JSON.stringify(process.env.DOCS_URL || '/docs-site'),
         METRICS_SERVICE_BASE_URL: JSON.stringify(
           process.env.METRICS_SERVICE_BASE_URL || 'http://localhost:6020',
         ),

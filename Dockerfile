@@ -1,7 +1,20 @@
 # syntax=docker/dockerfile:1
 
 ################################
-# Stage 1: Builder
+# Stage 1: Documentation
+################################
+# Renders docs/ into a static site with MkDocs Material. Keep this image tag in
+# sync with DOCS_IMAGE in the Makefile so a local `make docs` and the image
+# build produce the same output. --strict fails the build on a broken link.
+FROM squidfunk/mkdocs-material:9.7.7 AS docs
+
+COPY mkdocs.yml /docs/mkdocs.yml
+COPY docs /docs/docs
+
+RUN mkdocs build --strict -d /site
+
+################################
+# Stage 2: Builder
 ################################
 FROM node:24-alpine AS build
 
@@ -38,6 +51,11 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy source code
 COPY . .
 
+# Drop the rendered docs into the app's static assets. Must land after
+# `COPY . .` so it cannot be shadowed, and before the build so the
+# `public/**/*` asset glob in angular.json picks it up.
+COPY --from=docs /site ./public/docs-site
+
 # Build the application with a persistent Angular build cache.
 # This is the custom-webpack (Webpack) builder, which writes ~110MB to
 # .angular/cache. Persisting that cache across deploys turns a cold ~120s
@@ -46,7 +64,7 @@ RUN --mount=type=cache,target=/app/.angular \
     npm run build
 
 ################################
-# Stage 2: Runtime
+# Stage 3: Runtime
 ################################
 FROM nginx:mainline-alpine-slim AS runner
 
