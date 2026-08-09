@@ -9,6 +9,8 @@ pnpm-debug.log*
 dist
 build
 .github
+# Built by the `docs` stage inside the image; a local copy must not leak in.
+public/docs-site
 
 # Version control
 .git
@@ -114,6 +116,3 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 .angular
-
-# Documentation Service
-docs-service/

@@ -32,18 +32,16 @@ cp .env.example .env
 make up
 ```
 
-The app runs at `http://localhost:4200` and the docs service at `http://localhost:${DOCS_HOST_PORT}` (default `6011`).
+The app runs at `http://localhost:4200`, documentation included at `/docs`.
 
 ## Services
 
-The project runs two Docker services:
+| Service      | Dev port | Description                                          |
+| ------------ | -------- | ---------------------------------------------------- |
+| `visualizer` | `4200`   | Angular app (this repo), documentation included       |
+| `docs-build` | —        | One-shot MkDocs build; renders `docs/` and then exits |
 
-| Service        | Dev port         | Description                   |
-| -------------- | ---------------- | ----------------------------- |
-| `visualizer`   | `4200`           | Angular app (this repo)       |
-| `docs-service` | `DOCS_HOST_PORT` | Docusaurus documentation site |
-
-Both services start together via `make up`. The `DOCS_URL` env var tells the Angular app where to load the docs iframe from.
+`make up` runs `docs-build` first, then starts the app.
 
 ## Commands
 
@@ -51,11 +49,16 @@ Both services start together via `make up`. The `DOCS_URL` env var tells the Ang
 make up            # Start dev environment in Docker with hot-reload
 make down          # Stop and clean up all containers
 make prod          # Build and run the production Docker environment
+make docs          # Build the documentation into public/docs-site
+make docs-serve    # Live-reloading docs preview on http://localhost:8000
 
 npm start          # Run dev server directly (without Docker), port 4200
 npm run build      # Production build
 npm test           # Run unit tests (Vitest)
 ```
+
+> Running `npm start` outside Docker? Run `make docs` once first, or `/docs`
+> will 404 — the site is gitignored build output.
 
 ## Environment Variables
 
@@ -65,14 +68,22 @@ npm test           # Run unit tests (Vitest)
 | `ALERTS_SERVICE_BASE_URL` | Polygon alerts backend                       | `http://localhost:6007` |
 | `SMN_API_PROMPT_FOR_TOKEN` | Prompt for token when enabling SMN stations layer | `true`            |
 | `APP_HOST_PORT`           | Host port for the app in production          | `6010`                  |
-| `DOCS_HOST_PORT`          | Host port for the docs service               | `6011`                  |
-| `DOCS_URL`                | URL the Angular app loads docs from (iframe) | `http://localhost:6011` |
+| `DOCS_URL`                | Where the app loads docs from (iframe)       | `/docs-site`            |
 
 > In production (`make prod`), env vars are baked into the build at compile time via webpack `DefinePlugin`. In development, they are passed at runtime via Docker environment.
 
 ## Documentation
 
-The `/docs` route embeds the Docusaurus docs site (`docs-service`) via iframe, served from `DOCS_URL`.
+Sources live in `docs/` and are built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) via the pinned `squidfunk/mkdocs-material` image — no local Python needed:
+
+```bash
+make docs          # renders docs/ -> public/docs-site (gitignored)
+make docs-serve    # live preview while writing
+```
+
+Angular copies `public/` verbatim, so nginx serves the site at `/docs-site/` and the `/docs` route embeds it in an iframe from `DOCS_URL`. In the production image the same build runs in a dedicated `docs` stage, so the app image ships its own documentation.
+
+Adding a page means creating the Markdown file in `docs/` and adding it to `nav` in `mkdocs.yml`. Builds run with `--strict`, so a broken link fails the build.
 
 ## Architecture
 

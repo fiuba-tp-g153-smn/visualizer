@@ -9,7 +9,32 @@ npm test           # Unit tests (Vitest)
 make up            # Docker dev with hot-reload
 make down          # Stop dev containers
 make prod          # Docker production build+run
+make docs          # Build docs/ -> public/docs-site (MkDocs Material image)
+make docs-serve    # Live-reloading docs preview on :8000
 ```
+
+## Documentation
+
+Markdown in `docs/`, built by MkDocs Material into `public/docs-site` (gitignored)
+and served by the app's own nginx at `/docs-site/`; the `/docs` route embeds it in
+an iframe. Nav is explicit in `mkdocs.yml`. Builds are `--strict`.
+
+Because the docs are same-origin, `DocsComponent` keeps the shell's URL in sync by
+subscribing to the frame's own `document$` (Material's per-page observable, which
+also covers `navigation.instant` swaps) — no script is injected into the docs.
+`docs-url.ts` holds the base-stripping that turns `/docs-site/x/` into `/docs/x`.
+
+Media is deferred: images carry `loading=lazy` in their `attr_list`, and videos use
+`preload="none"` with a `-poster.webp` frame (regenerate with `ffmpeg -ss 0.5 -i
+video.webm -frames:v 1 -vf "scale='min(1280,iw)':-2" out.webp`). `lazy-video.js`
+plays them on scroll via IntersectionObserver — the `autoplay` attribute would
+override `preload` and download every video whether or not it is ever seen.
+
+Two constraints are easy to break: raw HTML in a page is emitted verbatim, so any
+`src` or `poster` in it must be written relative to that page's own URL depth
+(MkDocs only rewrites Markdown-syntax paths); and `toc.slugify` must stay the
+unicode-preserving pymdownx one, or accented heading anchors like `#introducción`
+break.
 
 ## Architecture
 
@@ -53,7 +78,7 @@ Key vars (see `.env.example`):
 
 - `DATA_SERVICE_BASE_URL` — tile/config API (default: `https://data.mapasmn.com`)
 - `ALERTS_SERVICE_BASE_URL` — alerts backend (default: `http://localhost:8080`)
-- `DOCS_URL` — external Docusaurus docs
+- `DOCS_URL` — where `/docs` loads the docs iframe from (default `/docs-site`, served by the app itself)
 
 ## Code Standards
 

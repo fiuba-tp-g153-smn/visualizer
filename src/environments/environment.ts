@@ -9,7 +9,7 @@ const envFallback = {
   ALERTS_SERVICE_BASE_URL: 'http://localhost:8080',
   WEATHER_STATIONS_API_KEY: '',
   SMN_API_PROMPT_FOR_TOKEN: 'true',
-  DOCS_URL: '',
+  DOCS_URL: '/docs-site',
   METRICS_SERVICE_BASE_URL: 'http://localhost:6020',
   IGN_PLACE_SEARCH_URL: 'https://api.ign.gob.ar/buscador/search',
   NOMINATIM_SEARCH_URL: 'https://nominatim.openstreetmap.org/search',
@@ -43,7 +43,7 @@ export const environment = {
       ? $ENV.SMN_API_PROMPT_FOR_TOKEN !== 'false'
       : envFallback.SMN_API_PROMPT_FOR_TOKEN !== 'false',
   },
-  docsUrl: envDefined ? $ENV.DOCS_URL : envFallback.DOCS_URL,
+  docsUrl: envDefined ? $ENV.DOCS_URL || envFallback.DOCS_URL : envFallback.DOCS_URL,
   metricsService: {
     // tiles-processor backoffice metrics API (consumed by the dashboard page).
     baseUrl: envDefined

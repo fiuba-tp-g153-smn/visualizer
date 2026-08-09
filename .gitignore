@@ -6,6 +6,9 @@
 /out-tsc
 /bazel-out
 
+# MkDocs site, built into the app's static assets by `make docs`
+/public/docs-site
+
 # Node
 /node_modules
 npm-debug.log

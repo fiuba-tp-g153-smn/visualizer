@@ -1,0 +1,25 @@
+/* Embedded-in-the-app presentation: Material's header stays, because it holds
+ * the search field and the drawer toggle, but its logo and site title would
+ * repeat the header the Angular shell already draws above this frame. */
+.md-header__title,
+.md-header .md-logo {
+  display: none;
+}
+
+/* Screenshots: replaces the per-image inline styles the MDX carried. */
+.md-typeset .doc-figure {
+  display: block;
+  margin: 30px auto;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 5px;
+  height: auto;
+}
+
+/* Videos carry `preload="none"` and a poster, so nothing is fetched until the
+ * reader presses play. */
+.md-typeset video {
+  display: block;
+  margin: 30px auto;
+  max-width: 100%;
+  border-radius: 5px;
+}
