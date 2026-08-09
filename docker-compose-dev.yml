@@ -44,7 +44,10 @@ services:
           echo "📦 visualizer deps changed — running npm ci..."
           npm ci && cp package-lock.json node_modules/.deps-installed
         fi
-        exec npm start -- --host 0.0.0.0
+        # --poll: the repo lives on a fuseblk (NTFS) mount, where inotify does
+        # not report new files. Without it webpack caches the failed resolution
+        # and every freshly added file is "Module not found" until a restart.
+        exec npm start -- --host 0.0.0.0 --poll 2000
     restart: unless-stopped
     healthcheck:
       test:
