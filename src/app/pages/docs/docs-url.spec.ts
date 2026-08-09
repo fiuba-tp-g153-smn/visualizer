@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { docsPageUrl, docsRouteFor } from './docs-url';
+import { docsPageUrl, docsShellUrl } from './docs-url';
 
 const BASE = '/docs-site';
 
@@ -26,37 +26,26 @@ describe('docsPageUrl', () => {
   });
 });
 
-describe('docsRouteFor', () => {
+describe('docsShellUrl', () => {
   it('maps the docs index to the bare /docs route', () => {
-    expect(docsRouteFor(BASE, '/docs-site/', '')).toEqual({
-      commands: ['/docs'],
-      fragment: undefined,
-    });
+    expect(docsShellUrl(BASE, '/docs-site/', '')).toBe('/docs');
   });
 
-  it('strips the base path so the shell URL is /docs/<page>, not /docs/docs-site/<page>', () => {
-    expect(docsRouteFor(BASE, '/docs-site/uso-general/', '').commands).toEqual([
-      '/docs',
-      'uso-general',
-    ]);
+  it('strips the base so the shell URL is /docs/<page>, not /docs/docs-site/<page>', () => {
+    expect(docsShellUrl(BASE, '/docs-site/uso-general/', '')).toBe('/docs/uso-general');
   });
 
-  it('splits nested pages into separate segments', () => {
-    expect(docsRouteFor(BASE, '/docs-site/guia/avanzada/', '').commands).toEqual([
-      '/docs',
-      'guia',
-      'avanzada',
-    ]);
+  it('keeps nested pages nested', () => {
+    expect(docsShellUrl(BASE, '/docs-site/guia/avanzada/', '')).toBe('/docs/guia/avanzada');
   });
 
-  it('decodes percent-encoded accents so unicode anchors survive the round trip', () => {
-    expect(docsRouteFor(BASE, '/docs-site/arquitectura/', '#introducci%C3%B3n')).toEqual({
-      commands: ['/docs', 'arquitectura'],
-      fragment: 'introducción',
-    });
+  it('passes the fragment through exactly as the frame reported it', () => {
+    expect(docsShellUrl(BASE, '/docs-site/arquitectura/', '#introducci%C3%B3n')).toBe(
+      '/docs/arquitectura#introducci%C3%B3n',
+    );
   });
 
   it('leaves the path alone when the docs are served from another base', () => {
-    expect(docsRouteFor(BASE, '/uso-general/', '').commands).toEqual(['/docs', 'uso-general']);
+    expect(docsShellUrl(BASE, '/uso-general/', '')).toBe('/docs/uso-general');
   });
 });

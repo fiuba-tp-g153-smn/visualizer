@@ -13,6 +13,27 @@
   --md-accent-fg-color--transparent: rgba(0, 144, 208, 0.1);
 }
 
+/* Navigation progress bar, driven by nav-progress.js. It creeps toward 80% on
+ * click and is removed when the next page renders, so a cached swap barely
+ * flashes while a real fetch shows movement. */
+#docs-nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  width: 0;
+  height: 2px;
+  background: var(--md-accent-fg-color);
+  opacity: 0;
+  transition: width 0.15s ease-out, opacity 0.15s ease-out;
+}
+
+#docs-nav-progress.is-loading {
+  width: 80%;
+  opacity: 1;
+  transition: width 3s cubic-bezier(0, 0.7, 0.2, 1), opacity 0.1s ease-in;
+}
+
 /* Screenshots: replaces the per-image inline styles the MDX carried. */
 .md-typeset .doc-figure {
   display: block;

@@ -38,6 +38,7 @@ theme:
     - navigation.top
     - navigation.footer # Anterior/Siguiente links at the foot of every page
     - navigation.instant # Page swaps without a reload; the shell follows via document$
+    - navigation.instant.prefetch # Start fetching on hover; prefetch.js covers the rest
     - content.code.copy
     - search.suggest
     - toc.follow
@@ -65,6 +66,8 @@ extra_css:
 
 extra_javascript:
   - javascripts/lazy-video.js
+  - javascripts/prefetch.js
+  - javascripts/nav-progress.js
 
 extra:
   generator: false

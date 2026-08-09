@@ -1,5 +1,5 @@
-import { Component, ElementRef, NgZone, OnDestroy, OnInit, inject, viewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, OnDestroy, OnInit, inject, viewChild } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinnerComponent } from '../../components/shared/loading-spinner/loading-spinner';
-import { docsPageUrl, docsRouteFor } from './docs-url';
+import { docsPageUrl, docsShellUrl } from './docs-url';
 
 /**
  * MkDocs Material publishes `document$` on its own window: it emits once per
@@ -63,7 +63,7 @@ export class DocsComponent implements OnInit, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly zone = inject(NgZone);
+  private readonly location = inject(Location);
 
   private readonly docsFrame = viewChild<ElementRef<HTMLIFrameElement>>('docsFrame');
   private pageSubscription: { unsubscribe(): void } | null = null;
@@ -123,17 +123,18 @@ export class DocsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Mirror the frame's page into the address bar — nothing more.
+   *
+   * `Location.replaceState` rather than `router.navigate`: the shell is not
+   * changing routes, it is relabelling the one it is already on. Routing it
+   * would re-run recognition, the SEO service's router-event work and the
+   * router's anchor scrolling against the parent document, on every single page
+   * swap. The back button is unaffected — the router still handles popstate.
+   */
   private syncUrlWithFrame(frame: Window): void {
-    const { commands, fragment } = docsRouteFor(
-      environment.docsUrl,
-      frame.location.pathname,
-      frame.location.hash,
+    this.location.replaceState(
+      docsShellUrl(environment.docsUrl, frame.location.pathname, frame.location.hash),
     );
-
-    // The emission comes from the frame's own execution context, which is
-    // outside Angular's zone.
-    this.zone.run(() => {
-      this.router.navigate([...commands], { replaceUrl: true, fragment });
-    });
   }
 }
