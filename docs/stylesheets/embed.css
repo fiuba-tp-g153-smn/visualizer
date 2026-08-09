@@ -1,17 +1,9 @@
-/* Embedded-in-the-app presentation: the Angular shell already draws a header
- * with a back button, so Material's own header would be a second one. */
-.md-header {
+/* Embedded-in-the-app presentation: Material's header stays, because it holds
+ * the search field and the drawer toggle, but its logo and site title would
+ * repeat the header the Angular shell already draws above this frame. */
+.md-header__title,
+.md-header .md-logo {
   display: none;
-}
-
-/* Reclaim the space Material reserves for the hidden header. */
-.md-main,
-.md-sidebar {
-  top: 0;
-}
-
-.md-container {
-  padding-top: 0;
 }
 
 /* Screenshots: replaces the per-image inline styles the MDX carried. */

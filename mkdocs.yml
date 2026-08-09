@@ -33,6 +33,7 @@ theme:
       accent: blue
   features:
     - navigation.top
+    - navigation.footer # Anterior/Siguiente links at the foot of every page
     - navigation.instant # Page swaps without a reload; the shell follows via document$
     - content.code.copy
     - search.suggest
