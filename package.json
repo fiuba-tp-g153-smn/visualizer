@@ -9,7 +9,9 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build --configuration production",
-    "test": "ng test"
+    "test": "ng test",
+    "docs": "make docs",
+    "docs:serve": "make docs-serve"
   },
   "prettier": {
     "printWidth": 100,
