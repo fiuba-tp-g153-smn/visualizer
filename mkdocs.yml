@@ -33,7 +33,7 @@ theme:
       accent: blue
   features:
     - navigation.top
-    - navigation.instant # SPA-style navigation; keeps the iframe bridge simple
+    - navigation.instant # Page swaps without a reload; the shell follows via document$
     - content.code.copy
     - search.suggest
     - toc.follow
@@ -58,9 +58,6 @@ plugins:
 
 extra_css:
   - stylesheets/embed.css
-
-extra_javascript:
-  - javascripts/iframe-bridge.js
 
 extra:
   generator: false

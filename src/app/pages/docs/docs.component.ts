@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, ElementRef, NgZone, OnDestroy, OnInit, inject, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,11 +7,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinnerComponent } from '../../components/shared/loading-spinner/loading-spinner';
+import { docsRouteFor } from './docs-url';
 
-interface DocsNavigationMessage {
-  type: 'docs-navigation';
-  path: string;
-  hash?: string;
+/**
+ * MkDocs Material publishes `document$` on its own window: it emits once per
+ * page the reader sees, including the instant navigations that replace the
+ * document without firing `load`.
+ */
+interface MaterialWindow extends Window {
+  readonly document$?: { subscribe(next: () => void): { unsubscribe(): void } };
 }
 
 @Component({
@@ -35,6 +39,7 @@ interface DocsNavigationMessage {
 
       <div class="iframe-wrapper">
         <iframe
+          #docsFrame
           *ngIf="safeUrl"
           [src]="safeUrl"
           (load)="onIframeLoad()"
@@ -58,66 +63,77 @@ export class DocsComponent implements OnInit, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private messageHandler = this.handleMessage.bind(this);
-  private pendingFragment: string | null = null;
+  private readonly zone = inject(NgZone);
+
+  private readonly docsFrame = viewChild<ElementRef<HTMLIFrameElement>>('docsFrame');
+  private pageSubscription: { unsubscribe(): void } | null = null;
 
   ngOnInit(): void {
-    window.addEventListener('message', this.messageHandler);
-
-    const path = this.route.snapshot.paramMap.get('path');
-    const fragment = this.route.snapshot.fragment;
-    this.loadDocsPage(path || '', fragment);
+    this.loadDocsPage(this.route.snapshot.paramMap.get('path') ?? '', this.route.snapshot.fragment);
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('message', this.messageHandler);
-  }
-
-  private loadDocsPage(path: string, fragment?: string | null): void {
-    const baseUrl = environment.docsUrl;
-    if (baseUrl) {
-      // Store fragment to scroll after iframe loads
-      this.pendingFragment = fragment || null;
-      const url = `${baseUrl}/${path}`;
-      this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
-    } else {
-      console.error('DOCS_URL is not defined in environment');
-      this.isLoading = false;
-    }
-  }
-
-  private handleMessage(event: MessageEvent): void {
-    // The docs are served from this same origin (public/docs-site), so anything
-    // arriving from elsewhere is not ours to act on.
-    if (event.origin !== window.location.origin) {
-      return;
-    }
-
-    const data = event.data as DocsNavigationMessage;
-    if (data?.type === 'docs-navigation' && data.path) {
-      const newPath = data.path.startsWith('/') ? data.path.slice(1) : data.path;
-      const fragment = data.hash?.startsWith('#') ? data.hash.slice(1) : data.hash;
-      this.router.navigate(['/docs', newPath], { replaceUrl: true, fragment });
-    }
+    this.pageSubscription?.unsubscribe();
   }
 
   onIframeLoad(): void {
     this.isLoading = false;
-
-    // After the iframe loads, ask the docs page to scroll to the anchor
-    if (this.pendingFragment) {
-      const iframe = document.querySelector('iframe') as HTMLIFrameElement;
-      if (iframe?.contentWindow) {
-        iframe.contentWindow.postMessage(
-          { type: 'scroll-to-anchor', anchor: this.pendingFragment },
-          window.location.origin,
-        );
-      }
-      this.pendingFragment = null;
-    }
+    this.watchDocsNavigation();
   }
 
   goBack(): void {
     this.router.navigate(['/']);
+  }
+
+  private loadDocsPage(path: string, fragment: string | null): void {
+    const baseUrl = environment.docsUrl;
+    if (!baseUrl) {
+      console.error('DOCS_URL is not defined in environment');
+      this.isLoading = false;
+      return;
+    }
+
+    // The fragment rides along in the URL, so the browser scrolls to the heading
+    // by itself — the shell never has to ask the docs page to do it.
+    const url = `${baseUrl}/${path}${fragment ? `#${fragment}` : ''}`;
+    this.safeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
+
+  /**
+   * The docs are served from this same origin, so the shell watches the frame
+   * directly instead of exchanging messages with a script injected into them.
+   */
+  private watchDocsNavigation(): void {
+    this.pageSubscription?.unsubscribe();
+    this.pageSubscription = null;
+
+    const frame = this.docsFrame()?.nativeElement.contentWindow as MaterialWindow | null;
+    if (!frame) {
+      return;
+    }
+
+    try {
+      const pages = frame.document$;
+      if (pages) {
+        this.pageSubscription = pages.subscribe(() => this.syncUrlWithFrame(frame));
+      }
+    } catch {
+      // A cross-origin DOCS_URL denies access. The docs still render; they just
+      // stop driving the shell's URL.
+    }
+  }
+
+  private syncUrlWithFrame(frame: Window): void {
+    const { commands, fragment } = docsRouteFor(
+      environment.docsUrl,
+      frame.location.pathname,
+      frame.location.hash,
+    );
+
+    // The emission comes from the frame's own execution context, which is
+    // outside Angular's zone.
+    this.zone.run(() => {
+      this.router.navigate([...commands], { replaceUrl: true, fragment });
+    });
   }
 }
