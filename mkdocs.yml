@@ -59,5 +59,8 @@ plugins:
 extra_css:
   - stylesheets/embed.css
 
+extra_javascript:
+  - javascripts/lazy-video.js
+
 extra:
   generator: false

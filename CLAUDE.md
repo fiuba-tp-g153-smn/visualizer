@@ -26,7 +26,9 @@ also covers `navigation.instant` swaps) — no script is injected into the docs.
 
 Media is deferred: images carry `loading=lazy` in their `attr_list`, and videos use
 `preload="none"` with a `-poster.webp` frame (regenerate with `ffmpeg -ss 0.5 -i
-video.webm -frames:v 1 -vf "scale='min(1280,iw)':-2" out.webp`).
+video.webm -frames:v 1 -vf "scale='min(1280,iw)':-2" out.webp`). `lazy-video.js`
+plays them on scroll via IntersectionObserver — the `autoplay` attribute would
+override `preload` and download every video whether or not it is ever seen.
 
 Two constraints are easy to break: raw HTML in a page is emitted verbatim, so any
 `src` or `poster` in it must be written relative to that page's own URL depth
