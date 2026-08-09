@@ -11,7 +11,7 @@
 
 Ejemplo de uso:
 
-<video controls preload="none" loop muted playsinline title="Ejemplo de Uso" width="100%"
+<video preload="none" loop muted playsinline title="Ejemplo de Uso" width="100%"
        poster="../videos/ejemplo-de-uso-poster.webp" style="max-height: 500px">
   <source src="../videos/ejemplo-de-uso.webm" type="video/webm" />
   Tu navegador no soporta este video.
@@ -73,7 +73,7 @@ Donde:
 4. **Timestamps**: Tiempo al que corresponde la imagen en UTC-0.
 5. **Botón de play/pausa y slider de animación**: Inicia/pausa la animación. El slider de animación permite moverse entre las imágenes de la animación, con clicks del mouse o con las flechas del teclado.
 
-<video controls preload="none" loop muted playsinline title="Animación de Capas" width="100%"
+<video preload="none" loop muted playsinline title="Animación de Capas" width="100%"
        poster="../videos/animacion-poster.webp" style="max-height: 500px">
   <source src="../videos/animacion.webm" type="video/webm"/>
   Tu navegador no soporta este video.

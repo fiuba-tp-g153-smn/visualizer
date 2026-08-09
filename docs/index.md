@@ -18,7 +18,7 @@ Consulta nuestra guía detallada para aprender a utilizar la interfaz.
 - **[Mapa Base](./mapa-base.md)**: Información sobre los diferentes mapas base disponibles y navegación general del mapa.
 - **[Productos Meteorológicos](./productos-meteorologicos.md)**: Aprende a activar, desactivar y organizar la información en el mapa.
 
-<video controls preload="none" loop muted playsinline width="100%"
+<video preload="none" loop muted playsinline width="100%"
        poster="videos/ejemplo-de-uso-poster.webp" style="max-height: 600px">
   <source src="videos/ejemplo-de-uso.webm" type="video/webm" />
   Tu navegador no soporta este video.

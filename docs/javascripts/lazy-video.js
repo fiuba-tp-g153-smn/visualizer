@@ -7,8 +7,8 @@
  * reader may never scroll to. The `autoplay` attribute cannot do this: it
  * overrides the preload hint and downloads offscreen videos in full.
  *
- * Without this script the videos still work: the poster shows and the controls
- * play them on demand.
+ * The videos have no controls, so this script is the only thing that starts
+ * them: without it a reader sees the poster frame and nothing else.
  */
 (function () {
   'use strict';
@@ -28,7 +28,7 @@
         entries.forEach(function (entry) {
           var video = entry.target;
           if (entry.isIntersecting) {
-            // Rejects when the browser declines to autoplay; the controls stay.
+            // Rejects when the browser declines to autoplay; the poster stays.
             var started = video.play();
             if (started && started.catch) started.catch(function () {});
           } else if (!video.paused) {
