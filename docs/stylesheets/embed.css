@@ -2,12 +2,14 @@
  * (src/styles.scss → mat.theme-overrides). `primary: custom` in mkdocs.yml
  * leaves these undefined, so there is nothing to out-specify. */
 :root {
-  --md-primary-fg-color: #0090d0;
-  --md-primary-fg-color--light: #33a6d9;
-  --md-primary-fg-color--dark: #0073a6;
+  /* Navy = the app's `tertiary`, the colour of a panel header (Explorador). */
+  --md-primary-fg-color: #242c4f;
+  --md-primary-fg-color--light: #3a4470;
+  --md-primary-fg-color--dark: #1d233f;
   --md-primary-bg-color: #fff;
   --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
-  --md-accent-fg-color: #0073a6;
+  /* Blue = the app's `primary`, used there for the active tab and links. */
+  --md-accent-fg-color: #0090d0;
   --md-accent-fg-color--transparent: rgba(0, 144, 208, 0.1);
 }
 
