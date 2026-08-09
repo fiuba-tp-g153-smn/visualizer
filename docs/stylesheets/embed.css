@@ -1,0 +1,30 @@
+/* Embedded-in-the-app presentation: the Angular shell already draws a header
+ * with a back button, so Material's own header would be a second one. */
+.md-header {
+  display: none;
+}
+
+/* Reclaim the space Material reserves for the hidden header. */
+.md-main,
+.md-sidebar {
+  top: 0;
+}
+
+.md-container {
+  padding-top: 0;
+}
+
+/* Screenshots: replaces the per-image inline styles the MDX carried. */
+.md-typeset .doc-figure {
+  display: block;
+  margin: 30px auto;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 5px;
+  height: auto;
+}
+
+.md-typeset video {
+  display: block;
+  margin: 30px auto;
+  max-width: 100%;
+}

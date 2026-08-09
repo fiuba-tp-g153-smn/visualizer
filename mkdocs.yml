@@ -1,0 +1,66 @@
+site_name: Visualizador MapaSMN
+site_description: Documentación del Sistema de Visualización Meteorológica
+docs_dir: docs
+
+# Built straight into the Angular app's static assets: `public/**/*` is an asset
+# glob in angular.json, so both `ng build` and `ng serve` copy the site verbatim
+# and nginx serves it at /docs-site/. Gitignored — rebuild with `make docs`.
+site_dir: public/docs-site
+
+# MkDocs emits relative URLs throughout, so the build is relocatable and the
+# same output works at whatever path it is mounted on.
+use_directory_urls: true
+
+# Illustration for the repository README, not part of the site.
+exclude_docs: |
+  imgs/general_data_flow.png
+
+nav:
+  - Inicio: index.md
+  - Uso General: uso-general.md
+  - Mapa Base: mapa-base.md
+  - Productos Meteorológicos: productos-meteorologicos.md
+  - Arquitectura: arquitectura.md
+
+theme:
+  name: material
+  language: es
+  favicon: assets/favicon.ico
+  palette:
+    # Matches the app's Angular Material primary.
+    - scheme: default
+      primary: blue
+      accent: blue
+  features:
+    - navigation.top
+    - navigation.instant # SPA-style navigation; keeps the iframe bridge simple
+    - content.code.copy
+    - search.suggest
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      # Unicode-preserving slugs. The default slugify strips accents, which
+      # would turn #introducción into #introduccin and break every
+      # hand-written table of contents in the Spanish pages.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  - pymdownx.superfences
+  - pymdownx.highlight
+
+plugins:
+  - search:
+      lang: es
+
+extra_css:
+  - stylesheets/embed.css
+
+extra_javascript:
+  - javascripts/iframe-bridge.js
+
+extra:
+  generator: false
