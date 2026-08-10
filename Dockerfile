@@ -10,6 +10,9 @@ FROM squidfunk/mkdocs-material:9.7.7 AS docs
 
 COPY mkdocs.yml /docs/mkdocs.yml
 COPY docs /docs/docs
+# Referenced by `hooks:` in mkdocs.yml — without it the build fails outright
+# rather than silently shipping unstamped, permanently-cached media.
+COPY hooks /docs/hooks
 
 # Material ships source maps for its own bundle. A reader never fetches them,
 # so they are 1.2 MB of the image nobody downloads. Local `make docs` keeps them.

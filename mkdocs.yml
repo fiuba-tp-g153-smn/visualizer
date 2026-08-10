@@ -57,6 +57,11 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.highlight
 
+hooks:
+  # Stamps ?v=<content hash> on imgs/ and videos/ references, which is what lets
+  # nginx serve them immutable without a replaced file going stale.
+  - hooks/media_cache_busting.py
+
 plugins:
   - search:
       lang: es

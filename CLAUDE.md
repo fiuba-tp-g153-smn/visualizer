@@ -30,6 +30,13 @@ video.webm -frames:v 1 -vf "scale='min(1280,iw)':-2" out.webp`). `lazy-video.js`
 plays them on scroll via IntersectionObserver — the `autoplay` attribute would
 override `preload` and download every video whether or not it is ever seen.
 
+Caching is keyed on content: `hooks/media_cache_busting.py` stamps `?v=<hash>` on
+every `imgs/`+`videos/` reference at build time, which is what lets nginx serve
+them `immutable`. Replace a screenshot in place and its URL changes, so no rename
+is needed. The hook is referenced by `hooks:` in `mkdocs.yml` and must be COPYed
+into the Dockerfile's docs stage alongside `docs/`. Pages themselves are
+`max-age=60, stale-while-revalidate`, so an edit lands on the reader's next view.
+
 Two constraints are easy to break: raw HTML in a page is emitted verbatim, so any
 `src` or `poster` in it must be written relative to that page's own URL depth
 (MkDocs only rewrites Markdown-syntax paths); and `toc.slugify` must stay the
