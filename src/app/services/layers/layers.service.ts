@@ -1,6 +1,13 @@
 import { Injectable } from '@angular/core';
-import { Layer, LayerCategory, LayerGroup, RadarTileLayer } from '../../models';
+import {
+  ForecastModelTileLayer,
+  Layer,
+  LayerCategory,
+  LayerGroup,
+  RadarTileLayer,
+} from '../../models';
 import { LAYER_DEFINITIONS } from '../../config/layers';
+import { adapterForLayer } from '../../config/layers/forecast-model';
 import { environment } from '../../../environments/environment';
 
 const RADAR_ID_PATTERN = /radar\/([A-Z0-9]+)\//;
@@ -139,7 +146,7 @@ export class LayersService {
               break;
 
             case LayerCategory.WRF:
-              parts.push('WRF');
+              parts.push(adapterForLayer(layer as ForecastModelTileLayer).displayName);
               parts.push(layer.name);
               break;
 

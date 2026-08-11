@@ -271,45 +271,53 @@
 
                   @if (isForecastRunExpanded(group.forecastTs)) {
                     <div class="forecast-renders">
-                      <div class="forecast-render-row">
-                        <mat-checkbox
-                          [checked]="isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)"
-                          (change)="onForecastRenderToggle(group.forecastTs, PRIMARY_RENDER_ID)"
-                          [disabled]="!isForecastSelected(group.forecastTs)"
-                          [matTooltip]="layerShortName()"
-                          class="forecast-render-checkbox"
-                        >
-                          <span class="forecast-render-name">{{ layerShortName() }}</span>
-                        </mat-checkbox>
-                        <mat-slider
-                          min="0"
-                          max="1"
-                          step="0.01"
-                          discrete
-                          class="control-slider"
-                          [displayWith]="formatOpacity"
-                          [disabled]="
-                            !isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)
-                          "
-                        >
-                          <input
-                            matSliderThumb
-                            [value]="getForecastRenderOpacity(group.forecastTs, PRIMARY_RENDER_ID)"
-                            (input)="
-                              onForecastRenderOpacityChange(
-                                group.forecastTs,
-                                PRIMARY_RENDER_ID,
-                                +$any($event.target).value
-                              )
+                      <!-- Los productos que son solo contornos no tienen render
+                           raster que controlar, así que no muestran esta fila. -->
+                      @if (hasPrimaryRender()) {
+                        <div class="forecast-render-row">
+                          <mat-checkbox
+                            [checked]="
+                              isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)
                             "
-                          />
-                        </mat-slider>
-                        <span class="control-value"
-                          >{{
-                            getForecastRenderOpacityPercent(group.forecastTs, PRIMARY_RENDER_ID)
-                          }}%</span
-                        >
-                      </div>
+                            (change)="onForecastRenderToggle(group.forecastTs, PRIMARY_RENDER_ID)"
+                            [disabled]="!isForecastSelected(group.forecastTs)"
+                            [matTooltip]="layerShortName()"
+                            class="forecast-render-checkbox"
+                          >
+                            <span class="forecast-render-name">{{ layerShortName() }}</span>
+                          </mat-checkbox>
+                          <mat-slider
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            discrete
+                            class="control-slider"
+                            [displayWith]="formatOpacity"
+                            [disabled]="
+                              !isForecastRenderSelected(group.forecastTs, PRIMARY_RENDER_ID)
+                            "
+                          >
+                            <input
+                              matSliderThumb
+                              [value]="
+                                getForecastRenderOpacity(group.forecastTs, PRIMARY_RENDER_ID)
+                              "
+                              (input)="
+                                onForecastRenderOpacityChange(
+                                  group.forecastTs,
+                                  PRIMARY_RENDER_ID,
+                                  +$any($event.target).value
+                                )
+                              "
+                            />
+                          </mat-slider>
+                          <span class="control-value"
+                            >{{
+                              getForecastRenderOpacityPercent(group.forecastTs, PRIMARY_RENDER_ID)
+                            }}%</span
+                          >
+                        </div>
+                      }
 
                       @for (render of group.secondaryRenders; track render.id) {
                         <div class="forecast-render-row">
