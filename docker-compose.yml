@@ -25,6 +25,7 @@ services:
       - METRICS_SERVICE_BASE_URL=${METRICS_SERVICE_BASE_URL}
       - IGN_PLACE_SEARCH_URL=${IGN_PLACE_SEARCH_URL}
       - NOMINATIM_SEARCH_URL=${NOMINATIM_SEARCH_URL}
+    restart: unless-stopped
     healthcheck:
       test:
         [
