@@ -77,7 +77,7 @@ export type Layer =
   | WmsLayer
   | EcmwfTpTileLayer
   | WeatherStationLayer
-  | WrfTileLayer;
+  | ForecastModelTileLayer;
 
 export interface TileLayer extends BaseLayer {
   type: LayerType.TILE;
@@ -123,14 +123,39 @@ export interface EcmwfTpTileLayer extends TileLayer {
 }
 
 /**
- * Capa WRF-ARG4K. Cada producto del modelo (Colmax, Rafagas, Precipitacion1h, ...)
- * es una capa independiente identificada por `productId`. Las corridas (init runs)
- * y pasos de pronóstico (fxxx) se descubren dinámicamente vía data-service.
+ * Modelos numéricos organizados en corridas + pasos de pronóstico.
+ * Hoy: WRF-ARG4K (`wrf`) y GFS 0.25° (`gfs`). Lo único que los diferencia es
+ * cómo se arman las URLs y cómo se parsea la etiqueta de corrida; de eso se
+ * ocupa el adaptador en `config/layers/forecast-model.ts`.
  */
-export interface WrfTileLayer extends TileLayer {
+export type ForecastModelId = 'wrf' | 'gfs';
+
+/**
+ * Capa de modelo numérico por corrida/paso. Cada producto (Colmax, Rafagas,
+ * 500 hPa, ...) es una capa independiente identificada por `productId`. Las
+ * corridas y los pasos de pronóstico (fxxx) se descubren dinámicamente vía
+ * data-service.
+ */
+export interface ForecastModelTileLayer extends TileLayer {
   category: LayerCategory.WRF;
-  /** Identificador del producto WRF (ej. 'Colmax', 'Rafagas', 'JetCapasBajas'). */
+  /**
+   * Modelo al que pertenece la capa. Ausente equivale a `'wrf'`, que era el
+   * único modelo con esta forma antes de incorporar GFS.
+   */
+  modelId?: ForecastModelId;
+  /** Identificador del producto (ej. 'Colmax', 'Rafagas', '500hpa'). */
   productId: string;
+  /**
+   * `false` para productos que son solo contornos y no tienen pirámide raster
+   * (ej. la presión a nivel del mar de GFS). Ausente equivale a `true`.
+   * El dato puntual sigue disponible: lo que falta son los tiles, no el COG.
+   */
+  hasRaster?: boolean;
+  /**
+   * Rango para ubicar el dato puntual en la barra de escala cuando la capa no
+   * tiene `scale` propia (caso `hasRaster: false`, sin leyenda de colores).
+   */
+  pointQueryScaleRange?: ScaleRangeInfo;
   /** Períodos disponibles (cantidad de últimos pasos a mostrar). */
   availablePeriods?: readonly number[];
   /**
@@ -148,6 +173,13 @@ export interface WrfTileLayer extends TileLayer {
    */
   secondaryRenders?: readonly (SecondaryVectorRender | BarbTileRender)[];
 }
+
+/**
+ * Nombre histórico de `ForecastModelTileLayer`. Se mantiene porque toda la
+ * maquinaria de controles, playback y point query ya lo usa; las capas GFS
+ * pasan por exactamente el mismo camino.
+ */
+export type WrfTileLayer = ForecastModelTileLayer;
 
 /**
  * Estilo de una línea vectorial (isobaras, contornos, etc.). Se mapea casi

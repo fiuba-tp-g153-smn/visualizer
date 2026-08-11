@@ -103,6 +103,55 @@ export function wrfFxxxForInitAndTime(initTag: string, time: Date): string | nul
 export function formatWrfInitTag(initTag: string): string {
   const dt = parseWrfInitTag(initTag);
   if (!dt) return initTag;
+  return formatRunLabel(dt);
+}
+
+// ============================================================================
+// GFS Timestamp Parsing & Formatting
+// ============================================================================
+//
+// GFS names its runs `YYYYMMDDTHHmmZ` (e.g. `20260808T0600Z`) and its steps
+// `fXXX` (e.g. `f003`), where XXX is the forecast offset in whole hours. Steps
+// are 3-hourly out to +48h and 6-hourly beyond, but the offset is always
+// integral, so a step maps to an absolute instant and back without ambiguity.
+
+export function parseGfsCycleTag(cycle: string): Date | null {
+  if (cycle.length < 14 || cycle.charAt(8) !== 'T') return null;
+  const year = parseInt(cycle.substring(0, 4));
+  const month = parseInt(cycle.substring(4, 6)) - 1;
+  const day = parseInt(cycle.substring(6, 8));
+  const hour = parseInt(cycle.substring(9, 11));
+  const minute = parseInt(cycle.substring(11, 13));
+  if ([year, month, day, hour, minute].some((n) => Number.isNaN(n))) return null;
+  return new Date(Date.UTC(year, month, day, hour, minute, 0));
+}
+
+export function parseGfsStepTimestamp(cycle: string, fxxx: string): Date | null {
+  const init = parseGfsCycleTag(cycle);
+  if (!init) return null;
+  if (!fxxx.startsWith('f')) return init;
+  const offsetH = parseInt(fxxx.substring(1));
+  if (Number.isNaN(offsetH)) return init;
+  return new Date(init.getTime() + offsetH * 3_600_000);
+}
+
+/** Inverse of `parseGfsStepTimestamp`: absolute instant → that cycle's `fxxx`. */
+export function gfsFxxxForCycleAndTime(cycle: string, time: Date): string | null {
+  const init = parseGfsCycleTag(cycle);
+  if (!init) return null;
+  const offsetH = Math.round((time.getTime() - init.getTime()) / 3_600_000);
+  if (offsetH < 0) return null;
+  return 'f' + String(offsetH).padStart(3, '0');
+}
+
+export function formatGfsCycleTag(cycle: string): string {
+  const dt = parseGfsCycleTag(cycle);
+  if (!dt) return cycle;
+  return formatRunLabel(dt);
+}
+
+/** Compact "MM-DD HHh" label shared by every forecast-model run selector. */
+function formatRunLabel(dt: Date): string {
   const utc = shouldUseUtc();
   const mo = String((utc ? dt.getUTCMonth() : dt.getMonth()) + 1).padStart(2, '0');
   const dd = String(utc ? dt.getUTCDate() : dt.getDate()).padStart(2, '0');

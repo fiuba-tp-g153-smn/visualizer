@@ -1,8 +1,7 @@
 import { Coords, DomUtil, DoneCallback, GridLayer, GridLayerOptions } from 'leaflet';
 import type { Feature, FeatureCollection, Point } from 'geojson';
 
-import { buildWrfBarbTileUrl } from '../../config/backend.config';
-import { renderBarbGlyphMarkup } from '../../config/layers/wrf/wrf-overlay-styles';
+import { renderBarbGlyphMarkup } from '../../config/layers/barb-glyph';
 
 const BARB_NATIVE_ZOOMS = [2, 4, 6, 8] as const;
 const TILE_SIZE = 256;
@@ -28,14 +27,16 @@ function lonLatToTilePixel(
   return [(fx - tx) * TILE_SIZE, (fy - ty) * TILE_SIZE];
 }
 
-export interface WrfBarbGridLayerOptions extends GridLayerOptions {
-  productId: string;
-  initTag: string;
-  fxxx: string;
+export interface BarbGridLayerOptions extends GridLayerOptions {
+  /**
+   * URL del tile GeoJSON nativo. Se recibe como closure para que la capa no
+   * tenga que saber a qué modelo (WRF / GFS) pertenece.
+   */
+  tileUrl: (z: number, x: number, y: number) => string;
 }
 
 /**
- * Capa custom de tiles vectoriales para barbas WRF.
+ * Capa custom de tiles vectoriales para barbas de viento.
  *
  * Backend emite GeoJSONs solo en zooms nativos `{2, 4, 6, 8}`. Para cualquier
  * zoom >= 8 (8, 9, ..., 18) snappea a 8 y reusa (overzoom) ese tile nativo;
@@ -44,17 +45,17 @@ export interface WrfBarbGridLayerOptions extends GridLayerOptions {
  * pixel-en-tile que Leaflet realmente pidió. Render = 1 `<svg>` por tile con
  * N glyphs adentro (sin DOM por barba).
  */
-export class WrfBarbGridLayer extends GridLayer {
-  private readonly opts: WrfBarbGridLayerOptions;
+export class BarbGridLayer extends GridLayer {
+  private readonly opts: BarbGridLayerOptions;
   private readonly nativeTileCache = new Map<string, Promise<FeatureCollection | null>>();
 
-  constructor(opts: WrfBarbGridLayerOptions) {
+  constructor(opts: BarbGridLayerOptions) {
     super({ tileSize: TILE_SIZE, noWrap: true, ...opts });
     this.opts = opts;
   }
 
   override createTile(coords: Coords, done: DoneCallback): HTMLElement {
-    const tile = DomUtil.create('div', 'wrf-barb-tile');
+    const tile = DomUtil.create('div', 'barb-tile');
     tile.style.position = 'absolute';
     tile.style.overflow = 'visible';
     tile.style.pointerEvents = 'none';
@@ -67,18 +68,9 @@ export class WrfBarbGridLayer extends GridLayer {
 
     let pending = this.nativeTileCache.get(key);
     if (!pending) {
-      const url = buildWrfBarbTileUrl(
-        this.opts.productId,
-        this.opts.initTag,
-        this.opts.fxxx,
-        nativeZ,
-        nx,
-        ny,
+      pending = this.fetchNativeTile(nativeZ, nx, ny).then((fc) =>
+        this.fallbackIfEmpty(fc, nativeZ, nx, ny),
       );
-      pending = fetch(url)
-        .then((r) => (r.ok ? (r.json() as Promise<FeatureCollection>) : null))
-        .catch((): null => null)
-        .then((fc) => this.fallbackIfEmpty(fc, nativeZ, nx, ny));
       this.nativeTileCache.set(key, pending);
     }
 
@@ -88,6 +80,12 @@ export class WrfBarbGridLayer extends GridLayer {
     });
 
     return tile;
+  }
+
+  private fetchNativeTile(z: number, x: number, y: number): Promise<FeatureCollection | null> {
+    return fetch(this.opts.tileUrl(z, x, y))
+      .then((r) => (r.ok ? (r.json() as Promise<FeatureCollection>) : null))
+      .catch((): null => null);
   }
 
   private fallbackIfEmpty(
@@ -105,17 +103,7 @@ export class WrfBarbGridLayer extends GridLayer {
     const lkey = `${lz}/${lx}/${ly}`;
     let lp = this.nativeTileCache.get(lkey);
     if (!lp) {
-      const lurl = buildWrfBarbTileUrl(
-        this.opts.productId,
-        this.opts.initTag,
-        this.opts.fxxx,
-        lz,
-        lx,
-        ly,
-      );
-      lp = fetch(lurl)
-        .then((r) => (r.ok ? (r.json() as Promise<FeatureCollection>) : null))
-        .catch((): null => null);
+      lp = this.fetchNativeTile(lz, lx, ly);
       this.nativeTileCache.set(lkey, lp);
     }
     return lp;

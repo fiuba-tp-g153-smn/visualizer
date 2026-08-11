@@ -36,3 +36,6 @@ export { WEATHER_STATION_RENDER_CONFIG } from './weather-stations/render.config'
 
 // WRF configuration
 export { WRF_SUBGROUP } from './wrf/config';
+
+// GFS configuration
+export { GFS_SUBGROUP } from './gfs/config';
