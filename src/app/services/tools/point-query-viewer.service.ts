@@ -52,13 +52,9 @@ import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
 } from '../../config';
-import { buildWrfPointQueryUrl, buildWrfSecondaryPointQueryUrl } from '../../config/backend.config';
-import {
-  formatDateFull,
-  parseEcmwfTimestamp,
-  parseWrfInitTag,
-  wrfFxxxForInitAndTime,
-} from '../../utils/tileset-timestamp';
+import { buildWrfSecondaryPointQueryUrl } from '../../config/backend.config';
+import { adapterForLayer } from '../../config/layers/forecast-model';
+import { formatDateFull, parseEcmwfTimestamp } from '../../utils/tileset-timestamp';
 
 interface MouseCoordinates {
   lat: number;
@@ -251,16 +247,17 @@ export class PointQueryViewerService {
       .filter(({ layer }) => layer.type === LayerType.TILE && layer.category === LayerCategory.WRF)
       .flatMap(({ layer, controls }): DisplaySourceItem[] => {
         const wrfLayer = layer as WrfTileLayer;
+        const adapter = adapterForLayer(wrfLayer);
         const wrfControls = controls as WrfLayerControls;
         const selectedForecasts = wrfControls.forecast.selectedForecastTimestamps;
         const baseName = this.layersService.getLayerFullName(wrfLayer);
-        const modelName = baseName.split(' - ')[0] || 'WRF';
+        const modelName = baseName.split(' - ')[0] || adapter.displayName;
         const primaryName = wrfLayer.pointQueryLabel
           ? `${modelName} - ${wrfLayer.pointQueryLabel}`
           : baseName;
 
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
-          const forecastDate = parseWrfInitTag(forecastTs);
+          const forecastDate = adapter.parseRunTag(forecastTs);
           const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
 
@@ -987,18 +984,19 @@ export class PointQueryViewerService {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
-    const fxxx = wrfFxxxForInitAndTime(resolvedInitTag, tilesetEntry.time);
+    const wrfLayer = layer as WrfTileLayer;
+    const adapter = adapterForLayer(wrfLayer);
+    const fxxx = adapter.fxxxForRunAndTime(resolvedInitTag, tilesetEntry.time);
     if (!fxxx) {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
-    const wrfLayer = layer as WrfTileLayer;
     const scaleRange = this.extractScaleRange(wrfLayer);
     if (!scaleRange) {
       return of(this.buildNoData(layer.id, layer.name));
     }
 
-    const url = buildWrfPointQueryUrl(wrfLayer.productId, resolvedInitTag, fxxx, lat, lon);
+    const url = adapter.buildPointQueryUrl(wrfLayer.productId, resolvedInitTag, fxxx, lat, lon);
 
     return this.http.get<PointQueryValueDto>(url).pipe(
       map(
@@ -1060,12 +1058,14 @@ export class PointQueryViewerService {
       return of(this.buildNoData(secondaryLayerId, secondary.name));
     }
 
-    const fxxx = wrfFxxxForInitAndTime(resolvedInitTag, tilesetEntry.time);
+    const wrfLayer = layer as WrfTileLayer;
+    const fxxx = adapterForLayer(wrfLayer).fxxxForRunAndTime(resolvedInitTag, tilesetEntry.time);
     if (!fxxx) {
       return of(this.buildNoData(secondaryLayerId, secondary.name));
     }
 
-    const wrfLayer = layer as WrfTileLayer;
+    // Solo WRF publica COGs de variables secundarias; los renders de GFS no
+    // declaran `pointQuery`, así que nunca llegan acá.
     const url = buildWrfSecondaryPointQueryUrl(
       wrfLayer.productId,
       resolvedInitTag,
@@ -1162,7 +1162,9 @@ export class PointQueryViewerService {
     layer: GoesTileLayer | RadarTileLayer | EcmwfTpTileLayer | WrfTileLayer,
   ): ScaleRangeInfo | undefined {
     if (!layer.scale) {
-      return undefined;
+      // Los productos que son solo contornos no tienen leyenda de colores, pero
+      // sí valor puntual: declaran a mano el rango con el que ubicarlo.
+      return 'pointQueryScaleRange' in layer ? layer.pointQueryScaleRange : undefined;
     }
 
     const scale = layer.scale;

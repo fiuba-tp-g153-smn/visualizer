@@ -1,11 +1,11 @@
 import { Injectable, inject } from '@angular/core';
-import { GridLayer, Layer, Map as LeafletMap, latLng, latLngBounds } from 'leaflet';
+import { GridLayer, LatLngBounds, Layer, Map as LeafletMap, latLng, latLngBounds } from 'leaflet';
 import { LayerControlService } from './layer-control.service';
 import { LayerRenderService } from './layer-render.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { VectorOverlayService } from './vector-overlay.service';
-import { WrfBarbGridLayer } from './wrf-barb-grid-layer';
+import { BarbGridLayer } from './barb-grid-layer';
 import {
   BarbTileRender,
   EcmwfTpLayerControls,
@@ -24,7 +24,7 @@ import {
   WEATHER_STATION_PANE,
   WEATHER_STATION_PANE_Z_INDEX,
 } from '../../config/layers/weather-stations/config';
-import { wrfFxxxForInitAndTime } from '../../utils/tileset-timestamp';
+import { ForecastModelAdapter, adapterForLayer } from '../../config/layers/forecast-model';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -33,14 +33,22 @@ const LEAFLET_TILE_PANE = 'tilePane';
 /** Leaflet pane prefix for vector overlays (isobars). */
 const VECTOR_OVERLAY_PANE_PREFIX = 'data-vector-overlay-';
 
-/** Bounds aproximados del dominio WRF (Argentina + alrededores). Evita pedir
- *  tiles fuera del dominio Lambert cuando el viewport está en otra región. */
-const WRF_BARB_BOUNDS = latLngBounds(latLng(-60.0, -110.0), latLng(-15.0, -30.0));
+/** Bounds por defecto de las barbas cuando la capa no declara `boundingBox`
+ *  (Argentina + alrededores). Evita pedir tiles fuera del dominio del modelo
+ *  cuando el viewport está en otra región. */
+const DEFAULT_BARB_BOUNDS = latLngBounds(latLng(-60.0, -110.0), latLng(-15.0, -30.0));
 
 function isBarbTileRender(
   render: SecondaryVectorRender | BarbTileRender,
 ): render is BarbTileRender {
   return 'kind' in render && render.kind === 'barb-tile';
+}
+
+/** Dominio del modelo, para no pedir tiles de barbas fuera de su cobertura. */
+function barbBoundsFor(layer: WrfTileLayer): LatLngBounds {
+  const box = layer.boundingBox;
+  if (!box) return DEFAULT_BARB_BOUNDS;
+  return latLngBounds(latLng(box[0][0], box[0][1]), latLng(box[1][0], box[1][1]));
 }
 
 @Injectable({
@@ -471,7 +479,7 @@ export class MapLayersService {
       if (!forecastsForCurrent.includes(forecastTs)) return;
 
       // fxxx concreto de esta corrida para el instante actual.
-      const fxxx = wrfFxxxForInitAndTime(forecastTs, currentEntry.time);
+      const fxxx = adapterForLayer(wrfLayer).fxxxForRunAndTime(forecastTs, currentEntry.time);
       if (!fxxx) return;
 
       // Per-forecast opacity override, falling back to the layer-wide opacity.
@@ -495,8 +503,7 @@ export class MapLayersService {
         // dedicated path.
         if (isBarbTileRender(render)) {
           this.requestBarbTile(
-            layerId,
-            wrfLayer.productId,
+            wrfLayer,
             render,
             forecastTs,
             fxxx,
@@ -515,19 +522,24 @@ export class MapLayersService {
           overlayZIndex,
           desired,
         );
-        this.prefetchSecondary(render, config, currentTimeIndex, forecastTs);
+        this.prefetchSecondary(
+          render,
+          config,
+          currentTimeIndex,
+          forecastTs,
+          adapterForLayer(wrfLayer),
+        );
       }
     });
   }
 
   /**
-   * Renders a WRF barb (wind) field as a tiled `WrfBarbGridLayer`, cached per
+   * Renders a barb (wind) field as a tiled `BarbGridLayer`, cached per
    * `(layer, render, init, step)` and placed in the same per-forecast pane /
    * z-index as the other overlays for that forecast.
    */
   private requestBarbTile(
-    layerId: string,
-    productId: string,
+    modelLayer: WrfTileLayer,
     render: BarbTileRender,
     initTag: string,
     fxxx: string,
@@ -535,17 +547,18 @@ export class MapLayersService {
     zIndex: number,
     desired: Map<string, Layer>,
   ): void {
+    const layerId = modelLayer.id;
     const cacheKey = `${layerId}#${render.id}#${initTag}#${fxxx}`;
     const paneName = `${VECTOR_OVERLAY_PANE_PREFIX}${layerId}#${render.id}#${initTag}`;
     this.ensureVectorOverlayPane(paneName, zIndex);
 
     let tile = this.barbTileLayers.get(cacheKey);
     if (!tile) {
-      tile = new WrfBarbGridLayer({
-        productId,
-        initTag,
-        fxxx,
-        bounds: WRF_BARB_BOUNDS,
+      const adapter = adapterForLayer(modelLayer);
+      tile = new BarbGridLayer({
+        tileUrl: (z, x, y) =>
+          adapter.buildBarbTileUrl(modelLayer.productId, initTag, fxxx, z, x, y),
+        bounds: barbBoundsFor(modelLayer),
         pane: paneName,
       });
       this.barbTileLayers.set(cacheKey, tile);
@@ -599,16 +612,13 @@ export class MapLayersService {
     config: EcmwfTpTileLayerConfig | WrfTileLayerConfig,
     currentTimeIndex: number,
     forecastTs: string,
+    adapter?: ForecastModelAdapter,
   ): void {
     const window = secondary.prefetchWindow ?? 0;
     if (window <= 0) return;
 
     const total = config.availableTilesets.length;
     if (total <= 1) return;
-
-    // WRF keya availableTilesets por instante absoluto → la URL necesita el
-    // fxxx derivado. ECMWF ya usa el timestamp absoluto como id de la URL.
-    const isWrfConfig = config.category === LayerCategory.WRF;
 
     const urls: string[] = [];
     for (let offset = 1; offset <= window; offset++) {
@@ -618,8 +628,10 @@ export class MapLayersService {
       // Only prefetch frames whose forecast actually has data for that timestamp.
       const forecastsForFrame = config.forecastsByPeriod[entry.id];
       if (!forecastsForFrame || !forecastsForFrame.includes(forecastTs)) continue;
-      // entry.id es el instante absoluto; la URL necesita el fxxx de la corrida.
-      const fxxx = isWrfConfig ? wrfFxxxForInitAndTime(forecastTs, entry.time) : entry.id;
+      // Los modelos por corrida keyan availableTilesets por instante absoluto →
+      // la URL necesita el fxxx derivado. ECMWF ya usa el timestamp absoluto
+      // como id de la URL.
+      const fxxx = adapter ? adapter.fxxxForRunAndTime(forecastTs, entry.time) : entry.id;
       if (!fxxx) continue;
       urls.push(secondary.buildUrl(forecastTs, fxxx));
     }

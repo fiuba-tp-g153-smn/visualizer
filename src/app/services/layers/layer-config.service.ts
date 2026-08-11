@@ -3,6 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, map, of, catchError, switchMap } from 'rxjs';
 import { buildConfigUrl } from '../../config';
 import {
+  ForecastModelAdapter,
+  adapterForLayer,
+  forecastModelAdapter,
+} from '../../config/layers/forecast-model';
+import {
   Layer,
   LayerConfig,
   LayerCategory,
@@ -23,7 +28,6 @@ import {
   parseGoesTimestamp,
   parseRadarTimestamp,
   parseEcmwfTimestamp,
-  parseWrfStepTimestamp,
 } from '../../utils/tileset-timestamp';
 import { computeWindowStart } from '../../utils/playback-window';
 
@@ -300,12 +304,13 @@ export class LayerConfigService {
    * GeoJSON layers per step. Mirrors `fetchEcmwfTpLayerConfig`.
    */
   fetchWrfLayerConfig(layer: WrfTileLayer): Observable<WrfTileLayerConfig> {
+    const adapter = adapterForLayer(layer);
     const initRunsUrl = buildConfigUrl(layer.id);
     return this.http
-      .get<{ init_runs: Array<{ init_tag: string; step_count: number }> }>(initRunsUrl)
+      .get<unknown>(initRunsUrl)
       .pipe(
         switchMap((resp) => {
-          const initRuns = (resp.init_runs ?? []).map((r) => r.init_tag);
+          const initRuns = adapter.readRunTags(resp);
           if (!initRuns.length) {
             // Backend OK pero sin datos aún (sync no terminó / no hay tiles).
             // Devolver config vacía para no bloquear la UI; el layer-refresh
@@ -353,7 +358,11 @@ export class LayerConfigService {
               // forecastsByPeriod (reverse lookup epoch→corridas) se reconstruye
               // sobre TODAS las corridas para que pasos recién publicados sean
               // descubribles.
-              const { forecastsByPeriod } = this.buildWrfTimeline(periodsByForecast, initRuns);
+              const { forecastsByPeriod } = this.buildWrfTimeline(
+                periodsByForecast,
+                initRuns,
+                adapter,
+              );
 
               // availableTilesets es una vista derivada de la selección
               // (updateWrfSelectedForecasts). Si ya existe config, preservarla
@@ -365,7 +374,8 @@ export class LayerConfigService {
               const existing = this.configMap().get(layer.id) as WrfTileLayerConfig | undefined;
               const availableTilesets: TilesetEntry[] = existing
                 ? [...existing.availableTilesets]
-                : this.buildWrfTimeline(periodsByForecast, [initRuns[0]]).availableTilesets;
+                : this.buildWrfTimeline(periodsByForecast, [initRuns[0]], adapter)
+                    .availableTilesets;
 
               const config: WrfTileLayerConfig = {
                 layerId: layer.id,
@@ -402,9 +412,11 @@ export class LayerConfigService {
 
     // Unión por instante absoluto: corridas que coinciden en una misma hora
     // comparten frame (overlap real); las que no, aportan frames propios.
+    const layer = this.layersService.getLayerById(layerId) as WrfTileLayer | undefined;
     const { availableTilesets, forecastsByPeriod } = this.buildWrfTimeline(
       config.periodsByForecast,
       selectedInitTags,
+      layer ? adapterForLayer(layer) : forecastModelAdapter(),
     );
 
     // Se devuelve sincrónicamente para que el caller lea la nueva unión de
@@ -548,11 +560,12 @@ export class LayerConfigService {
   private buildWrfTimeline(
     periodsByForecast: Readonly<Record<string, string[]>>,
     initTags: readonly string[],
+    adapter: ForecastModelAdapter,
   ): { availableTilesets: TilesetEntry[]; forecastsByPeriod: Record<string, string[]> } {
     const byTime = new Map<string, { time: Date; inits: string[] }>();
     for (const initTag of initTags) {
       for (const fxxx of periodsByForecast[initTag] ?? []) {
-        const time = parseWrfStepTimestamp(initTag, fxxx);
+        const time = adapter.parseStepTimestamp(initTag, fxxx);
         if (!time) continue;
         const id = String(time.getTime());
         const entry = byTime.get(id) ?? { time, inits: [] };

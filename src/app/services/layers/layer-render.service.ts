@@ -45,7 +45,7 @@ import {
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
 } from '../../config/layers';
-import { buildWrfTileUrl } from '../../config/backend.config';
+import { adapterForLayer, hasRasterPyramid } from '../../config/layers/forecast-model';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
 import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../constants';
 import { UnitsSettingsService } from '../settings/units-settings.service';
@@ -55,7 +55,7 @@ import {
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
-import { formatDateTimeLocalized, wrfFxxxForInitAndTime } from '../../utils/tileset-timestamp';
+import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
 import { windBarbSvg } from '../../utils/wind-barb.util';
 import { windDirectionTriangleSvg } from '../../utils/wind-direction.util';
 import {
@@ -1152,7 +1152,7 @@ export class LayerRenderService {
     }
 
     const wrfLayer = layer as WrfTileLayer;
-    const tileUrl = buildWrfTileUrl(wrfLayer.productId, initTag, fxxx);
+    const tileUrl = adapterForLayer(wrfLayer).buildTileUrl(wrfLayer.productId, initTag, fxxx);
     const tileLayer = this.buildTileLayer(tileUrl, layer as TileLayer, controls.opacity);
     this.attachErrorHandlers(tileLayer, layerId, initTag, this.formatForecastLabel(initTag));
     this.layerPool.set(poolKey, tileLayer);
@@ -1179,7 +1179,9 @@ export class LayerRenderService {
     const forecastsForStep = config.forecastsByPeriod[stepEntry.id];
     if (!forecastsForStep || !forecastsForStep.includes(initTag)) return null;
 
-    const fxxx = wrfFxxxForInitAndTime(initTag, stepEntry.time);
+    const modelLayer = this.layersService.getLayerById(layerId) as WrfTileLayer | undefined;
+    if (!modelLayer) return null;
+    const fxxx = adapterForLayer(modelLayer).fxxxForRunAndTime(initTag, stepEntry.time);
     if (!fxxx) return null;
 
     return this.createWrfTileLayerForForecast(layerId, controls, initTag, fxxx);
@@ -1207,16 +1209,25 @@ export class LayerRenderService {
     if (!currentEntry) return result;
     const forecastsForStep = config.forecastsByPeriod[currentEntry.id];
     const wrfLayer = this.layersService.getLayerById(layerId);
-    const slotsPerForecast =
-      wrfLayer && wrfLayer.type === LayerType.TILE && wrfLayer.category === LayerCategory.WRF
-        ? 1 + ((wrfLayer as WrfTileLayer).secondaryRenders?.length ?? 0)
-        : 1;
+    const isModelLayer =
+      !!wrfLayer && wrfLayer.type === LayerType.TILE && wrfLayer.category === LayerCategory.WRF;
+    const slotsPerForecast = isModelLayer
+      ? 1 + ((wrfLayer as WrfTileLayer).secondaryRenders?.length ?? 0)
+      : 1;
+
+    // Productos que son solo contornos (la presión a nivel del mar de GFS) no
+    // tienen pirámide raster: sus overlays los arma MapLayersService y acá no
+    // hay ningún tile que pedir.
+    if (isModelLayer && !hasRasterPyramid(wrfLayer as WrfTileLayer)) return result;
 
     selectedForecasts.forEach((initTag, index) => {
       const forecastZIndex = absoluteZIndex + index * slotsPerForecast;
       const forecastOpacity = controls.forecast.forecastOpacity[initTag];
 
-      const fxxx = wrfFxxxForInitAndTime(initTag, currentEntry.time);
+      const fxxx = adapterForLayer(wrfLayer as WrfTileLayer).fxxxForRunAndTime(
+        initTag,
+        currentEntry.time,
+      );
 
       // Check if the primary render is selected for this forecast run.
       const renderControls = controls.forecast.renderControls[initTag];

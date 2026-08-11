@@ -2,6 +2,7 @@ import { ABI_SUBGROUP } from './goes/abi/config';
 import { GLM_SUBGROUP } from './goes/glm/config';
 import { RADAR_SUBGROUPS } from './radar/config';
 import { ECMWF_SUBGROUP } from './ecmwf/config';
+import { GFS_SUBGROUP } from './gfs/config';
 import { WEATHER_STATIONS_SUBGROUP } from './weather-stations/config';
 import { WRF_SUBGROUP } from './wrf/config';
 import {
@@ -45,7 +46,7 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
     description: 'Modelos numéricos de pronóstico',
     icon: 'insights',
     expanded: false,
-    subgroups: [ECMWF_SUBGROUP, WRF_SUBGROUP],
+    subgroups: [ECMWF_SUBGROUP, WRF_SUBGROUP, GFS_SUBGROUP],
   },
   {
     id: 'smn-estaciones',

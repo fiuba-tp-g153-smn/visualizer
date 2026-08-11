@@ -52,8 +52,8 @@ import {
   formatDateFull,
   formatDateTimeOnly,
   parseEcmwfTimestamp,
-  parseWrfInitTag,
 } from '../../../../../utils/tileset-timestamp';
+import { adapterForLayer, hasRasterPyramid } from '../../../../../config/layers/forecast-model';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
 import { WeatherStationsApiKeyService } from '../../../../../services/weather-stations/weather-stations-api-key.service';
@@ -850,7 +850,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   private parseForecastTimestamp(forecastTs: string): Date | null {
     if (this.layer.type === LayerType.TILE && this.layer.category === LayerCategory.WRF) {
-      return parseWrfInitTag(forecastTs);
+      return adapterForLayer(this.layer as WrfTileLayer).parseRunTag(forecastTs);
     }
     return parseEcmwfTimestamp(forecastTs);
   }
@@ -867,6 +867,18 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       fullLabel: this.formatForecastFull(forecastTs),
       secondaryRenders,
     }));
+  });
+
+  /**
+   * False para los productos que son solo contornos (la presión a nivel del mar
+   * de GFS): no tienen pirámide raster, así que la fila del render primario
+   * controlaría algo que no se dibuja.
+   */
+  hasPrimaryRender = computed(() => {
+    if (this.layer.type !== LayerType.TILE || this.layer.category !== LayerCategory.WRF) {
+      return true;
+    }
+    return hasRasterPyramid(this.layer as WrfTileLayer);
   });
 
   hasForecastControl = computed(() => {
@@ -1210,6 +1222,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         return 'Cortante 850-700 hPa';
       case 'brn':
         return 'Bulk Richardson Number';
+      case 'thickness':
+        return 'Espesores 1000/500';
+      case 'heights':
+        return 'Geopotencial';
+      case 'isotherms':
+        return 'Isotermas';
       case 'haildiammax':
         return 'Diámetro máximo de granizo';
       default:

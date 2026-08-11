@@ -5,14 +5,16 @@ import {
   RadarLayerControls,
   TileLayerControls,
   ActiveLayerEntry,
+  WrfLayerControls,
 } from '../../models/layers/controls.models';
-import { LayerCategory, LayerType } from '../../models/layers/models';
+import { LayerCategory, LayerType, WrfTileLayer } from '../../models/layers/models';
 import {
   LayerConfig,
   GoesTileLayerConfig,
   RadarTileLayerConfig,
 } from '../../models/layers/config.models';
 import { buildTileUrl } from '../../config/backend.config';
+import { adapterForLayer, hasRasterPyramid } from '../../config/layers/forecast-model';
 import { MAP_CONFIG } from '../../config';
 import { calcTileRange, TileRange } from '../../utils/tile-math';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
@@ -155,22 +157,22 @@ export class TilePrefetchService {
           }
         }
       } else if (layer.category === LayerCategory.WRF) {
-        // WRF: una corrida por init_tag seleccionado × paso (fxxx) actual.
-        // Reutilizamos el mismo iteración window-aware del prefetch.
-        // controls es WrfLayerControls.
-        // Importamos perezosamente para evitar dep cíclica con models.
-        // (las URLs WRF tienen forma /products/wrf/{p}/{init}/{fxxx}/{z}/{x}/{y}.webp)
-        const wrfControls = controls as unknown as {
-          forecast: { selectedForecastTimestamps: string[] };
-        };
-        const productPath = layer.id; // 'wrf/<ProductId>'
-        for (const initTag of wrfControls.forecast.selectedForecastTimestamps) {
+        // Modelos por corrida/paso (WRF, GFS): una corrida por tag seleccionado
+        // × cada paso de la ventana de playback. Las URLs tienen la forma
+        // /products/<modelo>/<producto>/{corrida}/{fxxx}/{z}/{x}/{y}.webp, y
+        // `layer.id` ya es '<modelo>/<producto>'.
+        const modelLayer = layer as WrfTileLayer;
+        if (!hasRasterPyramid(modelLayer)) continue;
+
+        const adapter = adapterForLayer(modelLayer);
+        const forecastControls = (controls as WrfLayerControls).forecast;
+        for (const runTag of forecastControls.selectedForecastTimestamps) {
           for (const entry of ordered) {
-            const urls = this.buildUrls(
-              `${productPath}/${initTag}/${entry.id}`,
-              clampedZoom,
-              tileRange,
-            );
+            // `entry.id` es el instante absoluto; la URL necesita el fxxx de
+            // esa corrida para ese instante.
+            const fxxx = adapter.fxxxForRunAndTime(runTag, entry.time);
+            if (!fxxx) continue;
+            const urls = this.buildUrls(`${layer.id}/${runTag}/${fxxx}`, clampedZoom, tileRange);
             if (urls.length > MAX_TILES_PER_LAYER) continue;
             this.enqueue(urls);
           }

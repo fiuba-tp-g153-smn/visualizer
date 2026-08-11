@@ -129,6 +129,55 @@ export function buildWrfGeojsonUrl(
 }
 
 /**
+ * Construye la URL de un tile GFS para Leaflet (con placeholders {z}/{x}/{y}).
+ * `productId` es el segmento de la API: 'mslp' | '500hpa' | '250hpa'.
+ */
+export function buildGfsTileUrl(productId: string, cycle: string, fxxx: string): string {
+  return `${DATA_SERVICE_BASE_URL}/products/gfs/${productId}/${cycle}/${fxxx}/{z}/{x}/{y}.${TILE_FORMAT}`;
+}
+
+/**
+ * URL para consultar el valor puntual del COG GFS en una coordenada.
+ * Devuelve hPa para `mslp` y nudos para los niveles isobáricos.
+ */
+export function buildGfsPointQueryUrl(
+  productId: string,
+  cycle: string,
+  fxxx: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/gfs/${productId}/${cycle}/${fxxx}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
+ * URL del GeoJSON de un overlay de contornos GFS (isobaras, espesor,
+ * geopotencial, isotermas).
+ */
+export function buildGfsGeojsonUrl(
+  productId: string,
+  cycle: string,
+  fxxx: string,
+  layer: string,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/gfs/${productId}/${cycle}/${fxxx}/${layer}.json`;
+}
+
+/**
+ * URL concreta de un tile GeoJSON de barbas GFS (z/x/y). Solo 500 hPa las trae.
+ */
+export function buildGfsBarbTileUrl(
+  productId: string,
+  cycle: string,
+  fxxx: string,
+  z: number,
+  x: number,
+  y: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/gfs/${productId}/${cycle}/${fxxx}/barbs/${z}/${x}/${y}.json`;
+}
+
+/**
  * URL para consultar el valor puntual de una capa de radar en una coordenada.
  */
 export function buildRadarPointQueryUrl(
