@@ -38,18 +38,25 @@ describe('QueueDepthsComponent', () => {
     expect(byKey.get('cola ligera · WRF')?.value).toBe('N/A');
   });
 
-  it('shows N/A for the total only when both work queues are null', () => {
+  it('shows N/A for the total unless both work queues are known', () => {
+    // Both null → N/A.
     expect(
       tilesFor({ work: null, light: null, radar_light: null, wrf_light: null, dlq: 7 }).byKey.get(
         'total en espera',
       )?.value,
     ).toBe('N/A');
-    // A null on one side counts as 0 so the known queue still totals.
+    // Exactly one null → N/A too: coercing the null to 0 would understate the total.
     expect(
       tilesFor({ work: 4, light: null, radar_light: null, wrf_light: null, dlq: 0 }).byKey.get(
         'total en espera',
       )?.value,
-    ).toBe('4');
+    ).toBe('N/A');
+    // Both known → their sum.
+    expect(
+      tilesFor({ work: 4, light: 5, radar_light: null, wrf_light: null, dlq: 0 }).byKey.get(
+        'total en espera',
+      )?.value,
+    ).toBe('9');
   });
 
   it('is offline when there is no payload', () => {
