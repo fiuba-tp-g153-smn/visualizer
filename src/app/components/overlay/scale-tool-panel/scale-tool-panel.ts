@@ -13,11 +13,7 @@ import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel
 import { LayerScale, ScaleColorStop, ScaleLabelScale, ScaleType } from '../../../models';
 import { ScaleToolEntry } from '../../../services/tools/scale-tools.service';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
-import {
-  convertValueForDisplay,
-  getDisplayUnit,
-  isKelvinUnit,
-} from '../../../utils/unit-conversion.utils';
+import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
 import { formatScaleLabel } from '../../../utils/number-format.utils';
 
 @Component({
@@ -94,11 +90,9 @@ export class ScaleToolPanelComponent {
         max = 0;
     }
 
-    if (isKelvinUnit(this.entry.scale.unit)) {
-      min = convertValueForDisplay(min, this.entry.scale.unit, this.unitsSettings);
-      max = convertValueForDisplay(max, this.entry.scale.unit, this.unitsSettings);
-    }
-
+    // Return raw values; `scaleTooltip` renders them through `formatValue`,
+    // which performs the single display conversion. Converting here as well
+    // double-applies K→C on Kelvin scales (300 K → 26.85 → ≈ −246 °C).
     return { min, max };
   }
 
@@ -469,6 +463,10 @@ export class ScaleToolPanelComponent {
       major: true,
     }));
 
+    // Mirror the linear path: no sub-ticks requested → major ticks only.
+    // (Guards `8 / 0 = Infinity` → a single stray minor tick.)
+    if (subTickCount <= 0) return result;
+
     const decadeStep = Math.max(1, Math.round(8 / subTickCount));
     const startExp = Math.floor(Math.log10(safeMin));
     const endExp = Math.ceil(Math.log10(safeMax));
@@ -612,12 +610,16 @@ export class ScaleToolPanelComponent {
 
   private interpolateHexColor(colorA: string, colorB: string, t: number): string {
     const parse = (hex: string) => {
-      const h = hex.replace('#', '');
-      return [
-        parseInt(h.slice(0, 2), 16),
-        parseInt(h.slice(2, 4), 16),
-        parseInt(h.slice(4, 6), 16),
-      ];
+      let h = hex.replace('#', '');
+      // Expand 3-digit shorthand (#abc → #aabbcc) before slicing.
+      if (h.length === 3) {
+        h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      }
+      const channel = (start: number) => {
+        const value = parseInt(h.slice(start, start + 2), 16);
+        return Number.isNaN(value) ? 0 : value;
+      };
+      return [channel(0), channel(2), channel(4)];
     };
     const [rA, gA, bA] = parse(colorA);
     const [rB, gB, bB] = parse(colorB);

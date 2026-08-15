@@ -29,30 +29,47 @@ export function createDepartmentStyle(color: string): PathOptions {
   };
 }
 
+/**
+ * Parses a 3- or 6-digit hex string into `[r, g, b]`, or `null` when the input
+ * is not a hex color (named colors, `rgb()`, malformed values). Callers fall
+ * back to the original string so an unparseable color renders as-is instead of
+ * `#NaNNaNNaN`.
+ */
+function parseHexColor(hex: string): readonly [number, number, number] | null {
+  let h = hex.replace('#', '').trim();
+  if (h.length === 3) {
+    h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) {
+    return null;
+  }
+  return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+}
+
+function toHex(channels: readonly [number, number, number]): string {
+  return '#' + channels.map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
 export function lightenColor(hex: string, percent: number): string {
-  const color = hex.replace('#', '');
+  const rgb = parseHexColor(hex);
+  if (!rgb) return hex;
+  const [r, g, b] = rgb;
 
-  const r = parseInt(color.substring(0, 2), 16);
-  const g = parseInt(color.substring(2, 4), 16);
-  const b = parseInt(color.substring(4, 6), 16);
-
-  const newR = Math.min(255, Math.floor(r + (255 - r) * (percent / 100)));
-  const newG = Math.min(255, Math.floor(g + (255 - g) * (percent / 100)));
-  const newB = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
-
-  return '#' + [newR, newG, newB].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return toHex([
+    Math.min(255, Math.floor(r + (255 - r) * (percent / 100))),
+    Math.min(255, Math.floor(g + (255 - g) * (percent / 100))),
+    Math.min(255, Math.floor(b + (255 - b) * (percent / 100))),
+  ]);
 }
 
 export function darkenColor(hex: string, percent: number): string {
-  const color = hex.replace('#', '');
+  const rgb = parseHexColor(hex);
+  if (!rgb) return hex;
+  const [r, g, b] = rgb;
 
-  const r = parseInt(color.substring(0, 2), 16);
-  const g = parseInt(color.substring(2, 4), 16);
-  const b = parseInt(color.substring(4, 6), 16);
-
-  const newR = Math.max(0, Math.floor(r * (1 - percent / 100)));
-  const newG = Math.max(0, Math.floor(g * (1 - percent / 100)));
-  const newB = Math.max(0, Math.floor(b * (1 - percent / 100)));
-
-  return '#' + [newR, newG, newB].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return toHex([
+    Math.max(0, Math.floor(r * (1 - percent / 100))),
+    Math.max(0, Math.floor(g * (1 - percent / 100))),
+    Math.max(0, Math.floor(b * (1 - percent / 100))),
+  ]);
 }
