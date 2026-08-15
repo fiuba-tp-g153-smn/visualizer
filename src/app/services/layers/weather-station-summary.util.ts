@@ -83,11 +83,13 @@ const METRICS: readonly MetricDef[] = [
 ];
 
 function statValue(ys: number[], stat: Stat): number {
+  // `reduce` instead of `Math.max/min(...ys)`: the spread would overflow the call
+  // stack on a long series window (callers only pass non-empty arrays).
   if (stat === 'max') {
-    return Math.max(...ys);
+    return ys.reduce((m, y) => (y > m ? y : m), ys[0]);
   }
   if (stat === 'min') {
-    return Math.min(...ys);
+    return ys.reduce((m, y) => (y < m ? y : m), ys[0]);
   }
   return ys.reduce((sum, y) => sum + y, 0) / ys.length;
 }
