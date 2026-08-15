@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { ActiveAlertsService } from './active-alerts.service';
+import { ActiveAlertsService, FULL_RECONCILE_EVERY } from './active-alerts.service';
 import { ActiveAlertResponse } from '../../models/geo';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -124,5 +124,49 @@ describe('ActiveAlertsService', () => {
 
     expect(service.shownDepartmentsAlert()?.alertId).toBe(2);
     expect(service.shownDepartments().map((d) => d.name)).toEqual(['Dept2']);
+  });
+
+  it('skips an overlapping refresh while a fetch is already in flight (BUG-17)', async () => {
+    service.setShowActive(true); // initial fetch is in flight, not yet flushed
+
+    const refreshPromise = service.refresh();
+    await refreshPromise;
+
+    // The in-flight guard means the refresh issued no second request.
+    const requests = httpMock.match(alertsRequest);
+    expect(requests.length).toBe(1);
+    requests[0].flush([activeAlert(1, futureIso())]);
+    await tick();
+  });
+
+  it('reconciles backend-removed alerts on a periodic full fetch (BUG-16)', async () => {
+    service.setShowActive(true);
+    httpMock
+      .expectOne(alertsRequest)
+      .flush([activeAlert(1, futureIso()), activeAlert(2, futureIso())]);
+    await tick();
+    expect(service.activeAlerts().map((a) => a.alertId)).toEqual([1, 2]);
+
+    // Incremental refreshes keep prior alerts even though the backend returns none.
+    for (let i = 0; i < FULL_RECONCILE_EVERY - 1; i++) {
+      const p = service.refresh();
+      const req = httpMock.expectOne(alertsRequest);
+      expect(req.request.params.get('since_id')).toBe('2');
+      req.flush([]);
+      await p;
+      await tick();
+    }
+    expect(service.activeAlerts().map((a) => a.alertId)).toEqual([1, 2]);
+
+    // The FULL_RECONCILE_EVERY-th refresh fetches everything (no since_id); alert 2
+    // is gone from the backend, so it drops from the list.
+    const reconcilePromise = service.refresh();
+    const reconcileReq = httpMock.expectOne(alertsRequest);
+    expect(reconcileReq.request.params.has('since_id')).toBe(false);
+    reconcileReq.flush([activeAlert(1, futureIso())]);
+    await reconcilePromise;
+    await tick();
+
+    expect(service.activeAlerts().map((a) => a.alertId)).toEqual([1]);
   });
 });
