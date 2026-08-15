@@ -145,12 +145,18 @@ function adaptPoint(raw: BackendStationSeriesPoint): StationSeriesPoint {
 /** Map the backend payload to the frontend view, dropping unparseable timestamps. */
 export function adaptStationSeries(raw: BackendStationSeries): StationSeries {
   const points = (raw.points ?? []).map(adaptPoint).filter((p) => !Number.isNaN(p.t));
+  // Apply the same unparseable-timestamp filter to `latest`; otherwise a NaN `t`
+  // from `raw.latest` leaks through even though it was dropped from `points`.
+  const latestPoint = raw.latest ? adaptPoint(raw.latest) : null;
   return {
     stationId: raw.station_id,
     stationName: raw.station_name ?? null,
     province: raw.province ?? null,
     hours: raw.hours,
     points,
-    latest: raw.latest ? adaptPoint(raw.latest) : (points[points.length - 1] ?? null),
+    latest:
+      latestPoint && !Number.isNaN(latestPoint.t)
+        ? latestPoint
+        : (points[points.length - 1] ?? null),
   };
 }
