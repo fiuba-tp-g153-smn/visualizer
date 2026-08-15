@@ -31,7 +31,9 @@ function ms(value: number | null): string {
   if (value == null) {
     return '—';
   }
-  return value >= 1000 ? `${(value / 1000).toFixed(1)} s` : `${Math.round(value)} ms`;
+  // Round before the unit test so 999.5–999.99 ms renders "1.0 s", not "1000 ms".
+  const rounded = Math.round(value);
+  return rounded >= 1000 ? `${(rounded / 1000).toFixed(1)} s` : `${rounded} ms`;
 }
 
 /**
