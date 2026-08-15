@@ -362,6 +362,13 @@ export class PlaceSearchTabComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((items) => {
+        this.loadingMore.set(false);
+
+        // This subscription lives outside the debounced search stream, so a newer
+        // search is not cancelled by it. Drop a stale page whose term/source no
+        // longer matches the active query instead of appending old-term results.
+        if (term !== this.currentTerm || source !== this.currentSource) return;
+
         // The providers only support `limit`, not an offset/page — so a "next page"
         // is really a wider re-query, and a wider limit can shuffle the ranking
         // (ties resolve differently). Append only ids not already shown — slicing
@@ -374,7 +381,6 @@ export class PlaceSearchTabComponent {
         }
 
         this.resultsLimit.set(nextLimit);
-        this.loadingMore.set(false);
       });
   }
 
