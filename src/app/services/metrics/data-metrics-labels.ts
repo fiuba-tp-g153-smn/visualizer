@@ -5,6 +5,7 @@ const DOMAIN_LABELS: Readonly<Record<string, string>> = {
   ecmwf_tp: 'ECMWF · precipitación',
   ecmwf_mslp: 'ECMWF · presión',
   wrf: 'WRF',
+  gfs: 'GFS',
   basemap: 'Mapa base',
   weather_stations: 'Estaciones',
   indexes: 'Índices',
