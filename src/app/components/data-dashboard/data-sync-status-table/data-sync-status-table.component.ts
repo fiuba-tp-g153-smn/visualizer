@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 import type { DataSyncDomainStatus } from '../../../models/metrics/data-metrics.models';
 import { domainLabel } from '../../../services/metrics/data-metrics-labels';
-import { ago, fmtInstant } from '../../../services/metrics/metrics-format.util';
+import { ago, fmtInstant, secs } from '../../../services/metrics/metrics-format.util';
 import { SortableTableComponent } from '../../dashboard/sortable-table/sortable-table.component';
 import {
   buildTable,
@@ -50,14 +50,15 @@ const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncDomainStatus>> = [
   },
   {
     header: { key: 'duracion', label: 'duración', align: 'center', sortable: true },
-    cell: (r) =>
-      textCell(r.last_duration_ms == null ? '—' : `${(r.last_duration_ms / 1000).toFixed(1)}s`),
+    cell: (r) => textCell(secs(r.last_duration_ms == null ? null : r.last_duration_ms / 1000)),
     sortValue: (r) => r.last_duration_ms ?? -1,
   },
   {
     header: { key: 'ultimo', label: 'último ciclo', align: 'center', sortable: true },
     cell: (r) => textCell(ago(r.last_finished), { muted: true, title: fmtInstant(r.last_finished) }),
-    sortValue: (r) => r.last_finished ?? '',
+    // Parse to epoch ms so ordering is chronological, not lexicographic on the
+    // ISO string (and nulls sort first rather than mixing with real timestamps).
+    sortValue: (r) => (r.last_finished ? Date.parse(r.last_finished) : -1),
   },
 ];
 
