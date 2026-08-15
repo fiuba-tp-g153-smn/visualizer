@@ -7,7 +7,6 @@ const envDefined = typeof $ENV !== 'undefined';
 const envFallback = {
   DATA_SERVICE_BASE_URL: 'https://data.mapasmn.com',
   ALERTS_SERVICE_BASE_URL: 'http://localhost:8080',
-  WEATHER_STATIONS_API_KEY: '',
   SMN_API_PROMPT_FOR_TOKEN: 'true',
   DOCS_URL: '/docs-site',
   METRICS_SERVICE_BASE_URL: 'http://localhost:6020',
@@ -26,14 +25,6 @@ export const environment = {
     baseUrl: envDefined
       ? $ENV.ALERTS_SERVICE_BASE_URL || 'http://localhost:8080'
       : envFallback.ALERTS_SERVICE_BASE_URL,
-  },
-  weatherStations: {
-    // Public API key passed back to the data-service on every read request.
-    // Not a true secret (browser env vars are visible); rotate via the admin
-    // endpoints if leaked.
-    apiKey: envDefined
-      ? $ENV.WEATHER_STATIONS_API_KEY || envFallback.WEATHER_STATIONS_API_KEY
-      : envFallback.WEATHER_STATIONS_API_KEY,
   },
   ui: {
     disabledLayers: [] as string[],

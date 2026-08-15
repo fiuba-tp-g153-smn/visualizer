@@ -9,7 +9,6 @@ import { LayerConfigService } from './layer-config.service';
 import { LayerControlService } from './layer-control.service';
 import { LayersService } from './layers.service';
 import { NotificationService } from '../notifications/notification.service';
-import { environment } from '../../../environments/environment';
 import {
   buildWeatherStationsLatestUrl,
   buildWeatherStationsRegistryUrl,
@@ -108,11 +107,9 @@ function setupHarness(
     gracePeriodHours: number;
     selectedTilesetId: string | null;
     imageCount: number;
-    apiKey: string;
   }> = {},
 ): Harness {
   TestBed.resetTestingModule();
-  environment.weatherStations.apiKey = overrides.apiKey ?? 'test-api-key';
   const controlStub = buildLayerControlStub(overrides);
   TestBed.configureTestingModule({
     providers: [

@@ -20,12 +20,9 @@ interface StoredKeyState {
 
 /**
  * Owns the data-service `X-API-Key` value used on every /weather-stations/*
- * request. Resolution order:
- *   1. localStorage (set via the prompt dialog or General Settings)
- *   2. environment.weatherStations.apiKey (build-time env-var fallback)
- * Storing in localStorage is necessary because the data-service rejects all
- * read requests without a valid header; the env-var path lets dev / CI bake
- * a key into the bundle for unattended runs.
+ * request. The key lives in localStorage, set via the prompt dialog or General
+ * Settings; storing it there is necessary because the data-service rejects all
+ * read requests without a valid header.
  */
 @Injectable({ providedIn: 'root' })
 export class WeatherStationsApiKeyService {
@@ -49,21 +46,16 @@ export class WeatherStationsApiKeyService {
   /** Read-only tick that consumers can subscribe to for reactive header rebuilds. */
   readonly keyChanges = this.keyChangeTick.asReadonly();
 
-  /** Returns the effective API key, or null when neither localStorage nor env have one. */
+  /** Returns the stored API key, or null when the user has not set one. */
   getKey(): string | null {
-    const stored = this.readStoredKey();
-    if (stored) {
-      return stored;
-    }
-    const envKey = environment.weatherStations.apiKey;
-    return envKey ? envKey : null;
+    return this.readStoredKey();
   }
 
   hasKey(): boolean {
     return this.getKey() !== null;
   }
 
-  /** Whether the active key came from the user prompt (true) or the env fallback (false). */
+  /** Whether the user has provided a key (retained as a named alias of `hasKey`). */
   isUserProvided(): boolean {
     return this.readStoredKey() !== null;
   }

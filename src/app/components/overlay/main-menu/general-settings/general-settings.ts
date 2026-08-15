@@ -50,7 +50,7 @@ export class GeneralSettingsComponent implements MenuPanelComponent {
   readonly TIMEZONE_MODES = TIMEZONE_MODES;
   readonly localTimezoneTooltip = this.buildLocalTimezoneTooltip();
 
-  /** True iff the user (not the env var fallback) has provided a key. */
+  /** True iff the user has provided an API key. */
   readonly hasUserApiKey = computed(() => {
     this.apiKeyService.keyChanges();
     return this.apiKeyService.isUserProvided();
