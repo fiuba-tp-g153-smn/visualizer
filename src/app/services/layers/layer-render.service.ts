@@ -97,6 +97,14 @@ export class LayerRenderService {
   // Tile Layer Pool: cache of L.TileLayer instances for reuse
   private readonly layerPool = new Map<string, L.TileLayer>();
   private readonly weatherStationsLayerPool = new Map<string, L.Layer>();
+  /**
+   * Ascending-by-value sort of a scale's entries, cached by the (stable) entries
+   * array so the sort runs once per scale instead of once per station per render.
+   */
+  private readonly sortedScaleEntriesCache = new WeakMap<
+    readonly { value: number; color: string }[],
+    readonly { value: number; color: string }[]
+  >();
 
   // ============================================================================
   // Public Methods - Layer Creation
@@ -887,6 +895,17 @@ export class LayerRenderService {
     }
   }
 
+  private getSortedScaleEntries(
+    entries: readonly { value: number; color: string }[],
+  ): readonly { value: number; color: string }[] {
+    let sorted = this.sortedScaleEntriesCache.get(entries);
+    if (!sorted) {
+      sorted = [...entries].sort((a, b) => a.value - b.value);
+      this.sortedScaleEntriesCache.set(entries, sorted);
+    }
+    return sorted;
+  }
+
   private resolveWeatherStationsColor(scale: LayerScale, value: number): string {
     switch (scale.type) {
       case ScaleType.CONTINUOUS:
@@ -908,7 +927,7 @@ export class LayerRenderService {
       throw new Error('Invalid continuous weather station scale: no entries configured');
     }
 
-    const sortedEntries = [...entries].sort((a, b) => a.value - b.value);
+    const sortedEntries = this.getSortedScaleEntries(entries);
     if (value <= sortedEntries[0].value) {
       return sortedEntries[0].color;
     }
@@ -940,7 +959,7 @@ export class LayerRenderService {
       throw new Error('Invalid discrete weather station scale: no entries configured');
     }
 
-    const sorted = [...entries].sort((a, b) => a.value - b.value);
+    const sorted = this.getSortedScaleEntries(entries);
     let selected = sorted[0];
     for (const entry of sorted) {
       if (value >= entry.value) {
