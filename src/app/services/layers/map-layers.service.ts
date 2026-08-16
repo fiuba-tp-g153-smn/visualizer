@@ -452,7 +452,7 @@ export class MapLayersService {
         desired,
       );
       // Prefetch upcoming frames for smooth animation.
-      this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs);
+      this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs, null);
     });
   }
 
@@ -632,13 +632,21 @@ export class MapLayersService {
     }
   }
 
-  /** Pre-fetches the GeoJSON for the next N frames (modular wrap inside the active window). */
+  /**
+   * Pre-fetches the GeoJSON for the next N frames (modular wrap inside the
+   * active window).
+   *
+   * `adapter` es explícito y no opcional: `null` significa "esta config keya
+   * por timestamp absoluto" (ECMWF). Si fuera opcional, un callsite de modelo
+   * que lo olvide armaría las URLs con el epoch en lugar del `fxxx` y el
+   * prefetch quedaría pidiendo pasos inexistentes, en silencio.
+   */
   private prefetchSecondary(
     secondary: SecondaryVectorRender,
     config: EcmwfTpTileLayerConfig | WrfTileLayerConfig,
     currentTimeIndex: number,
     forecastTs: string,
-    adapter?: ForecastModelAdapter,
+    adapter: ForecastModelAdapter | null,
   ): void {
     const window = secondary.prefetchWindow ?? 0;
     if (window <= 0) return;
