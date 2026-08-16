@@ -36,9 +36,6 @@ describe('GFS layer routing', () => {
   });
 
   it('keeps the layer id and the API product segment in sync', () => {
-    // `layer.id` es lo que se le pasa a buildConfigUrl y al prefetch de tiles,
-    // mientras que `productId` alimenta a los builders del adaptador. Si se
-    // separan, el listado y los tiles apuntan a productos distintos.
     for (const l of LAYERS) {
       expect(l.id).toBe(`gfs/${l.productId}`);
     }
@@ -56,7 +53,6 @@ describe('presión a nivel del mar', () => {
   const mslp = () => layer('gfs/mslp');
 
   it('declares no raster pyramid', () => {
-    // `slpb.gs` es puro contorno: pedir tiles devolvería siempre transparente.
     expect(hasRasterPyramid(mslp())).toBe(false);
   });
 
@@ -91,15 +87,12 @@ describe('niveles isobáricos', () => {
   });
 
   it('puts the barbs last so they stack above the contours', () => {
-    // El z-index de cada overlay es su índice en `secondaryRenders`, así que el
-    // orden del array es el orden de apilado.
     const renders = layer('gfs/500hpa').secondaryRenders ?? [];
     expect(renders.filter(isBarb)).toHaveLength(1);
     expect(isBarb(renders[renders.length - 1])).toBe(true);
   });
 
   it('only 500 hPa carries barbs', () => {
-    // Es el único producto para el que tiles-processor emite tiles de barbas.
     expect((layer('gfs/250hpa').secondaryRenders ?? []).filter(isBarb)).toHaveLength(0);
     expect((layer('gfs/mslp').secondaryRenders ?? []).filter(isBarb)).toHaveLength(0);
   });
@@ -116,6 +109,18 @@ describe('niveles isobáricos', () => {
     expect(byId.get('gfs-500hpa-heights')).toBe('height_gpm');
     expect(byId.get('gfs-500hpa-isotherms')).toBe('temp_c');
     expect(byId.get('gfs-250hpa-heights')).toBe('height_gpm');
+  });
+
+  it('names every overlay exactly as its URL does', () => {
+    for (const l of LAYERS) {
+      for (const render of l.secondaryRenders ?? []) {
+        if (isBarb(render)) continue;
+        expect(render.backendLayerName).toBeDefined();
+        expect(render.buildUrl('20260808T0600Z', 'f003')).toContain(
+          `/${render.backendLayerName}.json`,
+        );
+      }
+    }
   });
 
   it('points every overlay at its own product', () => {
