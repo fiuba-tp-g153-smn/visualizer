@@ -2,9 +2,11 @@ import { ForecastModelId, ForecastModelTileLayer, Layer, LayerCategory } from '.
 import {
   buildGfsBarbTileUrl,
   buildGfsPointQueryUrl,
+  buildGfsSecondaryPointQueryUrl,
   buildGfsTileUrl,
   buildWrfBarbTileUrl,
   buildWrfPointQueryUrl,
+  buildWrfSecondaryPointQueryUrl,
   buildWrfTileUrl,
 } from '../backend.config';
 import {
@@ -47,6 +49,19 @@ export interface ForecastModelAdapter {
     lat: number,
     lon: number,
   ): string;
+  /**
+   * Dato puntual de una variable secundaria (las que declaran `pointQuery` en
+   * sus `secondaryRenders`). Ambos modelos publican un COG por variable además
+   * del primario, pero bajo rutas propias.
+   */
+  buildSecondaryPointQueryUrl(
+    productId: string,
+    runTag: string,
+    fxxx: string,
+    variable: string,
+    lat: number,
+    lon: number,
+  ): string;
   /** Instante en que arranca una corrida. */
   parseRunTag(runTag: string): Date | null;
   /** Instante para el que vale un paso de una corrida. */
@@ -78,6 +93,7 @@ const WRF_ADAPTER: ForecastModelAdapter = {
   buildTileUrl: buildWrfTileUrl,
   buildBarbTileUrl: buildWrfBarbTileUrl,
   buildPointQueryUrl: buildWrfPointQueryUrl,
+  buildSecondaryPointQueryUrl: buildWrfSecondaryPointQueryUrl,
   parseRunTag: parseWrfInitTag,
   parseStepTimestamp: parseWrfStepTimestamp,
   fxxxForRunAndTime: wrfFxxxForInitAndTime,
@@ -92,6 +108,7 @@ const GFS_ADAPTER: ForecastModelAdapter = {
   buildTileUrl: buildGfsTileUrl,
   buildBarbTileUrl: buildGfsBarbTileUrl,
   buildPointQueryUrl: buildGfsPointQueryUrl,
+  buildSecondaryPointQueryUrl: buildGfsSecondaryPointQueryUrl,
   parseRunTag: parseGfsCycleTag,
   parseStepTimestamp: parseGfsStepTimestamp,
   fxxxForRunAndTime: gfsFxxxForCycleAndTime,

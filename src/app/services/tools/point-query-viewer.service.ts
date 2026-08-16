@@ -52,7 +52,6 @@ import {
   buildRadarPointQueryUrl,
   buildSatellitePointQueryUrl,
 } from '../../config';
-import { buildWrfSecondaryPointQueryUrl } from '../../config/backend.config';
 import { adapterForLayer } from '../../config/layers/forecast-model';
 import { formatDateFull, parseEcmwfTimestamp } from '../../utils/tileset-timestamp';
 
@@ -1059,14 +1058,13 @@ export class PointQueryViewerService {
     }
 
     const wrfLayer = layer as WrfTileLayer;
-    const fxxx = adapterForLayer(wrfLayer).fxxxForRunAndTime(resolvedInitTag, tilesetEntry.time);
+    const adapter = adapterForLayer(wrfLayer);
+    const fxxx = adapter.fxxxForRunAndTime(resolvedInitTag, tilesetEntry.time);
     if (!fxxx) {
       return of(this.buildNoData(secondaryLayerId, secondary.name));
     }
 
-    // Solo WRF publica COGs de variables secundarias; los renders de GFS no
-    // declaran `pointQuery`, así que nunca llegan acá.
-    const url = buildWrfSecondaryPointQueryUrl(
+    const url = adapter.buildSecondaryPointQueryUrl(
       wrfLayer.productId,
       resolvedInitTag,
       fxxx,

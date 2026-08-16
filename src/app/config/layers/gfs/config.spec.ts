@@ -134,3 +134,77 @@ describe('niveles isobáricos', () => {
     }
   });
 });
+
+describe('dato puntual de variables secundarias', () => {
+  function pointQueryVariables(layerId: string): string[] {
+    return (layer(layerId).secondaryRenders ?? [])
+      .map((render) => render.pointQuery?.variable)
+      .filter((variable): variable is string => variable !== undefined);
+  }
+
+  it('exposes exactly the COGs tiles-processor uploads per product', () => {
+    expect(pointQueryVariables('gfs/mslp')).toEqual(['thickness']);
+    expect(pointQueryVariables('gfs/500hpa').sort()).toEqual(['geopotential', 'temperature']);
+    expect(pointQueryVariables('gfs/250hpa')).toEqual(['geopotential']);
+  });
+
+  it('does not offer a temperature query at 250 hPa', () => {
+    expect(pointQueryVariables('gfs/250hpa')).not.toContain('temperature');
+  });
+
+  it('leaves the isobars without a query, since that is the primary COG', () => {
+    const isobars = (layer('gfs/mslp').secondaryRenders ?? []).find(
+      (render) => !isBarb(render) && render.backendLayerName === 'isobars',
+    );
+    expect(isobars?.pointQuery).toBeUndefined();
+  });
+
+  it('names the field, not the contour line', () => {
+    const renders = new Map(
+      LAYERS.flatMap((l) => l.secondaryRenders ?? [])
+        .filter((render) => !isBarb(render))
+        .map((render) => [render.id, render.pointQuery?.variable]),
+    );
+    expect(renders.get('gfs-500hpa-heights')).toBe('geopotential');
+    expect(renders.get('gfs-500hpa-isotherms')).toBe('temperature');
+    expect(renders.get('gfs-250hpa-heights')).toBe('geopotential');
+  });
+
+  it('reuses the menu label so adding a query never renames the overlay', () => {
+    const names = new Map(
+      LAYERS.flatMap((l) => l.secondaryRenders ?? [])
+        .filter((render) => !isBarb(render))
+        .map((render) => [render.id, render.pointQuery?.name]),
+    );
+    expect(names.get('gfs-mslp-thickness')).toBe('Espesores 1000/500');
+    expect(names.get('gfs-500hpa-heights')).toBe('Geopotencial');
+    expect(names.get('gfs-500hpa-isotherms')).toBe('Isotermas');
+  });
+
+  it('returns temperature in the unit the conversion helper recognises', () => {
+    const isotherms = (layer('gfs/500hpa').secondaryRenders ?? []).find(
+      (render) => !isBarb(render) && render.backendLayerName === 'isotherms',
+    );
+    expect(isotherms?.pointQuery?.unit).toBe('°C');
+  });
+
+  it('gives every query a scale range that contains its field', () => {
+    for (const l of LAYERS) {
+      for (const render of l.secondaryRenders ?? []) {
+        const range = render.pointQuery?.scaleRange;
+        if (!range) continue;
+        expect(range.min).toBeLessThan(range.max);
+        expect(range.totalSteps).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('separates the 250 hPa heights from the 500 hPa ones', () => {
+    const rangeFor = (layerId: string) =>
+      (layer(layerId).secondaryRenders ?? []).find(
+        (render) => render.pointQuery?.variable === 'geopotential',
+      )?.pointQuery?.scaleRange;
+
+    expect(rangeFor('gfs/250hpa')!.min).toBeGreaterThan(rangeFor('gfs/500hpa')!.max);
+  });
+});
