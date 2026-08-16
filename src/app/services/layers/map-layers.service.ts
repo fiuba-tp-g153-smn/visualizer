@@ -44,6 +44,23 @@ function isBarbTileRender(
   return 'kind' in render && render.kind === 'barb-tile';
 }
 
+/**
+ * True cuando el paso publica el overlay, o cuando no hay información para
+ * decidirlo.
+ */
+export function stepPublishesOverlay(
+  config: WrfTileLayerConfig,
+  runTag: string,
+  fxxx: string,
+  render: SecondaryVectorRender,
+): boolean {
+  const name = render.backendLayerName;
+  if (!name) return true;
+  const published = config.layersByStep[`${runTag}/${fxxx}`];
+  if (!published) return true;
+  return published.includes(name);
+}
+
 /** Dominio del modelo, para no pedir tiles de barbas fuera de su cobertura. */
 function barbBoundsFor(layer: WrfTileLayer): LatLngBounds {
   const box = layer.boundingBox;
@@ -500,7 +517,9 @@ export class MapLayersService {
 
         // Barb (wind) fields ship as their own tiled GridLayer (arrows drawn
         // per tile) rather than a single GeoJSON overlay, so they take a
-        // dedicated path.
+        // dedicated path. Los tiles de barbas no se anuncian en `layers` (son
+        // por tesela, no un documento único), así que quedan fuera del chequeo
+        // de abajo.
         if (isBarbTileRender(render)) {
           this.requestBarbTile(
             wrfLayer,
@@ -513,6 +532,13 @@ export class MapLayersService {
           );
           continue;
         }
+
+        // Una corrida se llena de a poco: el data-service anuncia por paso los
+        // overlays que realmente subió, así que pedir uno que no está listado
+        // sería un 404 que `VectorOverlayService` traga en silencio. En una
+        // capa sin raster (la presión de GFS) eso deja el mapa en blanco.
+        if (!stepPublishesOverlay(config, forecastTs, fxxx, render)) continue;
+
         this.requestOverlay(
           layerId,
           render,
@@ -620,6 +646,8 @@ export class MapLayersService {
     const total = config.availableTilesets.length;
     if (total <= 1) return;
 
+    const modelConfig = adapter && config.category === LayerCategory.WRF ? config : null;
+
     const urls: string[] = [];
     for (let offset = 1; offset <= window; offset++) {
       const idx = (currentTimeIndex + offset) % total;
@@ -633,6 +661,9 @@ export class MapLayersService {
       // como id de la URL.
       const fxxx = adapter ? adapter.fxxxForRunAndTime(forecastTs, entry.time) : entry.id;
       if (!fxxx) continue;
+      // Mismo criterio que el render: no calentar la cache con un overlay que
+      // el paso todavía no publicó.
+      if (modelConfig && !stepPublishesOverlay(modelConfig, forecastTs, fxxx, secondary)) continue;
       urls.push(secondary.buildUrl(forecastTs, fxxx));
     }
     if (urls.length > 0) this.vectorOverlay.prefetch(urls);

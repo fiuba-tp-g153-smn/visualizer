@@ -62,6 +62,7 @@ const contourRender = (
 ): SecondaryVectorRender => ({
   id: `gfs-${productId}-${layerName}`,
   buildUrl: (cycle, fxxx) => buildGfsGeojsonUrl(productId, cycle, fxxx, layerName),
+  backendLayerName: layerName,
   valueProperty: opts.valueProperty,
   styleFor: opts.styleFor,
   labelFor: opts.labelFor,

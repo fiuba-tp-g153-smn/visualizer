@@ -78,6 +78,7 @@ const barbsRender = (productId: string, withWindPointQuery = true): BarbTileRend
 const slpRender = (productId: string): SecondaryVectorRender => ({
   id: `wrf-${productId}-slp`,
   buildUrl: (initTag, fxxx) => buildWrfGeojsonUrl(productId, initTag, fxxx, 'slp'),
+  backendLayerName: 'slp',
   valueProperty: 'value',
   styleFor: slpStyleFor,
   labelFor: slpLabelFor,
@@ -106,6 +107,7 @@ const contourRender = (
 ): SecondaryVectorRender => ({
   id: `wrf-${productId}-${layerName}`,
   buildUrl: (initTag, fxxx) => buildWrfGeojsonUrl(productId, initTag, fxxx, layerName),
+  backendLayerName: layerName,
   valueProperty: 'value',
   styleFor: opts.styleFor,
   labelFor: opts.labelFor ?? numericLabelFor,
