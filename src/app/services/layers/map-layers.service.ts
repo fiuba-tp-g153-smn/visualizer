@@ -24,7 +24,11 @@ import {
   WEATHER_STATION_PANE,
   WEATHER_STATION_PANE_Z_INDEX,
 } from '../../config/layers/weather-stations/config';
-import { ForecastModelAdapter, adapterForLayer } from '../../config/layers/forecast-model';
+import {
+  ForecastModelAdapter,
+  adapterForLayer,
+  isForecastModelLayer,
+} from '../../config/layers/forecast-model';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -343,8 +347,8 @@ export class MapLayersService {
 
       if (layer.category === LayerCategory.ECMWF_TP) {
         this.collectEcmwfOverlays(layerId, layer as EcmwfTpTileLayer, layerActualZIndexes, desired);
-      } else if (layer.category === LayerCategory.WRF) {
-        this.collectWrfOverlays(layerId, layer as WrfTileLayer, layerActualZIndexes, desired);
+      } else if (isForecastModelLayer(layer)) {
+        this.collectWrfOverlays(layerId, layer, layerActualZIndexes, desired);
       }
     }
 
