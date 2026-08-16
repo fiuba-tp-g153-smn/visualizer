@@ -230,12 +230,15 @@ export function buildScaleFromThresholds(config: BoundedScaleConfig): LayerScale
   }
 
   const domain = entriesDomain(entries);
+  const type = config.type ?? ScaleType.CONTINUOUS;
+  const resolvedLabelCount =
+    labelCount ?? (type === ScaleType.DISCRETE ? entries.length : undefined);
 
   return createLayerScale({
-    type: config.type ?? ScaleType.CONTINUOUS,
+    type,
     unit,
     entries,
-    labelCount,
+    labelCount: resolvedLabelCount,
     labelValues,
     subTickCount,
     clipRange: config.clipRange,
@@ -253,8 +256,8 @@ export function buildScaleFromUniformThresholds(config: UniformBoundedScaleConfi
     bucketCount === 0
       ? [min, max]
       : Array.from({ length: bucketCount + 1 }, (_, i) =>
-          roundScaleValue(min + (i * (max - min)) / bucketCount),
-        );
+        roundScaleValue(min + (i * (max - min)) / bucketCount),
+      );
   const labelCount = config.labelCount ?? bounds.length;
 
   const stops: ThresholdStop[] = [];
