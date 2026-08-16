@@ -33,6 +33,7 @@ import {
   DEFAULT_ACTIVE_LAYERS,
   DEFAULT_LAYER_CONTROLS,
 } from '../../config/layers';
+import { hasRasterPyramid } from '../../config/layers/forecast-model';
 import { STORAGE_KEYS } from '../../constants';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
@@ -1488,8 +1489,11 @@ export class LayerControlService {
     }
 
     if (layer.category === LayerCategory.WRF) {
-      const secondaryIds = ((layer as WrfTileLayer).secondaryRenders ?? []).map((r) => r.id);
-      return [PRIMARY_RENDER_ID, ...secondaryIds];
+      const modelLayer = layer as WrfTileLayer;
+      const secondaryIds = (modelLayer.secondaryRenders ?? []).map((r) => r.id);
+      return hasRasterPyramid(modelLayer)
+        ? [PRIMARY_RENDER_ID, ...secondaryIds]
+        : [...secondaryIds];
     }
 
     return [];
@@ -1630,37 +1634,37 @@ export class LayerControlService {
     if (!parsed) return;
 
     this.weatherStationsSharedState.set({
-        opacity:
-          typeof parsed.opacity === 'number'
-            ? this.clampWeatherStationsOpacity(parsed.opacity)
-            : this.weatherStationsSharedState().opacity,
-        zIndex:
-          typeof parsed.zIndex === 'number' && Number.isFinite(parsed.zIndex)
-            ? Math.max(0, Math.round(parsed.zIndex))
-            : null,
-        scaleVisible:
-          typeof parsed.scaleVisible === 'boolean'
-            ? parsed.scaleVisible
-            : this.weatherStationsSharedState().scaleVisible,
-        temporalMode: isWeatherStationsTemporalMode(parsed.temporalMode)
-          ? parsed.temporalMode
-          : this.weatherStationsSharedState().temporalMode,
-        gracePeriodHours:
-          typeof parsed.gracePeriodHours === 'number' &&
+      opacity:
+        typeof parsed.opacity === 'number'
+          ? this.clampWeatherStationsOpacity(parsed.opacity)
+          : this.weatherStationsSharedState().opacity,
+      zIndex:
+        typeof parsed.zIndex === 'number' && Number.isFinite(parsed.zIndex)
+          ? Math.max(0, Math.round(parsed.zIndex))
+          : null,
+      scaleVisible:
+        typeof parsed.scaleVisible === 'boolean'
+          ? parsed.scaleVisible
+          : this.weatherStationsSharedState().scaleVisible,
+      temporalMode: isWeatherStationsTemporalMode(parsed.temporalMode)
+        ? parsed.temporalMode
+        : this.weatherStationsSharedState().temporalMode,
+      gracePeriodHours:
+        typeof parsed.gracePeriodHours === 'number' &&
           Number.isFinite(parsed.gracePeriodHours)
-            ? Math.max(0, Math.min(24, Math.round(parsed.gracePeriodHours)))
-            : this.weatherStationsSharedState().gracePeriodHours,
-        imageCount:
-          typeof parsed.imageCount === 'number' && Number.isFinite(parsed.imageCount)
-            ? this.normalizeWeatherStationsImageCount(parsed.imageCount)
-            : this.weatherStationsSharedState().imageCount,
-        selectedTilesetId:
-          typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
-        showStationsWithoutData:
-          typeof parsed.showStationsWithoutData === 'boolean'
-            ? parsed.showStationsWithoutData
-            : this.weatherStationsSharedState().showStationsWithoutData,
-      });
+          ? Math.max(0, Math.min(24, Math.round(parsed.gracePeriodHours)))
+          : this.weatherStationsSharedState().gracePeriodHours,
+      imageCount:
+        typeof parsed.imageCount === 'number' && Number.isFinite(parsed.imageCount)
+          ? this.normalizeWeatherStationsImageCount(parsed.imageCount)
+          : this.weatherStationsSharedState().imageCount,
+      selectedTilesetId:
+        typeof parsed.selectedTilesetId === 'string' ? parsed.selectedTilesetId : null,
+      showStationsWithoutData:
+        typeof parsed.showStationsWithoutData === 'boolean'
+          ? parsed.showStationsWithoutData
+          : this.weatherStationsSharedState().showStationsWithoutData,
+    });
   }
 
   private saveWeatherStationsSharedState(): void {

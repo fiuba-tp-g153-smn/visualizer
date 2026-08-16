@@ -24,7 +24,11 @@ import {
   WEATHER_STATION_PANE,
   WEATHER_STATION_PANE_Z_INDEX,
 } from '../../config/layers/weather-stations/config';
-import { ForecastModelAdapter, adapterForLayer } from '../../config/layers/forecast-model';
+import {
+  ForecastModelAdapter,
+  adapterForLayer,
+  isForecastModelLayer,
+} from '../../config/layers/forecast-model';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -42,6 +46,23 @@ function isBarbTileRender(
   render: SecondaryVectorRender | BarbTileRender,
 ): render is BarbTileRender {
   return 'kind' in render && render.kind === 'barb-tile';
+}
+
+/**
+ * True cuando el paso publica el overlay, o cuando no hay información para
+ * decidirlo.
+ */
+export function stepPublishesOverlay(
+  config: WrfTileLayerConfig,
+  runTag: string,
+  fxxx: string,
+  render: SecondaryVectorRender,
+): boolean {
+  const name = render.backendLayerName;
+  if (!name) return true;
+  const published = config.layersByStep[`${runTag}/${fxxx}`];
+  if (!published) return true;
+  return published.includes(name);
 }
 
 /** Dominio del modelo, para no pedir tiles de barbas fuera de su cobertura. */
@@ -326,8 +347,8 @@ export class MapLayersService {
 
       if (layer.category === LayerCategory.ECMWF_TP) {
         this.collectEcmwfOverlays(layerId, layer as EcmwfTpTileLayer, layerActualZIndexes, desired);
-      } else if (layer.category === LayerCategory.WRF) {
-        this.collectWrfOverlays(layerId, layer as WrfTileLayer, layerActualZIndexes, desired);
+      } else if (isForecastModelLayer(layer)) {
+        this.collectWrfOverlays(layerId, layer, layerActualZIndexes, desired);
       }
     }
 
@@ -435,7 +456,7 @@ export class MapLayersService {
         desired,
       );
       // Prefetch upcoming frames for smooth animation.
-      this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs);
+      this.prefetchSecondary(secondary, config, currentTimeIndex, forecastTs, null);
     });
   }
 
@@ -500,7 +521,9 @@ export class MapLayersService {
 
         // Barb (wind) fields ship as their own tiled GridLayer (arrows drawn
         // per tile) rather than a single GeoJSON overlay, so they take a
-        // dedicated path.
+        // dedicated path. Los tiles de barbas no se anuncian en `layers` (son
+        // por tesela, no un documento único), así que quedan fuera del chequeo
+        // de abajo.
         if (isBarbTileRender(render)) {
           this.requestBarbTile(
             wrfLayer,
@@ -513,6 +536,13 @@ export class MapLayersService {
           );
           continue;
         }
+
+        // Una corrida se llena de a poco: el data-service anuncia por paso los
+        // overlays que realmente subió, así que pedir uno que no está listado
+        // sería un 404 que `VectorOverlayService` traga en silencio. En una
+        // capa sin raster (la presión de GFS) eso deja el mapa en blanco.
+        if (!stepPublishesOverlay(config, forecastTs, fxxx, render)) continue;
+
         this.requestOverlay(
           layerId,
           render,
@@ -606,19 +636,29 @@ export class MapLayersService {
     }
   }
 
-  /** Pre-fetches the GeoJSON for the next N frames (modular wrap inside the active window). */
+  /**
+   * Pre-fetches the GeoJSON for the next N frames (modular wrap inside the
+   * active window).
+   *
+   * `adapter` es explícito y no opcional: `null` significa "esta config keya
+   * por timestamp absoluto" (ECMWF). Si fuera opcional, un callsite de modelo
+   * que lo olvide armaría las URLs con el epoch en lugar del `fxxx` y el
+   * prefetch quedaría pidiendo pasos inexistentes, en silencio.
+   */
   private prefetchSecondary(
     secondary: SecondaryVectorRender,
     config: EcmwfTpTileLayerConfig | WrfTileLayerConfig,
     currentTimeIndex: number,
     forecastTs: string,
-    adapter?: ForecastModelAdapter,
+    adapter: ForecastModelAdapter | null,
   ): void {
     const window = secondary.prefetchWindow ?? 0;
     if (window <= 0) return;
 
     const total = config.availableTilesets.length;
     if (total <= 1) return;
+
+    const modelConfig = adapter && config.category === LayerCategory.WRF ? config : null;
 
     const urls: string[] = [];
     for (let offset = 1; offset <= window; offset++) {
@@ -633,6 +673,9 @@ export class MapLayersService {
       // como id de la URL.
       const fxxx = adapter ? adapter.fxxxForRunAndTime(forecastTs, entry.time) : entry.id;
       if (!fxxx) continue;
+      // Mismo criterio que el render: no calentar la cache con un overlay que
+      // el paso todavía no publicó.
+      if (modelConfig && !stepPublishesOverlay(modelConfig, forecastTs, fxxx, secondary)) continue;
       urls.push(secondary.buildUrl(forecastTs, fxxx));
     }
     if (urls.length > 0) this.vectorOverlay.prefetch(urls);

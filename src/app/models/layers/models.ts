@@ -216,6 +216,7 @@ export interface WrfSecondaryPointQuery {
 export interface SecondaryVectorRender {
   id: string;
   buildUrl: (forecastTs: string, timestampTs: string) => string;
+  backendLayerName?: string;
   /** Habilita una fila de dato puntual para esta variable secundaria. */
   pointQuery?: WrfSecondaryPointQuery;
   buildPointQueryUrl?: (

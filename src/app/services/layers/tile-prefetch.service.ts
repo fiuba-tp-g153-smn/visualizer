@@ -12,6 +12,7 @@ import {
   LayerConfig,
   GoesTileLayerConfig,
   RadarTileLayerConfig,
+  WrfTileLayerConfig,
 } from '../../models/layers/config.models';
 import { buildTileUrl } from '../../config/backend.config';
 import { adapterForLayer, hasRasterPyramid } from '../../config/layers/forecast-model';
@@ -21,6 +22,7 @@ import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-
 
 const MAX_CONCURRENT = 100;
 const MAX_TILES_PER_LAYER = 3000;
+const MAX_TILES_PER_LAYER_TOTAL = 6000;
 
 /**
  * Service responsible for prefetching tiles for the current animation window.
@@ -36,8 +38,10 @@ const MAX_TILES_PER_LAYER = 3000;
  *   discarded immediately; in-flight Image loads (already started) complete normally
  *
  * Frames are enqueued by proximity to the current playback position (forward-biased), so the
- * frames the user will see next are cached first. Layers with more than 300 tiles at the clamped zoom are skipped to prevent
- * hammering the server at high zoom levels with large bounding boxes.
+ * frames the user will see next are cached first. Two caps keep this from hammering the server at
+ * high zoom levels with large bounding boxes: a frame needing more than `MAX_TILES_PER_LAYER`
+ * tiles is dropped whole, and a layer stops enqueuing once it has accumulated
+ * `MAX_TILES_PER_LAYER_TOTAL` across all its frames.
  */
 @Injectable({ providedIn: 'root' })
 export class TilePrefetchService {
@@ -165,16 +169,29 @@ export class TilePrefetchService {
         if (!hasRasterPyramid(modelLayer)) continue;
 
         const adapter = adapterForLayer(modelLayer);
+        const modelConfig = config as WrfTileLayerConfig;
         const forecastControls = (controls as WrfLayerControls).forecast;
-        for (const runTag of forecastControls.selectedForecastTimestamps) {
-          for (const entry of ordered) {
+        let enqueuedForLayer = 0;
+
+        // Los frames vienen ordenados por cercanía al cursor, así que se corta
+        // por lo más lejano cuando se llega al tope.
+        outer: for (const entry of ordered) {
+          // Una corrida no cubre todos los instantes de la unión: solo las que
+          // `forecastsByPeriod` lista tienen un paso en este frame.
+          const runsForFrame = modelConfig.forecastsByPeriod[entry.id];
+          if (!runsForFrame) continue;
+
+          for (const runTag of forecastControls.selectedForecastTimestamps) {
+            if (!runsForFrame.includes(runTag)) continue;
             // `entry.id` es el instante absoluto; la URL necesita el fxxx de
             // esa corrida para ese instante.
             const fxxx = adapter.fxxxForRunAndTime(runTag, entry.time);
             if (!fxxx) continue;
             const urls = this.buildUrls(`${layer.id}/${runTag}/${fxxx}`, clampedZoom, tileRange);
             if (urls.length > MAX_TILES_PER_LAYER) continue;
+            if (enqueuedForLayer + urls.length > MAX_TILES_PER_LAYER_TOTAL) break outer;
             this.enqueue(urls);
+            enqueuedForLayer += urls.length;
           }
         }
       }

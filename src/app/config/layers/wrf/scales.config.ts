@@ -66,11 +66,6 @@ export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromUniformThresholds({
   ],
 });
 
-const WRF_PRECIPITACION1H_BOUNDS = [
-  0.1, 1.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 50.0, 60.0, 80.0, 100.0, 120.0, 150.0,
-  180.0, 220.0, 260.0,
-];
-
 export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.PRECIPITATION,
@@ -96,8 +91,6 @@ export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
     { value: 220.0, color: '#bbbbbb' },
     { value: 260.0, color: '#bbbbbb' },
   ] as const,
-  // Una etiqueta por umbral (sin esto, el default de 10 decima y oculta varias).
-  labelCount: WRF_PRECIPITACION1H_BOUNDS.length,
 });
 
 const SHARED_WRF_CAPE_SCALE: LayerScale = buildScaleFromThresholds({

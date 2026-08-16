@@ -400,14 +400,19 @@ export class ScaleToolPanelComponent {
     labelCount: number,
   ): readonly { text: string; top: number }[] {
     const total = entries.length;
+    const lastIndex = total - 1;
+    if (lastIndex <= 0) {
+      return [{ text: this.formatValue(entries[0].value), top: 0 }];
+    }
+
     const effectiveLabelCount = Math.max(2, Math.min(labelCount, total));
 
     return Array.from({ length: effectiveLabelCount }, (_, index) => {
-      const ratio = effectiveLabelCount === 1 ? 0 : index / (effectiveLabelCount - 1);
-      const stepIndex = Math.round(ratio * (total - 1));
+      const ratio = index / (effectiveLabelCount - 1);
+      const stepIndex = Math.round(ratio * lastIndex);
       return {
         text: this.formatValue(entries[stepIndex].value),
-        top: ratio * 100,
+        top: (stepIndex / lastIndex) * 100,
       };
     });
   }

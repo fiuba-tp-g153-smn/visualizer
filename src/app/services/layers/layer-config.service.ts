@@ -2,11 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, map, of, catchError, switchMap } from 'rxjs';
 import { buildConfigUrl } from '../../config';
-import {
-  ForecastModelAdapter,
-  adapterForLayer,
-  forecastModelAdapter,
-} from '../../config/layers/forecast-model';
+import { ForecastModelAdapter, adapterForLayer } from '../../config/layers/forecast-model';
 import {
   Layer,
   LayerConfig,
@@ -205,12 +201,12 @@ export class LayerConfigService {
             const availableTilesets: TilesetEntry[] = existing
               ? [...existing.availableTilesets]
               : this.keepLatestTilesetsForLayer(
-                  layer.availablePeriods,
-                  (periodsByForecast[forecasts[0]] ?? []).map((id) => ({
-                    id,
-                    time: parseEcmwfTimestamp(id) ?? new Date(0),
-                  })),
-                );
+                layer.availablePeriods,
+                (periodsByForecast[forecasts[0]] ?? []).map((id) => ({
+                  id,
+                  time: parseEcmwfTimestamp(id) ?? new Date(0),
+                })),
+              );
 
             const config: EcmwfTpTileLayerConfig = {
               layerId: layer.id,
@@ -375,7 +371,7 @@ export class LayerConfigService {
               const availableTilesets: TilesetEntry[] = existing
                 ? [...existing.availableTilesets]
                 : this.buildWrfTimeline(periodsByForecast, [initRuns[0]], adapter)
-                    .availableTilesets;
+                  .availableTilesets;
 
               const config: WrfTileLayerConfig = {
                 layerId: layer.id,
@@ -410,13 +406,18 @@ export class LayerConfigService {
     const config = this.getConfig(layerId) as WrfTileLayerConfig | undefined;
     if (!config || config.category !== LayerCategory.WRF) return undefined;
 
+    const layer = this.layersService.getLayerById(layerId) as WrfTileLayer | undefined;
+    if (!layer) {
+      console.error(`Layer '${layerId}' not found, skipping forecast timeline update`);
+      return undefined;
+    }
+
     // Unión por instante absoluto: corridas que coinciden en una misma hora
     // comparten frame (overlap real); las que no, aportan frames propios.
-    const layer = this.layersService.getLayerById(layerId) as WrfTileLayer | undefined;
     const { availableTilesets, forecastsByPeriod } = this.buildWrfTimeline(
       config.periodsByForecast,
       selectedInitTags,
-      layer ? adapterForLayer(layer) : forecastModelAdapter(),
+      adapterForLayer(layer),
     );
 
     // Se devuelve sincrónicamente para que el caller lea la nueva unión de
