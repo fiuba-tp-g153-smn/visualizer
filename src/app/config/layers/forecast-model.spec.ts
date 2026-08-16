@@ -54,6 +54,38 @@ describe('GFS adapter URLs', () => {
       `/products/gfs/mslp/${CYCLE}/f000/point?lat=-34.5&lon=-64.25`,
     );
   });
+
+  it('builds a secondary point query URL', () => {
+    expect(
+      gfs.buildSecondaryPointQueryUrl('500hpa', CYCLE, 'f003', 'geopotential', -34.5, -64.25),
+    ).toContain(
+      `/products/gfs/500hpa/${CYCLE}/f003/secondary/geopotential/point?lat=-34.5&lon=-64.25`,
+    );
+  });
+});
+
+describe('secondary point queries per model', () => {
+  it('sends each model to its own route', () => {
+    const gfsUrl = forecastModelAdapter('gfs').buildSecondaryPointQueryUrl(
+      '500hpa',
+      CYCLE,
+      'f003',
+      'temperature',
+      -34.5,
+      -64.25,
+    );
+    const wrfUrl = forecastModelAdapter('wrf').buildSecondaryPointQueryUrl(
+      'MUCAPE',
+      INIT_TAG,
+      'F003',
+      'shear_850_500',
+      -34.5,
+      -64.25,
+    );
+
+    expect(gfsUrl).toContain('/products/gfs/');
+    expect(wrfUrl).toContain('/products/wrf/');
+  });
 });
 
 describe('run listings', () => {

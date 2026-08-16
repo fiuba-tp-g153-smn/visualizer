@@ -151,6 +151,21 @@ export function buildGfsPointQueryUrl(
 }
 
 /**
+ * URL del dato puntual de una variable secundaria GFS (espesor, temperatura,
+ * geopotencial). `variable` es la clave del COG secundario en el backend.
+ */
+export function buildGfsSecondaryPointQueryUrl(
+  productId: string,
+  cycle: string,
+  fxxx: string,
+  variable: string,
+  lat: number,
+  lon: number,
+): string {
+  return `${DATA_SERVICE_BASE_URL}/products/gfs/${productId}/${cycle}/${fxxx}/secondary/${variable}/point?lat=${lat}&lon=${lon}`;
+}
+
+/**
  * URL del GeoJSON de un overlay de contornos GFS (isobaras, espesor,
  * geopotencial, isotermas).
  */
