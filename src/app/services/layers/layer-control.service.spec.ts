@@ -198,8 +198,10 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
 describe('LayerControlService — forecast secondary render controls', () => {
   const ECMWF_LAYER_ID = 'ecmwf/total-precipitation';
   const WRF_LAYER_ID = 'wrf/Precipitacion1h';
+  const GFS_MSLP_LAYER_ID = 'gfs/mslp';
   const ECMWF_FORECAST = '20260520T0000Z';
   const WRF_FORECAST = '20260430_060000';
+  const GFS_CYCLE = '20260808T0600Z';
 
   function buildConfigServiceStub() {
     const configMap = new Map<string, LayerConfig>();
@@ -375,5 +377,62 @@ describe('LayerControlService — forecast secondary render controls', () => {
       selectedRenderIds: ['primary', 'wrf-Precipitacion1h-slp'],
       renderOpacity: { 'wrf-Precipitacion1h-slp': 0.6 },
     });
+  });
+
+  it('does not seed a primary render id for a layer with no raster pyramid', () => {
+    const configStub = buildConfigServiceStub();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [{ provide: LayerConfigService, useValue: configStub }],
+    });
+
+    configStub.seedConfig(GFS_MSLP_LAYER_ID, {
+      layerId: GFS_MSLP_LAYER_ID,
+      type: LayerType.TILE,
+      category: LayerCategory.WRF,
+      availableForecasts: [GFS_CYCLE],
+      periodsByForecast: { [GFS_CYCLE]: ['f000'] },
+      forecastsByPeriod: { STEP_0: [GFS_CYCLE] },
+      availableTilesets: [{ id: 'STEP_0', time: new Date(0) }],
+      layersByStep: { [`${GFS_CYCLE}/f000`]: ['isobars', 'thickness'] },
+    });
+
+    const service = TestBed.inject(LayerControlService);
+    service.activateLayer(GFS_MSLP_LAYER_ID);
+
+    const controls = service.getControls(GFS_MSLP_LAYER_ID) as WrfLayerControls;
+    expect(controls.forecast.renderControls[GFS_CYCLE].selectedRenderIds).toEqual([
+      'gfs-mslp-thickness',
+      'gfs-mslp-isobars',
+    ]);
+  });
+
+  it('drops a contour-only run from the timeline when its last overlay is disabled', () => {
+    const configStub = buildConfigServiceStub();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [{ provide: LayerConfigService, useValue: configStub }],
+    });
+
+    configStub.seedConfig(GFS_MSLP_LAYER_ID, {
+      layerId: GFS_MSLP_LAYER_ID,
+      type: LayerType.TILE,
+      category: LayerCategory.WRF,
+      availableForecasts: [GFS_CYCLE],
+      periodsByForecast: { [GFS_CYCLE]: ['f000'] },
+      forecastsByPeriod: { STEP_0: [GFS_CYCLE] },
+      availableTilesets: [{ id: 'STEP_0', time: new Date(0) }],
+      layersByStep: { [`${GFS_CYCLE}/f000`]: ['isobars', 'thickness'] },
+    });
+
+    const service = TestBed.inject(LayerControlService);
+    service.activateLayer(GFS_MSLP_LAYER_ID);
+
+    service.setWrfForecastRenderVisible(GFS_MSLP_LAYER_ID, GFS_CYCLE, 'gfs-mslp-thickness', false);
+    service.setWrfForecastRenderVisible(GFS_MSLP_LAYER_ID, GFS_CYCLE, 'gfs-mslp-isobars', false);
+
+    const controls = service.getControls(GFS_MSLP_LAYER_ID) as WrfLayerControls;
+    expect(controls.forecast.renderControls[GFS_CYCLE].selectedRenderIds).toEqual([]);
+    expect(controls.visible).toBe(true);
   });
 });
