@@ -85,7 +85,7 @@ function renderThroughputTooltip(context: CustomTooltipContext): string {
 
 /** Bytes → human string (B/KB/MB/GB/TB). Shared by charts and tables. */
 export function formatBytes(bytes: number | null | undefined): string {
-  if (bytes == null) {
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) {
     return '—';
   }
   if (bytes < 1024) {

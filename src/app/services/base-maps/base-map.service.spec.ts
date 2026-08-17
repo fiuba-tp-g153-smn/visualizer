@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { BaseMapService } from './base-map.service';
 import { STORAGE_KEYS } from '../../constants';
-import { MAP_CONFIG, buildBasemapProvidersUrl } from '../../config';
+import { BASEMAP_DIRECT_SOURCES, MAP_CONFIG, buildBasemapProvidersUrl } from '../../config';
 import type { BaseMapProvidersResponse } from '../../config';
 
 const SAMPLE_RESPONSE: BaseMapProvidersResponse = {
@@ -103,22 +103,33 @@ describe('BaseMapService', () => {
   });
 
   describe('Empty provider list', () => {
-    it('clears the current base map and reports loaded state', () => {
+    it('keeps the static provider list when the backend returns none', () => {
+      const staticCount = Object.keys(BASEMAP_DIRECT_SOURCES).length;
       flushProviders({ providers: [] });
-      expect(service.providers().length).toBe(0);
-      expect(service.currentBaseMap()).toBeNull();
+      // An empty 200 must not blank the picker — the static baseline stands.
+      expect(service.providers().length).toBe(staticCount);
+      expect(service.currentBaseMap()?.id).toBe('argenmap');
       expect(service.loadState()).toBe('loaded');
-      expect(service.hasProviders()).toBe(false);
+      expect(service.hasProviders()).toBe(true);
     });
   });
 
   describe('API failure', () => {
-    it('reports error state without falling back to a hardcoded list', () => {
+    it('falls back to the static list so base maps still render offline', () => {
+      const staticCount = Object.keys(BASEMAP_DIRECT_SOURCES).length;
       const req = httpMock.expectOne(buildBasemapProvidersUrl());
       req.error(new ProgressEvent('error'), { status: 503, statusText: 'Service Unavailable' });
-      expect(service.loadState()).toBe('error');
-      expect(service.providers().length).toBe(0);
-      expect(service.currentBaseMap()).toBeNull();
+
+      // The data-service is down, but tiles come straight from upstream: keep a
+      // usable list + selection and stay out of the error state.
+      expect(service.loadState()).toBe('loaded');
+      expect(service.providers().length).toBe(staticCount);
+      expect(service.hasProviders()).toBe(true);
+
+      const current = service.currentBaseMap();
+      expect(current?.id).toBe('argenmap');
+      // Renderable with zero data-service involvement: a direct upstream source.
+      expect(current?.directUrl).toContain('ign.gob.ar');
     });
   });
 });

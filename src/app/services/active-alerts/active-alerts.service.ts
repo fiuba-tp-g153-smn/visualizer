@@ -10,6 +10,14 @@ import { STORAGE_KEYS } from '../../constants';
 const AUTO_REFRESH_INTERVAL_MS = 10_000;
 
 /**
+ * How often (in refreshes) to do a full reconcile instead of an incremental
+ * `since_id` fetch. The incremental cursor only surfaces *new* alert ids, so a
+ * periodic authoritative fetch is needed to reflect alerts the backend edited or
+ * cancelled. At the 10 s cadence, 6 ≈ one full reconcile per minute.
+ */
+export const FULL_RECONCILE_EVERY = 6;
+
+/**
  * Stateful service for active alerts. Owns the "show active" toggle, the list of
  * active alerts, manual/automatic refresh and expiry pruning.
  */
@@ -40,6 +48,10 @@ export class ActiveAlertsService {
   /** Monotonic cursor: highest alert id ever seen, independent of pruning. */
   private lastSeenMaxId: number | undefined = undefined;
   private timerId: number | undefined = undefined;
+  /** Guards against overlapping manual/auto fetches racing the loading flag. */
+  private fetchInFlight = false;
+  /** Counts refreshes to schedule a periodic full reconcile (see FULL_RECONCILE_EVERY). */
+  private refreshCount = 0;
 
   constructor() {
     this.destroyRef.onDestroy(() => this.stopAutoRefresh());
@@ -61,6 +73,7 @@ export class ActiveAlertsService {
 
     if (on) {
       this.lastSeenMaxId = undefined;
+      this.refreshCount = 0;
       void this.fetch(undefined);
       this.startAutoRefresh();
     } else {
@@ -120,30 +133,45 @@ export class ActiveAlertsService {
 
   async refresh(): Promise<void> {
     if (!this.showActiveSignal()) return;
-    await this.fetch(this.lastSeenMaxId);
+    // Every FULL_RECONCILE_EVERY-th refresh fetches the full list (no since_id)
+    // and treats it as authoritative, so alerts the backend edited or cancelled
+    // are reflected — the incremental cursor alone never sees them.
+    this.refreshCount += 1;
+    const reconcile = this.refreshCount % FULL_RECONCILE_EVERY === 0;
+    await this.fetch(reconcile ? undefined : this.lastSeenMaxId, reconcile);
   }
 
-  private async fetch(sinceId: number | undefined): Promise<void> {
+  private async fetch(sinceId: number | undefined, reconcile = false): Promise<void> {
+    // Skip if a fetch is already running so overlapping manual/auto refreshes
+    // don't interleave or flip the loading flag early.
+    if (this.fetchInFlight) return;
+    this.fetchInFlight = true;
     this.loadingSignal.set(true);
     try {
       const responses = await firstValueFrom(this.departmentIntersectionService.getAlerts(sinceId));
       const incoming = responses.map(toActiveAlert);
-      this.mergeAndPrune(incoming);
+      this.mergeAndPrune(incoming, reconcile);
     } catch (error) {
       console.error('Error al obtener avisos activos:', error);
-      // Still prune locally so expired alerts disappear even if the fetch failed.
-      this.mergeAndPrune([]);
+      // Prune locally so expired alerts disappear, but never reconcile the list
+      // away on a failed fetch (an empty error result must not wipe everything).
+      this.mergeAndPrune([], false);
     } finally {
       this.loadingSignal.set(false);
+      this.fetchInFlight = false;
     }
   }
 
-  private mergeAndPrune(incoming: ReadonlyArray<ActiveAlert>): void {
+  private mergeAndPrune(incoming: ReadonlyArray<ActiveAlert>, reconcile: boolean): void {
     const now = Date.now();
     const byId = new Map<number, ActiveAlert>();
 
-    for (const alert of this.activeAlertsSignal()) {
-      byId.set(alert.alertId, alert);
+    // On a full reconcile the incoming list is authoritative — don't carry prior
+    // alerts forward, so backend-removed ones drop out instead of lingering.
+    if (!reconcile) {
+      for (const alert of this.activeAlertsSignal()) {
+        byId.set(alert.alertId, alert);
+      }
     }
     for (const alert of incoming) {
       byId.set(alert.alertId, alert);

@@ -45,6 +45,10 @@ import {
 } from '../../services/metrics/metrics-chart.util';
 import { AlertsMetricsService } from '../../services/metrics/alerts-metrics.service';
 import { DepartmentIntersectionService } from '../../services/polygons/department-intersection.service';
+import {
+  TIMEZONE_MODES,
+  TimezoneSettingsService,
+} from '../../services/settings/timezone-settings.service';
 
 interface FailureRow {
   readonly label: string;
@@ -121,6 +125,7 @@ export class AlertsDashboardComponent {
   private readonly departments = inject(DepartmentIntersectionService);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly timezone = inject(TimezoneSettingsService);
 
   // Controles
   readonly windowHours = signal<WindowHours>(24);
@@ -297,7 +302,15 @@ export class AlertsDashboardComponent {
       { bucket: p.bucket, job_type: 'Exitosas', count: p.done },
       { bucket: p.bucket, job_type: 'Fallidas', count: p.failed },
     ]);
-    return buildLineChart(lineRows, 'count', 'count', 280, (t) => OUTCOME_COLORS[t] ?? '#8e8e8e');
+    const utc = this.timezone.mode() === TIMEZONE_MODES.UTC;
+    return buildLineChart(
+      lineRows,
+      'count',
+      'count',
+      280,
+      (t) => OUTCOME_COLORS[t] ?? '#8e8e8e',
+      utc,
+    );
   });
 
   /** Promedio por etapa (segundos) para la torta de la sección 6. */

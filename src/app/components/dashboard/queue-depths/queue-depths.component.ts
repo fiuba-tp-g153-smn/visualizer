@@ -28,10 +28,10 @@ export class QueueDepthsComponent {
     const queues = this.queues();
     const fmt = (value: number | null | undefined): string =>
       value == null ? 'N/A' : String(value);
+    // N/A unless BOTH depths are known — coercing one null to 0 would understate
+    // the total (e.g. work=12, light=null must read N/A, not 12).
     const total =
-      queues?.work == null && queues?.light == null
-        ? null
-        : (queues?.work ?? 0) + (queues?.light ?? 0);
+      queues?.work == null || queues?.light == null ? null : queues.work + queues.light;
     return [
       { key: 'total en espera', value: fmt(total), sub: 'general + ligera' },
       { key: 'cola de trabajo general', value: fmt(queues?.work), sub: 'en espera' },

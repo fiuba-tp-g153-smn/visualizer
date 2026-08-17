@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable, catchError, map, of, tap } from 'rxjs';
 import {
   BASEMAP_DIRECT_SOURCES,
   BASE_MAP_PREVIEW_CONFIG,
@@ -18,25 +18,13 @@ import { LocalStorageService } from '../storage/local-storage.service';
 export type BaseMapLoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
 /**
- * Best-effort metadata for the configured default base map, used to paint it
- * optimistically before `/basemap/providers` resolves — this removes that
- * round-trip from the LCP path (the first base-map tile is the LCP element).
- *
- * Mirrors the backend's `argenmap` entry. It is reconciled with the real
- * provider list the moment it arrives, so correctness never depends on these
- * values staying in sync — drift just causes an in-place metadata refresh.
- */
-const DEFAULT_BASE_MAP_META = {
-  name: 'Argenmap',
-  attribution: 'Instituto Geográfico Nacional + OpenStreetMap contributors',
-  maxNativeZoom: 21,
-} as const;
-
-/**
  * Base Map Service
  *
- * Owns the list of base map providers (sourced from the backend at runtime),
- * the currently selected base map, and persistence of that choice.
+ * Owns the list of base map providers, the currently selected base map, and
+ * persistence of that choice. The list is seeded from the client's static
+ * `BASEMAP_DIRECT_SOURCES` table (so base maps render straight from upstream
+ * even when the data-service is down) and refined in place by the backend
+ * `/basemap/providers` response when it arrives.
  */
 @Injectable({
   providedIn: 'root',
@@ -62,50 +50,62 @@ export class BaseMapService {
       }
     });
 
-    // Paint a base map immediately so the first tile (the LCP element) starts
-    // loading without waiting for the /basemap/providers round-trip. Replaced
-    // by the authoritative entry once `loadProviders` resolves.
-    this._currentBaseMap.set(this.buildOptimisticBaseMap());
+    // Seed the picker and the current base map from the client's own static
+    // provider table so base maps render (direct-from-upstream) with zero
+    // dependency on the data-service — this also removes the /basemap/providers
+    // round-trip from the LCP path (the first base-map tile is the LCP element).
+    // The backend list, when it arrives, only refines this metadata in place
+    // (see loadProviders); an outage never blanks the picker or the map.
+    const staticProviders = this.buildStaticProviders();
+    this._providers.set(staticProviders);
+    this._currentBaseMap.set(this.resolveInitialBaseMap(staticProviders));
 
     this.loadProviders().subscribe();
   }
 
-  private buildOptimisticBaseMap(): BaseMap {
-    const id = this.readStoredBaseMapId() ?? MAP_CONFIG.defaultBaseMapId;
-    const isDefault = id === MAP_CONFIG.defaultBaseMapId;
-    const direct = BASEMAP_DIRECT_SOURCES[id] ?? null;
-    return {
+  /**
+   * Build the full base-map list from the static `BASEMAP_DIRECT_SOURCES` table.
+   * This is the offline baseline: every entry has a direct upstream tile source,
+   * so the map works without the data-service (which is only a per-tile fallback).
+   */
+  private buildStaticProviders(): ReadonlyArray<BaseMap> {
+    return Object.entries(BASEMAP_DIRECT_SOURCES).map(([id, source]) => ({
       id,
-      name: isDefault ? DEFAULT_BASE_MAP_META.name : id,
+      name: source.name,
       url: buildBasemapTileUrl(id),
-      attribution: isDefault ? formatAttribution(DEFAULT_BASE_MAP_META.attribution) : '',
-      minZoom: MAP_CONFIG.minZoom,
+      attribution: formatAttribution(source.attribution),
+      minZoom: source.minZoom,
       maxZoom: MAP_CONFIG.maxZoom,
-      // Display tops out at MAP_CONFIG.maxZoom, so native zoom never needs to
-      // exceed it; the known default gets its real ceiling, others a safe one.
-      maxNativeZoom: isDefault ? DEFAULT_BASE_MAP_META.maxNativeZoom : MAP_CONFIG.maxZoom,
+      maxNativeZoom: source.maxNativeZoom,
       previewZ: BASE_MAP_PREVIEW_CONFIG.z,
       previewX: BASE_MAP_PREVIEW_CONFIG.x,
       previewY: BASE_MAP_PREVIEW_CONFIG.y,
-      directUrl: direct?.urlTemplate ?? null,
-      isTms: direct?.isTms ?? false,
-    };
+      directUrl: source.urlTemplate,
+      isTms: source.isTms,
+    }));
   }
 
   loadProviders(): Observable<ReadonlyArray<BaseMap>> {
     this._loadState.set('loading');
     return this.http.get<BaseMapProvidersResponse>(buildBasemapProvidersUrl()).pipe(
       map((response) => (response.providers ?? []).map(toBaseMap)),
+      tap((providers) => {
+        // Refine the static baseline only when the backend actually returns
+        // providers; reconcile the current selection against the refreshed list.
+        // An empty 200 leaves the static list untouched.
+        if (providers.length > 0) {
+          this._providers.set(providers);
+          this._currentBaseMap.set(this.resolveInitialBaseMap(providers));
+        }
+        this._loadState.set('loaded');
+      }),
       catchError((error) => {
         console.error('Failed to load base map providers:', error);
-        this._loadState.set('error');
-        return of<ReadonlyArray<BaseMap>>([]);
-      }),
-      map((providers) => {
-        this._providers.set(providers);
-        this._currentBaseMap.set(this.resolveInitialBaseMap(providers));
-        if (this._loadState() !== 'error') this._loadState.set('loaded');
-        return providers;
+        // The data-service is unreachable, but base maps are fetched directly
+        // from upstream — keep the static list and current selection intact.
+        // Only surface 'error' in the impossible case of an empty static list.
+        this._loadState.set(this._providers().length > 0 ? 'loaded' : 'error');
+        return of<ReadonlyArray<BaseMap>>(this._providers());
       }),
     );
   }

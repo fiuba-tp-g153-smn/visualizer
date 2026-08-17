@@ -9,9 +9,6 @@ export const environment = {
   alertsService: {
     baseUrl: $ENV.ALERTS_SERVICE_BASE_URL,
   },
-  weatherStations: {
-    apiKey: $ENV.WEATHER_STATIONS_API_KEY,
-  },
   ui: {
     disabledLayers: [] as string[],
   },

@@ -100,9 +100,10 @@ export function withDepartmentGeometries(
   departments: ReadonlyArray<ActiveAlertDepartment>,
   shownDepartments: ReadonlyArray<Department>,
 ): ReadonlyArray<DepartmentListItem> {
-  if (shownDepartments.length === 0) return departments;
-
   const geometryByName = new Map(shownDepartments.map((d) => [d.name, d.geometry]));
+  // Always map so every item is a `DepartmentListItem` with a `geometry` field
+  // (undefined when unavailable) — the empty-list early return used to leak raw
+  // `ActiveAlertDepartment`s, giving consumers an inconsistent shape.
   return departments.map((dept) => ({ ...dept, geometry: geometryByName.get(dept.name) }));
 }
 

@@ -93,7 +93,8 @@ export class BasemapDashboardComponent {
     if (!times.length) {
       return '';
     }
-    return 'último barrido ' + ago(new Date(Math.max(...times) * 1000).toISOString());
+    const latest = times.reduce((m, t) => (t > m ? t : m), times[0]);
+    return 'último barrido ' + ago(new Date(latest * 1000).toISOString());
   });
 
   private intervalId: ReturnType<typeof setInterval> | null = null;

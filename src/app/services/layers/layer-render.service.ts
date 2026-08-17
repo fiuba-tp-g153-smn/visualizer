@@ -47,6 +47,7 @@ import {
 } from '../../config/layers';
 import { adapterForLayer, hasRasterPyramid } from '../../config/layers/forecast-model';
 import { computeWindowStart, getDefaultCursorIndex } from '../../utils/playback-window';
+import { BoundedLruMap } from '../../utils/bounded-lru-map';
 import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../constants';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import {
@@ -62,6 +63,15 @@ import {
   WeatherStationPopupComponent,
   WeatherStationPopupData,
 } from '../../components/floating/weather-station-popup/weather-station-popup.component';
+
+/**
+ * Max pooled tile layers. Well above the number ever on the map at once
+ * (base + data layers + small playback windows), so eviction only ever drops
+ * stale entries for tilesets that are no longer displayed.
+ */
+const TILE_POOL_MAX = 200;
+/** Max pooled weather-station marker groups (each is heavy; few are ever active). */
+const WEATHER_STATIONS_POOL_MAX = 24;
 
 /**
  * Service responsible for creating and managing Leaflet tile layers.
@@ -94,9 +104,24 @@ export class LayerRenderService {
   private readonly errorTracker = new Map<string, number>();
   private readonly MAX_ERRORS_BEFORE_NOTIFY = 5;
 
-  // Tile Layer Pool: cache of L.TileLayer instances for reuse
-  private readonly layerPool = new Map<string, L.TileLayer>();
-  private readonly weatherStationsLayerPool = new Map<string, L.Layer>();
+  // Tile Layer Pool: bounded LRU cache of L.TileLayer instances for reuse. The
+  // pool key embeds the tilesetId/elevation/forecast, which change on every
+  // auto-refresh — the LRU cap keeps a long session from leaking layers, while
+  // the on-map layers (touched every sync) stay most-recently-used and safe.
+  private readonly layerPool = new BoundedLruMap<string, L.TileLayer>(TILE_POOL_MAX);
+  // Weather-station marker groups are much heavier (hundreds of DivIcon markers)
+  // and the key embeds `fetchedAt`, so a smaller cap is enough.
+  private readonly weatherStationsLayerPool = new BoundedLruMap<string, L.Layer>(
+    WEATHER_STATIONS_POOL_MAX,
+  );
+  /**
+   * Ascending-by-value sort of a scale's entries, cached by the (stable) entries
+   * array so the sort runs once per scale instead of once per station per render.
+   */
+  private readonly sortedScaleEntriesCache = new WeakMap<
+    readonly { value: number; color: string }[],
+    readonly { value: number; color: string }[]
+  >();
 
   // ============================================================================
   // Public Methods - Layer Creation
@@ -887,6 +912,17 @@ export class LayerRenderService {
     }
   }
 
+  private getSortedScaleEntries(
+    entries: readonly { value: number; color: string }[],
+  ): readonly { value: number; color: string }[] {
+    let sorted = this.sortedScaleEntriesCache.get(entries);
+    if (!sorted) {
+      sorted = [...entries].sort((a, b) => a.value - b.value);
+      this.sortedScaleEntriesCache.set(entries, sorted);
+    }
+    return sorted;
+  }
+
   private resolveWeatherStationsColor(scale: LayerScale, value: number): string {
     switch (scale.type) {
       case ScaleType.CONTINUOUS:
@@ -908,7 +944,7 @@ export class LayerRenderService {
       throw new Error('Invalid continuous weather station scale: no entries configured');
     }
 
-    const sortedEntries = [...entries].sort((a, b) => a.value - b.value);
+    const sortedEntries = this.getSortedScaleEntries(entries);
     if (value <= sortedEntries[0].value) {
       return sortedEntries[0].color;
     }
@@ -940,7 +976,7 @@ export class LayerRenderService {
       throw new Error('Invalid discrete weather station scale: no entries configured');
     }
 
-    const sorted = [...entries].sort((a, b) => a.value - b.value);
+    const sorted = this.getSortedScaleEntries(entries);
     let selected = sorted[0];
     for (const entry of sorted) {
       if (value >= entry.value) {
@@ -1297,14 +1333,6 @@ export class LayerRenderService {
         if (!created) continue;
         this.applyLayerStyles(created.layer, 0, absoluteZIndex);
         result.set(created.key, created.layer);
-      }
-    }
-  }
-
-  prunePool(activeKeys: Set<string>): void {
-    for (const [key] of this.layerPool) {
-      if (!activeKeys.has(key)) {
-        this.layerPool.delete(key);
       }
     }
   }

@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 
 import type { DataSyncCycle } from '../../../models/metrics/data-metrics.models';
 import { domainLabel } from '../../../services/metrics/data-metrics-labels';
-import { ago, fmtInstant } from '../../../services/metrics/metrics-format.util';
+import { ago, fmtInstant, secs } from '../../../services/metrics/metrics-format.util';
 import { SortableTableComponent } from '../../dashboard/sortable-table/sortable-table.component';
 import {
   buildTable,
@@ -47,7 +47,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncCycle>> = [
   },
   {
     header: { key: 'duracion', label: 'duración', align: 'center', sortable: true },
-    cell: (c) => textCell(`${(c.duration_ms / 1000).toFixed(1)}s`),
+    cell: (c) => textCell(secs(c.duration_ms / 1000)),
     sortValue: (c) => c.duration_ms,
   },
   {

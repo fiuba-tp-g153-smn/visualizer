@@ -48,12 +48,27 @@ export interface BaseMapProvidersResponse {
  * from XYZ to TMS convention before substituting the template — set `tms: true`
  * on the `L.tileLayer` options.
  *
+ * `name`, `attribution`, `minZoom` and `maxNativeZoom` mirror the backend's
+ * `PROVIDER_DEFAULTS` (services/basemap_config.py). They let `BaseMapService`
+ * build the full picker list from this table alone — so base maps render
+ * (direct-from-upstream) even when the data-service is unreachable. When
+ * `/basemap/providers` does respond, its values refine these in place; drift
+ * only triggers a metadata refresh, never a broken list.
+ *
  * Providers absent from this map (e.g. WMS overlays) go through the data-service
  * only and have no direct tile source.
  */
 export interface DirectTileSource {
   readonly urlTemplate: string;
   readonly isTms: boolean;
+  /** Human-readable display name (mirrors backend `name`). */
+  readonly name: string;
+  /** Plain-text attribution (mirrors backend `attribution`; wrapped via `formatAttribution`). */
+  readonly attribution: string;
+  /** Lowest zoom the provider supports (mirrors backend `min_zoom`). */
+  readonly minZoom: number;
+  /** Fetch ceiling: highest zoom we request tiles for (mirrors backend `max_zoom`). */
+  readonly maxNativeZoom: number;
 }
 
 export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> = {
@@ -61,40 +76,72 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
+    name: 'Argenmap',
+    attribution: 'Instituto Geográfico Nacional + OpenStreetMap contributors',
+    minZoom: 3,
+    maxNativeZoom: 21,
   },
   argenmapGris: {
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gris@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
+    name: 'Argenmap gris',
+    attribution: 'Instituto Geográfico Nacional',
+    minZoom: 3,
+    maxNativeZoom: 21,
   },
   argenmapOscuro: {
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/argenmap_oscuro@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
+    name: 'Argenmap oscuro',
+    attribution: 'Instituto Geográfico Nacional',
+    minZoom: 3,
+    maxNativeZoom: 21,
   },
   argenmapTopografico: {
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_topo@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
+    name: 'Argenmap topográfico',
+    attribution: 'Instituto Geográfico Nacional',
+    minZoom: 3,
+    maxNativeZoom: 21,
   },
   satellite: {
     urlTemplate:
       'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     isTms: false,
+    name: 'Imágenes satelitales Esri',
+    attribution: 'Tiles © Esri',
+    minZoom: 3,
+    maxNativeZoom: 17,
   },
   topographic: {
     urlTemplate:
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}',
     isTms: false,
+    name: 'Mapa topográfico Esri',
+    attribution: 'Tiles © Esri',
+    minZoom: 3,
+    maxNativeZoom: 8,
   },
   googleSatellite: {
     urlTemplate: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
     isTms: false,
+    name: 'Imágenes satelitales Google',
+    attribution: '© Google',
+    minZoom: 3,
+    maxNativeZoom: 20,
   },
   oceanBase: {
     urlTemplate:
       'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
     isTms: false,
+    name: 'Mapa Esri Fondo Oceánico',
+    attribution: 'Tiles © Esri',
+    minZoom: 3,
+    maxNativeZoom: 16,
   },
 } as const;
 

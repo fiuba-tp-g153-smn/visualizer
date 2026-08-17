@@ -15,12 +15,12 @@
         </tr>
       </thead>
       <tbody>
-        @for (job of jobs(); track job.image_id + '|' + job.band_id) {
+        @for (row of rows(); track row.image_id + '|' + row.band_id) {
           <tr>
-            <td class="l"><span class="ip__dot"></span>{{ job.image_id }}</td>
-            <td class="l muted">{{ job.band_id }}</td>
-            <td class="l muted">{{ job.status }}</td>
-            <td class="r muted">{{ since(job.updated_at) }}</td>
+            <td class="l"><span class="ip__dot"></span>{{ row.image_id }}</td>
+            <td class="l muted">{{ row.band_id }}</td>
+            <td class="l muted">{{ row.status }}</td>
+            <td class="r muted">{{ row.since }}</td>
           </tr>
         }
       </tbody>
