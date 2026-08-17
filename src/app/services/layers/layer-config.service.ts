@@ -295,6 +295,47 @@ export class LayerConfigService {
   }
 
   /**
+   * Lightweight availability probe used to grey out products that have no data.
+   *
+   * Resolves to `true` when the product exposes at least one period/forecast,
+   * `false` when the backend returns an empty product. Unlike
+   * `fetchLayerConfig` it issues a SINGLE top-level GET — for ECMWF/WRF it reads
+   * only the forecast-run list and skips the per-run `forkJoin` — and it does
+   * NOT write to the config cache, so it never disturbs the selection-derived
+   * `availableTilesets` maintained for active layers. Errors (unreachable,
+   * 404 for a product that isn't published yet) propagate so callers can treat
+   * them as "unknown" rather than "empty".
+   */
+  probeLayerAvailability(layer: Layer): Observable<boolean> {
+    switch (layer.category) {
+      case LayerCategory.GOES_19:
+        return this.http
+          .get<{ tilesets?: readonly unknown[] }>(buildConfigUrl(layer.id))
+          .pipe(map((resp) => (resp.tilesets?.length ?? 0) > 0));
+      case LayerCategory.RADAR: {
+        const radar = layer as RadarTileLayer;
+        if (!radar.availableElevations || radar.availableElevations.length === 0) {
+          return of(false);
+        }
+        const pathToProduct = `${layer.id}/${radar.availableElevations[0].id}`;
+        return this.http
+          .get<{ tilesets?: readonly unknown[] }>(buildConfigUrl(pathToProduct))
+          .pipe(map((resp) => (resp.tilesets?.length ?? 0) > 0));
+      }
+      case LayerCategory.ECMWF_TP:
+        return this.http
+          .get<{ forecasts?: readonly unknown[] }>(buildConfigUrl(layer.id))
+          .pipe(map((resp) => (resp.forecasts?.length ?? 0) > 0));
+      case LayerCategory.WRF:
+        return this.http
+          .get<unknown>(buildConfigUrl(layer.id))
+          .pipe(map((resp) => adapterForLayer(layer as WrfTileLayer).readRunTags(resp).length > 0));
+      default:
+        return of(false);
+    }
+  }
+
+  /**
    * Fetches and updates the configuration for a WRF model product.
    * Lists init runs (corridas) and the steps (fxxx) of each, plus the
    * GeoJSON layers per step. Mirrors `fetchEcmwfTpLayerConfig`.

@@ -46,6 +46,7 @@ import { LayersService } from '../../../../../services/layers/layers.service';
 import { LayerControlService } from '../../../../../services/layers/layer-control.service';
 import { LayerConfigService } from '../../../../../services/layers/layer-config.service';
 import { LayerRefreshService } from '../../../../../services/layers/layer-refresh.service';
+import { LayerAvailabilityService } from '../../../../../services/layers/layer-availability.service';
 import { SyncPlaybackService } from '../../../../../services/layers/sync-playback.service';
 import { NotificationService } from '../../../../../services/notifications/notification.service';
 import {
@@ -119,6 +120,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly controlService = inject(LayerControlService);
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
+  private readonly availabilityService = inject(LayerAvailabilityService);
   private readonly syncService = inject(SyncPlaybackService);
   private readonly scaleTools = inject(ScaleToolsService);
   private readonly apiKeyService = inject(WeatherStationsApiKeyService);
@@ -306,6 +308,17 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     if (this.layer.type !== LayerType.TILE) return false;
     return !this.configService.hasConfig(this.layer.id) && this.isLoadingConfig();
   });
+
+  /**
+   * True when this product has been probed/loaded and found to have no data,
+   * AND it isn't already active. Drives the greyed-out, unclickable row. Active
+   * layers are never blocked here — the user must still be able to deactivate a
+   * layer that went empty mid-session, and its in-row "no periods" message
+   * already explains the state.
+   */
+  readonly isUnavailable = computed(
+    () => this.availabilityService.state(this.layer) === 'empty' && !this.isActive(),
+  );
 
   hasNoElevationsSelected = computed(() => {
     return this.layer.category === LayerCategory.RADAR && this.selectedElevationIds().length === 0;
@@ -528,6 +541,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   async toggleActive(checked: boolean): Promise<void> {
     if (checked) {
+      // Blocked products can't be activated (the control is also [disabled]).
+      if (this.isUnavailable()) return;
       this._activating.set(true);
       await this.activateLayer();
       this._activating.set(false);
@@ -540,6 +555,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   async onRadioSelected(): Promise<void> {
+    if (this.isUnavailable()) return;
     this._activating.set(true);
     await this.activateLayer();
     this._activating.set(false);
@@ -549,6 +565,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onRadioClick(event: MouseEvent): void {
+    if (this.isUnavailable()) {
+      event.preventDefault();
+      return;
+    }
     if (!this.isActive()) {
       return;
     }

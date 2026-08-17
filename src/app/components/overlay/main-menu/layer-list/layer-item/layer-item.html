@@ -2,28 +2,34 @@
   class="layer-item-container"
   [class.mode-available]="mode === LayerItemMode.AVAILABLE"
   [class.mode-active]="mode === LayerItemMode.ACTIVE"
+  [class.is-unavailable]="isUnavailable()"
 >
   @if (mode === LayerItemMode.AVAILABLE) {
-    <div class="layer-header">
+    <div
+      class="layer-header"
+      [matTooltip]="isUnavailable() ? 'Sin datos disponibles' : ''"
+    >
       @if (selectionMode === LayerSelectionMode.SINGLE) {
         <mat-radio-button
           [name]="radioGroupName"
           [checked]="displayChecked()"
+          [disabled]="isUnavailable()"
           (click)="onRadioClick($event)"
           (change)="onRadioSelected()"
           color="primary"
           class="layer-radio"
-          [matTooltip]="layer.description || 'Sin descripción'"
+          [matTooltip]="isUnavailable() ? '' : layer.description || 'Sin descripción'"
         >
           <span class="layer-option-name">{{ layerShortName() }}</span>
         </mat-radio-button>
       } @else {
         <mat-checkbox
           [checked]="displayChecked()"
+          [disabled]="isUnavailable()"
           (change)="toggleActive($event.checked)"
           color="primary"
           class="layer-checkbox"
-          [matTooltip]="layer.description || 'Sin descripción'"
+          [matTooltip]="isUnavailable() ? '' : layer.description || 'Sin descripción'"
         >
           <span class="layer-option-name">{{ layerShortName() }}</span>
         </mat-checkbox>

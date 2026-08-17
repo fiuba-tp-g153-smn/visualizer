@@ -77,6 +77,18 @@
     }
   }
 
+  // Products with no data at all: greyed and unclickable. Interactivity is
+  // blocked via [disabled] on the mat-checkbox / mat-radio-button — NOT with
+  // `pointer-events: none` here, which would also kill the "Sin datos
+  // disponibles" matTooltip hosted on .layer-header.
+  &.is-unavailable {
+    opacity: 0.5;
+
+    .layer-header {
+      cursor: not-allowed;
+    }
+  }
+
   &.mode-active {
     padding: 8px 16px;
     background-color: var(--mat-sys-surface);

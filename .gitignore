@@ -62,3 +62,5 @@ public/testing/fixtures/weather-stations/weather.*T*.json
 # Python bytecode from the MkDocs build hook
 __pycache__/
 *.py[cod]
+
+CODE_REVIEW.md

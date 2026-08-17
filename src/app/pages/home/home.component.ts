@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { MapContainer } from '../../components/map-container/map-container';
 import { MapOverlayComponent } from '../../components/overlay/map-overlay';
 import { LayerRefreshService } from '../../services/layers/layer-refresh.service';
+import { LayerAvailabilityService } from '../../services/layers/layer-availability.service';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
 import { BasemapPerfService } from '../../services/base-maps/basemap-perf.service';
 
@@ -34,4 +35,11 @@ export class HomeComponent {
   private readonly layerRefresh = inject(LayerRefreshService);
   private readonly baseMaps = inject(BaseMapService);
   private readonly basemapPerf = inject(BasemapPerfService);
+  private readonly layerAvailability = inject(LayerAvailabilityService);
+
+  constructor() {
+    // Eagerly probe every product's availability so empty ones render greyed-out
+    // in the layer list up front, without waiting for the user to activate them.
+    this.layerAvailability.primeAll();
+  }
 }
