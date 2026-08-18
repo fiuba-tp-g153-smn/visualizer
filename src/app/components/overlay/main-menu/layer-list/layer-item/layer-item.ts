@@ -327,6 +327,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       : 'Sin datos disponibles',
   );
 
+  /** Short status pill (icon + label) shown on a greyed row so it reads at a glance. */
+  readonly unavailableBadge = computed(() =>
+    this.availabilityService.state(this.layer) === 'unreachable'
+      ? { icon: 'cloud_off', label: 'No disponible' }
+      : { icon: 'block', label: 'Sin datos' },
+  );
+
   hasNoElevationsSelected = computed(() => {
     return this.layer.category === LayerCategory.RADAR && this.selectedElevationIds().length === 0;
   });

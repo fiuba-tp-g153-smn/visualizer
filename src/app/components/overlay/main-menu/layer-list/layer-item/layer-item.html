@@ -34,6 +34,12 @@
           <span class="layer-option-name">{{ layerShortName() }}</span>
         </mat-checkbox>
       }
+      @if (isUnavailable()) {
+        <span class="unavailable-badge">
+          <mat-icon>{{ unavailableBadge().icon }}</mat-icon>
+          <span>{{ unavailableBadge().label }}</span>
+        </span>
+      }
       <div class="header-actions">
         @if (isActive()) {
           @if (hasScale() && isPrimaryRenderActiveForAnyForecast()) {

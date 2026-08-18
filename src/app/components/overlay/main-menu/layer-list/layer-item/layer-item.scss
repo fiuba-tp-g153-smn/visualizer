@@ -77,15 +77,41 @@
     }
   }
 
-  // Products with no data at all: greyed and unclickable. Interactivity is
-  // blocked via [disabled] on the mat-checkbox / mat-radio-button — NOT with
-  // `pointer-events: none` here, which would also kill the "Sin datos
-  // disponibles" matTooltip hosted on .layer-header.
+  // Unavailable products: the control + label fade to read as disabled, while a
+  // full-strength "Sin datos" / "No disponible" badge makes the state obvious at
+  // a glance. Interactivity is blocked via [disabled] on the mat-checkbox /
+  // mat-radio-button — NOT with `pointer-events: none`, which would also kill
+  // the explanatory matTooltip hosted on .layer-header.
   &.is-unavailable {
-    opacity: 0.5;
-
     .layer-header {
       cursor: not-allowed;
+    }
+
+    // Scope the fade to the control (a sibling of the badge) so the badge below
+    // is not dimmed along with it.
+    .layer-checkbox,
+    .layer-radio {
+      opacity: 0.5;
+    }
+  }
+
+  .unavailable-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface-variant);
+    background-color: var(--mat-sys-surface-variant);
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
     }
   }
 
