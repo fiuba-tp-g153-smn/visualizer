@@ -51,3 +51,85 @@
   max-width: 100%;
   border-radius: 5px;
 }
+
+/* Diagrams: full width, click to open at natural size. The site is embedded in
+ * an iframe narrower than most of these, so a scaled-down diagram is the
+ * default view and the overlay is the readable one. */
+.md-typeset .diagram {
+  display: block;
+  margin: 30px auto;
+  max-width: 100%;
+  cursor: zoom-in;
+}
+
+.diagram-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(29, 35, 63, 0.9);
+  cursor: zoom-out;
+}
+
+.diagram-overlay img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Links. Material derives `--md-typeset-a-color` from `primary`, which here is
+ * the navy of a panel header — close enough to body text that a link stops
+ * reading as one. Two changes: point links at the app's own blue (the same
+ * #0090d0 the Angular app uses for its links), and underline them so the cue
+ * does not rest on colour alone.
+ *
+ * Note on contrast: #0090d0 is 3.56:1 against white, below the 4.5:1 WCAG AA
+ * asks for body-size text. The underline is what carries the signal for anyone
+ * the colour does not reach, so it is deliberately a little stronger here than
+ * a colour-only scheme would need. Hover darkens rather than lightens, so the
+ * state change also increases legibility. */
+:root {
+  --md-typeset-a-color: #0090d0;
+  --smn-link-hover: #0072a6;
+}
+
+.md-typeset a {
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 144, 208, 0.55);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+  transition: color 0.1s ease, text-decoration-color 0.1s ease;
+}
+
+.md-typeset a:hover,
+.md-typeset a:focus {
+  color: var(--smn-link-hover);
+  text-decoration-color: currentcolor;
+}
+
+/* Keyboard focus needs a visible ring, not just the colour shift above. */
+.md-typeset a:focus-visible {
+  outline: 2px solid var(--smn-link-hover);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Inline code inside a link should look like part of the link, otherwise
+ * `[`make docs`](…)` renders as plain code with an underline under it. */
+.md-typeset a code {
+  color: inherit;
+}
+
+/* The ¶ permalink beside a heading is furniture, not prose. Material already
+ * hides it until hover; it must not pick up the underline treatment. */
+.md-typeset .headerlink {
+  text-decoration: none;
+}
+
+/* Images that happen to be wrapped in a link (the zoomable diagrams are not,
+ * but a future page may) should not sit on an underline. */
+.md-typeset a:has(> img) {
+  text-decoration: none;
+}

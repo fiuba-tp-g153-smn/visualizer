@@ -1,0 +1,48 @@
+...@_style
+
+# Quién escribe y quién lee cada bucket del almacén de objetos.
+# Los prefijos concretos están en la tabla de referencia/almacenamiento.md.
+
+direction: right
+
+tp: tiles-processor {
+  class: servicio
+}
+ds: data-service {
+  class: servicio
+}
+alerts: alerts-service {
+  class: servicio
+}
+
+seaweed: SeaweedFS (S3) {
+  class: almacen
+
+  tiles_data: {
+    label: "tiles-data\ntiles/  cog/  geojson/  grib/"
+    class: almacen
+  }
+  basemap: {
+    label: "basemap-tiles\nbasemap/{provider_id}/{z}/{x}/{y}.png"
+    class: almacen
+  }
+  stations: {
+    label: "weather-stations-data\nweather-stations/snapshots/..."
+    class: almacen
+  }
+  apikeys: {
+    label: "api-keys\nkeys/{sha256}.json"
+    class: almacen
+  }
+  intersection: {
+    label: "intersection-data\n{stem}_T{tolerancia}_{fecha}.geojson"
+    class: almacen
+  }
+}
+
+tp -> seaweed.tiles_data: escribe (RW)
+seaweed.tiles_data -> ds: lee (RO)
+ds -> seaweed.basemap: escribe y lee
+ds -> seaweed.stations: escribe y lee
+ds -> seaweed.apikeys: escribe y lee
+alerts -> seaweed.intersection: escribe y lee

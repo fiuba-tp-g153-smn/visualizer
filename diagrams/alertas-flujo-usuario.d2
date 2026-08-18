@@ -1,0 +1,25 @@
+...@_style
+
+# Lo que hace el pronosticador y lo que hace cada servicio.
+# El job_id se guarda en el borrador: recargar la página reanuda el sondeo
+# en lugar de volver a emitir el aviso.
+
+shape: sequence_diagram
+
+usuario: Pronosticador { class: navegador }
+app: visualizer { class: servicio }
+alerts: alerts-service { class: servicio }
+
+usuario -> app: dibuja el polígono en el mapa
+app -> alerts: "POST /intersect/departments"
+alerts -> app: departamentos afectados
+app -> usuario: previsualización de la zona
+usuario -> app: elige el fenómeno y confirma
+app -> alerts: "POST /alerts"
+alerts -> app: "202 {job_id}, o 503 si la cola está llena"
+app -> app: guarda job_id en el borrador
+app -> alerts: "GET /alerts/jobs/{job_id} cada 2 s (tope 180 s)"
+alerts -> app: "queued -> processing -> done | failed"
+app -> alerts: "GET /alerts/pending cada 10 s con If-None-Match"
+alerts -> app: "200 con la lista, o 304 si nada cambió"
+app -> usuario: aviso listado con sus dos GIF

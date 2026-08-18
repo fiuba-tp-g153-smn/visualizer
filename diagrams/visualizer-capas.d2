@@ -1,0 +1,34 @@
+...@_style
+
+# Del catálogo estático de capas a los objetos Leaflet sobre el mapa.
+# El estado del usuario vive en señales y se persiste en localStorage.
+
+direction: right
+
+catalogo: "LAYER_DEFINITIONS\n(catálogo estático)" { class: externo }
+svc_layers: LayersService { class: servicio }
+control: "LayerControlService\n(visibilidad, opacidad, z-index, reproducción)" { class: servicio }
+storage: "localStorage\nactive-layers" { class: almacen }
+config: "LayerConfigService\n(listados de tilesets)" { class: servicio }
+refresh: "LayerRefreshService\n(sondeo cada 10 s)" { class: servicio }
+playback: PlaybackEngineService { class: servicio }
+sync: "SyncPlaybackService\n(alineación ±5 min)" { class: servicio }
+maplayers: MapLayersService { class: servicio }
+render: "LayerRenderService\n(pools LRU)" { class: servicio }
+leaflet: "Mapa Leaflet" { class: navegador }
+ds: data-service { class: externo }
+ign: "IGN WMS" { class: externo }
+
+catalogo -> svc_layers: árbol de grupos
+svc_layers -> control: definiciones
+control -> storage: persiste el estado
+refresh -> config: revalida
+config -> control: tilesets disponibles
+control -> playback: cuadro actual
+sync -> playback: sesión sincronizada
+sync -> control: timeIndex alineado
+control -> maplayers: capas activas
+maplayers -> render: crear o reutilizar
+render -> leaflet: "L.TileLayer / L.GeoJSON"
+render -> ds: "URLs de tiles y GeoJSON"
+render -> ign: "GetMap (WMS)"

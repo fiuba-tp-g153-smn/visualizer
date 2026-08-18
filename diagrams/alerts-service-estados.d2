@@ -1,0 +1,19 @@
+...@_style
+
+# Estados de un trabajo de generación de ACP. El registro en memoria está
+# acotado a 256 entradas; jobs.sqlite es el respaldo durable de la consulta.
+
+encolado: queued { class: cola }
+procesando: processing { class: cola }
+listo: done { class: almacen }
+fallido: failed { class: externo }
+rechazado: "503 cola llena\n(no se crea el trabajo)" { class: externo }
+
+encolado -> procesando: un worker lo toma
+procesando -> listo: "alert_id persistido en MySQL"
+procesando -> fallido: "timeout (150 s del trabajo)"
+procesando -> fallido: "area_too_large"
+procesando -> fallido: "generation_failed"
+listo -> listo: "fila en jobs.sqlite con los cuatro tiempos"
+fallido -> fallido: "fila en jobs.sqlite con error_code"
+rechazado -> rechazado: "try_submit devolvió None"

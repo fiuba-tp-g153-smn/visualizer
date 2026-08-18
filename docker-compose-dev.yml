@@ -22,7 +22,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "4200:4200"
+      - "4201:4200"
     environment:
       - DATA_SERVICE_BASE_URL=${DATA_SERVICE_BASE_URL}
       - ALERTS_SERVICE_BASE_URL=${ALERTS_SERVICE_BASE_URL}

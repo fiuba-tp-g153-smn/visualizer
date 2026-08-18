@@ -1,0 +1,28 @@
+...@_style
+
+# Generación de un ACP: la API responde 202 enseguida y el trabajo pesado
+# corre en un pool acotado. El visualizer sondea el estado.
+
+shape: sequence_diagram
+
+vis: visualizer { class: navegador }
+api: "POST /alerts" { class: servicio }
+cola: "cola acotada\n(maxsize 16)" { class: cola }
+worker: "worker del pool\n(2 workers)" { class: servicio }
+geo: GeoIntersectionService { class: servicio }
+sub: "subproceso de render\n(semáforo de 2)" { class: servicio }
+mysql: "MySQL taviso_temporal" { class: almacen }
+
+vis -> api: "polígono + phenomenon_code"
+api -> api: "valida vértices y fenómeno"
+api -> cola: try_submit()
+api -> vis: "202 {job_id}, o 503 si la cola está llena"
+cola -> worker: toma el trabajo
+worker -> geo: intersección contra país y departamentos
+geo -> worker: "intersection_ms, filter_ms"
+worker -> sub: "geometrías en WKB Mercator"
+sub -> worker: "aviso_*.gif y avi_gral_*.gif (render_ms)"
+worker -> mysql: "INSERT (solo los nombres de archivo)"
+mysql -> worker: "alert_id (persist_ms)"
+vis -> api: "GET /alerts/jobs/{job_id}"
+api -> vis: "queued | processing | done | failed"

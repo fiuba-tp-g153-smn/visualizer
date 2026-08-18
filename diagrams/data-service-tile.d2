@@ -1,0 +1,32 @@
+...@_style
+
+# Resolución de una petición de tile: Redis primero, el bucket como respaldo.
+# El resultado de un fallo total NO es uniforme: ver la tabla en servicios/data-service.md.
+
+shape: sequence_diagram
+
+vis: visualizer {
+  class: navegador
+}
+api: "data-service\nAPP_ROLE=web" {
+  class: servicio
+}
+estrategia: "estrategia de sincronización\n(full u on_demand)" {
+  class: servicio
+}
+redis: Redis {
+  class: almacen
+}
+s3: "SeaweedFS\ntiles-data" {
+  class: almacen
+}
+
+vis -> api: "GET /products/.../{z}/{x}/{y}.webp"
+api -> estrategia: get_tile()
+estrategia -> redis: consulta la clave del tile
+redis -> estrategia: acierto -> bytes del tile
+estrategia -> s3: fallo -> download_tile(key)
+s3 -> estrategia: bytes del tile
+estrategia -> redis: recalienta la caché en segundo plano
+estrategia -> api: bytes o None
+api -> vis: "200 image/webp, o 404 / tile transparente"

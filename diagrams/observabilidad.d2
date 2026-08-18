@@ -1,0 +1,34 @@
+...@_style
+
+# Tres APIs de métricas independientes, un solo tablero.
+# Las tres exponen una ruta de resumen con nombre parecido en hosts distintos.
+
+direction: right
+
+panel: "Panel de estado\n/status" { class: navegador }
+
+tp_api: "tiles-processor\nmetrics-api :6020\n/api/summary, /api/live" { class: servicio }
+ds_api: "data-service\n/metrics/*" { class: servicio }
+al_api: "alerts-service\n/metrics/*" { class: servicio }
+
+tp_db: "metrics.db\njob_metrics" { class: almacen }
+tp_prog: "progress_tracker.db\nprocessed_images" { class: almacen }
+ds_db: "SQLite\nsync_cycles, redis_*_samples" { class: almacen }
+al_db: "metrics.sqlite\nprocessor_samples" { class: almacen }
+al_jobs: "jobs.sqlite\nalert_jobs" { class: almacen }
+rabbit: RabbitMQ { class: cola }
+
+externo: "Monitoreo de infraestructura\n(Prometheus, Grafana, Uptime Kuma)" { class: externo }
+
+panel -> tp_api: "pestaña Procesamiento"
+panel -> ds_api: "pestañas Caché y Mapas base"
+panel -> al_api: "pestaña Alertas"
+tp_api -> tp_db: lee
+tp_api -> tp_prog: lee en curso
+tp_api -> rabbit: profundidad de colas
+ds_api -> ds_db: lee
+al_api -> al_db: lee
+al_api -> al_jobs: lee
+externo -> tp_api: chequeos de disponibilidad
+externo -> ds_api: chequeos de disponibilidad
+externo -> al_api: chequeos de disponibilidad

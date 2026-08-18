@@ -1,0 +1,40 @@
+...@_style
+
+# Recorrido de una unidad de trabajo, del descubrimiento a la subida.
+# Camino feliz; las salidas por error están en tiles-processor-estados.d2.
+
+shape: sequence_diagram
+
+prod: producer {
+  class: servicio
+}
+tracker: progress_tracker.db {
+  class: almacen
+}
+cola: RabbitMQ {
+  class: cola
+}
+worker: worker {
+  class: servicio
+}
+sub: subproceso\n(worker.subprocess_processor) {
+  class: servicio
+}
+s3: SeaweedFS {
+  class: almacen
+}
+
+prod -> s3: lista tilesets ya generados
+prod -> tracker: cleanup_stale + get_in_progress_images
+prod -> prod: data_source.discover_images()
+prod -> tracker: mark_in_progress
+prod -> cola: publish (routing key = nombre de cola)
+worker -> cola: poll_one (basic_get, sin auto_ack)
+worker -> tracker: mark_processing
+worker -> worker: download() en el proceso principal
+worker -> sub: spawn con el work unit y el archivo
+sub -> sub: georreferenciación, ciencia, COG, tiles
+sub -> s3: upload_directory + upload_file
+sub -> worker: exit code + stage timings
+worker -> tracker: mark_completed
+worker -> cola: ack

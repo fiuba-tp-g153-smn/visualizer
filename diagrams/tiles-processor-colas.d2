@@ -1,0 +1,58 @@
+...@_style
+
+# Ruteo de unidades de trabajo entre las tres colas y los dos tipos de worker.
+# El detalle del ciclo de vida de una unidad vive en tiles-processor-estados.d2.
+
+direction: right
+
+producer: producer\n(APScheduler, */5 * * * *) {
+  class: servicio
+}
+
+router: queue_router {
+  class: servicio
+}
+
+q_main: tiles_work_queue {
+  class: cola
+}
+q_radar: tiles_radar_light_queue {
+  class: cola
+}
+q_wrf: tiles_wrf_light_queue {
+  class: cola
+}
+
+dlx: tiles_dlx\n(direct, durable) {
+  class: cola
+}
+dlq: tiles_dead_letter_queue {
+  class: cola
+}
+
+worker: worker\nWORKER_TYPE=normal {
+  class: servicio
+}
+worker_light: worker-light\nWORKER_TYPE=light {
+  class: servicio
+}
+
+s3: SeaweedFS\ntiles-data {
+  class: almacen
+}
+
+producer -> router: unidad de trabajo
+router -> q_radar: radar_*
+router -> q_wrf: wrf_<producto> liviano
+router -> q_main: resto
+q_main -> worker: prioridad estricta
+q_radar -> worker: round robin
+q_wrf -> worker: round robin
+q_radar -> worker_light: round robin
+q_wrf -> worker_light: round robin
+q_main -> dlx: x-dead-letter-exchange
+q_radar -> dlx: x-dead-letter-exchange
+q_wrf -> dlx: x-dead-letter-exchange
+dlx -> dlq: routing key
+worker -> s3: sube productos
+worker_light -> s3: sube productos

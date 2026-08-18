@@ -1,0 +1,25 @@
+# Shared style for every MapaSMN architecture diagram.
+#
+# The colours are the app's own Angular Material theme — the same ones
+# docs/stylesheets/embed.css sets. The site has a single light palette and no
+# dark-mode toggle (it is embedded in an iframe inside an Angular app that has
+# no dark theme), so there is deliberately no dark variant here.
+#
+# Import from every source with `...@_style` on the first line.
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 0
+    pad: 20
+    sketch: false
+  }
+}
+
+classes: {
+  servicio:  { style: { fill: "#242c4f"; stroke: "#1d233f"; font-color: "#ffffff"; border-radius: 6 } }
+  externo:   { style: { fill: "#eef1f6"; stroke: "#242c4f"; stroke-dash: 3; border-radius: 6 } }
+  almacen:   { style: { fill: "#0090d0"; stroke: "#0072a6"; font-color: "#ffffff"; border-radius: 6 } }
+  cola:      { style: { fill: "#f5a623"; stroke: "#c4831b"; font-color: "#1d233f"; border-radius: 6 } }
+  navegador: { style: { fill: "#ffffff"; stroke: "#242c4f"; border-radius: 6 } }
+}

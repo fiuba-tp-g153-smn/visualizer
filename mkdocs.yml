@@ -11,16 +11,40 @@ site_dir: public/docs-site
 # same output works at whatever path it is mounted on.
 use_directory_urls: true
 
-# Illustration for the repository README, not part of the site.
 exclude_docs: |
+  # Illustration for the repository README, not part of the site.
   imgs/general_data_flow.png
+  # Research notes from the documentation subagents; never shipped.
+  tmp-docs-agents/
 
+# Explicit and exhaustive: a page missing from nav is built but unreachable,
+# and --strict is what turns that from a silent omission into a build error.
 nav:
   - Inicio: index.md
-  - Uso General: uso-general.md
-  - Mapa Base: mapa-base.md
-  - Productos Meteorológicos: productos-meteorologicos.md
-  - Arquitectura: arquitectura.md
+  - Guía de uso:
+      - Uso general: uso-general.md
+      - Mapa base: mapa-base.md
+      - Productos meteorológicos: productos-meteorologicos.md
+      - Avisos a corto plazo: alertas.md
+      - Panel de estado: panel-de-estado.md
+  - Arquitectura:
+      - Visión general del sistema: arquitectura/index.md
+      - Flujo de datos: arquitectura/flujo-de-datos.md
+      - Despliegue e infraestructura: arquitectura/despliegue.md
+      - Observabilidad: arquitectura/observabilidad.md
+  - Servicios:
+      - Tiles Processor: servicios/tiles-processor.md
+      - Data Service: servicios/data-service.md
+      - Alerts Service: servicios/alerts-service.md
+      - Visualizer: servicios/visualizer.md
+  - Referencia:
+      - API HTTP: referencia/api.md
+      - Configuración y variables: referencia/configuracion.md
+      - Almacenamiento y colas: referencia/almacenamiento.md
+  - Desarrollo:
+      - Puesta en marcha local: desarrollo/entorno-local.md
+      - Pruebas y calidad: desarrollo/pruebas.md
+      - CI/CD y despliegue: desarrollo/ci-cd.md
 
 theme:
   name: material
@@ -73,6 +97,9 @@ extra_javascript:
   - javascripts/lazy-video.js
   - javascripts/prefetch.js
   - javascripts/nav-progress.js
+  # Click-to-zoom for the architecture diagrams, which are wider than the
+  # iframe the site is embedded in.
+  - javascripts/diagram-zoom.js
 
 extra:
   generator: false

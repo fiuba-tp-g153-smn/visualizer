@@ -1,0 +1,26 @@
+...@_style
+
+# Ciclo de vida de una unidad de trabajo: la fila en processed_images más el
+# destino del mensaje en RabbitMQ. Los reintentos son republicaciones propias,
+# no redeliveries de AMQP.
+
+nuevo: "Sin registrar" { class: navegador }
+in_progress: IN_PROGRESS { class: cola }
+processing: PROCESSING { class: cola }
+completado: "Fila borrada\n(mark_completed)" { class: almacen }
+reintento: "Reintento\nretry_count + 1" { class: cola }
+dlq: tiles_dead_letter_queue { class: cola }
+liberado: "Fila liberada\n(release_progress)" { class: externo }
+reclamado: "Recuperada por TTL" { class: externo }
+
+nuevo -> in_progress: el producer publica
+in_progress -> processing: el worker toma el mensaje
+processing -> completado: éxito, ack
+processing -> reintento: error y retry_count < max_retries
+reintento -> processing: se vuelve a consumir
+processing -> dlq: reintentos agotados (4 intentos)
+processing -> liberado: ForecastNotAvailable / TransientDownload
+liberado -> nuevo: el producer lo vuelve a descubrir
+processing -> reclamado: TTL vencido (JOB_TTL_MINUTES)
+in_progress -> reclamado: TTL vencido y las tres colas en cero
+reclamado -> nuevo: vuelve a estar disponible

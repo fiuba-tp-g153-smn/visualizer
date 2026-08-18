@@ -1,0 +1,45 @@
+...@_style
+
+# Arquitectura hexagonal: cada puerto tiene exactamente un adaptador.
+# Los servicios no tienen puerto propio; se les inyectan los puertos.
+
+direction: right
+
+nucleo: "Núcleo (servicios de dominio)" {
+  class: servicio
+  interseccion: GeoIntersectionService
+  generacion: AlertGenerationService
+  cola: AlertJobProcessor
+  refresco: LayerRefreshService
+}
+
+puertos: Puertos y adaptadores {
+  class: externo
+  geo_repo: "IGeoLayerRepository\nFileSystemGeoLayerRepository"
+  geo_proc: "IGeoLayerProcessor\nGeoLayerProcessor"
+  storage: "IObjectStorage\nS3ObjectStorage"
+  mysql: "IMySQLRepository\nMySQLAlertsRepository"
+  taviso: "ITavisoReadRepository\nMySQLTavisoReadRepository"
+  jobs: "IJobStore\nSqliteJobStore"
+}
+
+disco: "GeoJSON pre-simplificado\nen data_dir" { class: almacen }
+ign: "IGN (WFS)" { class: externo }
+s3: "SeaweedFS\nintersection-data" { class: almacen }
+db: "MySQL aviso_gempak" { class: almacen }
+sqlite: "jobs.sqlite" { class: almacen }
+render: "subproceso de render\n(2 GIF)" { class: servicio }
+
+nucleo.interseccion -> puertos.geo_repo
+nucleo.generacion -> puertos.mysql
+nucleo.generacion -> render: WKB proyectado
+nucleo.cola -> puertos.jobs
+nucleo.refresco -> puertos.geo_proc
+nucleo.refresco -> puertos.storage
+puertos.geo_repo -> disco: lee y cachea
+puertos.geo_proc -> ign: descarga
+puertos.geo_proc -> disco: simplifica
+puertos.storage -> s3
+puertos.mysql -> db
+puertos.taviso -> db
+puertos.jobs -> sqlite

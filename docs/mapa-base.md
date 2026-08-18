@@ -1,34 +1,60 @@
-# Mapa Base
+---
+title: Mapa base
+---
 
-## Tabla de Contenidos
+# Mapa base
 
-1. [Proveedores Disponibles](#proveedores-disponibles)
-2. [Selector de Mapas Base](#selector-de-mapas-base)
-3. [Navegación en el Mapa](#navegacion-en-el-mapa)
+El mapa base es el fondo cartográfico sobre el que se dibujan las capas meteorológicas y de
+referencia. Cambiarlo no afecta a las capas superpuestas: sólo cambia el contexto geográfico.
 
-Los mapas base proporcionan el contexto geográfico.
+## Cómo se cambia
 
-## Proveedores Disponibles
+Está en el panel **Explorador**, pestaña **Mapa base**. Se muestra una grilla de tarjetas, cada una
+con una vista previa del proveedor y su atribución. Por defecto se usa Argenmap, del IGN.
 
-| ID                      | Proveedor                      | Tipo | URL Template / Notas                                                                                                      |
-| :---------------------- | :----------------------------- | :--- | :------------------------------------------------------------------------------------------------------------------------ |
-| **argenmap**            | IGN Argenmap                   | TMS  | `.../tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{-y}.png` <br /> _Nota: Utiliza esquema TMS con eje Y invertido._ |
-| **argenmapGris**        | IGN Argenmap gris              | TMS  | `.../tms/1.0.0/mapabase_gris@EPSG%3A3857@png/{z}/{x}/{-y}.png` <br /> _Nota: Utiliza esquema TMS con eje Y invertido._    |
-| **argenmapOscuro**      | IGN Argenmap oscuro            | TMS  | `.../tms/1.0.0/argenmap_oscuro@EPSG%3A3857@png/{z}/{x}/{-y}.png` <br /> _Nota: Utiliza esquema TMS con eje Y invertido._  |
-| **argenmapTopografico** | IGN Argenmap topográfico       | TMS  | `.../tms/1.0.0/mapabase_topo@EPSG%3A3857@png/{z}/{x}/{-y}.png` <br /> _Nota: Utiliza esquema TMS con eje Y invertido._    |
-| **satellite**           | ESRI World Imagery             | XYZ  | Imágenes satelitales de alta resolución (ArcGIS).                                                                         |
-| **topographic**         | ESRI World Physical Map        | XYZ  | Mapa topográfico físico.                                                                                                  |
-| **googleSatellite**     | Google Satellite               | XYZ  | Imágenes satelitales de Google Maps.                                                                                      |
-| **oceanBase**           | ESRI Ocean World Ocean Base    | XYZ  | Mapa base especializado en fondos oceánicos.                                                                              |
+## Proveedores disponibles
 
-## Selector de Mapas Base
+| Identificador | Nombre en la interfaz | Origen |
+|---|---|---|
+| `argenmap` | Argenmap | IGN |
+| `argenmapGris` | Argenmap gris | IGN |
+| `argenmapOscuro` | Argenmap oscuro | IGN |
+| `argenmapTopografico` | Argenmap topográfico | IGN |
+| `satellite` | Imágenes satelitales Esri | Esri |
+| `topographic` | Mapa topográfico Esri | Esri |
+| `googleSatellite` | Imágenes satelitales Google | Google |
+| `oceanBase` | Mapa Esri Fondo Oceánico | Esri |
 
-Permite conmutar el fondo cartográfico sin afectar las capas operativas superpuestas.
+!!! note "Dos de ellos tienen zoom limitado"
+    **Imágenes satelitales Esri** arranca en el nivel 3, y **Mapa topográfico Esri** no tiene
+    teselas propias más allá del nivel 8: por encima de eso el visor amplía la última disponible en
+    lugar de traer más detalle.
 
-- **Recomendación para Referencia**: Utilice _Argenmap_ cuando necesite información geográfica detallada.
-- **Recomendación para Meteorología**: Utilice _Satellite_ o _Google Satellite_ para resaltar datos de nubes o precipitación con colores brillantes.
+## Cuál conviene
 
-## Navegación en el Mapa { #navegacion-en-el-mapa }
+- Para **referencia geográfica**, cualquiera de los Argenmap: son los que traen toponimia y límites
+  administrativos argentinos con más detalle.
+- Para **realzar productos meteorológicos**, las imágenes satelitales: los colores de nubosidad y
+  precipitación contrastan mejor sobre un fondo oscuro.
+- **Argenmap gris** y **Argenmap oscuro** son útiles cuando la capa de datos ya tiene mucha
+  saturación y el fondo compite con ella.
 
-- **Zoom**: Rueda del mouse ó controles de la UI (+/-).
-- **Desplazamiento**: Arrastrar mapa (Click izquierdo + Drag) o usar las flechas del teclado.
+## Detalle técnico
+
+Los cuatro mapas del IGN se sirven con esquema TMS, cuyo eje Y está invertido respecto del esquema
+XYZ habitual. En la configuración de la aplicación eso **no** se expresa con un marcador `{-y}` en la
+plantilla, sino con una bandera `isTms` que hace que Leaflet aplique la conversión.
+
+!!! warning "Copiar la plantilla sin la bandera invierte los tiles"
+    Las plantillas guardadas terminan en `{z}/{x}/{y}.png`. Usarlas tal cual en un cliente Leaflet
+    sin activar la opción `tms` produce un mapa con las filas dadas vuelta.
+
+## Respaldo
+
+`data-service` mantiene una copia de los tiles de los proveedores en un bucket propio, de modo que el
+sistema tolere una caída del proveedor original. El estado de ese respaldo —qué proveedor va por
+dónde, tasa de error y cortacircuitos— se ve en la pestaña **Mapas base** del
+[panel de estado](panel-de-estado.md).
+
+Si `data-service` no está disponible al abrir la aplicación, el selector cae a una tabla estática de
+proveedores en lugar de quedarse vacío.

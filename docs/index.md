@@ -2,43 +2,42 @@
 title: Inicio
 ---
 
-# Bienvenido al Visualizador del MapaSMN
+# Documentación de MapaSMN
 
-Esta es una plataforma de visualización geoespacial diseñada para la integración de datos meteorológicos en tiempo real acorde a la producción de imágenes fuente.
+MapaSMN es un sistema de visualización y aviso por condiciones temporales extremas. Integra datos de
+satélite, radar meteorológico y modelos numéricos sobre un mapa interactivo, y le da al pronosticador
+las herramientas para analizarlos y para emitir un aviso a corto plazo.
 
-Esta documentación te guiará a través de las funcionalidades, la configuración y el uso avanzado de la herramienta.
+Esta documentación tiene dos mitades: una **guía de uso** para quien opera el visualizador, y una
+**referencia técnica** para quien desarrolla o mantiene el sistema.
 
-## 📖 Explorar la Documentación
+## Guía de uso
 
-### Guía de Uso
+- [Uso general](uso-general.md) — la interfaz, las capas, la animación y las herramientas.
+- [Mapa base](mapa-base.md) — los ocho fondos cartográficos disponibles y cuál conviene.
+- [Productos meteorológicos](productos-meteorologicos.md) — qué representa cada capa y para qué sirve.
+- [Avisos a corto plazo](alertas.md) — dibujar un área, verificar departamentos y emitir un ACP.
+- [Panel de estado](panel-de-estado.md) — cómo leer los tableros de salud del sistema.
 
-Consulta nuestra guía detallada para aprender a utilizar la interfaz.
+## Qué ofrece el visualizador
 
-- **[Uso General](./uso-general.md)**: Información general sobre el uso de la interfaz.
-- **[Mapa Base](./mapa-base.md)**: Información sobre los diferentes mapas base disponibles y navegación general del mapa.
-- **[Productos Meteorológicos](./productos-meteorologicos.md)**: Aprende a activar, desactivar y organizar la información en el mapa.
+- **Satélite GOES-19**: tres canales del ABI y los tres productos de descargas eléctricas del GLM.
+- **Radar SINARAME**: las variables polarimétricas de la red, en tres elevaciones.
+- **Modelos numéricos**: ECMWF, WRF en su configuración regional argentina, y GFS.
+- **Estaciones de superficie**: las observaciones del SMN, con histórico por estación.
+- **Capas de referencia del IGN**: límites, hidrografía, infraestructura y más, por WMS.
+- **Animación** de cualquier capa temporal, con reproducción sincronizada entre capas.
+- **Consulta puntual** del valor numérico real de una variable en un punto del mapa.
+- **Avisos a corto plazo**: trazado de polígonos, intersección con departamentos y generación de las
+  imágenes oficiales.
 
-<video preload="none" loop muted playsinline width="100%"
-       poster="videos/ejemplo-de-uso-poster.webp" style="max-height: 600px">
-  <source src="videos/ejemplo-de-uso.webm" type="video/webm" />
-  Tu navegador no soporta este video.
-</video>
+## Referencia técnica
 
-## Funcionalidades Principales
-
-Visualizer integra múltiples fuentes de datos para ofrecer un contexto geográfico preciso:
-
-- **Mapas Base**: Soporte para tiles del mapa base con proveedores de tiles incluyendo Argenmap, capas satelitales de ESRI y Google.
-- **Capas Meteorológicas**: Visualización de imágenes del satélite GOES-19.
-- **Datos del IGN**: Integración con servicios WMS del IGN (Instituto Geográfico Nacional) para visualizar límites, hidrografía y rutas de Argentina.
-- **Interacción Avanzada**: Control de opacidad y orden de capas (Z-Index) para análisis personalizados.
-
-### Información Técnica
-
-Para desarrolladores y especialistas GIS (Geographic Information System):
-
-- [Arquitectura del Sistema](./arquitectura.md)
+- [Arquitectura](arquitectura/index.md) — los cuatro servicios y cómo se comunican.
+- [Servicios](servicios/tiles-processor.md) — cada uno por dentro.
+- [API HTTP](referencia/api.md) — todas las rutas, sus parámetros y sus errores.
+- [Puesta en marcha local](desarrollo/entorno-local.md) — cómo levantarlo.
 
 ---
 
-> **Nota**: Para reportar problemas o sugerir mejoras, por favor contacta al equipo de desarrollo.
+Para reportar un problema o sugerir una mejora, contactá al equipo de desarrollo.

@@ -1,0 +1,69 @@
+...@_style
+
+# Contexto del sistema MapaSMN: los cuatro servicios y sus fronteras externas.
+# Altitud alta a propósito: el detalle del pipeline vive en tiles-processor-flujo.d2.
+
+direction: right
+
+fuentes: Fuentes de datos externas {
+  class: externo
+  noaa: NOAA / GOES-19\n(ABI, GLM)
+  sinarame: SINARAME\n(radar H5)
+  modelos: ECMWF / GFS / WRF-ARG4K
+  smn_api: API del SMN\n(estaciones)
+  ign: IGN\n(WMS, WFS)
+}
+
+tp: tiles-processor {
+  class: servicio
+  tooltip: Producer, workers y metrics-api
+}
+
+cola: RabbitMQ\ntiles_work_queue {
+  class: cola
+}
+
+s3: SeaweedFS (S3)\ntiles-data {
+  class: almacen
+}
+
+ds: data-service {
+  class: servicio
+  tooltip: APP_ROLE=web | worker
+}
+
+redis: Redis {
+  class: almacen
+}
+
+alerts: alerts-service {
+  class: servicio
+}
+
+mysql: MySQL\naviso_gempak {
+  class: almacen
+}
+
+vis: visualizer\n(Angular + nginx) {
+  class: servicio
+}
+
+navegador: Navegador\ndel pronosticador {
+  class: navegador
+}
+
+fuentes.noaa -> tp: descarga
+fuentes.sinarame -> tp: descarga
+fuentes.modelos -> tp: descarga
+tp -> cola: encola unidades de trabajo
+cola -> tp: consume
+tp -> s3: tiles, COG, GeoJSON
+s3 -> ds: sincroniza
+ds -> redis: cachea
+fuentes.smn_api -> ds: estaciones
+vis -> ds: HTTP /products, /basemap
+vis -> alerts: HTTP /intersect, /alerts
+fuentes.ign -> vis: capas WMS
+fuentes.ign -> alerts: límites (WFS)
+alerts -> mysql: persiste el aviso
+navegador -> vis: usa la aplicación

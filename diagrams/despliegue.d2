@@ -1,0 +1,46 @@
+...@_style
+
+# Cadena de entrega: del push a main hasta los contenedores en el VPS.
+# Idéntica en los cuatro repositorios; sólo cambia el workflow que la habilita.
+
+direction: right
+
+dev: Desarrollador {
+  class: navegador
+}
+
+gh: GitHub Actions {
+  class: externo
+  ci: "ci.yml / test.yml\ngitleaks + Trivy + pruebas"
+  deploy: "deploy.yml\n(push a main)"
+}
+
+coolify: "Coolify\n(webhook de despliegue)" {
+  class: externo
+}
+
+vps: "VPS Hetzner + Coolify\n(Docker Compose)" {
+  class: servicio
+
+  tp_stack: "tiles-processor\nproducer + 2 workers + 3 light + metrics-api"
+  ds_stack: "data-service\napi (web) + sync (worker) + redis"
+  al_stack: "alerts-service\napi + mysql"
+  vis_stack: "visualizer\nnginx"
+  infra: "rabbitmq + seaweedfs"
+}
+
+caddy: "Caddy (proxy inverso)\n*.mapasmn.com" {
+  class: externo
+}
+
+dev -> gh.ci: push / pull request
+dev -> gh.deploy: merge a main
+gh.ci -> gh.deploy: needs (verify)
+gh.deploy -> coolify: deploy hook (bearer)
+coolify -> vps: docker compose up
+vps.tp_stack -> vps.infra: publica y procesa
+vps.ds_stack -> vps.infra: lee de S3
+vps.al_stack -> vps.infra: respalda capas
+caddy -> vps.vis_stack: mapasmn.com
+caddy -> vps.ds_stack: data.mapasmn.com
+caddy -> vps.al_stack: alerts.mapasmn.com
