@@ -54,6 +54,18 @@ export class DataServiceHealthService {
     void this.probeOnce();
   }
 
+  /**
+   * Force an immediate `/health` probe — used when the user explicitly asks to
+   * recheck, so they don't wait for the next poll tick. Resolves once the probe
+   * settles (which flips `isAvailable()` and, on recovery, dismisses the banner).
+   */
+  async checkNow(): Promise<void> {
+    if (this.probeInFlight) {
+      return;
+    }
+    await this.probeOnce();
+  }
+
   private async probeOnce(): Promise<void> {
     this.probeInFlight = true;
     try {

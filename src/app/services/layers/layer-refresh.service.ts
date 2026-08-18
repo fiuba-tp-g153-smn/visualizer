@@ -12,6 +12,7 @@ import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { LayerControlService } from './layer-control.service';
 import { WeatherStationsPrefetchService } from './weather-stations-prefetch.service';
+import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { NotificationService } from '../notifications/notification.service';
 import {
   WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
@@ -106,6 +107,7 @@ export class LayerRefreshService {
   private readonly notificationService = inject(NotificationService);
   private readonly layerControlService = inject(LayerControlService);
   private readonly weatherStationsPrefetch = inject(WeatherStationsPrefetchService);
+  private readonly healthService = inject(DataServiceHealthService);
 
   private readonly AUTO_REFRESH_INTERVAL_MS = 10_000;
   private readonly refreshTimers = new Map<string, number>();
@@ -150,6 +152,9 @@ export class LayerRefreshService {
     effect(() => {
       const activeLayers = this.layerControlService.activeLayers();
       const activeLayerIds = new Set(activeLayers.map((item) => item.layer.id));
+      // Tracked so this effect re-runs (and fetches the still-missing configs)
+      // once the data-service recovers.
+      const serviceAvailable = this.healthService.isAvailable();
 
       // Fetch config and start auto-refresh for newly active TILE layers
       for (const { layer } of activeLayers) {
@@ -167,6 +172,11 @@ export class LayerRefreshService {
 
         // If layer doesn't have config yet, fetch it first
         if (!this.layerConfigService.hasConfig(layer.id)) {
+          // Don't fetch (or keep retrying) while the data-service is known down;
+          // the health tracker polls for recovery and this effect re-runs then.
+          if (!serviceAvailable) {
+            continue;
+          }
           this.markLoading(layer.id);
           this.layerConfigService
             .fetchLayerConfig(layer)
@@ -176,6 +186,7 @@ export class LayerRefreshService {
                 this.startAutoRefresh(layer.id);
               },
               error: (err) => {
+                this.reportIfServiceUnreachable(err);
                 console.error(`Failed to fetch config for ${layer.id}:`, err);
               },
             });
@@ -348,6 +359,12 @@ export class LayerRefreshService {
    * Silently handles errors and only shows notifications if changes are detected.
    */
   private performAutoRefresh(layerId: string): void {
+    // Skip the 10s poll entirely while the data-service is down — the health
+    // tracker owns recovery, and hammering it just floods the console.
+    if (!this.healthService.isAvailable()) {
+      return;
+    }
+
     const layer = this.layersService.getLayerById(layerId);
     if (!layer) {
       return;
@@ -361,9 +378,22 @@ export class LayerRefreshService {
         this.compareAndNotify(layerId, beforeConfig, afterConfig, false);
       },
       error: (err) => {
+        this.reportIfServiceUnreachable(err);
         console.error(`Auto-refresh failed for ${layerId}:`, err);
       },
     });
+  }
+
+  /**
+   * A network-level failure (connection refused / timeout, HTTP status 0) means
+   * the data-service itself is unreachable — hand off to the health tracker so
+   * it shows the single banner and polls for recovery. A real HTTP status is a
+   * per-request problem, not an outage, so it is left for the caller to log.
+   */
+  private reportIfServiceUnreachable(err: unknown): void {
+    if (err instanceof HttpErrorResponse && err.status === 0) {
+      this.healthService.reportFailure();
+    }
   }
 
   private async fetchWeatherStationsSnapshot(): Promise<WeatherStationSnapshot> {
