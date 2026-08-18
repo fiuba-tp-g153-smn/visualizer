@@ -7,7 +7,7 @@
   @if (mode === LayerItemMode.AVAILABLE) {
     <div
       class="layer-header"
-      [matTooltip]="isUnavailable() ? 'Sin datos disponibles' : ''"
+      [matTooltip]="isUnavailable() ? unavailableTooltip() : ''"
     >
       @if (selectionMode === LayerSelectionMode.SINGLE) {
         <mat-radio-button

@@ -310,14 +310,21 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   /**
-   * True when this product has been probed/loaded and found to have no data,
-   * AND it isn't already active. Drives the greyed-out, unclickable row. Active
-   * layers are never blocked here — the user must still be able to deactivate a
-   * layer that went empty mid-session, and its in-row "no periods" message
+   * True when this product can't be used — probed-empty or the data-service is
+   * down — AND it isn't already active. Drives the greyed-out, unclickable row.
+   * Active layers are never blocked here — the user must still be able to
+   * deactivate a layer that went empty mid-session, and its in-row message
    * already explains the state.
    */
   readonly isUnavailable = computed(
-    () => this.availabilityService.state(this.layer) === 'empty' && !this.isActive(),
+    () => this.availabilityService.isUnavailable(this.layer) && !this.isActive(),
+  );
+
+  /** Tooltip shown on a greyed row, reflecting *why* it's unavailable. */
+  readonly unavailableTooltip = computed(() =>
+    this.availabilityService.state(this.layer) === 'unreachable'
+      ? 'Servicio no disponible'
+      : 'Sin datos disponibles',
   );
 
   hasNoElevationsSelected = computed(() => {

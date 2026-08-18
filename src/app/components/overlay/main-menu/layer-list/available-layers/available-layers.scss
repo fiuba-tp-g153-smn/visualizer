@@ -66,6 +66,13 @@
       flex: 1;
     }
 
+    // Every layer inside is empty: dim only the title (the rows within are
+    // already greyed individually). The header stays expandable so the user
+    // can still open it and see why.
+    &.header-unavailable .mat-expansion-panel-header-title {
+      opacity: 0.5;
+    }
+
     .mat-expansion-panel-header-description {
       display: flex;
       align-items: center;
@@ -101,6 +108,21 @@
     height: 20px;
     color: var(--mat-sys-on-surface-variant);
     flex-shrink: 0;
+  }
+
+  // Per-subgroup availability recheck. Lives in the header description so it
+  // stays at full opacity even when the title is dimmed as unavailable.
+  .recheck-btn {
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+
+    app-loading-spinner {
+      margin: 0 auto;
+    }
   }
 }
 
