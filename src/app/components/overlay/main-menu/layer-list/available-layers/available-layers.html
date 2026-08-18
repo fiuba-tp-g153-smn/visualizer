@@ -47,6 +47,9 @@
                   }}</span>
                 </mat-panel-title>
                 <mat-panel-description>
+                  @if (getActiveLayersCountInSubgroup(subgroup) > 0 && !subPanel.expanded) {
+                    <span class="active-dot"></span>
+                  }
                   @if (subgroupHasUnavailableLayer(subgroup)) {
                     <button
                       mat-icon-button
@@ -65,9 +68,6 @@
                         <mat-icon>refresh</mat-icon>
                       }
                     </button>
-                  }
-                  @if (getActiveLayersCountInSubgroup(subgroup) > 0 && !subPanel.expanded) {
-                    <span class="active-dot"></span>
                   }
                 </mat-panel-description>
               </mat-expansion-panel-header>
