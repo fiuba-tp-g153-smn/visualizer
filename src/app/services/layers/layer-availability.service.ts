@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import {
   EcmwfTpTileLayerConfig,
@@ -10,15 +11,20 @@ import {
 import { LayerConfigService } from './layer-config.service';
 import { LayerRefreshService } from './layer-refresh.service';
 import { LayersService } from './layers.service';
+import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { WeatherStationsApiKeyService } from '../weather-stations/weather-stations-api-key.service';
 
 /**
- * Per-layer availability, from the point of view of "does this product have any
- * data to show". Kept deliberately tri-state so that `loading`/`unknown` never
- * collapse into `empty`: only a product we have actually probed and found to
- * expose zero periods reports `empty`.
+ * Per-layer availability, from the point of view of "can the user use this
+ * product right now". Kept deliberately multi-state so that `loading`/`unknown`
+ * never collapse into a greyed-out state:
+ *  - `empty`       — probed, and the backend reports zero periods.
+ *  - `unreachable` — the data-service itself is down, so nothing can load.
+ *  - `loading`/`unknown` — not yet known; the row stays interactive.
+ *
+ * Both `empty` and `unreachable` grey out the row (see {@link isUnavailable}).
  */
-export type Availability = 'loading' | 'available' | 'empty' | 'unknown';
+export type Availability = 'loading' | 'available' | 'empty' | 'unreachable' | 'unknown';
 
 /** TILE categories whose availability we can probe from `/products/{id}`. */
 const PROBEABLE_TILE_CATEGORIES: ReadonlySet<LayerCategory> = new Set([
@@ -53,6 +59,7 @@ export class LayerAvailabilityService {
   private readonly configService = inject(LayerConfigService);
   private readonly refreshService = inject(LayerRefreshService);
   private readonly layersService = inject(LayersService);
+  private readonly healthService = inject(DataServiceHealthService);
   private readonly apiKeyService = inject(WeatherStationsApiKeyService);
 
   /** Eager-probe results, keyed by layer id. Live-config layers bypass this. */
@@ -73,10 +80,17 @@ export class LayerAvailabilityService {
       return 'available';
     }
 
-    // A live config (active layer) is the freshest truth; prefer it over the
-    // eager probe so we never grey a product that has just loaded data.
+    // A live config (a product we already loaded) is the freshest truth and
+    // stays usable even mid-outage; prefer it over health/probe state.
     if (this.configService.hasConfig(layer.id)) {
       return this.tileConfigHasData(layer) ? 'available' : 'empty';
+    }
+
+    // Data-service confirmed down: nothing can load, so a product we never
+    // managed to fetch is unreachable (greyed). Products that already loaded
+    // are handled above and stay available.
+    if (!this.healthService.isAvailable()) {
+      return 'unreachable';
     }
 
     if (this.refreshService.loadingLayerIds().has(layer.id)) {
@@ -86,9 +100,47 @@ export class LayerAvailabilityService {
     return this.probeStatesSignal().get(layer.id) ?? 'unknown';
   }
 
-  /** True only when the product has been probed/loaded and found to have zero data. */
+  /** True when the product is greyed out — probed-empty or the data-service is down. */
   isUnavailable(layer: Layer): boolean {
-    return this.state(layer) === 'empty';
+    const state = this.state(layer);
+    return state === 'empty' || state === 'unreachable';
+  }
+
+  /**
+   * Re-check a single product's availability on demand (a user clicked its
+   * recheck button) instead of waiting for the next re-prime tick.
+   *
+   * If the whole data-service is down, this first forces an immediate /health
+   * probe — the recheck then really means "is it back yet?", and on recovery
+   * every greyed row un-greys. If the service is up, it re-probes just this
+   * product so a newly-published (or newly-emptied) one updates right away.
+   */
+  async recheck(layer: Layer): Promise<void> {
+    await this.recheckMany([layer]);
+  }
+
+  /**
+   * Re-check a batch of products at once (a user clicked a subgroup's recheck
+   * button). Performs the "is the service back?" health probe a single time,
+   * then re-probes each still-unloaded data-service product in parallel.
+   */
+  async recheckMany(layers: readonly Layer[]): Promise<void> {
+    if (!this.healthService.isAvailable()) {
+      await this.healthService.checkNow();
+      if (!this.healthService.isAvailable()) {
+        return; // still down — the rows stay 'unreachable'
+      }
+    }
+    // Products served by the data-service that we haven't loaded yet: re-probe.
+    // (Live-config products and weather stations reflect their own state and
+    // recover from the health check above alone.)
+    const toProbe = layers.filter(
+      (layer) =>
+        layer.type === LayerType.TILE &&
+        PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
+        !this.configService.hasConfig(layer.id),
+    );
+    await this.runThrottled(toProbe, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
   }
 
   /**
@@ -129,16 +181,25 @@ export class LayerAvailabilityService {
   private weatherStationsState(): Availability {
     // Re-evaluate when the key changes so the row reacts to key add/remove.
     this.apiKeyService.keyChanges();
+    // No key is a distinct state with its own activation warning — not "down".
     if (!this.apiKeyService.hasKey()) {
       return 'unknown';
     }
-    return this.refreshService.getWeatherStationsAvailableTilesetIds().length > 0
-      ? 'available'
-      : 'unknown';
+    if (this.refreshService.getWeatherStationsAvailableTilesetIds().length > 0) {
+      return 'available';
+    }
+    // Key present but nothing loaded: grey only when we know the service is down.
+    return this.healthService.isAvailable() ? 'unknown' : 'unreachable';
   }
 
   private async probeAll(): Promise<void> {
     if (this.priming) {
+      return;
+    }
+    // Don't hammer a data-service that's already known to be down — the health
+    // tracker polls /health and flips back to available on recovery, and the
+    // next re-prime tick then resumes probing.
+    if (!this.healthService.isAvailable()) {
       return;
     }
     this.priming = true;
@@ -159,6 +220,11 @@ export class LayerAvailabilityService {
   }
 
   private async probeOne(layer: Layer): Promise<void> {
+    // Bail if the service went down mid-pass — the remaining queued probes
+    // become no-ops instead of piling up more failed requests.
+    if (!this.healthService.isAvailable()) {
+      return;
+    }
     const prior = this.probeStatesSignal().get(layer.id);
     // Only surface `loading` when we have nothing better yet; keep an already
     // established `available`/`empty` verbatim so re-primes don't flicker.
@@ -168,7 +234,15 @@ export class LayerAvailabilityService {
     try {
       const hasData = await firstValueFrom(this.configService.probeLayerAvailability(layer));
       this.setProbeState(layer.id, hasData ? 'available' : 'empty');
-    } catch {
+    } catch (err) {
+      // A network-level failure (connection refused / timeout, status 0) means
+      // the data-service itself is unreachable — hand off to the health tracker
+      // so it shows the single banner and starts polling for recovery. A real
+      // HTTP status (404 for an unpublished product, etc.) is not a service
+      // outage, so it just leaves this layer 'unknown'.
+      if (err instanceof HttpErrorResponse && err.status === 0) {
+        this.healthService.reportFailure();
+      }
       if (prior === undefined || prior === 'unknown') {
         this.setProbeState(layer.id, 'unknown');
       }

@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 
@@ -7,6 +8,7 @@ import { LayerAvailabilityService } from './layer-availability.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayerRefreshService } from './layer-refresh.service';
 import { LayersService } from './layers.service';
+import { DataServiceHealthService } from '../data-service-health/data-service-health.service';
 import { WeatherStationsApiKeyService } from '../weather-stations/weather-stations-api-key.service';
 import {
   ActiveLayerGroupId,
@@ -108,6 +110,9 @@ interface Mocks {
   hasKey: boolean;
   keyChanges: ReturnType<typeof signal<number>>;
   allLayers: Layer[];
+  isAvailable: ReturnType<typeof signal<boolean>>;
+  reportFailure: ReturnType<typeof vi.fn>;
+  checkNow: () => Promise<void>;
 }
 
 function setup(overrides: Partial<Mocks> = {}): {
@@ -122,12 +127,23 @@ function setup(overrides: Partial<Mocks> = {}): {
     hasKey: overrides.hasKey ?? false,
     keyChanges: overrides.keyChanges ?? signal(0),
     allLayers: overrides.allLayers ?? [],
+    isAvailable: overrides.isAvailable ?? signal(true),
+    reportFailure: overrides.reportFailure ?? vi.fn(),
+    checkNow: overrides.checkNow ?? (async () => {}),
   };
 
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       LayerAvailabilityService,
+      {
+        provide: DataServiceHealthService,
+        useValue: {
+          isAvailable: mocks.isAvailable,
+          reportFailure: mocks.reportFailure,
+          checkNow: mocks.checkNow,
+        },
+      },
       {
         provide: LayerConfigService,
         useValue: {
@@ -209,6 +225,28 @@ describe('LayerAvailabilityService — state() truth table', () => {
     expect(service.state(wmsLayer())).toBe('available');
     expect(service.isUnavailable(wmsLayer())).toBe(false);
   });
+
+  it('never greys WMS reference layers even when the data-service is down', () => {
+    // WMS/IGN is a separate external server, unaffected by data-service health.
+    const { service } = setup({ isAvailable: signal(false) });
+    expect(service.state(wmsLayer())).toBe('available');
+  });
+});
+
+describe('LayerAvailabilityService — data-service down greys unloaded products', () => {
+  it('marks an unloaded TILE product unreachable while the service is down', () => {
+    const layer = goesLayer();
+    const { service } = setup({ isAvailable: signal(false) });
+    expect(service.state(layer)).toBe('unreachable');
+    expect(service.isUnavailable(layer)).toBe(true);
+  });
+
+  it('keeps an already-loaded product available even mid-outage (live config wins)', () => {
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 3)]]);
+    const { service } = setup({ configs, isAvailable: signal(false) });
+    expect(service.state(layer)).toBe('available');
+  });
 });
 
 describe('LayerAvailabilityService — weather stations', () => {
@@ -224,6 +262,20 @@ describe('LayerAvailabilityService — weather stations', () => {
 
   it('stays unknown (never eagerly empty) when the tileset signal is empty', () => {
     const { service } = setup({ hasKey: true, weatherStationsTilesetIds: [] });
+    expect(service.state(weatherStationsLayer())).toBe('unknown');
+  });
+
+  it('is unreachable when a key is set but the data-service is down', () => {
+    const { service } = setup({
+      hasKey: true,
+      weatherStationsTilesetIds: [],
+      isAvailable: signal(false),
+    });
+    expect(service.state(weatherStationsLayer())).toBe('unreachable');
+  });
+
+  it('stays unknown (not greyed) when there is no key, even if the service is down', () => {
+    const { service } = setup({ hasKey: false, isAvailable: signal(false) });
     expect(service.state(weatherStationsLayer())).toBe('unknown');
   });
 });
@@ -276,6 +328,88 @@ describe('LayerAvailabilityService — primeAll probing', () => {
     await flushMicrotasks();
 
     expect(probe).not.toHaveBeenCalled();
+  });
+});
+
+describe('LayerAvailabilityService — data-service health gating', () => {
+  it('does not probe while the data-service is known to be down', async () => {
+    const layer = goesLayer('goes/abi/ch-2');
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({ allLayers: [layer], probe, isAvailable: signal(false) });
+
+    service.primeAll();
+    await flushMicrotasks();
+
+    expect(probe).not.toHaveBeenCalled();
+    // Down + never loaded → unreachable (greyed), and no wasted probe request.
+    expect(service.state(layer)).toBe('unreachable');
+    expect(service.isUnavailable(layer)).toBe(true);
+  });
+
+  it('reports a network-level failure (status 0) to the health tracker', async () => {
+    const layer = goesLayer('goes/abi/ch-2');
+    const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 0 })));
+    const reportFailure = vi.fn();
+    const { service } = setup({ allLayers: [layer], probe, reportFailure });
+
+    service.primeAll();
+    await flushMicrotasks();
+
+    expect(reportFailure).toHaveBeenCalled();
+    expect(service.state(layer)).toBe('unknown');
+  });
+
+  it('does not report a plain HTTP error (e.g. 404) as a service outage', async () => {
+    const layer = goesLayer('goes/abi/ch-2');
+    const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 404 })));
+    const reportFailure = vi.fn();
+    const { service } = setup({ allLayers: [layer], probe, reportFailure });
+
+    service.primeAll();
+    await flushMicrotasks();
+
+    expect(reportFailure).not.toHaveBeenCalled();
+  });
+});
+
+describe('LayerAvailabilityService — manual recheck', () => {
+  it('re-probes a single product when the service is up', async () => {
+    const layer = goesLayer('goes/abi/ch-2');
+    const probe = vi.fn(() => of(false));
+    const { service } = setup({ allLayers: [layer], probe });
+
+    await service.recheck(layer);
+
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(service.state(layer)).toBe('empty');
+  });
+
+  it('forces a health check first when down, and re-probes once recovered', async () => {
+    const layer = goesLayer('goes/abi/ch-2');
+    const isAvailable = signal(false);
+    const checkNow = vi.fn(async () => isAvailable.set(true)); // service comes back
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({ allLayers: [layer], probe, isAvailable, checkNow });
+
+    await service.recheck(layer);
+
+    expect(checkNow).toHaveBeenCalledTimes(1);
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(service.state(layer)).toBe('available');
+  });
+
+  it('does not probe when the health recheck shows the service is still down', async () => {
+    const layer = goesLayer('goes/abi/ch-2');
+    const isAvailable = signal(false);
+    const checkNow = vi.fn(async () => {}); // still down
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({ allLayers: [layer], probe, isAvailable, checkNow });
+
+    await service.recheck(layer);
+
+    expect(checkNow).toHaveBeenCalledTimes(1);
+    expect(probe).not.toHaveBeenCalled();
+    expect(service.state(layer)).toBe('unreachable');
   });
 });
 
