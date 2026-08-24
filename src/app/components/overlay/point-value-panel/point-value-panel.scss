@@ -3,14 +3,13 @@
 .point-panel {
   @include overlaySurface.floating-surface();
 
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   padding: 4px 10px;
   position: relative;
-  width: 250px;
-  height: 26px;
+  width: 270px;
   box-sizing: border-box;
 }
 
@@ -31,14 +30,41 @@
   opacity: 0.7;
 }
 
+.info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
 .layer-name {
   font-size: 11px;
   font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  font-size: 10px;
   color: var(--mat-sys-on-surface-variant);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
+  font-variant-numeric: tabular-nums;
+
+  &.blank {
+    visibility: hidden;
+  }
+}
+
+.value-col {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .value {

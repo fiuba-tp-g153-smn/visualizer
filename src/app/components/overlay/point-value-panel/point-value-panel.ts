@@ -9,6 +9,8 @@ import { UnitsSettingsService } from '../../../services/settings/units-settings.
 import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
 import { formatPointQueryValue } from '../../../utils/number-format.utils';
 
+const BLANK_LINE = ' ';
+
 @Component({
   selector: 'app-point-value-panel',
   standalone: true,
@@ -23,12 +25,50 @@ export class PointValuePanelComponent {
   @Input() visible = false;
   @Input() isLoading = false;
   @Input() layerName = 'Capa de datos';
+  @Input() periodLabel?: string;
+  @Input() runLabel?: string;
+  @Input() elevationLabel?: string;
+  @Input() isPlaying = false;
+  @Input() minDetailLines = 0;
   @Input() data: PointQueryDisplayData | null = null;
 
   @Output() close = new EventEmitter<void>();
 
   onClose(): void {
     this.close.emit();
+  }
+
+  get runLine(): string | null {
+    return this.runLabel ? `Corrida ${this.runLabel}` : null;
+  }
+
+  get periodLine(): string | null {
+    const parts: string[] = [];
+
+    if (this.isPlaying) {
+      parts.push('Reproduciéndose');
+    }
+
+    if (this.elevationLabel) {
+      parts.push(this.elevationLabel);
+    }
+
+    if (this.periodLabel) {
+      parts.push(this.periodLabel);
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : null;
+  }
+
+  get detailSlots(): ReadonlyArray<{ text: string; blank: boolean }> {
+    const real = [this.runLine, this.periodLine].filter((line): line is string => !!line);
+    const slots = real.map((text) => ({ text, blank: false }));
+
+    while (slots.length < this.minDetailLines) {
+      slots.push({ text: BLANK_LINE, blank: true });
+    }
+
+    return slots;
   }
 
   get valueData(): PointQueryValueData | null {
