@@ -50,13 +50,15 @@ precipitación sino también el tipo y la forma de las partículas.
 | Variable | Unidad | Qué representa |
 |---|---|---|
 | **DBZH** | dBZ | Reflectividad horizontal. Es la variable principal para estimar intensidad de precipitación; valores altos indican lluvia intensa o granizo. |
+| **DBZH 450 km** | dBZ | La misma reflectividad horizontal, pero del barrido de largo alcance: cubre unos 450 km en lugar de 240 km, a costa de menor resolución y de una única elevación. Útil para seguir sistemas que todavía están lejos del radar. |
 | **ZDR** | dB | Reflectividad diferencial: informa sobre el achatamiento, y por lo tanto el tamaño y la forma, de los hidrometeoros. |
 | **VRAD** | m/s | Velocidad radial por efecto Doppler. Revela el campo de viento, las convergencias y las firmas de rotación. |
 | **RHOHV** | — | Coeficiente de correlación cruzada. Cercano a 1 con hidrometeoros homogéneos; desciende ante mezclas, granizo o ecos no meteorológicos. |
 | **KDP** | °/km | Fase diferencial específica. Sensible al contenido de agua líquida y robusta frente a la atenuación. |
 
 Cada variable está disponible en tres elevaciones de antena, que en la interfaz aparecen como
-**Elevaciones**.
+**Elevaciones**. La excepción es **DBZH 450 km**, cuyo barrido de largo alcance tiene una sola
+elevación (0.5°).
 
 ## Modelos
 

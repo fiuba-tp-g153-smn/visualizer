@@ -75,6 +75,7 @@ Once identificadores de procesador están registrados. Los que producen tiles y 
 | Producto | Campo PyART | Subvolumen | Unidad |
 |---|---|---|---|
 | `DBZH` | `reflectivity` | 01 | dBZ |
+| `DBZH_450KM` | `reflectivity` | **04** | dBZ |
 | `ZH` | `reflectivity` | 01 | dBZ |
 | `TH` | `total_power` | 01 | dBZ |
 | `VRAD` | `velocity` | **02** | m/s |
@@ -88,6 +89,12 @@ Once identificadores de procesador están registrados. Los que producen tiles y 
     El procesador fija los barridos `(0, 1, 2)`, que son **índices** dentro del archivo. El ángulo
     real se lee de `fixed_angle` por archivo y sólo se registra en el log. El segmento de la ruta S3
     es `elev0`, `elev1`, `elev2`.
+
+!!! note "`DBZH` y `DBZH_450KM` comparten la variable del nombre de archivo"
+    Ambos leen archivos `..._DBZH_...H5`; los distingue el subvolumen. El 01 trae 15 barridos de
+    652 gates de 360 m (~235 km) y el 04 un único barrido de 0.55° con 1235 gates (~445 km), así
+    que del largo alcance sólo se publica `elev0`. Cada uno tiene su propia ruta
+    `tiles/radar/{radar}/{producto}/`, por lo que conviven sin pisarse.
 
 ### Productos de WRF-ARG4K
 
