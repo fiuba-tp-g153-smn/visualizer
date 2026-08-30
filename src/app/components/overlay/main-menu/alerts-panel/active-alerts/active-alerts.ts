@@ -5,7 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { ActiveAlertsService } from '../../../../../services/active-alerts/active-alerts.service';
 import { ActiveAlert, DepartmentRef } from '../../../../../models/geo';
-import { formatDateTimeLocalized } from '../../../../../utils/tileset-timestamp';
+import { formatDateFull } from '../../../../../utils/tileset-timestamp';
 import {
   activeAlertColorForExpiry,
   formatActiveAlertRemaining,
@@ -87,7 +87,7 @@ export class ActiveAlertsComponent {
   }
 
   formatDate(date: Date): string {
-    return formatDateTimeLocalized(date);
+    return formatDateFull(date);
   }
 
   remaining(alert: ActiveAlert): string {

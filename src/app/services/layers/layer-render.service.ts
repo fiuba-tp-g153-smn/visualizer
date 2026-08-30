@@ -56,7 +56,7 @@ import {
   convertValueForDisplay,
   getDisplayUnit,
 } from '../../utils/unit-conversion.utils';
-import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import { formatDateFull } from '../../utils/tileset-timestamp';
 import { windBarbSvg } from '../../utils/wind-barb.util';
 import { windDirectionTriangleSvg } from '../../utils/wind-direction.util';
 import {
@@ -627,9 +627,7 @@ export class LayerRenderService {
 
   getAvailableTilesetsCount(layerId: string): number {
     const config = this.layerConfigService.getConfig(layerId) as
-      | GoesTileLayerConfig
-      | RadarTileLayerConfig
-      | undefined;
+      GoesTileLayerConfig | RadarTileLayerConfig | undefined;
     if (!config) {
       throw new Error(`Configuration not loaded for layer '${layerId}'`);
     }
@@ -1080,7 +1078,7 @@ export class LayerRenderService {
             : Math.round(windDegrees),
         direction: formatText(observation.weather.wind.direction),
       },
-      updatedAt: formatDateTimeLocalized(new Date(observation.weather.date)),
+      updatedAt: formatDateFull(new Date(observation.weather.date)),
     };
   }
 
@@ -1352,8 +1350,7 @@ export class LayerRenderService {
           case LayerCategory.GOES_19: {
             const goesControls = tileControls as GoesLayerControls;
             const config = this.layerConfigService.getConfig(layerId) as
-              | GoesTileLayerConfig
-              | undefined;
+              GoesTileLayerConfig | undefined;
             if (!config) return `${layerId}-placeholder`;
 
             const tilesets = config.availableTilesets;
@@ -1371,8 +1368,7 @@ export class LayerRenderService {
           case LayerCategory.RADAR: {
             const radarControls = tileControls as RadarLayerControls;
             const config = this.layerConfigService.getConfig(layerId) as
-              | RadarTileLayerConfig
-              | undefined;
+              RadarTileLayerConfig | undefined;
             if (!config) return `${layerId}-placeholder`;
 
             const selectedElevationIds = radarControls.elevation.selectedElevationIds;
@@ -1394,8 +1390,7 @@ export class LayerRenderService {
           case LayerCategory.ECMWF_TP: {
             const ecmwfControls = tileControls as EcmwfTpLayerControls;
             const config = this.layerConfigService.getConfig(layerId) as
-              | EcmwfTpTileLayerConfig
-              | undefined;
+              EcmwfTpTileLayerConfig | undefined;
             if (!config) return `${layerId}-placeholder`;
 
             const tilesets = config.availableTilesets;
@@ -1416,8 +1411,7 @@ export class LayerRenderService {
           case LayerCategory.WRF: {
             const wrfControls = tileControls as WrfLayerControls;
             const config = this.layerConfigService.getConfig(layerId) as
-              | WrfTileLayerConfig
-              | undefined;
+              WrfTileLayerConfig | undefined;
             if (!config) return `${layerId}-placeholder`;
 
             const tilesets = config.availableTilesets;
@@ -1626,10 +1620,7 @@ export class LayerRenderService {
 
   private getTilesetId(layerId: string, layer: TileLayer, timeIndex: number | undefined): string {
     const config = this.layerConfigService.getConfig(layerId) as
-      | RadarTileLayerConfig
-      | GoesTileLayerConfig
-      | EcmwfTpTileLayerConfig
-      | undefined;
+      RadarTileLayerConfig | GoesTileLayerConfig | EcmwfTpTileLayerConfig | undefined;
 
     if (!config) {
       const categoryName =

@@ -24,8 +24,6 @@ import { WeatherStationsApiKeyService } from '../../../../services/weather-stati
 const DECIMAL_BASE_10 = 10;
 const MIN_DECIMAL_PRECISION: DecimalPrecision = 0;
 const MAX_DECIMAL_PRECISION: DecimalPrecision = 3;
-const MINUTES_PER_HOUR = 60;
-const OFFSET_PADDING = 2;
 
 @Component({
   selector: 'app-general-settings',
@@ -48,7 +46,6 @@ export class GeneralSettingsComponent implements MenuPanelComponent {
   readonly TEMPERATURE_UNITS = TEMPERATURE_UNITS;
   readonly WIND_SPEED_UNITS = WIND_SPEED_UNITS;
   readonly TIMEZONE_MODES = TIMEZONE_MODES;
-  readonly localTimezoneTooltip = this.buildLocalTimezoneTooltip();
 
   /** True iff the user has provided an API key. */
   readonly hasUserApiKey = computed(() => {
@@ -100,27 +97,5 @@ export class GeneralSettingsComponent implements MenuPanelComponent {
     ) {
       input.value = this.unitsSettings.decimalPrecision().toString();
     }
-  }
-
-  private buildLocalTimezoneTooltip(): string {
-    const timezoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const offsetForTooltip = this.getLocalUtcOffsetForTooltip();
-
-    if (timezoneName) {
-      return `Mostrar fechas y horas en tu zona horaria local (${timezoneName}, ${offsetForTooltip})`;
-    }
-
-    return `Mostrar fechas y horas en tu zona horaria local (${offsetForTooltip})`;
-  }
-
-  private getLocalUtcOffsetForTooltip(): string {
-    const now = new Date();
-    const offsetMinutes = -now.getTimezoneOffset();
-    const sign = offsetMinutes >= 0 ? '+' : '-';
-    const absoluteMinutes = Math.abs(offsetMinutes);
-    const hours = Math.floor(absoluteMinutes / MINUTES_PER_HOUR);
-    const minutes = absoluteMinutes % MINUTES_PER_HOUR;
-
-    return `UTC${sign}${String(hours).padStart(OFFSET_PADDING, '0')}:${String(minutes).padStart(OFFSET_PADDING, '0')}`;
   }
 }

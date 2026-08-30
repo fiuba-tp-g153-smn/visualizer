@@ -19,7 +19,7 @@ import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../../floating/confirm-dialog/confirm-dialog';
-import { formatDateTimeLocalized } from '../../../../utils/tileset-timestamp';
+import { formatDateFull } from '../../../../utils/tileset-timestamp';
 import { formatWithThousandsSeparator } from '../../../../utils/number-format.utils';
 import { EmittedAlertsComponent } from './emitted-alerts/emitted-alerts';
 import { DepartmentListComponent } from './department-list/department-list';
@@ -149,7 +149,7 @@ export class AlertsPanelComponent implements MenuPanelComponent {
   }
 
   formatDate(date: Date): string {
-    return formatDateTimeLocalized(new Date(date));
+    return formatDateFull(new Date(date));
   }
 
   getPolygonArea(polygon: Polygon): string {

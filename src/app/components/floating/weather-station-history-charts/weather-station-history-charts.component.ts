@@ -87,7 +87,7 @@ export class WeatherStationHistoryChartsComponent {
 
   readonly observations = computed(() => {
     const current = this.series();
-    void this.timezone.mode(); // formatDateTimeLocalized reads the global mode
+    void this.timezone.mode(); // formatDateFull reads the global mode
     return current ? buildObservationRows(current, this.unitsSettings) : [];
   });
 
