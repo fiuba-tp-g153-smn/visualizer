@@ -20,6 +20,7 @@ precipitación hay, sino qué forma tienen las partículas, y de ahí se deduce 
 | Variable | Unidad | Qué representa | Cómo se usa |
 |---|---|---|---|
 | **DBZH** | dBZ | Reflectividad horizontal | La variable principal. Es la medida de intensidad: cuanto más alta, más precipitación. Valores muy altos indican lluvia intensa o granizo. |
+| **DBZH 450 km** | dBZ | Reflectividad horizontal de largo alcance | La misma reflectividad, pero del barrido de largo alcance: cubre unos 450 km en lugar de 240 km, a costa de menor resolución y de una única elevación. Útil para seguir sistemas que todavía están lejos del radar. |
 | **ZDR** | dB | Reflectividad diferencial | Compara el rebote horizontal con el vertical, y con eso deduce si las partículas están achatadas. Las gotas grandes caen achatadas; el granizo, que cae rotando, no. |
 | **VRAD** | m/s | Velocidad radial | Por efecto Doppler, mide si las partículas se acercan o se alejan del radar. Es la única variable que informa sobre el **viento**. |
 | **RHOHV** | — | Coeficiente de correlación | Qué tan parecidas entre sí son las partículas de una zona. Cercano a 1 con precipitación homogénea; baja con mezclas, con granizo y con ecos que no son meteorológicos. |
@@ -41,7 +42,8 @@ Cada variable por separado dice poco; juntas identifican el tipo de precipitaci�
 ## Las elevaciones
 
 Cada variable está disponible en tres **elevaciones** de antena, que en la aplicación aparecen en el
-control de cada capa. La antena barre en círculos a distintos ángulos por encima del horizonte.
+control de cada capa. La antena barre en círculos a distintos ángulos por encima del horizonte. La
+excepción es **DBZH 450 km**, cuyo barrido de largo alcance tiene una sola elevación (0.5°).
 
 Esto tiene una consecuencia geométrica que conviene tener siempre presente: como el haz sale
 inclinado y la Tierra es curva, **cuanto más lejos del radar, más alto está mirando**. Cerca del

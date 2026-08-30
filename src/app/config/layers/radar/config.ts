@@ -1,9 +1,11 @@
 import {
   ActiveLayerGroupId,
+  BoundingBox,
   LayerCategory,
   LayerScale,
   LayerSubgroup,
   LayerType,
+  RadarElevation,
   RadarTileLayer,
 } from '../../../models';
 import { SHARED_DBZH_SCALE } from '../shared-scales.config';
@@ -49,6 +51,7 @@ const RADAR_DEFAULTS = {
 const satelitePrefix = 'radar';
 enum RadarProduct {
   DBZH = 'DBZH',
+  DBZH_450KM = 'DBZH_450KM',
   KDP = 'KDP',
   VRAD = 'VRAD',
   RHOHV = 'RHOHV',
@@ -61,11 +64,160 @@ const MAX_ZOOM = 9;
 
 const RADAR_SCALES: Record<RadarProduct, LayerScale> = {
   [RadarProduct.DBZH]: SHARED_DBZH_SCALE,
+  // Misma variable física (reflectividad) que DBZH, sólo cambia el alcance.
+  [RadarProduct.DBZH_450KM]: SHARED_DBZH_SCALE,
   [RadarProduct.KDP]: RADAR_KDP_SCALE,
   [RadarProduct.VRAD]: RADAR_VRAD_SCALE,
   [RadarProduct.RHOHV]: RADAR_RHOHV_SCALE,
   [RadarProduct.ZDR]: RADAR_ZDR_SCALE,
 };
+
+/**
+ * Nombre visible del producto cuando su id no se lee bien como etiqueta.
+ * Sin entrada, se muestra el id tal cual (DBZH, VRAD, …).
+ */
+const RADAR_PRODUCT_LABELS: Partial<Record<RadarProduct, string>> = {
+  [RadarProduct.DBZH_450KM]: 'DBZH 450 km',
+};
+
+/**
+ * El subvolumen 04 (largo alcance) trae un único sweep de 0.55°, no los tres
+ * del subvolumen 01, así que sólo se publica elev0 para ese producto.
+ */
+const SINGLE_ELEVATION: readonly RadarElevation[] = [
+  {
+    id: 'elev0',
+    name: '0.5°',
+    activeByDefault: true,
+    zIndexPreference: 1,
+  },
+];
+
+const RADAR_PRODUCT_ELEVATIONS: Partial<Record<RadarProduct, readonly RadarElevation[]>> = {
+  [RadarProduct.DBZH_450KM]: SINGLE_ELEVATION,
+};
+
+/**
+ * Bounding box real del barrido de largo alcance, por radar.
+ *
+ * Medidos de los propios `.H5` del subvolumen 04 con la misma fórmula que aplica
+ * el backend en `_compute_cartesian_mapping` (centro del radar ± alcance máximo,
+ * corrigiendo la longitud por el coseno de la latitud), y redondeados hacia
+ * afuera: son un superconjunto exacto de los tiles que publica el procesador.
+ *
+ * Los 17 radares medidos usan el mismo barrido: un sweep de ~0.5°, 1235–1237
+ * gates de 360 m, alcance 446.3–446.7 km. RMA18 todavía no tiene dato y cae al
+ * escalado aproximado de abajo.
+ */
+const RADAR_LONG_RANGE_BOXES: Readonly<Record<string, BoundingBox>> = {
+  rma1: [
+    [-35.47, -68.91],
+    [-27.42, -59.47],
+  ],
+  rma2: [
+    [-38.83, -63.42],
+    [-30.77, -53.61],
+  ],
+  rma3: [
+    [-28.76, -64.98],
+    [-20.7, -56.12],
+  ],
+  rma4: [
+    [-31.48, -63.59],
+    [-23.42, -54.51],
+  ],
+  rma5: [
+    [-30.3, -58.16],
+    [-22.25, -49.18],
+  ],
+  rma6: [
+    [-41.94, -62.63],
+    [-33.88, -52.42],
+  ],
+  rma7: [
+    [-42.91, -73.32],
+    [-34.85, -62.97],
+  ],
+  rma8: [
+    [-33.22, -62.66],
+    [-25.17, -53.43],
+  ],
+  rma9: [
+    [-57.81, -74.56],
+    [-49.76, -60.93],
+  ],
+  rma10: [
+    [-42.76, -67.32],
+    [-34.71, -57.0],
+  ],
+  rma11: [
+    [-31.53, -69.45],
+    [-23.47, -60.36],
+  ],
+  rma12: [
+    [-44.8, -70.39],
+    [-36.75, -59.76],
+  ],
+  rma13: [
+    [-31.65, -61.39],
+    [-23.6, -52.3],
+  ],
+  rma14: [
+    [-40.22, -66.06],
+    [-32.16, -56.08],
+  ],
+  rma15: [
+    [-34.06, -71.53],
+    [-26.0, -62.23],
+  ],
+  rma16: [
+    [-37.74, -70.22],
+    [-29.69, -60.54],
+  ],
+  rma17: [
+    [-37.38, -68.52],
+    [-29.32, -58.88],
+  ],
+};
+
+/**
+ * Alcance (km) que representan los boundingBox declarados en RADARES_SMN:
+ * el subvolumen corto son 652 gates de 360 m ≈ 235 km, más un margen.
+ */
+const RADAR_DEFAULT_RANGE_KM = 240;
+
+/**
+ * Alcance de los productos que se leen de un subvolumen de largo alcance.
+ * Sólo se usa como respaldo para un radar sin caja medida en
+ * RADAR_LONG_RANGE_BOXES.
+ */
+const RADAR_PRODUCT_RANGE_KM: Partial<Record<RadarProduct, number>> = {
+  [RadarProduct.DBZH_450KM]: 450,
+};
+
+/**
+ * Reescala un boundingBox alrededor de su centro (la posición del radar).
+ * Leaflet usa `bounds` para no pedir tiles fuera de la caja, así que un
+ * producto de mayor alcance necesita la suya o pierde el anillo exterior.
+ */
+function scaleBoundingBox(box: BoundingBox, factor: number): BoundingBox {
+  const [[latS, lngW], [latN, lngE]] = box;
+  const latCenter = (latS + latN) / 2;
+  const lngCenter = (lngW + lngE) / 2;
+  const latHalf = ((latN - latS) / 2) * factor;
+  const lngHalf = ((lngE - lngW) / 2) * factor;
+  return [
+    [latCenter - latHalf, lngCenter - lngHalf],
+    [latCenter + latHalf, lngCenter + lngHalf],
+  ];
+}
+
+/** Caja del producto: la medida si existe, si no la escalada, si no la base. */
+function boundingBoxFor(product: RadarProduct, radarId: string, box: BoundingBox): BoundingBox {
+  const rangeKm = RADAR_PRODUCT_RANGE_KM[product];
+  if (!rangeKm) return box;
+  return RADAR_LONG_RANGE_BOXES[radarId] ?? scaleBoundingBox(box, rangeKm / RADAR_DEFAULT_RANGE_KM);
+}
 
 // Ubicaciones y configuraciones de los 18 radares de la red SINARAME (SMN/INTA)
 const RADARES_SMN = [
@@ -275,15 +427,17 @@ export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   description: `Capas del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
   expanded: false,
   layers: products.map((product) => {
+    const label = RADAR_PRODUCT_LABELS[product] ?? product;
     return {
       ...RADAR_DEFAULTS,
       id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
-      name: product,
+      name: label,
       scale: RADAR_SCALES[product],
-      description: `Producto ${product} del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
+      description: `Producto ${label} del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
       minNativeZoom: radar.minNativeZoom,
       maxNativeZoom: radar.maxNativeZoom,
-      boundingBox: radar.boundingBox,
+      availableElevations: RADAR_PRODUCT_ELEVATIONS[product] ?? RADAR_DEFAULTS.availableElevations,
+      boundingBox: boundingBoxFor(product, radar.id, radar.boundingBox),
     };
   }) as RadarTileLayer[],
 }));

@@ -15,6 +15,7 @@ import { VectorLineStyle, VectorTextpathOptions } from '../../../models';
 const COLOR_BLACK = '#000000'; // GrADS 1
 const COLOR_RED = '#FF0000'; // GrADS 2
 const COLOR_GREEN = '#00FF00'; // GrADS 3
+const COLOR_GREEN_DARK = '#008000';
 const COLOR_BLUE = '#0000FF'; // GrADS 4
 const COLOR_THICKNESS = '#1482BE'; // jaecol 49 — rgb(20, 130, 190)
 const COLOR_THICKNESS_5280 = '#FFE878'; // jaecol 22 — rgb(255, 232, 120)
@@ -97,11 +98,9 @@ export const isothermLabelFor = (value: number): string => `${Math.round(value)}
 // 250 hPa (`250b.gs`)
 // ============================================================================
 
-// Geopotencial cada 60 m. El script deja activo el 'set ccolor 2' previo al
-// sombreado, así que estos contornos salen rojos y sólidos ('set cstyle 1').
 export const heights250StyleFor = (): VectorLineStyle => ({
-  color: COLOR_RED,
+  color: COLOR_GREEN_DARK,
   weight: 1.2,
   opacity: 0.95,
 });
-export const HEIGHTS_250_TEXTPATH_OPTIONS: VectorTextpathOptions = makeTextpath(COLOR_RED);
+export const HEIGHTS_250_TEXTPATH_OPTIONS: VectorTextpathOptions = makeTextpath(COLOR_GREEN_DARK);
