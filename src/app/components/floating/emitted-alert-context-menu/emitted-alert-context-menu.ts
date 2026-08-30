@@ -13,7 +13,7 @@ import {
   formatActiveAlertRemaining,
 } from '../../../utils/active-alert.utils';
 import { darkenColor, lightenColor } from '../../../utils/map-styles.utils';
-import { formatDateTimeLocalized } from '../../../utils/tileset-timestamp';
+import { formatDateFull } from '../../../utils/tileset-timestamp';
 
 /**
  * Right-click menu for emitted (pending/active) alert polygons on the map.
@@ -49,7 +49,7 @@ export class EmittedAlertContextMenuComponent {
   }
 
   formatDate(date: Date): string {
-    return formatDateTimeLocalized(date);
+    return formatDateFull(date);
   }
 
   remaining(endDatetime: Date): string {

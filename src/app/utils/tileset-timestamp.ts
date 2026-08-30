@@ -1,22 +1,40 @@
 export const TIMESTAMP_TIMEZONE_MODES = {
   UTC: 'utc',
-  LOCAL: 'local',
+  HOA: 'hoa',
 } as const;
 
 export type TimestampTimezoneMode =
   (typeof TIMESTAMP_TIMEZONE_MODES)[keyof typeof TIMESTAMP_TIMEZONE_MODES];
 
-const UTC_TIMEZONE = 'UTC';
-const DEFAULT_DATE_TIME_LOCALE = 'es-AR';
+// Argentina has used a fixed UTC-3 offset (no DST) since 2009.
+const HOA_OFFSET_MS = -3 * 60 * 60 * 1000;
 
-let timestampTimezoneMode: TimestampTimezoneMode = TIMESTAMP_TIMEZONE_MODES.LOCAL;
+interface TimezoneDisplayConfig {
+  readonly suffix: string;
+  readonly offsetMs: number;
+}
+
+let timestampTimezoneMode: TimestampTimezoneMode = TIMESTAMP_TIMEZONE_MODES.HOA;
 
 export function setTimestampTimezoneMode(mode: TimestampTimezoneMode): void {
   timestampTimezoneMode = mode;
 }
 
-function shouldUseUtc(): boolean {
-  return timestampTimezoneMode === TIMESTAMP_TIMEZONE_MODES.UTC;
+function resolveTimezoneConfig(): TimezoneDisplayConfig {
+  switch (timestampTimezoneMode) {
+    case TIMESTAMP_TIMEZONE_MODES.UTC:
+      return { suffix: 'UTC', offsetMs: 0 };
+    case TIMESTAMP_TIMEZONE_MODES.HOA:
+      return { suffix: 'HOA', offsetMs: HOA_OFFSET_MS };
+  }
+}
+
+function toDisplayDate(date: Date): Date {
+  return new Date(date.getTime() + resolveTimezoneConfig().offsetMs);
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
 }
 
 export function parseGoesTimestamp(tileset: string): Date | null {
@@ -152,11 +170,11 @@ export function formatGfsCycleTag(cycle: string): string {
 
 /** Compact "MM-DD HHh" label shared by every forecast-model run selector. */
 function formatRunLabel(dt: Date): string {
-  const utc = shouldUseUtc();
-  const mo = String((utc ? dt.getUTCMonth() : dt.getMonth()) + 1).padStart(2, '0');
-  const dd = String(utc ? dt.getUTCDate() : dt.getDate()).padStart(2, '0');
-  const hh = String(utc ? dt.getUTCHours() : dt.getHours()).padStart(2, '0');
-  return `${mo}-${dd} ${hh}h`;
+  const d = toDisplayDate(dt);
+  const mo = pad2(d.getUTCMonth() + 1);
+  const dd = pad2(d.getUTCDate());
+  const hh = pad2(d.getUTCHours());
+  return `${mo}-${dd} ${hh}h ${resolveTimezoneConfig().suffix}`;
 }
 
 // ============================================================================
@@ -164,34 +182,15 @@ function formatRunLabel(dt: Date): string {
 // ============================================================================
 
 export function formatDateTimeOnly(date: Date): string {
-  const hours = shouldUseUtc() ? date.getUTCHours() : date.getHours();
-  const minutes = shouldUseUtc() ? date.getUTCMinutes() : date.getMinutes();
-
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  const d = toDisplayDate(date);
+  return `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
 }
 
 export function formatDateOnly(date: Date): string {
-  const yyyy = shouldUseUtc() ? date.getUTCFullYear() : date.getFullYear();
-  const mo = String((shouldUseUtc() ? date.getUTCMonth() : date.getMonth()) + 1).padStart(2, '0');
-  const dd = String(shouldUseUtc() ? date.getUTCDate() : date.getDate()).padStart(2, '0');
-
-  return `${yyyy}-${mo}-${dd}`;
+  const d = toDisplayDate(date);
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
 }
 
 export function formatDateFull(date: Date): string {
-  return `${formatDateOnly(date)} ${formatDateTimeOnly(date)}`;
-}
-
-export function formatDateTimeLocalized(date: Date, locale = DEFAULT_DATE_TIME_LOCALE): string {
-  const formatter = new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: shouldUseUtc() ? UTC_TIMEZONE : undefined,
-  });
-
-  return formatter.format(date);
+  return `${formatDateOnly(date)} ${formatDateTimeOnly(date)} ${resolveTimezoneConfig().suffix}`;
 }

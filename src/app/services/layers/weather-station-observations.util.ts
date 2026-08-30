@@ -1,6 +1,6 @@
 import { TEMPERATURE_UNITS, WEATHER_STATION_UNITS } from '../../constants';
 import { convertValueForDisplay, getDisplayUnit } from '../../utils/unit-conversion.utils';
-import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import { formatDateFull } from '../../utils/tileset-timestamp';
 import { formatStationValue } from '../../utils/number-format.utils';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import { StationSeries } from '../../models/geo/weather-station-series.model';
@@ -40,7 +40,7 @@ export function buildObservationRows(
   units: UnitsSettingsService,
 ): ObservationRow[] {
   return [...series.points].reverse().map((p) => ({
-    time: formatDateTimeLocalized(new Date(p.observedAt)),
+    time: formatDateFull(new Date(p.observedAt)),
     temperature: fmt(p.temperature, TEMPERATURE_UNITS.CELSIUS, 1, units),
     dewPoint: fmt(p.dewPoint, TEMPERATURE_UNITS.CELSIUS, 1, units),
     humidity: fmt(p.humidity, WEATHER_STATION_UNITS.HUMIDITY, 0, units),

@@ -16,7 +16,7 @@ interface TimezoneSettings {
 }
 
 function isTimezoneMode(value: unknown): value is TimezoneMode {
-  return value === TIMEZONE_MODES.LOCAL || value === TIMEZONE_MODES.UTC;
+  return value === TIMEZONE_MODES.HOA || value === TIMEZONE_MODES.UTC;
 }
 
 @Injectable({
@@ -25,7 +25,7 @@ function isTimezoneMode(value: unknown): value is TimezoneMode {
 export class TimezoneSettingsService {
   private readonly storage = inject(LocalStorageService);
 
-  readonly mode = signal<TimezoneMode>(TIMEZONE_MODES.LOCAL);
+  readonly mode = signal<TimezoneMode>(TIMEZONE_MODES.HOA);
 
   constructor() {
     this.loadFromStorage();

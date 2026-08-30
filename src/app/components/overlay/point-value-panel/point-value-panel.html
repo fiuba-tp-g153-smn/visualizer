@@ -6,17 +6,29 @@
       (pressed)="onClose()"
     />
 
-    <span class="layer-name" [matTooltip]="layerName">{{ layerName }}</span>
+    <div class="info">
+      <span class="layer-name" [matTooltip]="layerName">{{ layerName }}</span>
+      @for (slot of detailSlots; track $index) {
+        <span
+          class="detail"
+          [class.blank]="slot.blank"
+          [matTooltip]="slot.blank ? '' : slot.text"
+          >{{ slot.text }}</span
+        >
+      }
+    </div>
 
-    @if (isLoading) {
-      <app-loading-spinner [diameter]="14" />
-    } @else if (valueData) {
-      <span class="value" [matTooltip]="valueTooltip">{{ formattedValue }}</span>
-      <span class="unit">{{ displayUnit }}</span>
-    } @else if (!data || data.status === PointQueryStatus.NO_DATA) {
-      <span class="empty">Sin dato</span>
-    } @else {
-      <span class="empty">Error</span>
-    }
+    <div class="value-col">
+      @if (isLoading) {
+        <app-loading-spinner [diameter]="14" />
+      } @else if (valueData) {
+        <span class="value" [matTooltip]="valueTooltip">{{ formattedValue }}</span>
+        <span class="unit">{{ displayUnit }}</span>
+      } @else if (!data || data.status === PointQueryStatus.NO_DATA) {
+        <span class="empty">Sin dato</span>
+      } @else {
+        <span class="empty">Error</span>
+      }
+    </div>
   </div>
 }

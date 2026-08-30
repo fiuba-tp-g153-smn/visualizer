@@ -43,6 +43,7 @@ import { STORAGE_KEYS } from '../../constants';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayerConfigService } from '../layers/layer-config.service';
 import { LocalStorageService } from '../storage/local-storage.service';
+import { TimezoneSettingsService } from '../settings/timezone-settings.service';
 import { LayersService } from '../layers/layers.service';
 import { MapInfoService } from '../layers/map-info.service';
 import { DrawingMode, PolygonDrawingService } from '../polygons/polygon-drawing.service';
@@ -84,6 +85,9 @@ type DisplaySourceItem = {
   forecastTs?: string;
   secondaryRenderId?: string;
   layerName: string;
+  periodLabel?: string;
+  runLabel?: string;
+  elevationLabel?: string;
   layer: ABIGoesTileLayer | GLMGoesTileLayer | RadarTileLayer | EcmwfTpTileLayer | WrfTileLayer;
   controls: TileLayerControls;
   /** Metadata de la variable secundaria WRF (presente solo en items WRF secondary). */
@@ -93,6 +97,10 @@ type DisplaySourceItem = {
 interface PointQueryViewerEntry {
   layerId: string;
   layerName: string;
+  periodLabel?: string;
+  runLabel?: string;
+  elevationLabel?: string;
+  isPlaying: boolean;
   data: PointQueryDisplayData | null;
   isLoading: boolean;
 }
@@ -132,6 +140,7 @@ export class PointQueryViewerService {
   private readonly mapInfoService = inject(MapInfoService);
   private readonly polygonDrawingService = inject(PolygonDrawingService);
   private readonly storage = inject(LocalStorageService);
+  private readonly timezoneSettings = inject(TimezoneSettingsService);
 
   private readonly subscriptions = new Subscription();
   private readonly queryTriggerSubject = new Subject<MouseCoordinates>();
@@ -159,6 +168,8 @@ export class PointQueryViewerService {
   private readonly loadingLayerIds = signal<Set<string>>(new Set());
 
   readonly displayItems = computed<DisplaySourceItem[]>(() => {
+    // Read-only: makes this computed depend on the timezone mode.
+    this.timezoneSettings.mode();
     const activeLayers = this.controlService.activeLayers();
 
     const satelliteItems: DisplaySourceItem[] = activeLayers
@@ -169,6 +180,10 @@ export class PointQueryViewerService {
         layerId: layer.id,
         sourceKind: 'primary' as const,
         layerName: this.layersService.getLayerFullName(layer),
+        periodLabel: this.getTilesetPeriodLabel(
+          layer.id,
+          (controls as GoesLayerControls).playback?.timeIndex,
+        ),
         layer: layer as ABIGoesTileLayer | GLMGoesTileLayer,
         controls: controls as GoesLayerControls,
       }));
@@ -182,10 +197,15 @@ export class PointQueryViewerService {
         const radarControls = controls as RadarLayerControls;
         const selectedElevations = radarControls.elevation.selectedElevationIds;
 
+        const periodLabel = this.getTilesetPeriodLabel(layer.id, radarControls.playback?.timeIndex);
+        const layerName = this.layersService.getLayerFullName(radarLayer);
+
         return selectedElevations.map((elevationId) => ({
           layerId: createCompositeId(layer.id, elevationId),
           sourceKind: 'primary' as const,
-          layerName: this.layersService.getLayerFullName(radarLayer, elevationId),
+          layerName,
+          periodLabel,
+          elevationLabel: radarLayer.availableElevations.find((e) => e.id === elevationId)?.name,
           elevationId,
           layer: radarLayer,
           controls: radarControls,
@@ -203,11 +223,12 @@ export class PointQueryViewerService {
         const baseName = this.layersService.getLayerFullName(ecmwfLayer);
         const modelName = baseName.split(' - ')[0] || 'ECMWF';
         const secondaryRender = this.getSecondaryRender(ecmwfLayer);
+        const periodLabel = this.getTilesetPeriodLabel(layer.id, ecmwfControls.playback?.timeIndex);
 
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
-          const forecastDate = parseEcmwfTimestamp(forecastTs);
-          const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
+          const runDate = parseEcmwfTimestamp(forecastTs);
+          const runLabel = runDate ? formatDateFull(runDate) : forecastTs;
 
           const entries: DisplaySourceItem[] = [];
 
@@ -215,7 +236,9 @@ export class PointQueryViewerService {
             entries.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
-              layerName: `${baseName} - corrida ${forecastLabel}`,
+              layerName: baseName,
+              periodLabel,
+              runLabel,
               forecastTs,
               layer: ecmwfLayer,
               controls: ecmwfControls,
@@ -230,7 +253,9 @@ export class PointQueryViewerService {
             entries.push({
               layerId: buildSecondaryLayerId(primaryLayerId),
               sourceKind: 'secondary',
-              layerName: `${modelName} - ${secondaryRender.pointQuery.name} - corrida ${forecastLabel}`,
+              layerName: `${modelName} - ${secondaryRender.pointQuery.name}`,
+              periodLabel,
+              runLabel,
               forecastTs,
               secondaryRenderId: secondaryRender.id,
               layer: ecmwfLayer,
@@ -254,10 +279,11 @@ export class PointQueryViewerService {
         const primaryName = wrfLayer.pointQueryLabel
           ? `${modelName} - ${wrfLayer.pointQueryLabel}`
           : baseName;
+        const periodLabel = this.getTilesetPeriodLabel(layer.id, wrfControls.playback?.timeIndex);
 
         return selectedForecasts.flatMap((forecastTs): DisplaySourceItem[] => {
-          const forecastDate = adapter.parseRunTag(forecastTs);
-          const forecastLabel = forecastDate ? formatDateFull(forecastDate) : forecastTs;
+          const runDate = adapter.parseRunTag(forecastTs);
+          const runLabel = runDate ? formatDateFull(runDate) : forecastTs;
           const primaryLayerId = createCompositeId(layer.id, forecastTs);
 
           const items: DisplaySourceItem[] = [];
@@ -266,7 +292,9 @@ export class PointQueryViewerService {
             items.push({
               layerId: primaryLayerId,
               sourceKind: 'primary',
-              layerName: `${primaryName} - corrida ${forecastLabel}`,
+              layerName: primaryName,
+              periodLabel,
+              runLabel,
               forecastTs,
               layer: wrfLayer,
               controls: wrfControls,
@@ -286,7 +314,9 @@ export class PointQueryViewerService {
             items.push({
               layerId: `${primaryLayerId}#secondary:${secondary.variable}`,
               sourceKind: 'secondary',
-              layerName: `${secondary.name} - corrida ${forecastLabel}`,
+              layerName: `${modelName} - ${secondary.name}`,
+              periodLabel,
+              runLabel,
               forecastTs,
               secondaryRenderId: render.id,
               layer: wrfLayer,
@@ -313,11 +343,25 @@ export class PointQueryViewerService {
       return {
         layerId: entry.layerId,
         layerName: entry.layerName,
+        periodLabel: entry.periodLabel,
+        runLabel: entry.runLabel,
+        elevationLabel: entry.elevationLabel,
+        isPlaying: showMovingState,
         data: results.get(entry.layerId) ?? null,
         isLoading: loadingIds.has(entry.layerId) || showMovingState,
       };
     });
   });
+
+  private getTilesetPeriodLabel(
+    layerId: string,
+    timeIndex: number | undefined,
+  ): string | undefined {
+    if (timeIndex === undefined) return undefined;
+    const tilesets = this.layerConfigService.getAvailableTilesets(layerId);
+    const tileset = tilesets?.[timeIndex];
+    return tileset ? formatDateFull(tileset.time) : undefined;
+  }
 
   private getSecondaryRender(layer: DisplaySourceItem['layer']) {
     if (layer.type !== LayerType.TILE) return undefined;
@@ -512,12 +556,10 @@ export class PointQueryViewerService {
 
               requests.push(
                 request$.pipe(
-                  map(
-                    (result): SourceQueryResult => ({
-                      layerId,
-                      result: { ...result, layerId, layerName },
-                    }),
-                  ),
+                  map((result): SourceQueryResult => ({
+                    layerId,
+                    result: { ...result, layerId, layerName },
+                  })),
                 ),
               );
             }
@@ -745,8 +787,7 @@ export class PointQueryViewerService {
 
     const ecmwfControls = controls as EcmwfTpLayerControls;
     const config = this.layerConfigService.getConfig(layer.id) as
-      | EcmwfTpTileLayerConfig
-      | undefined;
+      EcmwfTpTileLayerConfig | undefined;
     if (!config || config.availableTilesets.length === 0) {
       return of(this.buildNoData(secondaryLayerId, secondaryLayerName));
     }
@@ -891,8 +932,7 @@ export class PointQueryViewerService {
     forecastTs?: string,
   ): Observable<PointQueryDisplayData> {
     const config = this.layerConfigService.getConfig(layer.id) as
-      | EcmwfTpTileLayerConfig
-      | undefined;
+      EcmwfTpTileLayerConfig | undefined;
     if (!config || config.availableTilesets.length === 0) {
       return of(this.buildNoData(layer.id, layer.name));
     }

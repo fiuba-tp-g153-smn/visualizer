@@ -7,38 +7,35 @@
             [visible]="true"
             [isLoading]="entry.isLoading"
             [layerName]="entry.layerName"
+            [periodLabel]="entry.periodLabel"
+            [runLabel]="entry.runLabel"
+            [elevationLabel]="entry.elevationLabel"
+            [isPlaying]="entry.isPlaying"
             [data]="entry.data"
             (close)="onClose(entry.layerId)"
           />
         }
       </div>
     } @else {
-      @if (entryColumns().left.length > 0) {
-        <div class="point-value-column">
-          @for (entry of entryColumns().left; track entry.layerId) {
-            <app-point-value-panel
-              [visible]="true"
-              [isLoading]="entry.isLoading"
-              [layerName]="entry.layerName"
-              [data]="entry.data"
-              (close)="onClose(entry.layerId)"
-            />
-          }
-        </div>
-      }
-
-      @if (entryColumns().right.length > 0) {
-        <div class="point-value-column">
-          @for (entry of entryColumns().right; track entry.layerId) {
-            <app-point-value-panel
-              [visible]="true"
-              [isLoading]="entry.isLoading"
-              [layerName]="entry.layerName"
-              [data]="entry.data"
-              (close)="onClose(entry.layerId)"
-            />
-          }
-        </div>
+      @for (column of columns(); track $index) {
+        @if (column.length > 0) {
+          <div class="point-value-column">
+            @for (entry of column; track entry.layerId) {
+              <app-point-value-panel
+                [visible]="true"
+                [isLoading]="entry.isLoading"
+                [layerName]="entry.layerName"
+                [periodLabel]="entry.periodLabel"
+                [runLabel]="entry.runLabel"
+                [elevationLabel]="entry.elevationLabel"
+                [isPlaying]="entry.isPlaying"
+                [minDetailLines]="entry.minDetailLines"
+                [data]="entry.data"
+                (close)="onClose(entry.layerId)"
+              />
+            }
+          </div>
+        }
       }
     }
   }

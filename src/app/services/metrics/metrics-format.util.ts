@@ -1,4 +1,4 @@
-import { formatDateTimeLocalized } from '../../utils/tileset-timestamp';
+import { formatDateFull } from '../../utils/tileset-timestamp';
 
 export function secs(value: number | null | undefined): string {
   if (value == null) {
@@ -60,7 +60,7 @@ export function fmtBucket(bucket: string, utc = true): string {
 
 /**
  * Formatea un instante ISO absoluto (p. ej. `started_at`) en UTC o en hora local
- * según el toggle de zona horaria, reutilizando `formatDateTimeLocalized`. Para
+ * según el toggle de zona horaria, reutilizando `formatDateFull`. Para
  * relativos ("hace 5m") usar `ago`, que no depende de la zona.
  */
 export function fmtInstant(iso: string | null | undefined): string {
@@ -68,5 +68,5 @@ export function fmtInstant(iso: string | null | undefined): string {
     return '—';
   }
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : formatDateTimeLocalized(d);
+  return Number.isNaN(d.getTime()) ? '—' : formatDateFull(d);
 }
