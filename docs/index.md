@@ -4,39 +4,62 @@ title: Inicio
 
 # Documentación de MapaSMN
 
-MapaSMN es un sistema de visualización y aviso por condiciones temporales extremas. Integra datos de
-satélite, radar meteorológico y modelos numéricos sobre un mapa interactivo, y le da al pronosticador
-las herramientas para analizarlos y para emitir un aviso a corto plazo.
+MapaSMN es un sistema de visualización y aviso por condiciones meteorológicas extremas. Integra
+datos de satélite, radar y modelos numéricos sobre un mapa interactivo, y le da al pronosticador las
+herramientas para analizarlos y para emitir un aviso a corto plazo.
 
-Esta documentación tiene dos mitades: una **guía de uso** para quien opera el visualizador, y una
-**referencia técnica** para quien desarrolla o mantiene el sistema.
+Esta documentación está dividida en dos mitades independientes. Cada una está escrita para un lector
+distinto, y no hace falta leer la otra.
 
-## Guía de uso
+<div class="grid cards" markdown>
 
-- [Uso general](uso-general.md) — la interfaz, las capas, la animación y las herramientas.
-- [Mapa base](mapa-base.md) — los ocho fondos cartográficos disponibles y cuál conviene.
-- [Productos meteorológicos](productos-meteorologicos.md) — qué representa cada capa y para qué sirve.
-- [Avisos a corto plazo](alertas.md) — dibujar un área, verificar departamentos y emitir un ACP.
-- [Panel de estado](panel-de-estado.md) — cómo leer los tableros de salud del sistema.
+-   ### :material-book-open-variant: [Manual de usuario](manual/index.md)
 
-## Qué ofrece el visualizador
+    **Para quien usa la aplicación.**
 
-- **Satélite GOES-19**: tres canales del ABI y los tres productos de descargas eléctricas del GLM.
+    Qué es cada cosa en pantalla, qué significa cada producto meteorológico y cómo interpretarlo,
+    cómo animar, cómo medir y cómo emitir un aviso.
+
+    Sin requisitos técnicos previos.
+
+    [Empezar por acá](manual/index.md)
+
+-   ### :material-server-network: [Documentación técnica](tecnica/index.md)
+
+    **Para quien lo despliega, lo opera o lo audita.**
+
+    La arquitectura, los contratos entre servicios, la topología de red, el procedimiento de puesta
+    en marcha, y el análisis de seguridad del sistema.
+
+    Orientada a infraestructura, no a desarrollo.
+
+    [Ir a la referencia técnica](tecnica/index.md)
+
+</div>
+
+## Qué hace el sistema
+
+- **Satélite GOES-19**: tres canales del instrumento de imágenes y los tres productos de descargas
+  eléctricas.
 - **Radar SINARAME**: las variables polarimétricas de la red, en tres elevaciones.
 - **Modelos numéricos**: ECMWF, WRF en su configuración regional argentina, y GFS.
 - **Estaciones de superficie**: las observaciones del SMN, con histórico por estación.
-- **Capas de referencia del IGN**: límites, hidrografía, infraestructura y más, por WMS.
+- **Capas de referencia del IGN**: límites, hidrografía, infraestructura y más.
 - **Animación** de cualquier capa temporal, con reproducción sincronizada entre capas.
 - **Consulta puntual** del valor numérico real de una variable en un punto del mapa.
 - **Avisos a corto plazo**: trazado de polígonos, intersección con departamentos y generación de las
   imágenes oficiales.
 
-## Referencia técnica
+## Cómo elegir
 
-- [Arquitectura](arquitectura/index.md) — los cuatro servicios y cómo se comunican.
-- [Servicios](servicios/tiles-processor.md) — cada uno por dentro.
-- [API HTTP](referencia/api.md) — todas las rutas, sus parámetros y sus errores.
-- [Puesta en marcha local](desarrollo/entorno-local.md) — cómo levantarlo.
+| Si querés… | Andá a |
+|---|---|
+| Entender qué muestra una capa | [Manual ▸ los productos](manual/index.md) |
+| Saber cómo se emite un aviso | [Manual ▸ avisos](manual/avisos.md) |
+| Levantar el sistema en tu propia red | [Técnica ▸ puesta en marcha](tecnica/operacion/puesta-en-marcha.md) |
+| Saber qué puertos expone y qué queda autenticado | [Técnica ▸ superficie expuesta](tecnica/seguridad/superficie.md) |
+| Evaluar si es seguro desplegarlo | [Técnica ▸ seguridad](tecnica/seguridad/index.md) |
+| Consultar una ruta HTTP o una variable de entorno | [Técnica ▸ contratos](tecnica/contratos/api.md) |
 
 ---
 

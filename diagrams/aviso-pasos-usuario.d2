@@ -1,0 +1,23 @@
+...@_style
+
+# Los pasos que da el pronosticador para emitir un aviso a corto plazo.
+# Deliberadamente sin servicios ni rutas: la versión técnica de este mismo
+# recorrido es alertas-flujo-usuario.d2.
+
+direction: down
+
+dibujar: "1. Dibujar el área\nsobre el mapa" { class: navegador }
+ajustar: "2. Ajustar el trazado\nnivel de detalle, recorte" { class: navegador }
+verificar: "3. Verificar qué\ndepartamentos abarca" { class: navegador }
+fenomeno: "4. Elegir el fenómeno\ny confirmar" { class: navegador }
+espera: "5. El sistema genera\nel aviso y sus imágenes" { class: servicio }
+pendiente: "6. Queda como pendiente\ncon sus dos imágenes" { class: almacen }
+smn: "El circuito de emisión del SMN\nlo completa y lo difunde" { class: externo }
+
+dibujar -> ajustar
+ajustar -> verificar
+verificar -> ajustar: "si abarca de más\no de menos"
+verificar -> fenomeno
+fenomeno -> espera
+espera -> pendiente
+pendiente -> smn

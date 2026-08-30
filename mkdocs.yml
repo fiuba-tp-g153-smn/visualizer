@@ -21,30 +21,48 @@ exclude_docs: |
 # and --strict is what turns that from a silent omission into a build error.
 nav:
   - Inicio: index.md
-  - Guía de uso:
-      - Uso general: uso-general.md
-      - Mapa base: mapa-base.md
-      - Productos meteorológicos: productos-meteorologicos.md
-      - Avisos a corto plazo: alertas.md
-      - Panel de estado: panel-de-estado.md
-  - Arquitectura:
-      - Visión general del sistema: arquitectura/index.md
-      - Flujo de datos: arquitectura/flujo-de-datos.md
-      - Despliegue e infraestructura: arquitectura/despliegue.md
-      - Observabilidad: arquitectura/observabilidad.md
-  - Servicios:
-      - Tiles Processor: servicios/tiles-processor.md
-      - Data Service: servicios/data-service.md
-      - Alerts Service: servicios/alerts-service.md
-      - Visualizer: servicios/visualizer.md
-  - Referencia:
-      - API HTTP: referencia/api.md
-      - Configuración y variables: referencia/configuracion.md
-      - Almacenamiento y colas: referencia/almacenamiento.md
-  - Desarrollo:
-      - Puesta en marcha local: desarrollo/entorno-local.md
-      - Pruebas y calidad: desarrollo/pruebas.md
-      - CI/CD y despliegue: desarrollo/ci-cd.md
+  - Manual de usuario:
+      - manual/index.md
+      - Primeros pasos: manual/primeros-pasos.md
+      - Trabajar con capas: manual/capas.md
+      - El mapa de fondo: manual/mapa-base.md
+      - Qué muestra cada producto:
+          - Satélite: manual/productos/satelite.md
+          - Radar: manual/productos/radar.md
+          - Modelos de pronóstico: manual/productos/modelos.md
+          - Estaciones: manual/productos/estaciones.md
+          - Capas de referencia: manual/productos/referencia.md
+      - Ver la evolución en el tiempo: manual/animacion.md
+      - Consultar un valor puntual: manual/consulta-puntual.md
+      - Emitir un aviso a corto plazo: manual/avisos.md
+      - El panel de estado: manual/panel-de-estado.md
+      - Glosario: manual/glosario.md
+  - Documentación técnica:
+      - tecnica/index.md
+      - Decisiones de arquitectura: tecnica/decisiones.md
+      - Flujo de datos: tecnica/flujo-de-datos.md
+      - Servicios:
+          - Tiles Processor: tecnica/servicios/tiles-processor.md
+          - Data Service: tecnica/servicios/data-service.md
+          - Alerts Service: tecnica/servicios/alerts-service.md
+          - Visualizer: tecnica/servicios/visualizer.md
+      - Contratos:
+          - API HTTP: tecnica/contratos/api.md
+          - Configuración y variables: tecnica/contratos/configuracion.md
+          - Almacenamiento y colas: tecnica/contratos/almacenamiento.md
+      - Operación:
+          - Topología de red: tecnica/operacion/topologia.md
+          - Puesta en marcha: tecnica/operacion/puesta-en-marcha.md
+          - Despliegue e infraestructura: tecnica/operacion/despliegue.md
+          - Entrega continua: tecnica/operacion/entrega-continua.md
+          - Verificación automática: tecnica/operacion/calidad.md
+          - Observabilidad: tecnica/operacion/observabilidad.md
+          - Capacidad y dimensionamiento: tecnica/operacion/capacidad.md
+      - Seguridad:
+          - tecnica/seguridad/index.md
+          - Superficie expuesta: tecnica/seguridad/superficie.md
+          - Datos y secretos: tecnica/seguridad/datos-y-secretos.md
+          - Endurecimiento: tecnica/seguridad/endurecimiento.md
 
 theme:
   name: material
@@ -60,6 +78,8 @@ theme:
       accent: custom
   features:
     - navigation.top
+    - navigation.expand # Every nav section open on load, not just the current one
+    - navigation.indexes # A section's own index.md becomes the clickable section entry
     - navigation.footer # Anterior/Siguiente links at the foot of every page
     - navigation.instant # Page swaps without a reload; the shell follows via document$
     - navigation.instant.prefetch # Start fetching on hover; prefetch.js covers the rest
@@ -72,6 +92,14 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - tables
+  # The glossary is written as definition lists; without this they render as
+  # paragraphs with stray colons.
+  - def_list
+  # Material icons in the landing page cards (`:material-…:`). Without the
+  # extension the shortcodes render literally.
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
       # Unicode-preserving slugs. The default slugify strips accents, which
