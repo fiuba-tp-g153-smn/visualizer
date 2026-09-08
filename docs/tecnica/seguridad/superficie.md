@@ -1,156 +1,129 @@
 ---
-title: Superficie expuesta
+title: 19.1 Superficie expuesta
 ---
 
-# Superficie expuesta
+# 19.1 Superficie expuesta
 
-Todo lo que un atacante puede alcanzar, y qué le pide el sistema para dejarlo pasar.
+**Todo lo que un atacante puede alcanzar, y qué le pide el sistema para dejarlo pasar.**
+
+![Puertos publicados, por quién debería alcanzarlos](../../imgs/diagrams/superficie-puertos.svg){ .diagram loading=lazy }
 
 ## Puertos
 
-Ninguna de las plantillas de despliegue del sistema declara una interfaz de escucha. En Docker, un
-mapeo escrito como `9000:8333` se publica en **todas** las interfaces del host. La columna "debería
-ser" es la recomendación, no lo que ocurre hoy.
+**Ninguna plantilla declara una interfaz de escucha.** **Un mapeo escrito como `9000:8333` se publica
+en todas las interfaces del host.** **La columna «debería ser» es la recomendación, no lo que ocurre.**
 
 | Puerto | Qué hay detrás | Autenticación | Debería ser |
 |---|---|---|---|
-| `6010` | Visualizador (archivos estáticos) | Ninguna | Público |
-| `6011` | Este sitio de documentación | Ninguna | Público |
+| `6010` | Visualizador y este sitio, estáticos | Ninguna | Público |
 | `6006` | API del servicio de datos | Ninguna, salvo estaciones | Público |
-| `6007` | API del servicio de avisos | **Ninguna** | Público sólo si se acepta el riesgo |
+| `6007` | API del servicio de avisos | **Ninguna** | **Público sólo si se acepta el riesgo** |
 | `6020` | API de métricas del procesador | Lectura anónima; escritura con clave | Restringido por IP |
-| `9000` | API S3 del almacén de objetos | Identidades S3 configuradas | Restringido por IP |
-| `8888` | Interfaz de archivos del almacén | **Ninguna** | **Interno** |
+| `9000` | API S3 del almacén | Identidades S3 por bucket | Sólo desde la máquina del servicio de datos |
+| `8888` | Filer del almacén | **Ninguna** | **Interno** |
 | `9333` | Coordinador del almacén | **Ninguna** | **Interno** |
 | `23646` | Panel de administración del almacén | Credenciales raíz del almacén | **Interno** |
-| `5672` | Broker de mensajes | Usuario y contraseña por variable | **Interno** |
-| `15672` | Panel del broker | Usuario y contraseña por variable | **Interno** |
-| `6379` | Caché | **Ninguna** | **Interno** |
-| `3306` | Base de datos de avisos | Usuario y contraseña | **Interno** |
+| `5672`, `15672` | Broker y su panel | Usuario y contraseña | **Interno** |
+| `6379` | Redis, **sólo en la plantilla repartida** | **Ninguna** | **Interno** |
+| `3306` | MySQL de avisos | Usuario y contraseña | **Interno** |
 
-!!! danger "Los cuatro que hay que cerrar antes de exponer el host"
-    - **`8888`, la interfaz de archivos del almacén de objetos.** Da acceso al árbol completo de
-      archivos sin firmar ninguna petición. Anula por completo el control por bucket que sí está
-      configurado en la API S3 del puerto 9000: quien llegue acá lee, escribe y borra cualquier
-      objeto.
-    - **`9333`, el coordinador del almacén.** El propio script de arranque lo describe como puerto no
-      autenticado.
-    - **`6379`, la caché**, en la variante de despliegue en la que se publica. El archivo que la
-      define lleva escrito el comentario de que hay que ponerle contraseña y restringir el firewall,
-      y ese cambio no está aplicado. Una caché sin contraseña abierta a internet se compromete en
-      minutos.
-    - **`3306`, la base de datos de avisos.** Los servicios la alcanzan por el nombre de red interno,
-      así que publicarla no aporta nada operativamente.
+!!! danger "Los que hay que cerrar antes de exponer el host"
+    - **`8888`.** Da acceso al árbol de archivos completo sin firmar nada. **Anula el control por
+      bucket del `9000`**: quien llegue lee, escribe y borra cualquier objeto.
+    - **`9333`.** **El propio script de arranque lo llama «puerto no autenticado».**
+    - **`6379`**, en la variante repartida. El archivo lleva escrito el aviso de ponerle contraseña,
+      y no está aplicado.
+    - **`3306`.** **Los servicios llegan por el nombre interno; publicarlo no aporta nada.**
 
-!!! note "La caché sólo se publica en una de las dos variantes"
-    En la plantilla que levanta todo en un solo host, la caché **no** publica puertos: es alcanzable
-    únicamente desde la red interna del stack. La exposición aparece en la variante pensada para
-    correr la caché en un host separado, que es justamente donde debe atravesar la red. El riesgo es
-    real en esa variante y no en la otra: conviene verificar cuál se está usando antes de decidir.
+Un puerto `6011` que aparecía en versiones anteriores de esta documentación **no existe**: **este sitio
+se sirve en el mismo puerto que la aplicación**.
 
 !!! warning "El firewall del host puede no alcanzar"
-    Docker escribe sus propias reglas de redirección, que se evalúan antes que las de un firewall de
-    host configurado de la manera habitual. Un puerto publicado puede quedar accesible aunque el
-    firewall parezca decir lo contrario. El control efectivo hay que ponerlo en el firewall del
-    proveedor, en el borde, o en la cadena que Docker deja reservada para reglas del operador.
+    **Docker escribe sus propias reglas de redirección**, que se evalúan antes que las de un firewall
+    de host configurado de la manera habitual. **El control efectivo va en el firewall del
+    proveedor, en el borde, o en la cadena `DOCKER-USER`.**
 
 ## Rutas HTTP
 
 ### Servicio de datos
 
-Alrededor de cuarenta rutas de lectura, **todas anónimas**: teselas de radar, satélite, ECMWF, WRF,
-GFS y mapas base, listados de períodos disponibles, consulta de valores puntuales, el estado de
-sincronización y las nueve rutas de métricas —incluidas las que reportan el estado interno de la
-caché—.
+**47 rutas anónimas de 56.** Teselas, índices, consultas puntuales, mapas base, estado de
+sincronización y las nueve rutas de métricas, incluidas las que reportan el estado interno de la
+caché.
 
-Las únicas rutas con control de acceso son las de estaciones meteorológicas:
+!!! warning "Una de las rutas anónimas escribe"
+    `GET /basemap/{provider}/{z}/{x}/{y}.png` no es sólo lectura. **Cada tesela que trae del proveedor
+    la escribe en Redis y en el bucket `basemap-tiles`**, y deja una marca negativa en cada falta.
+    **Un llamante anónimo que recorra coordenadas produce escrituras sin tope.**
 
 | Grupo | Control |
 |---|---|
-| Lectura de estaciones (5 rutas) | Cabecera con clave de acceso |
-| Administración de estaciones (4 rutas) | Cabecera con contraseña de administración, comparada en tiempo constante |
+| Lectura de estaciones, 5 rutas | Cabecera `X-API-Key`; las claves viven como hash en un bucket |
+| Administración de estaciones, 4 rutas | Cabecera `X-Admin-Password`, comparada en tiempo constante |
+
+Un interruptor de configuración **apaga la verificación de `X-API-Key` por completo**. **Viene
+encendido y no figura en el archivo de ejemplo.**
 
 ### Servicio de avisos
 
-**Diecisiete rutas, ninguna autenticada.** Incluye la que crea un aviso.
+**Dieciséis rutas y un montaje de archivos estáticos. Ninguna autenticada.** **Incluye la que crea
+un aviso.**
 
 !!! danger "Un llamante anónimo puede insertar una fila de aviso en la base del SMN"
-    La ruta de creación acepta un polígono y un código de fenómeno sin credencial alguna, y termina
-    insertando una fila en la tabla intermedia de la base operativa del organismo, marcada como no
-    procesada. Un servicio externo del SMN es el que la promueve a la tabla definitiva.
+    `POST /alerts` acepta un polígono y un código de fenómeno sin credencial alguna, y termina
+    insertando una fila en `taviso_temporal` marcada como no procesada. **Nada en el código
+    distingue la base local de la del organismo: lo decide `MYSQL_HOST`.**
 
-    **Si esa promoción es desatendida, una petición anónima equivale a un aviso oficial.** Ese
-    servicio no forma parte de estos repositorios, así que desde acá no se puede determinar; es la
-    primera pregunta que hay que responder antes de publicar este puerto.
+    Si la promoción de esa fila es desatendida, una petición anónima equivale a un aviso oficial. **El
+    proceso que promueve no está en estos repositorios**, así que desde acá no se puede saber.
 
-Dos rutas de intersección geométrica no tienen límite de tamaño de polígono y ejecutan el cálculo en
-el mismo hilo que atiende las peticiones: un polígono suficientemente grande o degenerado bloquea el
-servicio entero. La ruta de creación sí valida el tamaño, pero sólo del contorno exterior.
+Las dos rutas de intersección **no tienen límite de tamaño de polígono y calculan en el mismo hilo
+que atiende las peticiones**. **Un polígono suficientemente grande bloquea el servicio entero.** Además,
+**sus errores devuelven el texto de la excepción**, incluida la ruta del archivo de capa ausente.
 
 ### API de métricas del procesador
 
-Lectura anónima de todas las métricas de procesamiento. La única ruta protegida es la de importación,
-que exige una clave por cabecera, la compara en tiempo constante y falla cerrado si la clave no está
-configurada.
+**Lectura anónima de todo.** La única ruta protegida es la importación: clave por cabecera, comparada en
+tiempo constante, y **falla cerrada con `503`** si la clave no está configurada.
 
 ### Visualizador
 
 Archivos estáticos. **No hay ningún `proxy_pass`**: no es un proxy abierto, pero tampoco agrupa a los
-demás servicios. Es la razón por la que el navegador termina hablando con cuatro puertos distintos.
+demás. **Es la razón por la que el navegador termina hablando con cuatro puertos.**
 
 ## Documentación interactiva de las APIs
 
-Los dos servicios en Python publican sus rutas de documentación interactiva y su esquema de API sin
-restricción. Le entregan a un atacante el catálogo completo de rutas y parámetros sin necesidad de
-adivinar. En uno de los dos, además, la descripción del propio esquema nombra la cabecera de
-administración y la variable de entorno de la que sale su contraseña.
-
-Desactivarlas en producción es un cambio de una línea por servicio.
+**Los tres servicios en Python publican `/docs` y `/openapi.json` sin restricción.** **Le entregan a un
+atacante el catálogo completo de rutas y parámetros.** En el servicio de datos, además, la descripción
+del esquema **nombra la cabecera de administración y la variable de entorno** de la que sale su
+contraseña. **Desactivarlas en producción es un cambio de una línea por servicio.**
 
 ## Origen cruzado
 
-Los tres servicios responden con origen permitido `*`.
-
-| Servicio | Origen | Credenciales | Consecuencia |
-|---|---|---|---|
-| Datos | `*` | No | Aceptable: la autenticación que tiene es por cabecera, no por cookie. |
-| Métricas | `*` | No | Aceptable con la misma lógica. |
-| **Avisos** | `*` | **Sí** | Cualquier página web que visite un usuario puede hacer que su navegador ejecute operaciones contra el servicio. |
-
-El caso del servicio de avisos es el que hay que corregir: permitir credenciales junto con origen
-comodín es una combinación que los navegadores rechazan en el caso general, y que acá se sostiene
-sólo porque no hay sesión que robar. En cuanto se agregue autenticación —que es lo que hay que
-hacer— la configuración pasa a ser un agujero directo.
+**Los tres servicios responden con origen `*`, sin credenciales.** Con autenticación por cabecera y
+sin sesión, hoy es aceptable. La combinación de origen comodín con credenciales que tenía el servicio
+de avisos **se corrigió el 18 de agosto de 2026**; **el día que se agregue autenticación por sesión,
+el origen tiene que restringirse antes**.
 
 ## Cabeceras de seguridad
 
-El servidor web que publica el visualizador **no emite ninguna cabecera de seguridad**. Las únicas
-que agrega son de caché. Faltan todas las habituales: política de contenido, control de enmarcado,
-bloqueo de adivinación de tipo, política de referente, política de permisos y transporte estricto.
-Tampoco está desactivada la firma de versión del servidor.
-
-Es de las cosas más baratas de arreglar y está enteramente del lado del despliegue.
+El servidor web del visualizador **no emite ninguna cabecera de seguridad**, sólo de caché. Faltan
+política de contenido, control de enmarcado, bloqueo de adivinación de tipo, política de referente,
+política de permisos y transporte estricto. Tampoco está desactivada la firma de versión. **Es de las
+cosas más baratas de arreglar.**
 
 ## El sitio de documentación dentro de la aplicación
 
-La aplicación embebe este sitio en un marco del **mismo origen** y sin atributo de aislamiento. Es
-deliberado: el marco necesita ser del mismo origen para que la aplicación pueda sincronizar la URL
-con la página que se está leyendo.
-
-La consecuencia es que **el contenido de la documentación está dentro del límite de confianza de la
-aplicación**. Cualquier script que llegue a servirse desde este sitio puede leer el almacenamiento
-del navegador, incluida la clave de acceso a estaciones. Hoy el contenido se compila dentro de la
-imagen a partir del repositorio, así que el riesgo es de cadena de suministro, no de entrada de
-usuario. Pero es una decisión de diseño que conviene tener registrada: aislar el marco rompe la
-sincronización de URL, así que las dos cosas no se pueden tener a la vez sin rehacer ese mecanismo.
+La aplicación embebe este sitio en un marco del **mismo origen y sin aislamiento**, para poder
+sincronizar la URL con la página leída. La consecuencia: **el contenido de la documentación está
+dentro del límite de confianza de la aplicación**. **Cualquier script que llegue a servirse desde acá
+puede leer el almacenamiento del navegador**, incluida la clave de estaciones. Hoy el contenido se
+compila dentro de la imagen desde el repositorio, **así que el riesgo es de cadena de suministro**.
 
 ## Lo que no se encontró
 
-Vale tanto como lo anterior, para no gastar esfuerzo donde no hace falta:
-
-- Sin inyección de SQL: las consultas de tiempo de ejecución están parametrizadas.
-- Sin ejecución de comandos: no se usa shell en ninguna invocación de subproceso.
-- Sin traversal de rutas desde las fuentes externas de datos.
-- Sin secretos incrustados en el paquete que descarga el navegador.
-- Sin verificación TLS desactivada en las llamadas salientes.
-- Sin trazas de error ni rutas internas devueltas al cliente.
+- Sin inyección de SQL: las consultas de ejecución están parametrizadas.
+- Sin ejecución de comandos: ningún subproceso usa shell.
+- Sin traversal de rutas desde las fuentes externas.
+- Sin secretos en el paquete del navegador.
+- Sin verificación TLS desactivada.

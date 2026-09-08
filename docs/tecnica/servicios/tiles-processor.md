@@ -1,212 +1,214 @@
 ---
-title: Tiles Processor
+title: 11.1 Tiles Processor
 ---
 
-# Tiles Processor
+# 11.1 Tiles Processor
 
-`tiles-processor` es el motor de generación del sistema: descarga datos meteorológicos crudos de
-fuentes heterogéneas, les aplica las transformaciones geográficas y científicas de cada producto, y
-deposita tiles WebP, GeoTIFF optimizados para la nube (COG) y capas GeoJSON en el almacén de objetos.
-Es un sistema distribuido productor-consumidor y el componente que más recursos consume.
+`tiles-processor` es el motor de generación. **Descarga datos meteorológicos crudos, los transforma y
+deposita teselas WebP, COG y GeoJSON en el bucket `tiles-data`.** Es un sistema productor-consumidor
+sobre RabbitMQ, y **el componente que más memoria consume**. No expone ninguna API de datos: **su
+única salida es el bucket**.
 
-![Ruteo de unidades de trabajo entre las tres colas y los dos tipos de worker](../../imgs/diagrams/tiles-processor-colas.svg){ .diagram loading=lazy }
+![Tres colas, dos tipos de worker: el ruteo depende del producto](../../imgs/diagrams/tiles-processor-colas.svg){ .diagram loading=lazy }
 
-## Modos de ejecución
+## Unidades desplegables
 
-Un solo punto de entrada, `src/main.py`, despacha sobre el primer argumento.
+**Nueve contenedores en la plantilla de producción, todos en la misma red de compose.**
 
-| Comando | Qué levanta |
-|---|---|
-| `python3 src/main.py producer` | El scheduler de descubrimiento |
-| `python3 src/main.py worker` | Un worker; el tipo lo decide `WORKER_TYPE` |
-| `python3 src/main.py metrics-api` | La API de métricas de FastAPI en el puerto `6020` |
-| `python3 src/main.py migrate` | Aplica las migraciones y termina |
-
-!!! warning "El `CMD` por defecto de la imagen es un modo inexistente"
-    El `Dockerfile` termina con `CMD ["python3", "src/main.py", "process_band_13"]`, y ese modo ya no
-    existe: `main.py` sólo conoce los cuatro de arriba. Nunca se nota porque todos los servicios de
-    la compose sobreescriben `command:`, pero correr la imagen sin argumentos imprime el uso y sale
-    con código 1.
-
-## Anatomía de un procesador
-
-El marco de trabajo que comparten todos los procesadores es más delgado de lo que sugiere el tamaño
-del catálogo. Un procesador sólo tiene que saber **transformar un archivo descargado en los productos
-que le corresponden**; todo lo demás lo aporta la base: la comprobación de apagado entre etapas, el
-cronómetro por etapa, el volcado de métricas, y el directorio de trabajo por intento con su limpieza.
-
-La secuencia concreta se define un nivel más abajo, por familia de producto. La del satélite es el
-caso de referencia y la que reutilizan sus variantes:
-
-1. Georreferenciación del archivo crudo.
-2. Conversión de radiancia a temperatura de brillo.
-3. Reproyección y recorte al área de interés.
-4. Escritura del GeoTIFF optimizado para la nube.
-5. Coloreado según la paleta del producto.
-6. Generación de la pirámide de teselas.
-7. Subida al almacén de objetos y limpieza del directorio de trabajo.
-
-Cada uno de esos pasos es un punto de extensión: una variante puede reemplazar el que necesite sin
-reescribir la secuencia completa.
-
-!!! note "El comportamiento por banda viene de la configuración, no de la variante"
-    Las bandas del instrumento de imágenes comparten la misma secuencia. Lo que las distingue —rango
-    de valores, paleta de colores, prefijos de destino— sale enteramente de la configuración de cada
-    banda. Sólo una de ellas necesita una variante propia, porque la banda visible se procesa como
-    reflectancia y no como temperatura.
-
-## El catálogo
-
-Once identificadores de procesador están registrados. Los que producen tiles y los que no:
-
-| `processor_id` | Entrada | Transformación | Salidas |
-|---|---|---|---|
-| `goes_band_13` | ABI L1b NetCDF | Radiancia a temperatura de brillo por Planck, paleta de topes nubosos | Tiles + COG |
-| `goes_band_9` | ABI L1b NetCDF | Igual, con paleta de vapor de agua | Tiles + COG |
-| `goes_band_2` | ABI L1b NetCDF, malla de 500 m | Reflectancia desde el coeficiente de calibración | Tiles + COG |
-| `glm_fed` | Directorio de archivos GLM de un minuto | Agregación de la ventana y coloreado logarítmico | Tiles + COG de FED, TOE y MFA |
-| `radar` | HDF5 de SINARAME | Lectura con PyART, mapeo polar a cartesiano por vecino más cercano | Tiles + COG por radar, variable, elevación e instante |
-| `wrf` | NetCDF de WRF-ARG4K | Variable primaria, conversión de unidades, reproyección con GCP | Tiles, COG primario y secundarios, contornos y barbas |
-| `ecmwf_tp_processor` | GRIB de ECMWF | Diferencial de acumulación de 6 h, metros a milímetros | Tiles + COG |
-| `ecmwf_mslp_processor` | GRIB de ECMWF | Pascales a hectopascales, suavizado e isobaras cada 5 hPa | **COG + GeoJSON, sin tiles** |
-| `gfs_mslp` | GRIB2 de GFS | MSLET y espesor 1000/500 hPa | **COG + GeoJSON, sin tiles** |
-| `gfs_upper_level` | GRIB2 de GFS | Velocidad del viento, contornos de geopotencial, isotermas y barbas en 500 hPa | Tiles + COG + GeoJSON |
-| Descargadores de GRIB | Endpoints de ECMWF y NOMADS | Sólo descarga y reparto | GRIB cacheado en el bucket |
-
-### Variables de radar
-
-| Producto | Campo PyART | Subvolumen | Unidad |
-|---|---|---|---|
-| `DBZH` | `reflectivity` | 01 | dBZ |
-| `DBZH_450KM` | `reflectivity` | **04** | dBZ |
-| `ZH` | `reflectivity` | 01 | dBZ |
-| `TH` | `total_power` | 01 | dBZ |
-| `VRAD` | `velocity` | **02** | m/s |
-| `WRAD` | `spectrum_width` | **02** | m/s |
-| `RHOHV` | `cross_correlation_ratio` | 01 | — |
-| `ZDR` | `differential_reflectivity` | 01 | dB |
-| `KDP` | `specific_differential_phase` | 01 | °/km |
-| `PHIDP` | `differential_phase` | 01 | ° |
-
-!!! note "Las tres elevaciones son índices, no ángulos"
-    El procesador fija los barridos `(0, 1, 2)`, que son **índices** dentro del archivo. El ángulo
-    real se lee de `fixed_angle` por archivo y sólo se registra en el log. El segmento de la ruta S3
-    es `elev0`, `elev1`, `elev2`.
-
-!!! note "`DBZH` y `DBZH_450KM` comparten la variable del nombre de archivo"
-    Ambos leen archivos `..._DBZH_...H5`; los distingue el subvolumen. El 01 trae 15 barridos de
-    652 gates de 360 m (~235 km) y el 04 un único barrido de 0.55° con 1235 gates (~445 km), así
-    que del largo alcance sólo se publica `elev0`. Cada uno tiene su propia ruta
-    `tiles/radar/{radar}/{producto}/`, por lo que conviven sin pisarse.
-
-### Productos de WRF-ARG4K
-
-| `product_id` | Variable primaria | Nivel | Unidad |
-|---|---|---|---|
-| `Colmax` | `mdbz` | — | dBZ |
-| `Rafagas` | `gust10` | — | kt |
-| `Campo900hPa` | `q` | 900 hPa | g/kg |
-| `Precipitacion1h` | `pp01H` | — | mm |
-| `MUCAPE` | `mcape` | — | J/kg |
-| `AguaPrecipitable` | `pw` | — | mm |
-| `JetCapasBajas` | `v` | 850 hPa | kt |
-| `CortanteNivelesBajos` | `shear_s1_s2` | — | kt |
-| `CAPE_BRN` | `mcape` | — | J/kg |
-| `Granizo` | `ship` | — | — |
-
-### Productos de GFS
-
-| `product_id` | Segmento de prefijo | Procesador |
+| Contenedor | Imagen | Papel |
 |---|---|---|
-| `mslp` | `mean_sea_level_pressure` | `gfs_mslp` |
-| `500` | `500hpa` | `gfs_upper_level` |
-| `250` | `250hpa` | `gfs_upper_level` |
+| `tiles-processor-rabbitmq` | `rabbitmq:4.2.9-management` | El broker. Tres colas de trabajo, una de descarte. |
+| `tiles-processor-seaweedfs` | `chrislusf/seaweedfs:4.45` | El almacén de objetos. **Crea los buckets al arrancar.** |
+| `tiles-processor-producer` | Propia | Descubre imágenes nuevas cada cinco minutos y las encola. |
+| `tiles-processor-worker1`, `worker2` | Propia | `WORKER_TYPE=normal`. Atienden la cola pesada primero. |
+| `tiles-processor-worker-light1..3` | Propia | `WORKER_TYPE=light`. Sólo las colas de radar y WRF. |
+| `tiles-processor-metrics-api` | Propia | API de métricas en `6020`. Alimenta el panel de estado. |
 
-!!! note "Implementado no es lo mismo que habilitado"
-    El catálogo de arriba describe lo que el código sabe hacer. Qué se genera en un despliegue
-    concreto lo decide `settings.json`, mediante el interruptor `sources.<fuente>.products.<id>` de
-    cada producto y, en el caso del radar, además la lista de estaciones. La configuración versionada
-    tiene todos los productos habilitados, pero es habitual que un entorno la recorte para acotar el
-    consumo de recursos: conviene mirar el archivo del despliegue, no dar por sentado el catálogo
-    completo.
+**La imagen propia es una sola.** **El primer argumento del comando elige el modo**: `producer`,
+`worker`, `metrics-api` o `migrate`. Las migraciones de las bases locales **corren en proceso al
+arrancar** cada modo, serializadas con un bloqueo de archivo. **No hay un contenedor de migración
+aparte.**
 
-## Memoria: por qué existe la división de colas
+!!! note "`settings.json` viaja dentro de la imagen"
+    **En producción ningún contenedor monta el archivo.** **Cambiar un producto habilitado exige
+    reconstruir la imagen.** En desarrollo sí se monta.
 
-!!! warning "La banda 2 es la que fuerza el diseño"
-    La malla de disco completo de la banda 2 del ABI es de 21696 × 21696 píxeles, unos 470 millones
-    de puntos. Decodificarla con las convenciones CF a float64 costaría del orden de 3,7 GB, y por eso
-    el procesador la carga como enteros de 16 bits sin escalar, promedia en bloques de 4 × 4 y recién
-    entonces aplica escala y offset; además baja `GDAL_PROCESSES` a 1. El pico queda cerca de 1,2 GB.
-    Una subclase que llame a la función de módulo en vez del método sobreescrito se saltea la
-    mitigación y se queda sin memoria.
+## Puertos
 
-Esa asimetría —unos pocos trabajos carísimos contra cientos de trabajos baratos— es la razón de las
-colas livianas: sin ellas, el sistema tendría que limitar la concurrencia global al peor caso y no
-alcanzaría a drenar el volumen de radar y WRF.
+| Puerto del host | Contenedor | Qué es | Quién lo necesita |
+|---|---|---|---|
+| `${S3_TILES_DATA_PORT}` (9000) → `8333` | `seaweedfs` | API S3 | `data-service` y `alerts-service`, **desde el host** |
+| `8888`, `9333`, `23646` | `seaweedfs` | Filer, coordinador y panel de administración | Nadie en operación normal |
+| `${RABBITMQ_PORT}` (5672) | `rabbitmq` | AMQP | Nadie fuera del stack |
+| `${RABBITMQ_MGMT_PORT}` (15672) | `rabbitmq` | Panel del broker | Quien opera |
+| `${METRICS_API_PORT:-6020}` | `metrics-api` | Métricas | **El navegador**, directamente |
+
+Producer y workers levantan un servidor de salud en `8080` **que nunca se publica**. **Lo consulta sólo
+el healthcheck del contenedor.**
+
+!!! warning "`RABBITMQ_PORT` es dos cosas a la vez"
+    La misma variable es el puerto publicado en el host **y** el puerto al que se conectan los
+    clientes dentro de la red de compose. Cambiarla para mover el puerto del host **rompe la conexión
+    interna**. Ver [15. Distribuir el sistema](../operacion/distribucion.md).
+
+## Con quién habla
+
+| Destino | Protocolo | Para qué |
+|---|---|---|
+| Bucket público `noaa-goes19` de NOAA | S3 anónimo | Imágenes ABI y GLM |
+| Espejos de ECMWF y NOMADS de NOAA | HTTPS | GRIB de modelos globales |
+| `/app/data/radar_h5`, `/app/data/wrf_nc`, `/app/data/glm_h5` | **Sistema de archivos** | Radar, WRF y GLM en `mode: "local"` |
+| `rabbitmq:5672` | AMQP | Colas, por nombre de servicio |
+| `seaweedfs:8333` | S3 | Subida de productos, por nombre de servicio |
+
+Las tres fuentes locales **no llegan por red**. Las escribe el replicador de datos
+(`data-simulator`) directamente en el volumen `tiles_data`, o cualquier proceso del organismo que
+tenga ese directorio montado. **Es un acoplamiento de disco, no de puerto.** Ver
+[13. Topología de red](../operacion/topologia.md).
+
+## Qué guarda
+
+| Volumen | Montado en | Contenido | Copia única |
+|---|---|---|---|
+| `s3_data` | `/data` del almacén | **Todas las teselas y COG del sistema** | Sí |
+| `seaweedfs_filerldb2` | `/data/filerldb2` del almacén | El índice de archivos del almacén | **Sí, y hay que respaldarlo junto con `s3_data`** |
+| `tiles_data` | `/app/data` de producer, workers y métricas | Crudos de radar, WRF y GLM; `progress_tracker.db`; `metrics.db` | Sí para las métricas |
+| `rabbitmq_data` | `/var/lib/rabbitmq` | Colas y mensajes pendientes | No: el productor vuelve a publicar |
+
+**Las siete unidades de aplicación comparten `tiles_data`.** **Es un volumen local, no una carpeta de
+red.** **Esa es la razón por la que producer y workers tienen que estar en la misma máquina.**
+
+## Cuando algo falla
+
+| Dependencia caída | Productor y workers | API de métricas |
+|---|---|---|
+| RabbitMQ | Reintentan la conexión y **el proceso muere**; `restart: unless-stopped` lo levanta. | Sigue arriba; reporta las profundidades de cola como nulas. |
+| SeaweedFS | **El worker muere al arrancar**: necesita crear el bucket y aplicar la retención. | No la usa. |
+| Fuente externa (NOAA, ECMWF) | La pasada de esa fuente falla y se registra. Las demás siguen. | — |
+| Un archivo patológico | El subproceso crece hasta el tope de 30 minutos o hasta que el sistema operativo lo mata. **No hay límite de memoria declarado.** | — |
+
+## Arranque
+
+1. `rabbitmq` y `seaweedfs` arrancan sin dependencias. El almacén **crea los buckets** `tiles-data`,
+   `intersection-data` y `basemap-tiles` antes de declararse sano.
+2. Producer y workers esperan a que **los dos** estén sanos. Cada uno migra sus bases locales,
+   conecta al broker y levanta su servidor de salud.
+3. Cada worker aplica al bucket **las reglas de retención** de `settings.json`, una por prefijo.
+4. El productor hace **una pasada inmediata** y luego una cada cinco minutos.
+5. `metrics-api` sólo espera al broker.
+
+## Salud
+
+| Contenedor | Comprobación | Gracia |
+|---|---|---|
+| `rabbitmq` | Diagnóstico propio del broker | 15 s |
+| `seaweedfs` | Marca de buckets creados **y** respuesta del coordinador | 30 s |
+| Producer y workers | `GET /health` en `8080`, `200` si el broker está conectado | 15 s |
+| `metrics-api` | `GET /health` en `6020` | 15 s |
+
+## Qué produce
+
+Qué se genera lo decide `settings.json`, con un interruptor por producto y una lista de estaciones de
+radar. **La configuración versionada ya recorta el catálogo**: la banda visible, dos de los tres
+productos de descargas, seis de diez productos de radar, dos de diez de WRF, la presión de ECMWF y los
+niveles altos de GFS **vienen apagados**. **Conviene leer el archivo del despliegue, no dar por sentado
+el catálogo.**
+
+| Fuente | Productos posibles | Salida | Prefijo del bucket |
+|---|---|---|---|
+| GOES-19 ABI | Bandas 13, 9 y 2 | Teselas + COG | `tiles/band_*`, `cog/band_*` |
+| GOES-19 GLM | Densidad de destellos, energía óptica, área mínima | Teselas + COG | `tiles/glm_*`, `cog/glm_*` |
+| Radar SINARAME | Diez variables por radar, tres elevaciones | Teselas + COG | `tiles/radar/`, `cog/radar/` |
+| WRF-ARG4K | Diez productos | Teselas, COG, contornos y barbas | `tiles/wrf/`, `cog/wrf/`, `geojson/wrf/` |
+| ECMWF | Precipitación total; presión a nivel del mar | Teselas + COG; sólo isobaras GeoJSON | `tiles/models/ecmwf/`, `geojson/models/ecmwf/` |
+| GFS | Presión a nivel del mar; 500 y 250 hPa | COG + GeoJSON; teselas en altura | `tiles/models/gfs/`, `geojson/models/gfs/` |
+
+Las variables de radar y su subvolumen de origen:
+
+| Producto | Subvolumen | Unidad |
+|---|---|---|
+| `DBZH`, `ZH`, `TH`, `RHOHV`, `ZDR`, `KDP`, `PHIDP` | 01 | dBZ, dBZ, dBZ, —, dB, °/km, ° |
+| `DBZH_450KM` | **04** | dBZ |
+| `VRAD`, `WRAD` | **02** | m/s |
+
+!!! note "Las elevaciones son índices, no ángulos"
+    Los tres barridos publicados son los índices `0`, `1` y `2` del archivo. **El ángulo real sólo
+    queda en el registro.** **`DBZH_450KM` tiene un solo barrido**, así que sólo publica `elev0`.
+
+## Memoria
+
+!!! warning "La banda 2 es la que dimensiona la máquina"
+    La malla de disco completo de la banda 2 tiene 21696 × 21696 puntos. Decodificarla a punto
+    flotante de 64 bits costaría del orden de 3,7 GB. **El procesador la carga como enteros de 16
+    bits, promedia bloques de 4 × 4 y recién entonces aplica escala.** **Además baja el paralelismo de
+    GDAL a 1.** Aun así, es el trabajo más caro del sistema. Los números para dimensionar están en
+    [16. Capacidad](../operacion/capacidad.md).
+
+## Retención
+
+**Cada worker aplica al arrancar una regla de ciclo de vida de S3 por prefijo**, tomada de
+`settings.json`.
+
+| Prefijos | Días |
+|---|---|
+| `tiles/band_`, `cog/band_`, `tiles/glm_`, `cog/glm_`, `tiles/radar`, `cog/radar` | 1 |
+| `tiles/wrf`, `cog/wrf`, `geojson/wrf`, `tiles/models/ecmwf`, `cog/models/ecmwf`, `geojson/models/ecmwf` | 2 |
+| `grib/models/ecmwf`, `tiles/models/gfs`, `cog/models/gfs`, `geojson/models/gfs`, `grib/models/gfs` | 1 |
+
+!!! warning "Cambiar la retención no toca lo ya escrito"
+    **SeaweedFS estampa el vencimiento al escribir.** **Modificar `retention_days` sólo afecta a los
+    objetos futuros.**
 
 ## Estado y deduplicación
 
 ![Ciclo de vida de una unidad de trabajo](../../imgs/diagrams/tiles-processor-estados.svg){ .diagram loading=lazy }
 
-Una base SQLite con la tabla `processed_images` evita encolar dos veces el mismo trabajo. El producer
-marca `IN_PROGRESS` **antes** de publicar; el worker pasa la fila a `PROCESSING` al tomarla, lo que
-rearma el TTL; al terminar bien, la fila se borra.
+**Una tabla SQLite, `processed_images`, evita encolar dos veces la misma imagen.** **El productor marca
+la fila antes de publicar.** El worker la pasa a `PROCESSING` al tomarla, lo que rearma el TTL. **Al
+terminar bien, la fila se borra.**
 
-Dos limpiezas la mantienen sana, ambas a cargo del producer: las filas en `PROCESSING` más viejas que
-`JOB_TTL_MINUTES` se borran en cada tick, y las filas en `IN_PROGRESS` vencidas se recuperan **sólo
-si las tres colas están vacías**, para que un backlog de arranque en frío no se confunda con trabajo
-huérfano. Si la lectura de profundidad de una cola falla, la recuperación no ocurre.
+**Dos limpiezas la mantienen sana, ambas en el productor.** Las filas en `PROCESSING` más viejas que
+`JOB_TTL_MINUTES` se borran en cada tick. Las filas en `IN_PROGRESS` vencidas se recuperan **sólo si
+las tres colas están vacías**, para no confundir un arranque en frío con trabajo huérfano.
 
-## Retención
+## Cómo se agranda
 
-La expiración se aplica como reglas de ciclo de vida de S3, una por prefijo, derivadas de
-`settings.json` y aplicadas por cada worker al arrancar.
+**La cantidad de workers se cambia regenerando la plantilla**, no editándola:
 
-| Prefijo | Días |
-|---|---|
-| `tiles/band_`, `cog/band_` | 1 |
-| `tiles/glm_`, `cog/glm_` | 1 |
-| `tiles/radar`, `cog/radar` | 1 |
-| `tiles/wrf`, `cog/wrf`, `geojson/wrf` | 2 |
-| `tiles/models/ecmwf`, `cog/models/ecmwf`, `geojson/models/ecmwf` | 2 |
-| `grib/models/ecmwf` | 1 |
-| `tiles/models/gfs`, `cog/models/gfs`, `geojson/models/gfs`, `grib/models/gfs` | 1 |
+```
+./scripts/generate-compose.sh --light 3 2
+```
 
-!!! warning "Cambiar la retención no afecta lo ya escrito"
-    SeaweedFS estampa el TTL en el momento de la escritura, así que modificar `retention_days` sólo
-    alcanza a los objetos futuros. Los que ya están en disco conservan el que tenían, o ninguno.
+**Dos workers normales y tres livianos es el dimensionamiento de producción.** Cada worker procesa dos
+unidades a la vez (`WORKER_CONCURRENCY`).
+
+!!! warning "La plantilla versionada difiere de lo que el script produce"
+    La plantilla de producción **fue editada a mano** después de generarla. Regenerarla hoy
+    **perdería** las versiones fijadas de imagen, los puertos extra del almacén, el volumen del
+    índice, las credenciales de los buckets de entrada, los ajustes de concurrencia y los tiempos de
+    gracia al apagar. **Antes de regenerar, comparar los dos archivos.**
 
 ## Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `make up` | Levanta la compose de desarrollo |
-| `make prod` | Levanta la compose de producción |
-| `make metrics-api` | Levanta sólo la API de métricas |
-| `make test` | Corre pytest **en el host**, no en Docker |
+| `make up` / `make prod` | Compose de desarrollo / producción |
+| `make metrics-api` | Sólo la API de métricas |
+| `make test` | Pruebas **dentro de Docker** |
+| `make test-host` | Pruebas en el host, con el entorno virtual activo |
 | `make clean` | Borra los volúmenes del proyecto |
-| `make precommit` | `pre-commit run --all-files` |
-| `./scripts/generate-compose.sh [--dev] [--light N] <workers>` | Regenera las compose |
+| `./scripts/generate-compose.sh [--dev] [--light N] <workers>` | Regenera las plantillas |
 
-Ver también [Configuración y variables](../contratos/configuracion.md) y
-[Almacenamiento y colas](../contratos/almacenamiento.md).
+## Discrepancias verificadas
 
-!!! warning "Sin verificar"
-    Tres discrepancias del repositorio quedaron sin resolver, y conviene conocerlas antes de
-    perseguirlas:
+Tres cosas del repositorio confunden y ya están resueltas:
 
-    - `migrations/README.md` describe un servicio `migrate` de un solo uso que condicionaría al resto
-      de la compose. Ese servicio no existe en las compose generadas: cada modo aplica sus
-      migraciones en proceso al arrancar. No pudo determinarse cuál de las dos descripciones es la
-      vigente.
-    - `scripts/seaweedfs_start.sh` menciona una variable `TILE_LIFECYCLE_RETENTION_DAYS` como origen
-      de las reglas de retención. Esa variable no existe: la retención sale de `settings.json`.
-      Parece un nombre que quedó viejo, pero no está confirmado.
-    - `src/healthcheck.py` implementa una verificación por archivo de latido. Ningún `healthcheck` de
-      las compose ni del `Dockerfile` lo invoca —todos usan una petición HTTP—, así que aparenta ser
-      código muerto, pero no se confirmó si está reservado para algún uso.
+- La guía de migraciones describe un contenedor `migrate` de un solo uso. **Ese contenedor no
+  existe**; cada modo migra en proceso al arrancar. **La guía es la que quedó vieja.**
+- El script de arranque del almacén menciona una variable `TILE_LIFECYCLE_RETENTION_DAYS`. **No
+  existe**; la retención sale de `settings.json`. Es un nombre viejo en un comentario.
+- Existe una comprobación de salud por archivo de latido. **Nada la invoca** y nada escribe el
+  archivo: es código muerto. **Las comprobaciones reales son las HTTP de arriba.**
 
-!!! warning "Sin verificar"
-    La poda de la base de métricas corre con el cron fijo `0 * * * *`, escrito en el código y no
-    expuesto en `settings.json` junto al cron de descubrimiento. No pudo determinarse si la asimetría
-    es deliberada.
+La poda de la base de métricas corre con un cron fijo, `0 * * * *`, escrito en el código. **No es
+configurable**; sólo lo es el tope de filas, `metrics.max_rows`.

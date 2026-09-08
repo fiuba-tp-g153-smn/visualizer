@@ -1,179 +1,200 @@
 ---
-title: Configuración y variables
+title: 12.2 Configuración y variables
 ---
 
-# Configuración y variables
+# 12.2 Configuración y variables
 
-Cada servicio se configura por dos vías: variables de entorno para lo específico del despliegue y
-lo secreto, y un `settings.json` versionado para las políticas de producto. Esta página documenta
-**nombres y formas**, nunca valores.
+Cada servicio se configura por dos vías. **Las variables de entorno llevan lo específico del
+despliegue y lo secreto. `settings.json` lleva la política de producto.** **Esta página documenta
+nombres, formas y precedencia.** **Nunca valores.**
+
+![De dónde sale la configuración, y cuál gana](../../imgs/diagrams/configuracion-fuentes.svg){ .diagram loading=lazy }
 
 !!! warning "Los `.env` reales no se leen ni se copian"
-    Los repositorios contienen archivos `.env` con credenciales de verdad. La fuente de esta página
-    es `.env.example` en cada uno. Ningún valor real aparece acá ni debe aparecer.
+    Los repositorios contienen archivos `.env` con credenciales de verdad. **La fuente de esta
+    página es `.env.example`** de cada uno. **Ningún valor real aparece acá ni debe aparecer.**
+
+## Cómo se combinan las dos fuentes
+
+| Servicio | `settings.json` | Precedencia | Si falta `settings.json` |
+|---|---|---|---|
+| `tiles-processor` | Dentro de la imagen | Cada clave admite una variable de entorno; **la variable gana** | No arranca |
+| `data-service` | Dentro de la imagen, en `/settings.json` | Cada clave admite la variable con el mismo nombre en mayúsculas; **la variable gana** | **No arranca**: once claves no tienen valor por defecto en el código |
+| `alerts-service` | Dentro de la imagen, en `/config/settings.json` | **El archivo gana** para sus claves; quince de ellas no tienen variable | No arranca |
+| `visualizer` | No tiene | Ocho argumentos de construcción, **fijados al compilar** | — |
+
+**Un valor vacío no siempre es «sin definir».** En `data-service`, **una variable numérica vacía se
+ignora; una de texto vacía se toma como valor**. En `alerts-service`, una variable ausente vale cadena
+vacía y ninguna es obligatoria por código.
 
 ## tiles-processor
 
-| Variable | ¿Requerida? | Para qué | Forma |
-|---|---|---|---|
-| `LOG_LEVEL` | Sí | Nivel de registro | Cadena |
-| `DATA_DIR` | Sí | Raíz de datos dentro del contenedor | Ruta absoluta |
-| `S3_TILES_DATA_ENDPOINT` | Sí | Puerta de enlace S3 | `host:puerto` |
-| `S3_TILES_DATA_PORT` | Sí | Puerto publicado del almacén | Entero |
-| `S3_TILES_DATA_SECURE` | No | HTTP o HTTPS | Booleano |
-| `S3_TILES_DATA_BUCKET_NAME` | Sí | Bucket principal | Nombre |
-| `S3_INTERSECTION_DATA_BUCKET_NAME` | Sí | Bucket de capas de avisos | Nombre |
-| `S3_BASEMAP_BUCKET_NAME` | Sí | Bucket de mapas base | Nombre |
-| `S3_ROOT_USER` / `S3_ROOT_PASSWORD` | Sí | Administración de SeaweedFS | Cadena / secreto |
-| `S3_TILES_DATA_TILES_PROCESSOR_USER` / `_PASSWORD` | Sí | Identidad de escritura | Cadena / secreto |
-| `S3_TILES_DATA_DATA_SERVICE_USER` / `_PASSWORD` | Sí | Identidad de lectura | Cadena / secreto |
-| `S3_INTERSECTION_DATA_ALERTS_SERVICE_USER` / `_PASSWORD` | Sí | Identidad de `alerts-service` | Cadena / secreto |
-| `S3_UPLOAD_CONCURRENCY` | No (32) | Tamaño del pool de subida | Entero |
-| `RABBITMQ_HOST` | Sí | Host del broker | Nombre de host |
-| `RABBITMQ_PORT` / `RABBITMQ_MGMT_PORT` | Sí | AMQP y panel | Entero |
-| `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | Sí | Credenciales | Cadena / secreto |
-| `RABBITMQ_QUEUE` | Sí | Cola pesada | Nombre |
-| `RABBITMQ_RADAR_LIGHT_QUEUE` / `RABBITMQ_WRF_LIGHT_QUEUE` | No | Colas livianas | Nombre |
-| `RABBITMQ_DLQ` / `RABBITMQ_DLX` | Sí | Cola e intercambio de descarte | Nombre |
-| `WORKER_TYPE` | No (`normal`) | Tipo de worker | `normal` \| `light` |
-| `WORKER_CONCURRENCY` | No (2) | Unidades en vuelo por worker | Entero ≥ 1 |
-| `WORKER_ID` | No (hostname) | Atribución en métricas | Cadena |
-| `JOB_TTL_MINUTES` | Sí | Vencimiento de una unidad en curso | Entero |
-| `HEALTH_PORT` | No (8080) | Puerto del servidor de salud | Entero |
-| `METRICS_API_PORT` | No (6020) | Puerto de la API de métricas | Entero |
-| `METRICS_API_KEY` | No | Clave de `POST /api/import` | Secreto |
-| `ECMWF_TP_SMOOTHING_RESOLUTION_DEG` | No (0.01) | Remuestreo de precipitación; 0 lo desactiva | Grados |
-| `GFS_TILE_SMOOTHING_RESOLUTION_DEG` | No (0.01) | Ídem para GFS | Grados |
-| `ECMWF_OPENDATA_SOURCES` | No | Espejos en orden de preferencia | Lista separada por comas |
-| `GFS_SUBSET_ENDPOINT` | Sí si GFS está activo | Endpoint de recorte GRIB | URL |
-| `GDAL_CACHEMAX` | No | Tope de caché de GDAL | Megabytes |
-| `CPL_VSIL_CURL_CACHE_SIZE` | No | Tope de caché de lectura remota | Bytes |
-| `{RADAR,GLM_FOLDER,WRF,GOES19}_S3_ACCESS_KEY` / `_SECRET_KEY` | No | Credenciales de los buckets de entrada; sin definir, acceso anónimo | Secreto |
+**Catorce variables son obligatorias**: **sin ellas el proceso aborta al arrancar**.
 
-!!! note "Dos variables usadas que no están en el ejemplo"
-    `RABBITMQ_HOST` es obligatoria en el código pero falta en `.env.example`; la aporta la compose.
-    Lo mismo pasa con las credenciales de los buckets de entrada, que la compose interpola aunque el
-    ejemplo no las liste.
+| Variable | ¿Requerida? | Para qué |
+|---|---|---|
+| `LOG_LEVEL`, `DATA_DIR` | **Sí** | Nivel de registro; raíz de datos dentro del contenedor |
+| `S3_TILES_DATA_ENDPOINT`, `S3_TILES_DATA_BUCKET_NAME` | **Sí** | Puerta S3 y bucket de salida. **La plantilla de producción fija `seaweedfs:8333` a mano.** |
+| `S3_TILES_DATA_TILES_PROCESSOR_USER` / `_PASSWORD` | **Sí** | Identidad de escritura en el bucket |
+| `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD` | **Sí** | El broker. **`RABBITMQ_HOST` falta en `.env.example`**; la aporta la plantilla como `rabbitmq`. |
+| `RABBITMQ_QUEUE`, `RABBITMQ_DLQ`, `RABBITMQ_DLX` | **Sí** | Cola pesada, cola e intercambio de descarte |
+| `JOB_TTL_MINUTES` | **Sí** | Vencimiento de una unidad en curso |
+| `S3_TILES_DATA_SECURE` | No (`false`) | HTTPS hacia el almacén |
+| `RABBITMQ_RADAR_LIGHT_QUEUE`, `RABBITMQ_WRF_LIGHT_QUEUE` | No | Colas livianas; tienen nombre por defecto |
+| `WORKER_TYPE` | No (`normal`) | `normal` o `light` |
+| `WORKER_CONCURRENCY` | No (2) | Unidades simultáneas por worker |
+| `WORKER_ID` | No (nombre del host) | Atribución en las métricas |
+| `S3_UPLOAD_CONCURRENCY`, `S3_HEAVY_UPLOAD_CONCURRENCY`, `S3_LARGE_UPLOAD_CONCURRENCY` | No (32, 16, 4) | Carriles de subida al bucket |
+| `S3_LARGE_OBJECT_THRESHOLD_MB`, `S3_HEAVY_READ_TIMEOUT_S` | No (6, 120) | Corte entre carriles y tiempo de espera de las subidas pesadas |
+| `HEALTH_PORT`, `METRICS_API_PORT` | No (8080, 6020) | Puertos internos |
+| `METRICS_API_KEY` | No | Clave de `POST /api/import`. **Vacía, la ruta responde `503`.** |
+| `ECMWF_OPENDATA_SOURCES` | No (`ecmwf,azure,aws`) | Espejos en orden de preferencia |
+| `ECMWF_TP_SMOOTHING_RESOLUTION_DEG`, `GFS_TILE_SMOOTHING_RESOLUTION_DEG` | No (0.01) | Remuestreo; `0` lo desactiva |
+| `GFS_SUBSET_ENDPOINT` | Sí si GFS está activo | Endpoint de recorte GRIB de NOAA |
+| `{GOES19,RADAR,GLM_FOLDER,WRF}_S3_ACCESS_KEY` / `_SECRET_KEY` | No | Credenciales de los buckets de entrada. **Sin definir, acceso anónimo; a medias, el arranque falla.** |
+
+Las siguientes **no las lee el proceso**: las consumen el script de arranque del almacén o la
+plantilla. **Todas menos las de Prometheus son obligatorias para que el almacén arranque.**
+
+| Variable | Quién la usa |
+|---|---|
+| `S3_ROOT_USER` / `_PASSWORD` | Identidad raíz del almacén y su panel de administración |
+| `S3_TILES_DATA_DATA_SERVICE_USER` / `_PASSWORD` | Identidad que usa `data-service` para leer |
+| `S3_INTERSECTION_DATA_BUCKET_NAME`, `S3_INTERSECTION_DATA_ALERTS_SERVICE_USER` / `_PASSWORD` | Bucket e identidad de `alerts-service` |
+| `S3_BASEMAP_BUCKET_NAME` | Bucket de mapas base, creado por el almacén |
+| `S3_TILES_DATA_PORT`, `RABBITMQ_MGMT_PORT` | Puertos publicados en el host |
+| `SEAWEEDFS_METRICS_ADDRESS`, `PROMETHEUS_PUSHGATEWAY_HTTP_PROTO` / `_USER` / `_PASS` | Envío opcional de métricas del almacén a un Pushgateway |
+| `GDAL_CACHEMAX`, `CPL_VSIL_CURL_CACHE_SIZE` | Cachés de GDAL en los workers, en megabytes y bytes |
 
 ### `settings.json`
 
-Es la configuración de producto: no lleva secretos y se monta de sólo lectura.
-
 | Clave | Controla |
 |---|---|
-| `timezone` | Zona del scheduler |
-| `bounds` | Recuadro de recorte en EPSG:4326 |
-| `scheduler.discovery_cron` | Cadencia del descubrimiento (`*/5 * * * *`) |
-| `metrics.enabled` / `metrics.max_rows` | Registro de métricas y tope de filas |
-| `sources.<fuente>.products.*` | Qué productos se generan |
+| `timezone`, `bounds` | Zona del planificador; recuadro de recorte en EPSG:4326 |
+| `scheduler.discovery_cron` | Cadencia del descubrimiento, `*/5 * * * *` |
+| `metrics.enabled`, `metrics.max_rows` | Registro de métricas y tope de filas |
+| `sources.<fuente>.products.<id>` | **Qué productos se generan** |
 | `sources.<fuente>.input.mode` | `local` o `s3` |
-| `sources.<fuente>.zoom_levels` | Rango de zoom, con la forma `"MIN-MAX"` |
-| `sources.<fuente>.retention_days` | Días de retención, entero u objeto por tipo |
+| `sources.<fuente>.zoom_levels`, `retention_days` | Rango de zoom y días de retención por prefijo |
 | `sources.{radar,wrf}.light_queue` | Qué productos van a las colas livianas |
-| `sources.radar.stations` | Lista blanca o negra de estaciones |
+| `sources.goes19.max_hours_back`, `sources.gfs.max_steps_per_tick` | Cuánto mira hacia atrás; cuántos pasos por pasada |
 
 ## data-service
 
-| Variable | ¿Requerida? | Para qué | Forma |
-|---|---|---|---|
-| `APP_HOST_PORT` | No (6006) | Puerto publicado | Entero |
-| `APP_ENV` | No | Entorno | `development` \| `production` |
-| `LOG_LEVEL` | No | Nivel de registro | Cadena |
-| `APP_ROLE` | No (`all`) | Reparto API/sincronizador | `web` \| `worker` \| `all` |
-| `WEB_CONCURRENCY` | No | Workers de uvicorn | Entero |
-| `WORKER_CONCURRENCY` | No | Concurrencia de sincronización | Entero |
-| `REDIS_URL` | Sí | Caché | URL de Redis |
-| `S3_TILES_DATA_ENDPOINT` y credenciales | Sí | Lectura del bucket de productos | `host:puerto`, secretos |
-| `S3_BASEMAP_BUCKET_NAME` | Sí | Bucket de mapas base | Nombre |
-| `S3_WEATHER_STATIONS_BUCKET_NAME` | Sí | Bucket de estaciones | Nombre |
-| `S3_API_KEYS_BUCKET_NAME` | Sí | Bucket de claves | Nombre |
-| `SMN_API_BASE_URL` | Sí | API de estaciones del SMN | URL |
-| `SMN_API_USERNAME` / `SMN_API_PASSWORD` | Sí | Credenciales de esa API | Cadena / secreto |
-| `SMN_API_TOKEN_SETTLING_DELAY_SECONDS` | No (0) | Espera tras renovar el token | Segundos |
-| `SMN_API_LOG_REQUESTS` | No (falso) | Diagnóstico de peticiones salientes | Booleano |
-| `SMN_STATIONS_REGISTRY_URL` | Sí | Registro canónico de estaciones | URL |
-| `WEATHER_STATIONS_ADMIN_PASSWORD` | Sí para administración | Cabecera `X-Admin-Password` | Secreto |
-| `BASEMAP_<PROVEEDOR>_URL` | Sí | Plantilla por proveedor, ocho en total | Plantilla XYZ o TMS |
+El proceso lee **122 nombres** de variable. **Casi todos son ajustes finos con valor por defecto.** Los que
+deciden si el servicio arranca y funciona:
+
+| Variable | ¿Requerida? | Para qué |
+|---|---|---|
+| `S3_TILES_DATA_ENDPOINT`, `S3_TILES_DATA_ACCESS_KEY`, `S3_TILES_DATA_SECRET_KEY`, `S3_TILES_DATA_BUCKET_NAME` | **Sí** | Sin ellas no hay sincronización ni claves de estaciones. **El ejemplo trae `host.docker.internal:9000`.** |
+| `REDIS_URL` | **Sí** | La caché. Sin ella, todo sale por el bucket. |
+| `WEATHER_STATIONS_ADMIN_PASSWORD` | **Sí** con la autenticación de estaciones encendida | Cabecera `X-Admin-Password` |
+| `SMN_API_USERNAME` / `_PASSWORD` | **Sí** con `WEATHER_STATIONS_SYNC_MODE=full` | Credenciales de la API del SMN |
+| `WEB_CONCURRENCY` | **Sí**, como argumento de construcción | Procesos de uvicorn. **Sin él, el comando queda con `--workers=` vacío.** |
+| `APP_ROLE` | No (`all`) | `web`, `worker` o `all`. Otro valor aborta. |
+| `APP_ENV` | No | **Sólo `production` acota la espera del almacén a 120 s.** |
+| `LOG_LEVEL` | No (`INFO`) | Nivel de registro |
+| `SYNC_MODE` | No (`full` en `settings.json`) | **Cualquier valor distinto de `full` apaga la sincronización sin avisar.** |
+| `S3_TILES_DATA_SECURE` | No (`false`) | HTTPS hacia el almacén |
+| `S3_BASEMAP_BUCKET_NAME`, `S3_WEATHER_STATIONS_BUCKET_NAME`, `S3_API_KEYS_BUCKET_NAME` | No | Nombres de los tres buckets propios |
+| `SMN_API_BASE_URL` | No | **El valor por defecto es el entorno de prueba del SMN.** |
+| `SMN_STATIONS_REGISTRY_URL` | No | El padrón de estaciones, **por HTTP plano** |
+| `SMN_API_LOG_REQUESTS` | No (`false`) | Diagnóstico ruidoso; las credenciales van redactadas |
+| `BASEMAP_<PROVEEDOR>_URL` | Sí por proveedor XYZ habilitado | Ocho plantillas: `ARGENMAP`, `ARGENMAPGRIS`, `ARGENMAPOSCURO`, `ARGENMAPTOPOGRAFICO`, `SATELLITE`, `TOPOGRAPHIC`, `GOOGLESATELLITE`, `OCEANBASE`. Sin definir, el proveedor se salta. |
+| `WEATHER_STATIONS_API_KEY_AUTH_ENABLED` | No (`true`) | **En `false`, las cinco rutas de estaciones quedan abiertas.** |
+| `WEATHER_STATIONS_SYNC_MODE` | No (`full`) | `full` o `disabled` |
+| `BASEMAP_SYNC_MODE` | No (`no_cache` en `settings.json`) | `full`, `on_demand`, `no_cache` o `relay_only` |
 
 !!! warning "Las plantillas de los mapas del IGN son TMS, y no lo dicen"
-    Los cuatro fondos del IGN se sirven con esquema TMS, cuyo eje Y está invertido respecto del
-    esquema XYZ habitual. La plantilla **no** lo expresa con un marcador en la propia URL: termina
-    igual que cualquier otra, y la inversión la aplica una bandera aparte en la configuración de la
-    capa. Copiar una de esas plantillas a otro cliente sin activar ahí la opción equivalente produce
-    un mapa con las filas dadas vuelta.
+    Los cuatro fondos del IGN usan el esquema TMS, con el eje Y invertido. **La plantilla no lo
+    expresa en la URL**: la inversión la aplica una bandera aparte en la configuración de la capa.
+    **Copiar una de esas URL a otro cliente sin esa bandera produce un mapa con las filas dadas vuelta.**
 
-!!! note "El comentario de `SMN_API_LOG_REQUESTS` quedó viejo"
-    `.env.example` advierte que la opción escribe en el log el JWT y la contraseña. El cliente
-    **redacta** ambos antes de registrarlos. Sigue siendo una opción de diagnóstico ruidosa que no
-    corresponde dejar encendida en producción, pero no filtra credenciales.
+Los grupos de ajuste fino, todos con valor por defecto y **ninguno en `.env.example`**:
+
+| Grupo | Variables | Qué ajustan |
+|---|---|---|
+| `S3_*` | 5 | Concurrencia de descargas, tiempos de espera, reintentos, teselas en vuelo |
+| `SYNC_*`, `*_TILE_TTL`, `*_TO_KEEP`, `*_SYNC_INTERVAL_SECONDS`, `*_SYNC_TIMEOUT_SECONDS` | 26 | Cadencia de cada bucle, vencimientos en Redis, corridas retenidas |
+| `BASEMAP_*` | 34 | Recorrido de respaldo: recuadro, concurrencia, retrocesos, cortacircuitos, vencimientos |
+| `WEATHER_STATIONS_*` | 24 | Cadencia del padrón, tiempos de espera, vencimientos en Redis, ventana de series |
+| `METRICS_*`, `REDIS_METRICS_*` | 9 | Retención y muestreo de métricas |
+| `GDAL_*`, `CPL_*`, `VSI_*` | 5 | Cachés de lectura remota |
+
+**Cada clave de `settings.json` admite la variable con el mismo nombre en mayúsculas y guiones
+bajos.** El archivo versionado fija `sync.mode`, los vencimientos por dominio, `wrf.inits_to_keep: 3`,
+`basemap.sync_mode: no_cache` y la lista de catorce proveedores de mapas base.
+
+!!! note "Concurrencia del sincronizador"
+    `WORKER_CONCURRENCY` en la plantilla de `data-service` sólo fija los procesos de uvicorn del
+    sincronizador: **no es la variable homónima de `tiles-processor`**.
 
 ## alerts-service
 
-| Variable | ¿Requerida? | Para qué | Forma |
-|---|---|---|---|
-| `APP_HOST_PORT` | No (6007) | Puerto publicado | Entero |
-| `APP_ENV` / `LOG_LEVEL` | No | Entorno y registro | Cadena |
-| `SETTINGS_FILE` | Sí | Ruta del `settings.json` | Ruta absoluta |
-| `DATA_DIR` | No | Raíz de datos | Ruta |
-| `COUNTRY_GEOJSON_URL` | No | WFS del contorno del país | URL |
-| `DEPARTMENTS_GEOJSON_URL` | No | WFS de departamentos | URL |
-| `PROVINCES_GEOJSON_URL` | No | WFS de provincias | URL |
-| `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` / `S3_BUCKET_NAME` / `S3_SECURE` | Sí | Respaldo de capas | `host:puerto`, secretos, nombre, booleano |
-| `MYSQL_HOST` / `_PORT` / `_DATABASE` / `_USER` / `_PASSWORD` | Sí | Base de avisos | Cadena / entero / secreto |
-| `MYSQL_READONLY_USER` / `_PASSWORD` | Sí | Usuario de sólo lectura | Cadena / secreto |
-| `MYSQL_READONLY_MAX_CONNECTIONS` / `_PER_HOUR` | No | Límites de ese usuario | Entero |
-| `MYSQL_TAVISO_*` | Sí | Base externa de sólo lectura | Cadena / secreto |
-| `MANAGE_DB_SCHEMAS` | No | Habilita las migraciones MySQL | Booleano |
-| `OUTPUT_DIR` | Sí | Dónde se escriben los GIF | Ruta |
-| `ALERT_CACHE_DIR` | Sí | Dónde viven los índices pre-calculados | Ruta |
-| `JOBS_DB_PATH` / `METRICS_DB_PATH` | No | Rutas de las bases SQLite | Ruta |
+**Ninguna variable es obligatoria por código**: una ausente vale cadena vacía. **Lo que falta se nota
+después, en la primera operación que la necesita.**
 
-!!! warning "`MANAGE_DB_SCHEMAS` no va en producción"
-    Habilitarla ejecuta DDL contra la base operativa del SMN, incluida una revisión que trunca dos
-    tablas de correo con las comprobaciones de clave foránea desactivadas. En producción el esquema
-    lo gestiona el DBA del organismo.
+| Variable | Para qué |
+|---|---|
+| `APP_ENV`, `LOG_LEVEL` | Entorno y nivel de registro |
+| `SETTINGS_FILE` | Ruta del `settings.json`, `/config/settings.json` en la imagen. **Si no existe, el arranque falla.** |
+| `DATA_DIR` | Raíz de las bases SQLite. `/app/data` por defecto; **no está en el ejemplo ni en la plantilla.** |
+| `MYSQL_HOST`, `_PORT`, `_DATABASE`, `_USER`, `_PASSWORD` | La base donde **escribe** el aviso |
+| `MYSQL_TAVISO_HOST`, `_PORT`, `_DATABASE`, `_USER`, `_PASSWORD` | La base de la que **lee** la tabla definitiva. En el ejemplo apunta al mismo contenedor. |
+| `MANAGE_DB_SCHEMAS` | **Habilita las migraciones MySQL. El ejemplo la trae en `true`.** |
+| `MYSQL_ROOT_HOST`, `MYSQL_ROOT_PASSWORD`, `MYSQL_READONLY_USER` / `_PASSWORD`, `MYSQL_READONLY_MAX_CONNECTIONS` / `_PER_HOUR` | Las consume el contenedor de MySQL, no el servicio |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET_NAME`, `S3_SECURE` | Respaldo de capas. **Con el endpoint vacío, desactivado.** |
+| `COUNTRY_GEOJSON_URL`, `DEPARTMENTS_GEOJSON_URL`, `PROVINCES_GEOJSON_URL` | Los tres WFS del IGN; tienen valor por defecto |
+| `OUTPUT_DIR`, `ALERT_CACHE_DIR` | Dónde se escriben los GIF y los índices |
+| `JOBS_DB_PATH`, `METRICS_DB_PATH` | Rutas de las bases SQLite; derivan de `DATA_DIR` |
+| `APP_HOST_PORT` | El puerto publicado, sólo en la plantilla |
+
+!!! danger "`MANAGE_DB_SCHEMAS` no va en producción"
+    Activada, el arranque ejecuta el árbol completo de migraciones contra `MYSQL_HOST`, incluida una
+    revisión que **trunca `departamentos` y `provincia`**. En producción el esquema pertenece al
+    DBA del organismo. Ver [19.3 Endurecimiento](../seguridad/endurecimiento.md).
 
 ### `settings.json`
 
-Las claves están agrupadas por área. El servicio las aplana internamente al cargarlas, de modo que
-los nombres de los atributos en código no llevan la jerarquía.
+Las claves se agrupan por área y el servicio las aplana al cargarlas. **Quince no tienen variable de
+entorno**; **se cambian editando el archivo y reconstruyendo la imagen**.
 
 | Clave | Controla |
 |---|---|
-| `layer.update_cron` | Cron del refresco de capas (`0 3 * * 0`) |
-| `layer.cache_ttl_minutes` | Expiración por inactividad de la caché de geometrías |
-| `alerts.detail_level` | Nivel de detalle usado al construir la caché de arranque |
-| `alerts.job.workers` | Workers del pool de generación |
-| `alerts.job.queue_maxsize` | Tamaño de la cola de generación |
-| `alerts.job.timeout_seconds` | Tiempo límite de un trabajo completo |
-| `alerts.job.shutdown_seconds` | Margen para drenar la cola al apagar |
-| `alerts.supervisor.interval_seconds` | Cadencia del supervisor de workers |
-| `metrics.enabled` | Si se registran métricas |
-| `metrics.sample_interval_seconds` | Cadencia del muestreador |
-| `metrics.retention_days` / `metrics.max_rows` | Retención de las métricas |
-| `detail_level_tolerances` | Tolerancia de simplificación por nivel de detalle |
-| `departments_simplify_tolerance` | Tolerancia única de la capa de departamentos |
-| `ign_simplify_tolerance` | Tolerancia de simplificación de las capas del IGN usadas al renderizar |
+| `layer.update_cron`, `layer.cache_ttl_minutes` | Cron del refresco, `0 3 * * 0`; expiración de la caché de geometrías |
+| `alerts.detail_level` | Nivel de la caché de arranque, `7` |
+| `alerts.job.workers`, `queue_maxsize`, `timeout_seconds`, `shutdown_seconds` | 2, 16, 150 s y 160 s |
+| `alerts.supervisor.interval_seconds` | Cadencia del supervisor, 30 s |
+| `metrics.enabled`, `sample_interval_seconds`, `retention_days`, `max_rows` | Métricas del pool |
+| `detail_level_tolerances`, `departments_simplify_tolerance`, `ign_simplify_tolerance` | Tolerancias de simplificación |
 
 ## visualizer
 
 !!! warning "Son variables de compilación, no de ejecución"
-    Llegan al bundle por el `DefinePlugin` de webpack. Cambiar cualquiera obliga a **recompilar**:
-    reiniciar el contenedor no alcanza. Además, en la compose sólo los `args:` llegan al bundle de
-    producción; los `environment:` con los mismos nombres no.
+    Llegan al paquete durante `npm run build`. **Cambiar cualquiera obliga a reconstruir la
+    imagen.** En la plantilla sólo cuentan los `args:`; el bloque `environment:` con los mismos
+    nombres no hace nada.
 
-| Variable | Para qué | Forma |
+| Variable | Para qué | Valor de reserva |
 |---|---|---|
-| `DATA_SERVICE_BASE_URL` | Base de `data-service` | URL |
-| `ALERTS_SERVICE_BASE_URL` | Base de `alerts-service` | URL |
-| `METRICS_SERVICE_BASE_URL` | Base de la API de métricas de `tiles-processor` | URL |
-| `SMN_API_PROMPT_FOR_TOKEN` | Si se pide la clave de estaciones al usuario | Booleano |
-| `APP_HOST_PORT` | Puerto publicado | Entero |
-| `DOCS_URL` | De dónde carga el iframe de documentación | Ruta o URL |
-| `IGN_PLACE_SEARCH_URL` | Búsqueda de lugares del IGN | URL |
-| `NOMINATIM_SEARCH_URL` | Búsqueda alternativa | URL |
+| `DATA_SERVICE_BASE_URL` | Base de `data-service` | `https://data.mapasmn.com` |
+| `ALERTS_SERVICE_BASE_URL` | Base de `alerts-service` | `http://localhost:8080` |
+| `METRICS_SERVICE_BASE_URL` | Base de la API de métricas | `http://localhost:6020` |
+| `DOCS_URL` | De dónde carga el marco de documentación | `/docs-site` |
+| `SMN_API_PROMPT_FOR_TOKEN` | Si se pide la clave de estaciones al usuario | `true` |
+| `APP_HOST_PORT` | El puerto publicado. **Ninguna fuente de la aplicación la lee.** | `4200` |
+| `IGN_PLACE_SEARCH_URL`, `NOMINATIM_SEARCH_URL` | Buscadores de lugares | URL públicas |
 
-!!! note "Los valores de reserva no coinciden con el ejemplo"
-    `custom-webpack.config.js` define reservas para el caso de que una variable no esté definida, y
-    tres de ellas discrepan con `.env.example`: la base de `data-service`, la de `alerts-service` y
-    el puerto de la aplicación. Una compilación sin variables no apunta a donde sugiere el ejemplo.
+**Tres reservas discrepan del ejemplo**: las bases de datos y avisos, y el puerto. **Una compilación
+sin variables no apunta a donde sugiere `.env.example`.**
+
+## El repositorio de orquestación
+
+Existe un repositorio que incluye a los cuatro como submódulos y **genera cada `.env` a partir de uno
+solo**, con plantillas por servicio. Tres cosas a tener en cuenta si se usa:
+
+- Sus plantillas siguen escribiendo `host.docker.internal:${S3_TILES_DATA_PORT}` para el almacén.
+- Emite variables que nadie lee: `SEAWEEDFS_FILER_ENDPOINT`, `SEAWEEDFS_TILE_TTL`,
+  `SEAWEEDFS_RADAR_TILE_TTL`, `TILE_FORMAT` y `DOCS_HOST_PORT`. Un puerto `6011` de documentación
+  **ya no existe**.
+- Sus copias de los submódulos están **más viejas** que las ramas principales.

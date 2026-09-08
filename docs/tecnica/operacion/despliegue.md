@@ -1,122 +1,134 @@
 ---
-title: Despliegue e infraestructura
+title: 17. Despliegue y entrega continua
 ---
 
-# Despliegue e infraestructura
+# 17. Despliegue y entrega continua
 
-Los cuatro servicios se despliegan igual: un push a `main` dispara un workflow de GitHub Actions que
-llama a un webhook de Coolify, espera a que el despliegue termine y verifica que la aplicación
-responda. No hay Kubernetes en ninguna parte: todo corre con Docker Compose sobre un VPS,
-detrás de un proxy inverso Caddy.
+Los cuatro servicios se despliegan igual: **un push a `main` dispara un workflow de GitHub Actions
+que llama a un webhook de Coolify, espera a que el despliegue termine y comprueba que la aplicación
+responda.** **Todo corre con Docker Compose sobre un servidor virtual**, detrás de un proxy inverso con
+TLS que no está en los repositorios.
 
-![Cadena de entrega, del push a main hasta los contenedores](../../imgs/diagrams/despliegue.svg){ .diagram loading=lazy }
+![Del push a main a los contenedores](../../imgs/diagrams/despliegue.svg){ .diagram loading=lazy }
 
-## Los contenedores en producción
+## Los nueve workflows
 
-| Stack | Contenedores |
+| Repositorio | Workflow | Disparador | Qué hace |
+|---|---|---|---|
+| `tiles-processor` | `ci.yml` | Push y pull request **fuera de `main`**, y llamada desde `deploy.yml` | Lockfile y gitleaks. Lint, tipos y pruebas **suprimidos** |
+| `tiles-processor` | `deploy.yml` | Push a `main` | Llama a `ci.yml` y despliega |
+| `tiles-processor` | El de seguridad | Push a `main`, pull request, lunes 06:00 | Trivy sobre la imagen, **sólo informe** |
+| `data-service`, `alerts-service`, `visualizer` | El de pruebas | Push y pull request fuera de `main`, y llamada desde `deploy.yml` | gitleaks y pruebas |
+| Los mismos tres | `deploy.yml` | Push a `main` | Pruebas, Trivy en paralelo, y despliegue |
+
+## Qué bloquea de verdad un despliegue
+
+La intención aparente y el efecto real **no coinciden**.
+
+| Repositorio | Lo único que detiene un despliegue |
 |---|---|
-| `tiles-processor` | `rabbitmq`, `seaweedfs`, `producer`, `worker1`, `worker2`, `worker-light1`, `worker-light2`, `worker-light3`, `metrics-api` |
-| `data-service` | `redis`, API con `APP_ROLE=web`, sincronizador con `APP_ROLE=worker` |
-| `alerts-service` | `mysql`, la API |
-| `visualizer` | nginx sirviendo el bundle estático |
+| `tiles-processor` | `poetry check --lock` y gitleaks |
+| `data-service`, `alerts-service` | gitleaks y las pruebas |
+| `visualizer` | gitleaks. **Las pruebas llevan `continue-on-error`.** |
 
-### Puertos publicados
+!!! warning "En `tiles-processor` la compuerta está en verde por construcción"
+    Los trabajos `lint`, `type-check` y `unit-tests` llevan `if: false`, marcados como suprimidos
+    **sin fecha ni issue**. La compuerta final corre con `if: always()` y sólo falla ante `failure`
+    o `cancelled`. Un trabajo salteado reporta `skipped`, así que **pasa**. **La acción compuesta que
+    preparaba el entorno de Python quedó sin uso.**
 
-| Puerto | Servicio |
-|---|---|
-| `3306` | MySQL de `alerts-service` |
-| `5672` | RabbitMQ (AMQP) |
-| `6006` | API de `data-service` |
-| `6007` | API de `alerts-service` |
-| `6010` | Frontend |
-| `6011` | Documentación |
-| `6020` | API de métricas de `tiles-processor` |
-| `8888`, `9000`, `9333` | SeaweedFS: filer, API S3, master |
-| `15672` | Panel de RabbitMQ |
+!!! warning "Trivy no bloquea ningún despliegue en ningún repositorio"
+    En los tres repositorios de la generación anterior, el escaneo de imagen **no figura en las
+    dependencias del trabajo de despliegue**: corre en paralelo. **Un hallazgo crítico pone el
+    workflow en rojo después de que la aplicación ya se desplegó.** **En `tiles-processor` el escaneo
+    vive en un workflow aparte que `deploy.yml` no invoca.** Además, **todas las excepciones de Trivy
+    de `alerts-service` vencieron el 1 de septiembre de 2026**, y dos de `data-service` en julio.
 
-## Imágenes fijadas
+## La secuencia de despliegue
+
+**Idéntica en los cuatro repositorios**:
+
+1. `POST` al webhook de Coolify con un token bearer, con tope de 30 s.
+2. Validación de la respuesta y extracción del identificador del despliegue.
+3. Sondeo de `/deployments/<uuid>` hasta 600 s. El intervalo crece de 2 en 2 hasta 10 s; ante
+   errores de la API se duplica y aborta tras tres fallos seguidos.
+4. Sondeo de `/applications/<uuid>` durante 60 s, cada 3 s, hasta ver la aplicación sana.
+5. **Ante fallo, un paso condicional vuelca los registros del despliegue.**
+
+!!! note "Tres salidas blandas"
+    Si el chequeo de salud agota su tiempo, **el trabajo termina en éxito igual**. **Un despliegue
+    marcado como reinicio se saltea los chequeos.** Y un estado `running:unknown` también cuenta como
+    éxito. **Un workflow verde no prueba que la aplicación haya quedado sana.**
+
+Los cuatro secretos, por nombre: `COOLIFY_DEPLOY_HOOK`, `COOLIFY_DEPLOY_TOKEN`, `COOLIFY_BASE_URL`
+y `COOLIFY_READ_TOKEN`. **Ningún workflow contiene un host, un puerto ni una URL de salud** del
+sistema: **la salud la informa la API de Coolify**.
+
+## Dos generaciones de configuración
+
+| Aspecto | `tiles-processor` | Los otros tres |
+|---|---|---|
+| Workflows | CI, despliegue y seguridad, en tres archivos | Pruebas y despliegue, en dos |
+| gitleaks | 8.30.1, fijado por versión y suma SHA-256 | Última publicación, sin verificar |
+| Trivy | 0.72.0, fijado por versión y suma | 0.70.0, sin verificar |
+| Poetry en CI | Fijado a 2.3.2 | `pip install poetry`, sin versión; el visualizador usa Node |
+| Acción de checkout | v7, salvo el propio `deploy.yml`, que usa v4 | v4 |
+
+**Las imágenes fijan Poetry 2.3.2; dos workflows no.** **La versión de CI puede desplazarse sola.**
+
+## Las imágenes
 
 | Componente | Imagen |
 |---|---|
 | RabbitMQ | `rabbitmq:4.2.9-management` |
-| SeaweedFS | `chrislusf/seaweedfs:4.41` |
+| SeaweedFS | `chrislusf/seaweedfs:4.45` |
 | Redis | `redis:8.10-trixie` |
 | MySQL | `mysql:8.4` |
 | Documentación | `squidfunk/mkdocs-material:9.7.7` |
 | Base de `tiles-processor` | `ghcr.io/osgeo/gdal:ubuntu-small-3.12.3-amd64` |
-| Base de `data-service` / `alerts-service` | `python:3.13-slim-trixie` |
-| Build del visualizador | `node:24-alpine` |
-| Runtime del visualizador | `nginx:mainline-alpine-slim` |
+| Base de `data-service` y `alerts-service` | `python:3.13-slim-trixie` |
+| Build y runtime del visualizador | `node:24-alpine`, `nginx:mainline-alpine-slim` |
 
-`nginx:mainline-alpine-slim` es la única etiqueta que se mueve; todas las demás están fijadas.
+**Las dos del visualizador son las únicas etiquetas que se mueven solas.** **Ninguna imagen está fijada
+por resumen criptográfico.** `tiles-processor` tiene además dos dependencias fuera del archivo de
+bloqueo: **una se instala siempre en su última versión y otra se toma de la punta de un repositorio**.
 
-!!! warning "Las compose de `tiles-processor` son generadas"
-    `docker-compose.yaml` y `docker-compose-dev.yaml` de `tiles-processor` los escribe
-    `scripts/generate-compose.sh`, que recibe la cantidad de workers como argumento. Editarlos a mano
-    funciona hasta la próxima regeneración, que descarta el cambio. Para cambiar la cantidad de
-    workers hay que volver a correr el script.
-
-!!! warning "Sin `restart:`, un reinicio del host puede dejar el servicio caído"
-    Todos los servicios de producción declaran `restart: unless-stopped`. Los únicos que no lo hacen
-    son `rabbitmq` y `seaweedfs` en la compose de desarrollo de `tiles-processor`, y `docs-build` en
-    la del visualizador, que es de un solo uso por diseño. Un servicio de larga vida sin política de
-    reinicio no vuelve solo después de un reinicio del host.
-
-## La secuencia de despliegue
-
-Es idéntica en los cuatro repositorios; sólo cambian los números de línea.
-
-1. El workflow llama por POST al webhook de despliegue (`COOLIFY_DEPLOY_HOOK`) con un token bearer y
-   un tope de 30 s.
-2. Valida la respuesta con `jq` y extrae el identificador del despliegue.
-3. Sondea `/deployments/<uuid>` hasta 600 s. Hay **dos** retrocesos distintos: en el camino normal
-   incrementa el intervalo de a 2 s con techo en 10 s; ante errores de la API duplica el intervalo y
-   aborta tras tres fallos seguidos.
-4. Cuando el despliegue termina, sondea `/applications/<uuid>` durante 60 s cada 3 s para
-   comprobar que la aplicación quedó sana.
-5. Si algo falla, un paso `if: failure()` vuelca los logs.
-
-Dos salidas son deliberadamente blandas: si el chequeo de salud agota su tiempo, el job termina en
-éxito igual, y un despliegue marcado como `restart_only` se saltea los chequeos por completo.
-
-### Secretos que usan los workflows
-
-Sólo los nombres; los valores viven en la configuración del repositorio.
-
-| Nombre | Para qué |
+| Repositorio | Etapas de construcción |
 |---|---|
-| `COOLIFY_DEPLOY_HOOK` | URL del webhook que dispara el despliegue |
-| `COOLIFY_DEPLOY_TOKEN` | Token bearer de ese webhook |
-| `COOLIFY_BASE_URL` | Base de la API de Coolify para el sondeo |
-| `COOLIFY_READ_TOKEN` | Token de lectura para consultar despliegues y aplicaciones |
+| `tiles-processor` | Dos, sobre la imagen de GDAL |
+| `data-service` | Dos, sobre Python |
+| `alerts-service` | Dos, con un punto de entrada que migra antes de arrancar |
+| `visualizer` | Tres: documentación, compilación y nginx |
 
-## Cómo se sirve la documentación
-
-Este sitio se construye dentro de la imagen del visualizador y viaja con él. La etapa `docs` del
-`Dockerfile` corre `mkdocs build --strict`, y el resultado se copia a `public/docs-site` **después**
-de `COPY . .` —para que no lo tape— y **antes** de `npm run build`, para que el glob de assets
-`public/**/*` de `angular.json` lo levante.
-
-nginx lo sirve en `/docs-site/` con distintas políticas de caché:
-
-| Ruta | Caché | Por qué |
-|---|---|---|
-| `/docs-site/assets/javascripts/`, `/assets/stylesheets/` | `immutable`, un año | Material versiona su bundle por contenido |
-| El resto de `/docs-site/assets/` | Una semana | Íconos y logo, sin hash |
-| `/docs-site/imgs/`, `/docs-site/videos/` | `immutable`, un año | Cada referencia lleva `?v=<hash>` estampado en la compilación |
-| `/docs-site/` (las páginas) | `max-age=60` con `stale-while-revalidate` | Una edición llega al lector en la visita siguiente |
-
-`absolute_redirect off` es necesario porque el sitio usa URLs de directorio: sin eso nginx
-reconstruiría la redirección desde su propio bloque `server` y perdería el puerto detrás del proxy.
+!!! warning "El orden de las etapas del visualizador es funcional"
+    La documentación compilada se copia a `public/docs-site` **después** de copiar el contexto, para
+    que no la tape, y **antes** de `npm run build`, para que el paquete la incluya. Invertir
+    cualquiera de las dos produce una imagen sin documentación, **sin error**. La etapa de
+    documentación copia también `hooks/`; **sin ese directorio, la compilación falla**.
 
 ## Migraciones al arrancar
 
-`alerts-service` corre `alembic -c /config/alembic.ini upgrade head` en su `entrypoint.sh` antes de
-levantar uvicorn. `tiles-processor` y `data-service` aplican las suyas en proceso al arrancar,
-serializadas con un `flock`.
+`alerts-service` corre `alembic upgrade head` en su punto de entrada, y aborta si falla. **Sin
+`MANAGE_DB_SCHEMAS`, es una operación vacía.** `tiles-processor` y `data-service` **aplican las suyas en
+proceso al arrancar, serializadas con un bloqueo de archivo**.
 
-!!! warning "`MANAGE_DB_SCHEMAS` debe quedar sin definir en producción"
-    Todo el árbol de migraciones MySQL de `alerts-service` está detrás de esa variable. En producción
-    el esquema pertenece al DBA del SMN y `alembic upgrade head` es deliberadamente una operación
-    vacía. Definirla apuntando a la base del cliente ejecutaría DDL sobre un sistema que no es
-    nuestro, incluida una revisión que trunca tablas.
+!!! danger "`MANAGE_DB_SCHEMAS` debe quedar sin definir en producción"
+    **El esquema pertenece al DBA del SMN.** **Definirla apuntando a la base del organismo ejecuta DDL
+    sobre un sistema ajeno**, incluida una revisión que trunca tablas. Ver
+    [19.3 Endurecimiento](../seguridad/endurecimiento.md).
+
+## Políticas de reinicio
+
+**Todos los servicios de producción declaran `restart: unless-stopped`.** Los únicos que no lo hacen
+son el broker y el almacén en la plantilla de desarrollo del procesador, y el compilador de
+documentación del visualizador, que es de un solo uso. Un servicio de larga vida sin política de
+reinicio **no vuelve solo** después de reiniciar el host; **con una limpieza automática de contenedores
+detenidos, además desaparece**.
+
+## Lo que no se puede verificar desde los repositorios
+
+- **Si la compuerta de CI está exigida como verificación obligatoria** en la protección de rama. **No
+  hay ningún archivo de reglas versionado.**
+- **Qué hace Trivy con una excepción vencida**: si vuelve a reportar la vulnerabilidad o la sigue
+  ignorando.
+- **Qué plantilla despliega Coolify para `data-service`**: la todo en uno o la repartida.

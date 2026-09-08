@@ -1,118 +1,126 @@
 ---
-title: Topología de red
+title: 13. Topología de red
 ---
 
-# Topología de red
+# 13. Topología de red
 
-Cómo están cableados los cuatro stacks entre sí. Es lo primero que hay que entender para decidir
-dónde poner un firewall, y tiene una particularidad que sorprende: **no hay una red compartida entre
-los stacks**.
+Cómo están cableados los cuatro stacks entre sí. **Es lo primero que hay que entender para decidir
+dónde va un firewall**, y tiene una particularidad: **no hay una red compartida entre los stacks.**
+**Cada uno vive en su propia red de compose**, y lo que cruza de uno a otro lo hace **por un puerto
+publicado en el host** o por el disco.
 
-![Los cuatro stacks y la costura que los une](../../imgs/diagrams/topologia-red.svg){ .diagram loading=lazy }
+![Cuatro redes, una costura](../../imgs/diagrams/topologia-red.svg){ .diagram loading=lazy }
 
 ## Las redes
 
-Cada stack define su propia red de compose. La única declarada como externa es la del servicio de
-datos, y la usan sólo sus tres archivos de despliegue —la variante todo en uno, la que corre sólo la
-aplicación y la que corre sólo la caché—. Hay que crearla a mano una vez antes del primer arranque.
+| Stack | Red | Quién la crea |
+|---|---|---|
+| `tiles-processor` | La red por defecto del proyecto | Compose, al levantar |
+| `data-service` | `data_service_network`, declarada **externa** | **Nadie del stack.** Hay que crearla a mano una vez: `docker network create data_service_network` |
+| `alerts-service` | `alerts_service_network`, propia del proyecto | Compose, al levantar |
+| `visualizer` | La red por defecto del proyecto | Compose, al levantar |
 
-Dentro de un stack, los contenedores se alcanzan por su nombre de servicio. **Entre stacks, no.**
+**Dentro de un stack, los contenedores se alcanzan por nombre de servicio**: `rabbitmq`, `seaweedfs`,
+`redis`, `mysql`. **Entre stacks, no.** **Un contenedor de `data-service` no puede resolver `seaweedfs`.**
+
+!!! note "El repositorio de orquestación no cambia esto"
+    Existe un repositorio que incluye las cuatro plantillas en **un solo proyecto** de compose. En
+    ese modelo, `tiles-processor` y `visualizer` comparten la red por defecto del proyecto, pero
+    `data-service` y `alerts-service` siguen en las suyas. **La costura de abajo existe igual.**
 
 ## La costura: el tráfico entre stacks pasa por el host
 
-El servicio de datos alcanza al almacén de objetos del procesador de mosaicos **saliendo al host y
-volviendo a entrar** por un puerto publicado, mediante un nombre especial que resuelve a la dirección
-de la puerta de enlace del host.
+**El servicio de datos alcanza el almacén saliendo al host y volviendo a entrar** por el puerto
+publicado `9000`, usando el nombre `host.docker.internal`, que resuelve a la puerta de enlace del
+host. Es el único mecanismo del sistema que **asume una sola máquina**, y tiene tres consecuencias:
 
-Esto tiene tres consecuencias prácticas:
+1. **El puerto `9000` tiene que estar publicado**, aunque los dos stacks corran en la misma máquina.
+   **No es una exposición decorativa.**
+2. **Filtrarlo rompe el arranque, no sólo el tráfico.** `data-service` comprueba el almacén al
+   arrancar y, en producción, aborta a los 120 s. **El resultado es un contenedor en ciclo de
+   reinicio, no un servicio degradado.**
+3. **El filtrado tiene que ser por dirección de origen**, no por cierre del puerto: permitir al host y
+   bloquear el resto.
 
-1. **El puerto del almacén de objetos tiene que estar publicado**, aunque los dos stacks corran en la
-   misma máquina. No es una exposición decorativa: es la vía por la que el sistema funciona.
-2. **Filtrarlo rompe el arranque, no sólo el tráfico.** El servicio de datos comprueba el almacén al
-   arrancar y, en producción, aborta si no responde dentro del tiempo límite. El resultado es un
-   contenedor en ciclo de reinicio, no un servicio degradado. Si después de aplicar reglas de
-   firewall el servicio de datos no levanta, este es el primer lugar donde mirar.
-3. **El filtrado tiene que ser por dirección de origen**, no por cierre del puerto: hay que permitir
-   al host y bloquear el resto.
+`alerts-service` usa el mismo camino para su respaldo, **sólo si `S3_ENDPOINT` está definido**. **La
+alternativa limpia es una red de compose común**, con el servicio de datos apuntando a `seaweedfs:8333`.
+**Es un cambio de configuración.** Lo que costaría repartir los stacks en más de una máquina está en
+[15. Distribuir el sistema](distribucion.md).
 
-La alternativa limpia es unir los dos stacks a una red de compose común y apuntar el servicio de datos
-al nombre interno del almacén. Es un cambio de configuración y elimina de raíz un puerto publicado.
+## La otra costura: el disco
+
+Tres de las fuentes del procesador, radar, WRF y descargas eléctricas, están configuradas como
+**locales**: el productor mira directorios dentro de su volumen `tiles_data`. **Esos archivos no
+llegan por red.** Los escribe el replicador de datos, `data-simulator`, que **monta la ruta del mismo
+volumen en el host** y deposita ahí copias renombradas al momento actual. **En el despliegue actual no
+hay un feed en vivo del organismo.**
+
+Para el firewall, esto significa **ningún puerto extra**. Para la topología, significa que **el
+replicador tiene que correr en la máquina del procesador**. Si algún día un proceso del organismo
+entrega esos archivos, **ese proceso será el nuevo canal a mapear**.
 
 ## Puertos
 
-El mapa completo, con qué debería ser alcanzable desde dónde, está en
-[Superficie expuesta](../seguridad/superficie.md). El resumen operativo:
+El mapa completo, con autenticación y recomendación por puerto, está en
+[19.1 Superficie expuesta](../seguridad/superficie.md). El resumen operativo:
 
-| Deben ser alcanzables desde el navegador del usuario | Deben ser alcanzables sólo desde el host | No deberían salir del host |
+| Deben ser alcanzables desde el navegador | Sólo desde el host, o desde la máquina del servicio de datos | No deberían salir del host |
 |---|---|---|
-| Visualizador, documentación, servicio de datos, servicio de avisos, API de métricas | API S3 del almacén de objetos | Interfaz de archivos y coordinador del almacén, panel del broker, base de datos, caché |
+| `6010` visualizador, `6006` datos, `6007` avisos, `6020` métricas | `9000`, la API S3 del almacén | `8888`, `9333`, `23646` del almacén; `5672`, `15672` del broker; `3306` de MySQL; `6379` de Redis en la variante repartida |
 
 !!! warning "Publicar sólo el visualizador no alcanza"
-    El servidor web del visualizador **no hace de proxy** hacia ningún otro servicio. El navegador
-    del usuario llama por su cuenta al servicio de datos, al de avisos y al de métricas. Si se
-    publica únicamente el puerto del visualizador, la aplicación carga y queda vacía.
-
-    Si se quiere una única entrada, hay que agregar el proxy en el borde y apuntar las variables de
-    dirección de la aplicación a esas rutas. Es un cambio de configuración de compilación del
-    visualizador más reglas en el proxy inverso.
+    **El servidor web del visualizador no hace de proxy.** **El navegador llama por su cuenta al
+    servicio de datos, al de avisos y al de métricas.** Con sólo el puerto del visualizador abierto,
+    la aplicación carga y queda vacía. Una única entrada exige un proxy inverso delante de los
+    cuatro puertos y recompilar el visualizador con esas rutas.
 
 !!! danger "Las reglas de Docker se evalúan antes que las del firewall del host"
-    Docker inserta sus propias reglas de redirección. Un puerto publicado puede quedar accesible
-    aunque el firewall del host, configurado de la manera habitual, parezca cerrarlo. El control
-    efectivo va en el firewall del proveedor de infraestructura, en el borde, o en la cadena que
-    Docker deja reservada para reglas del operador.
+    Ninguna plantilla declara dirección de escucha: **todo se publica en `0.0.0.0`**. **Docker
+    inserta sus propias reglas de redirección**, y un puerto publicado puede quedar accesible aunque
+    el firewall del host parezca cerrarlo. El control efectivo va en el firewall del proveedor, en
+    el borde, o en la cadena `DOCKER-USER`.
 
 ## Orden de arranque
 
-Cada stack declara sus dependencias internas con comprobación de salud, así que dentro de un stack el
-orden se respeta solo. Entre stacks no hay coordinación:
-
-- El **procesador de mosaicos** tiene que estar arriba antes que el servicio de datos, porque este
-  último comprueba el almacén de objetos al arrancar y aborta si no responde.
-- El **servicio de avisos** aplica migraciones antes de levantar su API y aborta si fallan.
-- El **visualizador** no depende de nadie para arrancar: es estático. Si los servicios no están, carga
-  igual y muestra los estados vacíos.
+**Dentro de un stack, compose respeta las dependencias.** **Entre stacks no hay coordinación.** El orden
+correcto y lo que fuerza cada paso están en [14. Puesta en marcha](puesta-en-marcha.md). En una
+línea: primero el procesador, después el servicio de datos, el de avisos cuando se quiera, y el
+visualizador en cualquier momento.
 
 ## Volúmenes
 
-| Volumen | Contiene | Nota |
+| Volumen | Contiene | Se puede regenerar |
 |---|---|---|
-| Datos del almacén de objetos | Las teselas generadas | **Respaldar junto con el índice**: por separado no sirven |
-| Índice del almacén de objetos | El árbol de archivos | Ídem |
-| Base de datos de avisos | Avisos y capas de referencia | Copia única |
-| Bases locales del servicio de avisos | Historial, trabajos y métricas | Copia única, sobrevive al redespliegue |
-| Datos de trabajo del procesador | Archivos crudos pendientes | Se vuelven a descargar |
-| Caché | Nada propio | Se repuebla sola |
+| `s3_data` + `seaweedfs_filerldb2` | Todas las teselas y el índice del almacén | Reprocesando, pero **los crudos ya expiraron**. Respaldar los dos juntos. |
+| `mysql_data` | Los avisos y las capas de referencia | **No** |
+| `alerts_service_data`, `alerts_output` | Historial, trabajos, métricas y los GIF | **No** |
+| `tiles_data` | Crudos pendientes y las métricas del procesador | Los crudos vuelven a llegar; las métricas, no |
+| `dataservice_data` | Métricas y el cursor del respaldo de mapas base | No las métricas |
+| `redis_data` | La caché | **Sí**, sola, desde el bucket |
 
-## Despliegue mínimo y despliegue completo
+## Despliegue mínimo y completo
 
-No hace falta levantar todo para tener el mapa funcionando.
+**Mínimo, sólo el mapa:** `tiles-processor` con su almacén y su broker, `data-service` con su caché, y
+`visualizer`. **Se puede prescindir de `metrics-api`, de todo `alerts-service` y de cualquier fuente**
+apagando sus productos en `settings.json`.
 
-**Mínimo — mapa sin avisos:**
+**Completo:** agrega `alerts-service` con su MySQL, el acceso a la base operativa y a la API del SMN,
+y el replicador de datos si no hay feeds en vivo.
 
-- Procesador de mosaicos, con su almacén de objetos y su broker.
-- Servicio de datos, con su caché.
-- Visualizador.
-
-**Completo**, agrega:
-
-- Servicio de avisos, con su base de datos, y acceso a la base operativa y a la API del SMN.
-
-El visualizador degrada de forma razonable si falta el servicio de avisos: el panel correspondiente
-queda inutilizable, el resto del mapa funciona. Lo que no tolera es la falta del servicio de datos,
-que es de donde salen todas las capas.
+**El visualizador degrada bien sin el servicio de avisos**: el panel correspondiente queda inutilizable y
+el resto funciona. **Lo que no tolera es la falta del servicio de datos.**
 
 ## Tareas programadas
 
+**No hay cron del sistema ni temporizadores de systemd.** **Toda la programación es interna a cada
+proceso**: si el contenedor está caído, el tick no ocurre.
+
 | Qué | Cada cuánto | Dónde corre |
 |---|---|---|
-| Descubrimiento de datos nuevos en las fuentes | Cada 5 minutos | Productor del procesador de mosaicos |
-| Ciclos de sincronización de caché | Continuo, por dominio | Sincronizador del servicio de datos |
-| Refresco de capas de referencia del IGN | Semanal, domingos de madrugada | Servicio de avisos |
-
-!!! warning "Sin verificar: la llegada de radar, WRF y descargas eléctricas"
-    Tres de las fuentes están configuradas como locales y no se encontró en los repositorios el
-    mecanismo por el que esos archivos llegan al volumen de trabajo del procesador. Si llegan por
-    red —una transferencia programada, un montaje remoto, un servicio del organismo—, ese canal no
-    figura en este mapa y hay que agregarlo a las reglas de firewall. Es la única pregunta abierta de
-    esta página, y hay que resolverla con el equipo antes de cerrar el perímetro.
+| Descubrimiento de datos nuevos | 5 minutos | Productor del procesador |
+| Poda de la base de métricas del procesador | 1 hora, cron fijo | Productor |
+| Sincronización de teselas a Redis | 60 s, por dominio | Sincronizador del servicio de datos |
+| Respaldo de mapas base | 7 días | Sincronizador |
+| Padrón y observaciones de estaciones | 5 minutos | Sincronizador |
+| Refresco de capas del IGN | Domingos 03:00 UTC | Servicio de avisos |
+| Replicación de radar, WRF y descargas | 10 minutos; WRF cada 6 horas | `data-simulator` |

@@ -1,199 +1,151 @@
 ---
-title: Endurecimiento
+title: 19.3 Endurecimiento
 ---
 
-# Endurecimiento previo al despliegue
+# 19.3 Endurecimiento
 
-La lista concreta de cambios, ordenada por severidad. Cada punto dice **qué está mal hoy**, **qué
-hacer** y **de qué tipo de cambio se trata**: casi todos son de configuración o de despliegue, no de
-código.
+La lista concreta de cambios, ordenada por severidad. Cada punto dice **qué está mal hoy, qué hacer y
+de qué tipo de cambio se trata**. **Casi todos son de configuración o de despliegue, no de código.**
+**Los tres primeros bloquean**: impiden recomendar un despliegue expuesto tal como está.
 
-Los tres primeros bloqueos son los que impiden recomendar un despliegue expuesto tal como está.
+![Antes de exponerlo: tres cambios bloquean](../../imgs/diagrams/endurecimiento-prioridades.svg){ .diagram loading=lazy }
 
 ## Bloqueantes
 
 ### 1. Resolver quién puede crear un aviso
 
-**Hoy**: la ruta que crea un aviso no pide credencial alguna y termina insertando una fila en la base
-operativa del SMN.
+**Hoy**: `POST /alerts` no pide credencial y **termina insertando una fila en la base que apunte
+`MYSQL_HOST`**.
 
-**Antes que nada**, hay que responder una pregunta que no se puede contestar desde estos
-repositorios: **¿la promoción de esa fila al registro definitivo es desatendida?** Si lo es, una
-petición anónima equivale a un aviso oficial y el puerto no puede publicarse en ninguna condición.
+**Antes que nada**, responder una pregunta que no se puede contestar desde los repositorios: **¿la
+promoción de esa fila al registro definitivo es desatendida?** Si lo es, **una petición anónima
+equivale a un aviso oficial y el puerto no puede publicarse en ninguna condición**.
 
 **Qué hacer**, en orden de preferencia:
 
-1. No publicar ese puerto en internet: dejarlo accesible sólo desde la red donde trabajan los
-   pronosticadores, por VPN o por lista de direcciones.
-2. Poner autenticación delante, en el proxy inverso, si hace falta acceso remoto. Es la solución más
-   rápida y no toca el código.
-3. Agregar autenticación al servicio. Es lo correcto a mediano plazo, y arrastra la corrección del
-   origen cruzado del punto 3.
+1. No publicar `6007` en internet. **Dejarlo accesible sólo desde la red de los pronosticadores**, por VPN
+   o por lista de direcciones.
+2. Poner autenticación delante, en el proxy inverso. **Es lo más rápido y no toca el código.**
+3. Agregar autenticación al servicio. **Es lo correcto a mediano plazo, y exige restringir el origen
+   cruzado antes.**
 
-*Tipo de cambio: despliegue, o código si se elige la tercera opción.*
+*Tipo de cambio: despliegue, o código en la tercera opción.*
 
 ### 2. Cerrar los puertos de infraestructura
 
-**Hoy**: el almacén de objetos publica su interfaz de archivos y su coordinador **sin autenticación**,
-el broker publica su panel, la base de datos de avisos publica el puerto de MySQL, y en la variante de
-despliegue distribuido la caché se publica sin contraseña.
+**Hoy**: el almacén publica su filer y su coordinador **sin autenticación**, el broker publica su
+panel, MySQL publica `3306`, y la plantilla repartida publica Redis sin contraseña.
 
 **Qué hacer**:
 
-- Quitar los mapeos de puertos que no hacen falta —la base de datos y el panel del broker no se
-  necesitan desde fuera del host—.
-- Los que sí tienen que salir, publicarlos con dirección de escucha explícita en la interfaz interna
-  en lugar de en todas.
-- Ponerle contraseña a la caché **y a la vez** corregir el registro de la cadena de conexión, que hoy
-  la escribiría completa en el log de arranque.
-- Aplicar el filtrado en el firewall del proveedor o en la cadena reservada al operador, **no** en el
-  firewall del host configurado de la manera habitual: las reglas que escribe Docker se evalúan
-  antes.
+- **Quitar los mapeos que no hacen falta**: `3306`, `15672`, `8888`, `9333`, `23646`.
+- Los que sí tienen que salir, **publicarlos con dirección de escucha explícita**.
+- Ponerle contraseña a Redis **y a la vez** corregir el registro de la cadena de conexión.
+- Filtrar en el firewall del proveedor o en `DOCKER-USER`, **no** en el del host: **las reglas de Docker
+  se evalúan antes**.
 
 *Tipo de cambio: configuración de despliegue.*
 
 ### 3. Quitarle a la base del SMN los permisos de esquema
 
-**Hoy**: el árbol de migraciones —que incluye revisiones que vacían tablas y eliminan la de avisos— se
-ejecuta al arrancar si una variable de entorno está activada, y el archivo de variables de ejemplo la
-trae activada.
+**Hoy**: con `MANAGE_DB_SCHEMAS` activada, el arranque ejecuta migraciones que vacían tablas y renombran
+la de avisos. **El archivo de ejemplo la trae activada.**
 
-**Qué hacer**: crear el usuario de base de datos **sin permisos de DDL**. Así, aunque la variable
-quede mal configurada, la operación destructiva no puede ejecutarse. Apagar la variable es necesario
-pero no suficiente: depende de que nadie se equivoque, una vez, en un archivo de configuración.
+**Qué hacer**: crear el usuario de base de datos **sin permisos de DDL**. **Así la operación destructiva
+no puede ejecutarse aunque la variable quede mal.** **Apagar la variable es necesario pero no suficiente.**
 
 *Tipo de cambio: permisos de base de datos, del lado del organismo.*
 
 ## Importantes
 
-### 4. Corregir el origen cruzado del servicio de avisos
+### 4. Desactivar la documentación interactiva en producción
 
-**Hoy**: origen permitido `*` junto con credenciales habilitadas.
+**Hoy**: los tres servicios publican `/docs` y `/openapi.json`, y uno nombra la variable de la que sale
+su contraseña de administración. **Qué hacer**: **desactivarla cuando el entorno es de producción**.
+*Una línea por servicio.*
 
-**Qué hacer**: restringir el origen a la dirección real del visualizador. Es obligatorio antes de
-agregar cualquier forma de autenticación por sesión; hoy no hay sesión que robar, pero la
-configuración quedaría abierta justo cuando empiece a importar.
+### 5. Agregar cabeceras de seguridad
 
-*Tipo de cambio: una línea de código.*
+**Hoy**: nginx sólo emite cabeceras de caché. **Qué hacer**: política de contenido, control de
+enmarcado, bloqueo de adivinación de tipo, política de referente, política de permisos y transporte
+estricto; desactivar la firma de versión. **La política de contenido tiene que contemplar los destinos
+externos del navegador** listados en [19.2 Datos y secretos](datos-y-secretos.md).
+*Configuración del servidor web.*
 
-### 5. Desactivar la documentación interactiva de las APIs en producción
+### 6. Poner límites de recursos a los contenedores
 
-**Hoy**: los dos servicios en Python publican su esquema y su interfaz de exploración sin
-restricción, y uno de ellos nombra ahí la variable de la que sale su contraseña de administración.
+**Hoy**: **ninguno** declara límite de memoria ni de CPU. Un worker con un archivo patológico puede
+hacer que el sistema operativo mate a la base o a la caché. **Qué hacer**: **declarar memoria y CPU por
+contenedor, empezando por los workers**. Los valores se miden según [16. Capacidad](../operacion/capacidad.md).
+*Configuración de despliegue.*
 
-**Qué hacer**: desactivarla cuando el entorno es de producción.
+### 7. Acotar las credenciales del almacén
 
-*Tipo de cambio: una línea por servicio.*
+**Hoy**: la identidad del servicio de datos lleva `Admin` global, y puede escribir y borrar el bucket
+de claves con el que se autentica. **Qué hacer**: **una identidad de sólo lectura para servir teselas y
+otra acotada al bucket de claves**. *Configuración del almacén.*
 
-### 6. Agregar cabeceras de seguridad
+### 8. Acotar las rutas de intersección
 
-**Hoy**: el servidor web del visualizador sólo emite cabeceras de caché.
+**Hoy**: dos rutas aceptan un polígono sin límite y calculan en el hilo de atención; sus errores
+devuelven rutas internas. **Qué hacer**: **limitar la cantidad de vértices, como ya hace la ruta de
+creación, mover el cálculo fuera del hilo y devolver errores genéricos**. *Código.*
 
-**Qué hacer**: agregar política de contenido, control de enmarcado, bloqueo de adivinación de tipo,
-política de referente, política de permisos y transporte estricto; y desactivar la firma de versión
-del servidor. La política de contenido hay que escribirla contemplando los destinos externos que la
-aplicación usa —proveedores de mapas de fondo, servicios del IGN, tipografías— que están listados en
-[Datos y secretos](datos-y-secretos.md).
+### 9. Acotar la ruta de mapas base
 
-*Tipo de cambio: configuración del servidor web.*
-
-### 7. Poner límites de recursos a los contenedores
-
-**Hoy**: **ninguno** de los contenedores del sistema declara límite de memoria ni de CPU. Un
-trabajador procesando un archivo patológico puede consumir toda la memoria del host y hacer que el
-sistema operativo mate a la base de datos o a la caché.
-
-**Qué hacer**: declarar memoria y CPU por contenedor, empezando por los trabajadores del procesador,
-que son los que más consumen y los que procesan entrada externa.
-
-*Tipo de cambio: configuración de despliegue. Ver [Capacidad](../operacion/capacidad.md) para los
-valores.*
-
-### 8. Acotar el alcance de las credenciales del almacén de objetos
-
-**Hoy**: la identidad que el servicio de datos usa está documentada como de sólo lectura pero
-configurada con permisos de administrador; y un mismo par de credenciales, con permiso de escritura y
-borrado, cubre los cuatro buckets, incluido el que guarda las claves de estaciones.
-
-**Qué hacer**: una identidad de sólo lectura para servir teselas, y otra acotada al bucket de claves,
-usada únicamente por las rutas que lo necesitan.
-
-*Tipo de cambio: configuración del almacén.*
-
-### 9. Acotar las rutas de intersección geométrica
-
-**Hoy**: dos rutas aceptan un polígono sin límite de tamaño y hacen el cálculo geométrico en el mismo
-hilo que atiende las peticiones. Un polígono suficientemente grande bloquea el servicio completo.
-
-**Qué hacer**: limitar la cantidad de vértices en la entrada —la ruta de creación ya lo hace, con lo
-que hay precedente— y mover el cálculo fuera del hilo de atención.
-
-*Tipo de cambio: código.*
+**Hoy**: una ruta anónima escribe en Redis y en el bucket por cada tesela nueva que recorre un
+llamante. **Qué hacer**: **limitar el zoom y la tasa de peticiones en el borde**, o restringir la
+escritura al recorrido de respaldo. *Configuración de despliegue o código.*
 
 ## Higiene
 
 ### 10. Ejecutar los contenedores sin privilegios
 
-Ninguna de las imágenes del sistema cambia de usuario: todos los procesos corren como `root` dentro
-de su contenedor, incluido el servidor web. Agregar un usuario sin privilegios a cada imagen, y
-considerar sistema de archivos de sólo lectura y descarte de capacidades donde se pueda.
+Ninguna imagen cambia de usuario: **todo corre como `root`**. **Agregar un usuario sin privilegios a
+cada imagen**, y sistema de archivos de sólo lectura donde se pueda.
 
 ### 11. Separar las credenciales del broker
 
-Productor, trabajadores y API de métricas comparten **el mismo usuario y contraseña**. Comprometer
-cualquiera de ellos entrega el control del broker, incluida la posibilidad de inyectar unidades de
-trabajo arbitrarias. Conviene una identidad por rol, con permisos acotados a las colas que cada uno
-necesita.
+Productor, workers y API de métricas comparten **el mismo usuario y contraseña**. **Una identidad por
+rol, acotada a las colas que cada uno necesita.**
 
 ### 12. Reactivar las verificaciones de integración continua
 
-En el procesador de mosaicos, los pasos de análisis estático, verificación de tipos y pruebas
-unitarias están **desactivados con una marca temporal**, y la compuerta final los da por aprobados. El
-análisis de vulnerabilidades y el de secretos sí corren y bloquean. Reactivar los tres pasos, o al
-menos que la compuerta no los cuente como exitosos mientras estén apagados.
+En el procesador, lint, tipos y pruebas están **desactivados con una marca temporal sin fecha**, y la
+compuerta los da por aprobados. **Trivy no bloquea en ningún repositorio.** **Reactivar los tres
+trabajos, poner el escaneo en las dependencias del despliegue y renovar las excepciones vencidas.**
 
 ### 13. Fijar las imágenes base
 
-Las imágenes están fijadas por etiqueta, no por resumen criptográfico. Dos etiquetas se mueven solas
-—la del servidor web del visualizador y la de la etapa de compilación—, con lo que dos compilaciones
-del mismo commit pueden producir imágenes distintas. Fijar por resumen donde importe la
-reproducibilidad.
-
-Hay además dos dependencias fuera del archivo de bloqueo del procesador: una que se instala siempre
-en su última versión y otra que se toma directamente de la punta de un repositorio. Las dos son
-puntos de entrada de cadena de suministro.
+**Las imágenes están fijadas por etiqueta, no por resumen.** Dos se mueven solas. Hay además dos
+dependencias del procesador fuera del archivo de bloqueo: una siempre en su última versión y otra
+tomada de la punta de un repositorio.
 
 ### 14. Cerrar los detalles menores
 
-- Destapar las líneas que excluyen los archivos de variables de entorno del contexto de compilación
-  del visualizador.
-- Dejar de registrar el polígono completo del usuario, y de exponer el texto de las excepciones en la
-  ruta pública de métricas.
-- Poner una política de retención a las imágenes generadas por el servicio de avisos: hoy **no se
-  borran nunca** y no hay tope, así que peticiones repetidas llenan el volumen.
-- Descargar el registro de estaciones por HTTPS en lugar de HTTP.
-- Revisar que la dirección de la API del SMN no siga apuntando al entorno de prueba.
-- Agregar `restart:` a los servicios de larga vida que no lo declaran en las plantillas de desarrollo.
+- Destapar las líneas que excluyen `.env` del contexto de compilación del visualizador.
+- Dejar de registrar el polígono completo, y de exponer el texto de las excepciones en `/metrics/jobs`.
+- **Poner retención a las imágenes generadas**: **hoy no se borran nunca**.
+- Descargar el padrón de estaciones por HTTPS.
+- Revisar que `SMN_API_BASE_URL` no siga apuntando al entorno de prueba.
+- Agregar `restart:` a los servicios de larga vida de las plantillas de desarrollo.
+- **Programar copias de respaldo de los volúmenes de estado**, con el almacén y su índice juntos.
 
 ## Lista de verificación
 
-Para ir tildando antes de exponer el sistema.
-
 - [ ] Se determinó si la promoción de un aviso a registro definitivo es desatendida
-- [ ] El puerto del servicio de avisos no es alcanzable desde internet, o tiene autenticación delante
-- [ ] La interfaz de archivos y el coordinador del almacén de objetos no salen del host
-- [ ] El panel del broker no sale del host
-- [ ] El puerto de la base de datos no sale del host
-- [ ] La caché tiene contraseña, y la cadena de conexión ya no se registra completa
-- [ ] El filtrado está en el firewall del proveedor o en la cadena del operador, no sólo en el del host
+- [ ] `6007` no es alcanzable desde internet, o tiene autenticación delante
+- [ ] `8888`, `9333` y `23646` no salen del host
+- [ ] `15672` y `3306` no salen del host
+- [ ] Redis tiene contraseña, y la cadena de conexión ya no se registra completa
+- [ ] El filtrado está en el firewall del proveedor o en `DOCKER-USER`
 - [ ] El usuario de base de datos del SMN no tiene permisos de esquema
-- [ ] La variable que habilita las migraciones está desactivada en producción
-- [ ] El origen cruzado del servicio de avisos está restringido
-- [ ] La documentación interactiva de las APIs está desactivada
-- [ ] El servidor web emite las cabeceras de seguridad
+- [ ] `MANAGE_DB_SCHEMAS` está sin definir en producción
+- [ ] La documentación interactiva de las tres APIs está desactivada
+- [ ] nginx emite las cabeceras de seguridad
 - [ ] Todos los contenedores tienen límite de memoria y de CPU
-- [ ] Las identidades del almacén de objetos están acotadas por bucket y por operación
-- [ ] Hay una tarea de respaldo para los volúmenes de datos y del índice del almacén, tomados juntos
-- [ ] Hay una tarea de respaldo para la base de avisos y las bases locales
+- [ ] Las identidades del almacén están acotadas por bucket y por operación
+- [ ] Hay respaldo de `s3_data` y `seaweedfs_filerldb2`, tomados juntos
+- [ ] Hay respaldo de `mysql_data` y de las bases locales del servicio de avisos
 - [ ] Está definida la retención de las imágenes generadas
-- [ ] La lista de egreso permite todos los destinos, incluidos los que llama el navegador
+- [ ] La lista de egreso permite todos los destinos, incluidos los del navegador

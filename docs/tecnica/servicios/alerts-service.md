@@ -1,156 +1,167 @@
 ---
-title: Alerts Service
+title: 11.3 Alerts Service
 ---
 
-# Alerts Service
+# 11.3 Alerts Service
 
-`alerts-service` cierra el ciclo operativo. Tiene dos responsabilidades: calcular la intersección
-geográfica de un polígono contra el territorio argentino y sus departamentos, y generar el ACP
-—Aviso a Corto Plazo— en un formato listo para emitir, con sus dos visualizaciones oficiales. Está
-implementado con arquitectura hexagonal: ocho puertos abstractos, un adaptador por puerto.
+`alerts-service` cierra el ciclo operativo. **Calcula qué departamentos toca un polígono y genera el
+aviso a corto plazo con sus dos imágenes oficiales.** Es el único servicio que **escribe en una base
+de datos del SMN**, y por eso el que más pesa en el análisis de seguridad. **Por dentro es una API con un
+planificador y un pool de workers en el mismo proceso.**
 
-![Arquitectura hexagonal: cada puerto tiene exactamente un adaptador](../../imgs/diagrams/alerts-service-hexagono.svg){ .diagram loading=lazy }
+![Generación de un aviso: la API responde en seguida, el trabajo pesado va a una cola acotada](../../imgs/diagrams/alerts-service-generacion.svg){ .diagram loading=lazy }
 
 !!! note "El servicio no emite el aviso"
-    Escribe los datos del ACP en una tabla intermedia de una base MySQL del SMN. Un servicio externo
-    del propio organismo lee esa tabla, completa el aviso con los campos del formulario de emisión y
-    lo difunde por sus canales. El alcance de este servicio termina en esa tabla.
+    Escribe la fila del aviso en la tabla `taviso_temporal`, marcada como no procesada. **Un proceso
+    del organismo la promueve al registro definitivo** y difunde el aviso. **El alcance de este
+    servicio termina en esa tabla.**
 
-## Puertos y adaptadores
+## Unidades desplegables
 
-La lógica de negocio no conoce ninguna de sus dependencias directamente: habla con ocho puertos, y
-cada puerto tiene un adaptador que lo implementa contra una tecnología concreta. Es lo que permite
-sustituir cualquiera de esas dependencias sin tocar la lógica.
-
-| Qué necesita el dominio | Contra qué habla el adaptador |
-|---|---|
-| Leer capas de referencia | GeoJSON ya simplificado en disco |
-| Producir capas de referencia | Servicio WFS del IGN y el subproceso de simplificación |
-| Guardar objetos | Bucket `intersection-data` del almacén de objetos |
-| Escribir avisos | Base de datos operativa del SMN |
-| Leer avisos vigentes | Tabla externa de avisos del SMN, **sólo lectura** |
-| Guardar el historial | Base local `history.db` |
-| Guardar el estado de los trabajos | Base local `jobs.sqlite` |
-| Guardar métricas de procesamiento | Base local `metrics.sqlite` |
-
-La distinción entre las dos filas de MySQL importa para el análisis de permisos: una escribe en la
-tabla intermedia del organismo y la otra sólo lee la tabla definitiva. Son dos capacidades distintas y
-pueden —y deberían— separarse en dos usuarios de base de datos.
-
-## Niveles de detalle
-
-Las capas de referencia del IGN se pre-simplifican por nivel de detalle y se versionan por fecha y
-tolerancia. La API acepta `detail_level` de 1 a 5; existe además un nivel 7 de uso interno, que el
-programador de tareas emplea al construir su caché de arranque y que no se expone por HTTP.
-
-| Nivel | Tolerancia | Uso |
+| Contenedor | Imagen | Papel |
 |---|---|---|
-| 1 | 0.2 | API |
-| 2 | 0.1 | API |
-| 3 | 0.05 | API |
-| 4 | 0.025 | API |
-| 5 | 0.01 | API, valor por defecto |
-| 7 | 0.005 | Interno, caché de arranque |
+| `alerts-mysql` | `mysql:8.4` | La base local de avisos. En desarrollo hace también de base del SMN. |
+| `alerts-service-container` | Propia | API, planificador semanal, pool de generación y muestreador de métricas, **todo en un proceso**. |
 
-Los departamentos tienen una sola tolerancia, `0.005`, sin niveles. Los archivos quedan nombrados
-`pais_simple_L{nivel}_T{tolerancia}_{AAAAMMDD}.geojson` y
-`departamentos_simple_T0p005_{AAAAMMDD}.geojson`, con el punto decimal escrito como `p`.
+El contenedor de MySQL arranca con un script propio que **crea un usuario de sólo lectura** con
+límites de conexiones. **Está pensado para consultas externas y para leer la tabla definitiva.**
 
-!!! warning "Las capas se simplifican de antemano, nunca por pedido"
-    La simplificación sólo corre desde el refresco semanal y desde la reconciliación de arranque, y
-    siempre en un **subproceso**. El camino de la petición lee un archivo ya simplificado y nada más.
-    La razón declarada es la memoria: GeoPandas infla las arenas de glibc y no las devuelve, así que
-    terminar el proceso es la única forma de recuperarlas. Los subprocesos además fijan en 1 todos
-    los contadores de hilos de BLAS y OpenMP, para que un renderizado no acapare la máquina y deje
-    sin CPU al bucle de eventos de FastAPI.
+## Puertos y conexiones
 
-Cada capa se carga una sola vez en una caché en memoria —un GeoDataFrame por nivel— con expiración
-por inactividad a los 30 minutos. La entrada se valida contra la ruta resuelta, así que la aparición
-de un archivo con fecha más nueva la invalida sola.
+| Puerto del host | Contenedor | Quién lo necesita |
+|---|---|---|
+| `${APP_HOST_PORT}` (6007) → `8080` | `alerts-service-container` | **El navegador**, directamente |
+| `3306` | `alerts-mysql` | Nadie del sistema. **Se publica igual.** |
 
-## Generación de un ACP
+| Destino | Protocolo | Variables | Para qué |
+|---|---|---|---|
+| MySQL de avisos | MySQL | `MYSQL_*` | **Escribe** `taviso_temporal`; lee `departamentos` y `provincia` |
+| MySQL de referencia | MySQL | `MYSQL_TAVISO_*` | **Sólo lee** la tabla `taviso`. Es una segunda conexión. |
+| Almacén de objetos | S3 | `S3_ENDPOINT`, `S3_BUCKET_NAME` | Respaldo de las capas simplificadas |
+| IGN | WFS sobre HTTPS | `COUNTRY_GEOJSON_URL` y dos más | Contorno del país, departamentos y provincias |
 
-El recorrido completo, desde que el pronosticador cierra el polígono hasta que el aviso queda
-listado, con las rutas y los códigos de respuesta que intervienen:
+**Las dos conexiones a MySQL apuntan por defecto al mismo contenedor local.** **En un despliegue real,
+la segunda apunta a la base del SMN.** Nada en el código distingue una cosa de la otra: **lo decide
+`MYSQL_HOST`.** Ver [19.2 Datos y secretos](../seguridad/datos-y-secretos.md).
 
-![Secuencia de emisión de un aviso, con las rutas HTTP involucradas](../../imgs/diagrams/alertas-flujo-usuario.svg){ .diagram loading=lazy }
+!!! note "El bucket no tiene nombre en el repositorio"
+    `S3_BUCKET_NAME` viene vacío en el archivo de ejemplo. El nombre `intersection-data` es el que
+    crea el script de arranque del almacén y el que usa el repositorio de orquestación. **Con la
+    variable vacía, el respaldo en S3 queda desactivado** y el servicio sigue funcionando.
 
-!!! danger "Ninguna de esas rutas pide credenciales"
-    La secuencia funciona igual para el visualizador que para cualquier cliente que alcance el
-    puerto. Ver [Superficie expuesta](../seguridad/superficie.md).
+## Qué guarda
 
-![Generación de un ACP: la API responde enseguida y el trabajo pesado va a una cola acotada](../../imgs/diagrams/alerts-service-generacion.svg){ .diagram loading=lazy }
+| Volumen | Contenido | Copia única |
+|---|---|---|
+| `mysql_data` | La base de avisos, con `taviso_temporal` | **Sí** |
+| `alerts_service_data` | Las capas del IGN simplificadas por nivel; `history.db`, `jobs.sqlite`, `metrics.sqlite` | Sí para las tres bases; las capas se regeneran desde el IGN |
+| `alerts_output` | Los GIF generados, servidos como estáticos bajo `/alerts/` | Sí. **Nunca se borran y no hay tope.** |
 
-Generar un aviso es caro —intersección, filtrado, renderizado y escritura en base—, así que la API no
-bloquea. El endpoint de creación valida sincrónicamente sólo lo barato: que el fenómeno exista y que
-el polígono entre en la columna de la base. Después encola el trabajo y responde `202` con un
-identificador.
+Las tipografías, los logos y el recuadro de referencia **van dentro de la imagen**. **No se montan
+desde el host.**
 
-![Estados de un trabajo de generación](../../imgs/diagrams/alerts-service-estados.svg){ .diagram loading=lazy }
+## Cuando algo falla
 
-La cola es acotada y la atiende un pool de workers en segundo plano. El renderizado corre en un
-subproceso detrás de un semáforo que limita los renders concurrentes, y produce **dos** GIF: uno con
-acercamiento al área afectada, con municipios y cabeceras etiquetados, y otro general de todo el
-país. Ambos siguen la plantilla oficial del SMN.
+| Dependencia caída | Efecto |
+|---|---|
+| MySQL de avisos | El arranque espera a que esté sano. En marcha, **las rutas que lo tocan responden `500`**; la intersección sigue. |
+| IGN | **Degradado, no fatal.** El arranque registra el error y sigue con las capas que tenga en disco. |
+| Almacén de objetos | La restauración se salta con un aviso. Las subidas fallan y se registran. |
+| Base de referencia del SMN | Se abre al primer uso. Ver el recuadro de abajo. |
 
-!!! warning "Cola llena devuelve 503, no 429"
-    Si la cola está saturada, la creación falla con `503` y el texto
-    `Alert generation queue is full, try again later`. El trabajo no se crea: no hay identificador
-    que consultar después.
-
-!!! note "Dos tiempos límite encimados"
-    El subproceso de renderizado tiene 120 s y el trabajo completo 150 s. El del subproceso vence
-    primero, así que un render lento se reporta como `generation_failed` y no como `timeout`.
-
-De los GIF se persisten **solamente los nombres de archivo**, tanto en MySQL como en `jobs.sqlite`.
-Los archivos se escriben en disco y se sirven como estáticos bajo `/alerts/`; el cliente arma la URL
-a partir del nombre. El almacén de objetos queda reservado para el respaldo de las capas
-geográficas, no para las imágenes.
-
-## Catálogo de fenómenos
-
-El catálogo está **en código**, no en la base ni en `settings.json`: un diccionario de 28 entradas
-con códigos dispersos —1 a 11, 21 a 31, 40, 41, 50, 90, 91 y 92—. El código 50 no tiene texto
-asociado, así que 27 son utilizables y una petición con el código 50 se rechaza como fenómeno
-inválido. El rango «1 a 92» que sugiere el contrato HTTP es sólo el intervalo numérico de las
-claves, no un rango denso.
+!!! warning "Sin verificar: la base de referencia caída"
+    La conexión a la tabla `taviso` no tiene `depends_on`, comprobación de salud ni reintento
+    visible. No pudo determinarse leyendo el código cómo responde el servicio si esa base no
+    contesta en marcha. Lo levanta `src/container.py`, que la construye a demanda.
 
 ## Arranque
 
-El arranque hace bastante antes de contestar, y por eso el healthcheck declara ocho minutos de
-gracia. En orden: limpieza de temporales huérfanos, reconciliación entre disco y el bucket,
-regeneración de los niveles faltantes, construcción de los índices de departamentos y provincias,
-construcción de la caché de capas del IGN pre-proyectada a Mercator, y rasterizado del recuadro de
-referencia.
+**Hace bastante antes de contestar**, y por eso su comprobación de salud declara **ocho minutos de
+gracia**:
 
-!!! warning "La reconciliación borra"
-    Cualquier archivo local o clave S3 cuyo nombre no coincida con el canónico para esa capa y
-    tolerancia se elimina. Si ni el disco ni el bucket tienen un archivo con la tolerancia correcta,
-    se purga todo lo de ese nivel y se lo marca para regenerar. Cambiar una tolerancia en
-    `settings.json` dispara una purga completa y una nueva descarga desde el IGN.
+1. El punto de entrada corre `alembic upgrade head`. **Sin `MANAGE_DB_SCHEMAS`, es una operación
+   vacía.** **Si falla, el contenedor no arranca.**
+2. Limpia temporales huérfanos.
+3. Reconcilia las capas en disco con el bucket. **Lo que no coincide con el nombre canónico se
+   borra.**
+4. Descarga del IGN y simplifica los niveles que falten, **en un subproceso**.
+5. Construye los índices de departamentos y provincias y dos cachés de dibujo.
+6. **Migra sus bases SQLite y recién entonces atiende HTTP.**
+
+## Salud
+
+`GET /health` responde `{"status":"running"}` **sin comprobar nada más**. El contenedor lo consulta
+cada 30 s, con 3 reintentos y **8 minutos de gracia** para el primer arranque.
+
+!!! warning "El tiempo de gracia al apagar es más corto que el drenado"
+    La plantilla da un minuto para apagar. El servicio intenta drenar su cola durante **160 s**.
+    **Un apagado con trabajos en curso puede cortar una generación a medias.**
+
+## Cómo se agranda
+
+| Parámetro | Valor | Dónde |
+|---|---|---|
+| Workers de generación | 2 | `alerts.job.workers` en `settings.json` |
+| Tamaño de la cola | 16 | `alerts.job.queue_maxsize` |
+| Tiempo límite de un trabajo | 150 s | `alerts.job.timeout_seconds` |
+| Renders simultáneos | 2 | **En el código**, no configurable |
+| Tiempo límite del render | 120 s | **En el código**, no configurable |
+
+**Cuando la cola está llena, la creación responde `503` en el acto**, con el texto
+`Alert generation queue is full, try again later`. **No se crea ningún trabajo.** Esos cuatro números
+definen cuántos avisos simultáneos tolera el sistema en un evento severo.
+
+![Estados de un trabajo de generación](../../imgs/diagrams/alerts-service-estados.svg){ .diagram loading=lazy }
+
+Los dos tiempos límite se enciman: **el render vence primero**, así que un render lento se reporta
+como `generation_failed` y no como `timeout`.
+
+!!! warning "El control de admisión no cubre la intersección"
+    Las dos rutas de intersección **corren en el mismo hilo que atiende las peticiones y sin límite
+    de tamaño**. **Un polígono grande bloquea el servicio entero.** Es el punto de saturación más
+    fácil de alcanzar. Ver [19.3 Endurecimiento](../seguridad/endurecimiento.md).
+
+## Niveles de detalle
+
+Las capas del IGN se simplifican **de antemano**, por nivel, y se versionan por fecha y tolerancia.
+La API acepta `detail_level` de 1 a 5. **Existe un nivel 7 interno para la caché de arranque.**
+
+| Nivel | Tolerancia | Uso |
+|---|---|---|
+| 1 | 0.2 | API, el más grueso |
+| 5 | 0.01 | API, valor por defecto |
+| 7 | 0.005 | Interno |
+
+Los departamentos tienen una única tolerancia, `0.005`. **Cambiar una tolerancia en `settings.json`
+dispara una purga completa y una nueva descarga del IGN.** **Cada capa vive en memoria mientras se use**,
+con 30 minutos de expiración por inactividad; un barrido cada 60 s la limpia.
+
+## Catálogo de fenómenos
+
+El catálogo está **en el código**: 28 entradas con códigos dispersos entre 1 y 92. **El código 50 no
+tiene texto** y se rechaza como fenómeno inválido, así que 27 son utilizables. **La aplicación filtra
+las entradas sin texto antes de mostrarlas.**
 
 ## Tareas programadas
 
-Hay **una sola** tarea de APScheduler: el refresco de capas, con el cron `0 3 * * 0`, es decir los
-domingos a las 03:00 UTC. Descarga del IGN, simplifica en todos los niveles y sube al bucket.
-
-Aparte corren tres bucles periódicos que no son de APScheduler: el muestreador de métricas cada 60 s,
-el supervisor de workers cada 30 s, y la expiración de la caché de geometrías cada 30 minutos.
+**Una sola tarea del planificador**: el refresco de capas, con el cron `0 3 * * 0`, **los domingos a las
+03:00 UTC**. Aparte corren dos bucles: el muestreador de métricas cada 60 s y el supervisor de
+workers cada 30 s.
 
 ## Bases de datos
 
-| Base | Motor | Contenido | Gestión del esquema |
+| Base | Motor | Contenido | Esquema |
 |---|---|---|---|
-| `aviso_gempak` | MySQL | `taviso_temporal` (nuestra), `taviso` (del cliente), `departamentos`, `provincia` | Alembic, detrás de `MANAGE_DB_SCHEMAS` |
-| `jobs.sqlite` | SQLite | `alert_jobs`: historial durable de trabajos | Alembic |
-| `metrics.sqlite` | SQLite | `processor_samples` | Alembic |
-| `history.db` | SQLite | `job_runs`: una fila por refresco semanal | **Ninguna**: la crea el adaptador |
+| La de `MYSQL_DATABASE` | MySQL | `taviso_temporal` (propia), `taviso` (del SMN), `departamentos`, `provincia` | Alembic, **sólo con `MANAGE_DB_SCHEMAS`** |
+| `jobs.sqlite` | SQLite | `alert_jobs`, historial durable de trabajos | Alembic |
+| `metrics.sqlite` | SQLite | `processor_samples` y `alert_jobs` | Alembic |
+| `history.db` | SQLite | `job_runs`, una fila por refresco semanal | **Ninguno**: la crea el adaptador, sin poda |
 
-!!! warning "En producción las migraciones MySQL no corren"
-    Todo el árbol está detrás de `MANAGE_DB_SCHEMAS`. Sin esa variable, `alembic upgrade head` es una
-    operación vacía y el esquema pertenece al DBA del SMN. Es deliberado: una de las revisiones
-    trunca tablas de correo con las comprobaciones de clave foránea desactivadas, y no es algo que
-    deba ejecutarse sobre la base operativa del organismo.
+!!! danger "`MANAGE_DB_SCHEMAS` no va en producción"
+    Con la variable activada, el arranque ejecuta el árbol completo de migraciones contra
+    `MYSQL_HOST`. **Una revisión trunca `departamentos` y `provincia`** con las comprobaciones de
+    clave foránea apagadas, y otra **renombra `taviso` a `taviso_temporal`**. El archivo de ejemplo
+    **la trae activada**. Ver [19.3 Endurecimiento](../seguridad/endurecimiento.md).
 
 ## Comandos
 
@@ -158,10 +169,4 @@ el supervisor de workers cada 30 s, y la expiración de la caché de geometrías
 |---|---|
 | `make up` / `make prod` | Compose de desarrollo / producción |
 | `make down` / `make clean` | Baja los stacks / borra volúmenes |
-| `make test` | Construye `Dockerfile.run_test` y corre pytest adentro |
-| `make precommit` | `pre-commit run --all-files` |
-
-!!! warning "Sin verificar"
-    El directorio `/app/data_alerts`, del que el proceso de renderizado lee shapefiles, tipografías y
-    el recuadro de referencia, no es poblado por ningún paso visible en los repositorios. Se
-    desconoce si se monta desde el host o se incorpora a la imagen por una vía no versionada.
+| `make test` | Pruebas dentro de Docker |

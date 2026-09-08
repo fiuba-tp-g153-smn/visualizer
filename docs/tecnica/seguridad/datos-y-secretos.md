@@ -1,164 +1,144 @@
 ---
-title: Datos y secretos
+title: 19.2 Datos y secretos
 ---
 
-# Datos y secretos
+# 19.2 Datos y secretos
 
-Qué información maneja el sistema, dónde queda guardada, quién puede leerla y hacia dónde sale.
+**Qué información maneja el sistema, dónde queda guardada, quién puede leerla y hacia dónde sale.**
+
+![Dónde vive cada secreto y por dónde viaja](../../imgs/diagrams/secretos-flujo.svg){ .diagram loading=lazy }
 
 ## Clasificación de los datos
 
 | Dato | Sensibilidad | Dónde vive |
 |---|---|---|
-| Productos meteorológicos procesados | Pública. Derivada de fuentes abiertas. | Almacén de objetos |
-| Observaciones de estaciones | Pública, pero detrás de una clave del organismo | Caché y almacén |
-| **Avisos emitidos** | **Integridad crítica.** Su falsificación tiene consecuencias fuera del sistema. | Base de datos operativa del SMN |
+| Productos meteorológicos procesados | Pública | Almacén de objetos |
+| Observaciones de estaciones | Pública, detrás de una clave del organismo | Caché y almacén |
+| **Avisos emitidos** | **Integridad crítica** | Base de datos del SMN |
 | Borradores de polígonos | Baja | Navegador del usuario |
-| Métricas operativas | Baja de por sí, útil para reconocimiento | Bases locales de cada servicio |
+| Métricas operativas | Baja; útil para reconocimiento | Bases locales de cada servicio |
 | Credenciales de infraestructura | Alta | Variables de entorno |
-| Clave de estaciones del usuario | Media | Almacenamiento del navegador, en texto plano |
+| Clave de estaciones del usuario | Media | Almacenamiento del navegador, en claro |
 
-El sistema **no maneja datos personales**. No hay usuarios, no hay cuentas, no hay registro de quién
-hizo qué. Eso simplifica mucho el análisis de privacidad, y a la vez es la razón de que no exista
-trazabilidad: no hay forma de saber quién generó un aviso.
+**El sistema no maneja datos personales.** **No hay usuarios ni cuentas.** Eso simplifica el análisis de
+privacidad, y a la vez **impide saber quién generó un aviso**.
 
 ## La clave de estaciones
 
-Es la única credencial que el sistema le pide al usuario final, y su manejo merece atención:
+**Es la única credencial que el sistema le pide al usuario**:
 
-- La escribe el usuario en el panel de configuración. **No viene compilada en la aplicación** ni se
-  obtiene de un servidor.
-- Se guarda en el almacenamiento del navegador **en texto plano**.
-- Se envía en cada petición como cabecera, a un origen distinto del de la aplicación.
-- Es **por navegador y por máquina**. No hay distribución central ni rotación: cambiar la clave
-  implica que cada persona la vuelva a cargar a mano.
-- Cualquier script que se ejecute en el origen de la aplicación puede leerla. Eso incluye el
-  contenido de este sitio de documentación, que se sirve dentro del mismo origen y sin aislamiento.
+- La escribe el usuario en Configuración ▸ SMN. **No viene compilada** ni se obtiene de un servidor.
+- Se guarda en el almacenamiento del navegador **en claro**.
+- Viaja en cada petición como cabecera `X-API-Key`, a un origen distinto del de la aplicación.
+- **Es por navegador y por máquina.** No hay distribución central ni rotación.
+- **Cualquier script del origen de la aplicación puede leerla, incluido este sitio.**
 
-No es un secreto de alto valor, pero es el que más manos toca y el que no tiene ningún mecanismo de
-revocación.
+Del lado del servidor **sólo se guarda el hash**: un objeto por clave en el bucket `api-keys`,
+nombrado con el SHA-256 del secreto. **El secreto se devuelve una única vez al crearlo.**
 
 ## Inventario de credenciales
 
-Sólo los nombres de las variables; los valores viven fuera del repositorio.
+Sólo nombres. **Todos los valores del archivo de ejemplo son marcadores de reemplazo**; **ningún
+repositorio trae una contraseña real**.
 
-| Credencial | Quién la usa | Alcance |
-|---|---|---|
-| Usuario y contraseña del broker | Productor, todos los trabajadores y la API de métricas | **La misma para todos** |
-| Identidad raíz del almacén de objetos | Arranque del almacén y su panel de administración | Total |
-| Identidad de acceso a buckets | Trabajadores y servicio de datos | Ver más abajo |
-| Clave de la API de métricas | Sólo la ruta de importación | Escritura de métricas |
-| Contraseña de administración de estaciones | Rutas administrativas del servicio de datos | Esas rutas |
-| Usuario y contraseña de la base de avisos | Servicio de avisos | Ver más abajo |
-| Credenciales de la API del SMN | Servicio de datos | Lectura de observaciones |
-| Secretos del despliegue continuo | Sólo los flujos de integración | Disparar despliegues |
+| Credencial | Variables | Quién la usa | Alcance |
+|---|---|---|---|
+| Broker | `RABBITMQ_USER` / `_PASSWORD` | Productor, los cinco workers y la API de métricas | **La misma para todos** |
+| Raíz del almacén | `S3_ROOT_USER` / `_PASSWORD` | Arranque del almacén y su panel | Total |
+| Escritura en `tiles-data` | `S3_TILES_DATA_TILES_PROCESSOR_USER` / `_PASSWORD` | Workers | Un bucket |
+| Lectura del almacén | `S3_TILES_DATA_DATA_SERVICE_USER` / `_PASSWORD` | Servicio de datos | Ver abajo |
+| Respaldo de capas | `S3_INTERSECTION_DATA_ALERTS_SERVICE_USER` / `_PASSWORD` | Servicio de avisos | Un bucket |
+| Importación de métricas | `METRICS_API_KEY` | Sólo `POST /api/import` | Escritura de métricas |
+| Administración de estaciones | `WEATHER_STATIONS_ADMIN_PASSWORD` | Cuatro rutas | Alta y baja de claves |
+| Base de avisos | `MYSQL_USER` / `_PASSWORD`, `MYSQL_TAVISO_USER` / `_PASSWORD` | Servicio de avisos | Ver abajo |
+| API del SMN | `SMN_API_USERNAME` / `_PASSWORD` | Servicio de datos | Lectura de observaciones |
+| Entrega continua | `COOLIFY_DEPLOY_HOOK`, `_DEPLOY_TOKEN`, `_BASE_URL`, `_READ_TOKEN` | Sólo los workflows | Disparar y consultar despliegues |
 
 ### Dos alcances más amplios de lo que parecen
 
-**La identidad con la que el servicio de datos accede al almacén de objetos está documentada como de
-sólo lectura, pero está configurada con permisos de administrador globales.** El comentario y la
-configuración no coinciden, y lo que manda es la configuración.
+**La identidad de lectura del servicio de datos lleva la acción global `Admin`.** El script del
+almacén la documenta como de sólo lectura. **La configura con permisos de administrador**, más lectura
+y escritura sobre `tiles-data` y `basemap-tiles`. **Lo que manda es la configuración.** **El
+contenedor que atiende peticiones públicas puede escribir y borrar el bucket donde guarda las claves
+que usa para autenticar.**
 
-**Un único par de credenciales cubre los cuatro buckets del servicio de datos, con permiso de
-escritura y borrado, incluido el bucket donde se guardan las claves de estaciones.** El contenedor que
-atiende peticiones públicas puede, con las credenciales que ya tiene, escribir y borrar el propio
-almacén de claves que usa para autenticar. Separar esa identidad en una de sólo lectura para las
-teselas y otra acotada para las claves es un cambio de configuración, no de código.
+**Las dos conexiones a MySQL apuntan por defecto al mismo contenedor.** En un despliegue real, la de
+`MYSQL_TAVISO_*` lee la base del organismo. **Nada en el código las distingue.** Son dos capacidades,
+escribir la tabla intermedia y leer la definitiva, que **deberían ser dos usuarios**.
 
 ### El permiso de esquema sobre la base del SMN
 
-La variable que habilita las migraciones de esquema es el único guardián entre este sistema y las
-operaciones destructivas sobre la base del organismo. Con ella activada, el arranque del servicio
-ejecuta el árbol completo de migraciones, que incluye revisiones que **vacían tablas de departamentos
-y provincias** y que **eliminan la tabla de avisos**.
+**`MANAGE_DB_SCHEMAS` es el único guardián entre este sistema y las operaciones destructivas.** Activada,
+el arranque ejecuta el árbol completo de migraciones: una revisión **vacía `departamentos` y
+`provincia`** con las comprobaciones de clave foránea apagadas, y otra **renombra `taviso` a
+`taviso_temporal`**. Ninguna revisión elimina la tabla de avisos en el camino de subida; **las
+eliminaciones están sólo en el camino de bajada, que el arranque no ejecuta**.
 
 !!! danger "El archivo de ejemplo la trae activada"
-    El archivo de variables de ejemplo la entrega habilitada, porque está pensado para desarrollo y
-    lo dice en sus propios comentarios. Copiarlo a producción sin revisar esa línea, apuntando a la
-    base del organismo, ejecuta DDL destructivo sobre un sistema que no es de este proyecto.
-
-    La protección correcta no es recordar apagarla: es **que el usuario de base de datos no tenga
-    permisos de esquema**. Así la variable falla cerrado aunque quede mal configurada.
+    Está pensado para desarrollo y lo dice en sus comentarios. Copiarlo a producción apuntando a la
+    base del organismo ejecuta DDL sobre un sistema ajeno. **La protección correcta no es recordar
+    apagarla: es que el usuario de base de datos no tenga permisos de esquema.**
 
 ## Registro de eventos
 
-No se registran credenciales, con una excepción que hoy es latente:
-
-- **La cadena de conexión de la caché se registra completa al arrancar.** Hoy no contiene contraseña
-  porque la caché no tiene ninguna. En el momento en que se le agregue una —que es exactamente lo
-  que hay que hacer— esa contraseña va a quedar escrita en los registros de arranque de dos
-  contenedores. Hay que corregir las dos cosas juntas.
-- El script de arranque del almacén de objetos **pasa credenciales como argumentos de línea de
-  comandos**, con lo que quedan visibles para cualquiera que pueda listar procesos dentro de ese
-  contenedor.
-- El servicio de avisos **registra el polígono completo del usuario** en nivel informativo, y el texto
-  de la excepción de un trabajo fallido queda legible desde una ruta pública de métricas.
-- La clave de la API de métricas se registra únicamente como "configurada" o "sin configurar", nunca
-  su valor.
+- **La cadena de conexión de Redis se registra completa al arrancar**, en dos contenedores. Hoy no
+  lleva contraseña porque Redis no tiene. **El día que se le ponga, quedará en el registro.**
+- El script de arranque del almacén **pasa credenciales como argumentos de línea de comandos**, y lo
+  mismo hace el envío opcional a Prometheus con usuario y contraseña en la URL.
+- El servicio de avisos **registra el polígono completo** del usuario, y el texto de la excepción de
+  un trabajo fallido queda legible desde `/metrics/jobs`, que es pública.
+- `SMN_API_LOG_REQUESTS` registra las peticiones a la API del SMN **con las credenciales
+  redactadas**. Viene apagada.
+- **La clave de la API de métricas se registra sólo como «configurada» o «sin configurar».**
 
 ## Persistencia y copias de respaldo
 
-| Volumen | Qué contiene | Si se pierde |
+| Volumen | Contiene | Si se pierde |
 |---|---|---|
-| Datos del almacén de objetos y su índice | Todas las teselas generadas | Se regenera reprocesando, pero es la mayor parte del trabajo del sistema. **Los dos volúmenes hay que respaldarlos juntos**: el índice sin los datos no sirve. |
-| Base de datos de avisos | Los avisos y las capas de referencia | Pérdida definitiva |
-| Bases locales del servicio de avisos | Historial, trabajos y métricas | Pérdida definitiva |
-| Datos de trabajo del procesador | Archivos crudos aún sin procesar | Se vuelven a descargar |
-| Caché | Nada propio | Se repuebla sola |
+| `s3_data` + `seaweedfs_filerldb2` | Todas las teselas y el índice | Se regenera reprocesando, pero los crudos ya expiraron. **Respaldar los dos juntos.** |
+| `mysql_data` | Los avisos y las capas de referencia | **Definitiva** |
+| `alerts_service_data`, `alerts_output` | Historial, trabajos, métricas y GIF | **Definitiva** |
+| `tiles_data` | Crudos pendientes y métricas del procesador | Los crudos vuelven; las métricas no |
+| `redis_data` | La caché | Se repuebla sola |
 
-!!! warning "Nada de esto tiene respaldo automático"
-    No hay ninguna tarea de copia de respaldo en los repositorios. Las bases locales del servicio de
-    avisos sobreviven a un redespliegue porque están en volúmenes nombrados, pero eso no es un
-    respaldo: no protege contra el borrado del volumen ni contra la corrupción.
+!!! warning "Nada tiene respaldo automático"
+    **No hay ninguna tarea de copia de respaldo en los repositorios.** **Los volúmenes nombrados
+    sobreviven a un redespliegue**, pero eso no protege contra el borrado del volumen ni contra la
+    corrupción.
 
 ## Salidas hacia afuera
 
-La lista para escribir una regla de egreso. Sin estos destinos el sistema no funciona.
+**Sin estos destinos el sistema no funciona.**
 
-### Desde los servidores
-
-| Destino | Para qué |
+| Desde los servidores | Para qué |
 |---|---|
-| Buckets públicos de NOAA en AWS | Imágenes de satélite y descargas eléctricas. Acceso anónimo. |
-| Servicio de datos de ECMWF y sus réplicas | Salidas del modelo europeo |
-| Servidor de modelos de NOAA | Salidas del modelo global |
-| API del SMN | Observaciones de estaciones |
-| Registro de estaciones del SMN | Catálogo de estaciones |
-| Servicios del IGN | Capas de referencia y búsqueda de lugares |
-| Base de datos operativa del SMN | Escritura de avisos y lectura de referencia |
-| Registros de imágenes de contenedores | Sólo en el despliegue |
+| Bucket público `noaa-goes19` en AWS | Satélite y descargas eléctricas, acceso anónimo |
+| Espejos de ECMWF y NOMADS de NOAA | Modelos globales |
+| API del SMN, por HTTPS | Observaciones de estaciones |
+| Padrón de estaciones del SMN, **por HTTP plano** | El catálogo de estaciones, sin credencial |
+| Servicios del IGN | Capas de referencia y mapas base |
+| Esri y Google | Respaldo de mapas base |
+| Base de datos del SMN | Escritura del aviso y lectura de referencia |
+| Registros de imágenes, PyPI, npm, GitHub | Sólo al construir y desplegar |
 
-### Desde el navegador del usuario
-
-Esto es lo que se suele pasar por alto: **el navegador no habla sólo con el visualizador**.
-
-| Destino | Para qué |
+| Desde el navegador del usuario | Para qué |
 |---|---|
-| Servicio de datos, de avisos y de métricas | Todos los datos de la aplicación, directo y sin proxy |
-| Servicios de teselas del IGN, Esri y Google | Los mapas de fondo, **directo al proveedor** |
-| Servicio de búsqueda de lugares | El buscador del panel explorador |
-| Fuentes tipográficas de Google | Tipografía de la interfaz |
+| Servicio de datos, de avisos y de métricas | Todos los datos, directo y sin proxy |
+| IGN, Esri y Google | **Los mapas base, directo al proveedor** |
+| IGN y Nominatim | El buscador de lugares |
+| Fuentes tipográficas de Google | Tipografía |
 
-Si el puesto de trabajo tiene egreso restringido, hay que permitir todos estos destinos o la
-aplicación queda a medias. No hay analítica ni scripts de terceros.
+Si el puesto de trabajo tiene egreso restringido, hay que permitir todos esos destinos. **No hay
+analítica ni scripts de terceros.**
 
-!!! warning "Dos salidas por HTTP sin cifrar"
-    El registro de estaciones del SMN se descarga por HTTP plano. Es información pública, así que el
-    riesgo no es de confidencialidad sino de integridad: quien pueda interceptar ese tráfico puede
-    alterar el catálogo de estaciones que el sistema ingiere.
-
-    Además, los valores por defecto de las direcciones del servicio de avisos y del de métricas son
-    HTTP sobre `localhost`. En producción tienen que apuntar a HTTPS, o el navegador va a bloquear
-    esas peticiones por contenido mixto.
-
-!!! note "El valor por defecto de la API del SMN es el entorno de prueba"
-    La variable correspondiente apunta al entorno de test del organismo. Es una decisión sensata para
-    un valor por defecto, pero hay que revisarla explícitamente al desplegar en producción.
+!!! note "Valores por defecto que hay que revisar"
+    `SMN_API_BASE_URL` apunta al **entorno de prueba** del organismo. Las direcciones del servicio de
+    avisos y del de métricas valen `http://localhost` si no se definen; en producción tienen que ser
+    HTTPS o el navegador bloqueará esas peticiones por contenido mixto.
 
 ## Imágenes de contenedor
 
 El archivo que excluye contenido del contexto de compilación del visualizador **tiene comentadas las
-líneas que excluirían los archivos de variables de entorno**. Un archivo de entorno presente en el
-directorio al compilar termina copiado dentro de una capa intermedia de la imagen. No llega a la
-imagen final, que sólo lleva el paquete compilado y la configuración del servidor web, pero conviene
-destapar esas líneas: es un renglón y elimina la clase de error entera.
+líneas que excluirían los archivos `.env`**. **Un `.env` presente al compilar termina copiado en una capa
+intermedia.** No llega a la imagen final, que sólo lleva el paquete y la configuración de nginx. **Destapar esas
+líneas elimina la clase de error entera.** Los otros tres repositorios sí excluyen `.env`.

@@ -1,143 +1,154 @@
 ---
-title: Data Service
+title: 11.2 Data Service
 ---
 
-# Data Service
+# 11.2 Data Service
 
-`data-service` es el intermediario entre el almacén de objetos y el visualizador. Expone una API REST
-de lectura sobre los productos que genera `tiles-processor`, mantiene una caché en Redis para servir
-tiles con baja latencia, y además incorpora por cuenta propia dos dominios que no vienen del
-pipeline: los mapas base y las estaciones meteorológicas de superficie.
+`data-service` es **el intermediario entre el bucket y el navegador**. **Copia a Redis lo que genera
+`tiles-processor` y lo sirve como teselas con baja latencia.** Además incorpora dos familias que no
+vienen del procesador: los mapas base y las estaciones meteorológicas. **Es el servicio que recibe el
+tráfico de los usuarios.**
 
-![Resolución de una petición de tile](../../imgs/diagrams/data-service-tile.svg){ .diagram loading=lazy }
+![Una imagen, dos roles: el sincronizador llena Redis, la API responde](../../imgs/diagrams/data-service-roles.svg){ .diagram loading=lazy }
 
-## Una imagen, dos contenedores
+## Unidades desplegables
 
-La misma imagen corre dos veces con distinto `APP_ROLE`.
+| Contenedor | Imagen | Papel |
+|---|---|---|
+| `data-service-redis-dev` | `redis:8.10-trixie` | La caché. `--maxmemory 5gb`, expulsión `volatile-ttl`, sin contraseña. |
+| `data-service-api` | Propia, `APP_ROLE=web` | Atiende HTTP. Lee Redis; ante una falta, lee el bucket. |
+| `data-service-sync` | Propia, `APP_ROLE=worker` | Seis bucles de sincronización, el respaldo de mapas base, el de estaciones y el muestreo de Redis. |
 
-| Rol | Qué arranca |
+**La imagen es una sola y el papel lo elige `APP_ROLE`.** El valor `all` arranca los dos papeles en
+un contenedor y es el valor por defecto. **Un valor distinto de los tres hace fallar el arranque.**
+
+!!! warning "Los routers se montan en todos los papeles"
+    Un contenedor mal configurado **sigue respondiendo HTTP**, y el error no salta a la vista. Con
+    los dos contenedores en `web`, nada sincroniza: Redis no se llena y todo sale por el camino
+    lento del bucket. Con la API en `worker`, atiende peticiones mientras compite consigo misma por
+    CPU.
+
+Hay **tres plantillas de despliegue**:
+
+| Plantilla | Qué levanta | Para qué |
+|---|---|---|
+| `docker-compose.yaml` | Redis, API y sincronizador | Todo en un host. Redis **no publica puerto**. |
+| `docker-compose.data.yaml` | API y sincronizador | La aplicación sola, sobre la red externa `data_service_network`. |
+| `docker-compose.redis.yaml` | Redis | La caché sola, `--maxmemory 7gb`, **publicada en `6379` sin contraseña**. |
+
+**Las dos últimas son proyectos de compose separados.** **Ninguna crea la red externa**: hay que crearla a
+mano una vez. Ver [15. Distribuir el sistema](../operacion/distribucion.md).
+
+## Puertos y conexiones
+
+| Puerto del host | Contenedor | Quién lo necesita |
+|---|---|---|
+| `${APP_HOST_PORT}` (6006) → `8080` | `data-service-api` | **El navegador**, directamente |
+| `6379`, sólo en `docker-compose.redis.yaml` | `redis` | Una API en otro host |
+
+| Destino | Protocolo | Cómo lo alcanza |
+|---|---|---|
+| SeaweedFS, API S3 | S3 | `S3_TILES_DATA_ENDPOINT`, hoy `host.docker.internal:9000`: **sale al host y vuelve a entrar** |
+| Redis | RESP | `REDIS_URL`, hoy `redis://redis:6379/0` por nombre de servicio |
+| API del SMN | HTTPS | Observaciones de estaciones, con usuario y contraseña |
+| Registro de estaciones del SMN | **HTTP plano** | El padrón de estaciones |
+| IGN, Esri, Google | HTTPS | Respaldo de mapas base |
+
+## Qué guarda
+
+| Volumen | Contenido | Copia única |
+|---|---|---|
+| `redis_data` | La caché. Instantáneas RDB cada 300 s, sin AOF. | **No**: se repuebla desde el bucket |
+| `dataservice_data` | `metrics.sqlite` y el estado del recorrido de mapas base | Métricas: sí |
+
+En el almacén, el servicio **escribe** tres buckets: `basemap-tiles`, `weather-stations-data` y
+`api-keys`. **Sólo `api-keys` lo crea él mismo.** `basemap-tiles` lo crea el almacén al arrancar. Ver
+[12.3 Almacenamiento y colas](../contratos/almacenamiento.md).
+
+## Cuando algo falla
+
+| Dependencia caída | Efecto |
 |---|---|
-| `web` | Sólo el lado de lectura: Redis, migraciones, estrategias de lectura, y **todos** los routers |
-| `worker` | Todo lo anterior **más** los seis bucles de sincronización, el scraper de mapas base, el de estaciones y el colector de métricas de Redis |
-| `all` | Equivalente a `worker`; es el valor por defecto |
+| **Redis** | Nunca fatal. La conexión es perezosa y cada lectura cae al bucket. **Cuesta latencia, no errores.** |
+| **SeaweedFS al arrancar** | **Bloquea el arranque.** Sondea con retroceso de 1 a 30 s. En `APP_ENV=production` aborta a los 120 s para que el orquestador reinicie. Fuera de producción espera para siempre. |
+| SeaweedFS en marcha | Cada ruta degrada a su respuesta de falta: `404` o tesela transparente. |
+| API del SMN | Las estaciones dejan de actualizarse. Las teselas siguen. |
+| Proveedor de mapas base | El navegador lo nota primero: **pide al proveedor directamente** y usa el respaldo del servicio tesela por tesela. |
 
-!!! warning "El reparto de `APP_ROLE` es fácil de romper"
-    Los routers se montan **en todos los roles**, así que un contenedor mal configurado sigue
-    respondiendo HTTP y el error no salta a la vista. Si ambos contenedores quedan en `web`, nada
-    sincroniza: Redis nunca se llena, los tiles salen siempre por el camino lento del bucket y el
-    historial de `/metrics/*` deja de crecer. Si el contenedor de la API queda en `worker`, atiende
-    peticiones mientras compite consigo mismo por CPU. Un valor que no sea uno de los tres hace
-    fallar el arranque.
+!!! warning "Un firewall puede romper el arranque, no sólo el tráfico"
+    Como alcanza el almacén **por un puerto publicado del propio host**, una regla que filtre `9000`
+    deja este contenedor en ciclo de reinicio. **Es el primer lugar donde mirar.** Ver
+    [13. Topología de red](../operacion/topologia.md).
+
+## Arranque
+
+1. Conecta Redis de forma perezosa y migra `metrics.sqlite`.
+2. **Comprueba el almacén** y espera hasta que responda.
+3. Levanta las estrategias de lectura y, en `worker`, los bucles de fondo.
+4. Responde `GET /health` con `{"status":"running"}`. **Esa ruta no comprueba Redis ni el almacén.**
+
+**El healthcheck del contenedor consulta esa misma ruta cada 10 s, con 15 s de gracia.**
 
 ## Estrategias de caché
 
-La estrategia se elige una sola vez al arrancar, desde `settings.json` o `SYNC_MODE`.
+La estrategia se elige una vez al arrancar, con `SYNC_MODE` o `settings.json`.
 
-- **`full`** — es el modo desplegado. Seis bucles de fondo recorren el almacén a intervalos fijos y
-  precargan en Redis los productos nuevos junto con sus índices. Cada estrategia `full` delega su
-  camino de fallo a la variante `on_demand`, de modo que un desalojo de Redis cuesta latencia pero
-  nunca un error.
-- **`on_demand`** — no se levanta ningún bucle. Cada lectura resuelve Redis, después el bucket, y
-  recalienta la caché con lo que encontró.
+- **`full`**, el modo desplegado. Seis bucles recorren el bucket y precargan Redis: `satellite`,
+  `radar`, `ecmwf_tp`, `ecmwf_mslp`, `wrf` y `gfs`.
+- **`on_demand`**. Sin bucles. Cada lectura resuelve Redis, luego el bucket, y recalienta.
 
-### Los dominios de sincronización
-
-| Dominio | Qué retiene |
+| Dominio | Qué retiene en Redis |
 |---|---|
-| `satellite` | Ventana temporal por antigüedad |
-| `radar` | Ventana temporal por antigüedad |
-| `ecmwf_tp` / `ecmwf_mslp` | Las 2 corridas más recientes |
+| `satellite`, `radar` | Una ventana temporal por antigüedad |
+| `ecmwf_tp`, `ecmwf_mslp` | Las 2 corridas más recientes |
 | `wrf` | Las 3 inicializaciones más recientes |
 | `gfs` | Los 2 ciclos más recientes |
 
-Los mapas base y las estaciones tienen sus propios ciclos, mucho más lentos.
+!!! note "Los mapas base no pasan por Redis"
+    El modo desplegado para mapas base es `no_cache`. **El recorrido de respaldo sigue corriendo y
+    escribe `basemap-tiles`**, pero el lector va del proveedor al bucket sin tocar Redis.
 
 ## Superficie HTTP
 
-El detalle completo, con parámetros y códigos de error, está en [API HTTP](../contratos/api.md).
-En resumen:
+El detalle completo está en [12.1 API HTTP](../contratos/api.md). En resumen:
 
-| Familia | Para qué |
-|---|---|
-| `GET /products/{product_id}` y descendientes | Configuración del producto, listado de tilesets, tiles `.webp`, consultas puntuales y superposiciones GeoJSON |
-| `GET /basemap/providers`, `GET /basemap/{provider_id}/{z}/{x}/{y}.png` | Mapas base propios y respaldados |
-| `GET /weather-stations/*` | Estaciones: última instantánea, listados, registro y series por estación |
-| `GET /metrics/*` | Lo que alimenta las pestañas Caché y Mapas base del tablero |
-| `GET /health` | Sonda de salud; es la que consulta el visualizador |
+| Familia | Para qué | Autenticación |
+|---|---|---|
+| `/products/*` | Índices, teselas, consultas puntuales y GeoJSON de cada producto | Ninguna |
+| `/basemap/*` | Proveedores y teselas de fondo | Ninguna |
+| `/weather-stations/*` | Estaciones: última instantánea, listados, series | `X-API-Key` |
+| `/weather-stations/admin/*` | Alta y baja de claves | `X-Admin-Password` |
+| `/metrics/*`, `/sync/status` | Lo que lee el panel de estado | Ninguna |
 
-!!! warning "El orden en que se montan los routers es funcional"
-    El router de satélite se queda con la ruta comodín `/products/{product_id}`, así que los routers
-    de radar, WRF, GFS y ECMWF tienen que montarse **antes**. Invertir ese orden hace que
-    `/products/radar` se resuelva como si `radar` fuera un producto satelital. Lo mismo pasa dentro de
-    estaciones: `/weather-stations/{tileset_id}` se declara al final, y por eso una petición a
-    `/weather-stations/admin` sin segmento adicional la atrapa esa ruta y no el router de
-    administración.
+Las claves de estaciones **se guardan sólo como hash** en el bucket `api-keys`. **El secreto se devuelve
+una única vez al crearlo.** **Un interruptor de configuración desactiva la verificación de `X-API-Key`
+por completo**; viene encendida.
 
-### Consultas puntuales
-
-Además de tiles, el servicio permite pedir el valor numérico de una variable en un punto. Abre el COG
-correspondiente directamente en el almacén, con lecturas por rango, y devuelve el valor real en su
-unidad sin descargar el archivo entero.
-
-## Autenticación
-
-Sólo dos familias de rutas están protegidas, y de formas distintas.
-
-| Rutas | Mecanismo |
-|---|---|
-| Las cinco de lectura de `/weather-stations/` | Cabecera `X-API-Key` |
-| Las cuatro de `/weather-stations/admin/` | Cabecera `X-Admin-Password`, comparada con `hmac.compare_digest` |
-
-Las claves se guardan **sólo como hash**: el bucket de claves contiene un objeto por clave, nombrado
-con el SHA-256 del secreto. El secreto en claro se devuelve una única vez, al crearlo, y no se
-almacena.
-
-!!! warning "El control de clave se puede apagar por configuración"
-    Existe un interruptor que desactiva por completo la verificación de `X-API-Key`. Con él en falso,
-    las cinco rutas de lectura de estaciones quedan abiertas sin que nada más cambie.
-
-Todo lo demás es público y CORS está completamente abierto: es el único middleware de la aplicación.
-
-## Los buckets propios
-
-Tres buckets pertenecen enteramente a este servicio; `tiles-processor` no los toca.
-
-| Bucket | Contenido |
-|---|---|
-| `basemap-tiles` | Respaldo de los mapas base de terceros |
-| `weather-stations-data` | Instantáneas horarias y el registro de estaciones |
-| `api-keys` | Un objeto por clave, nombrado por su hash |
+!!! warning "Una ruta de lectura anónima escribe"
+    `GET /basemap/{provider}/{z}/{x}/{y}.png` **escribe** cada tesela que trae del proveedor en
+    Redis y en el bucket. Un llamante anónimo que recorra coordenadas genera escrituras sin tope.
+    Ver [19.1 Superficie expuesta](../seguridad/superficie.md).
 
 ## Estaciones meteorológicas
 
-El servicio se autentica contra la API del SMN con un JWT que refresca una sola vez ante un 401, con
-un candado que evita la estampida cuando varias peticiones fallan a la vez. Descarga el registro
-canónico de estaciones, guarda instantáneas periódicas y precomputa las series por estación para que
-el visualizador no tenga que agregarlas.
+**El sincronizador se autentica contra la API del SMN con un token que renueva ante un `401`.** Descarga
+el padrón, guarda instantáneas cada cinco minutos y precomputa las series por estación. **El punto de
+rocío se calcula en la lectura**, a partir de temperatura y humedad.
 
-El punto de rocío no viene de la fuente: se calcula por la aproximación de Magnus-Tetens a partir de
-temperatura y humedad relativa, y se computa **en la lectura**, no al guardar la instantánea.
+## Cómo se agranda
 
-!!! note "El comentario sobre `SMN_API_LOG_REQUESTS` en `.env.example` está desactualizado"
-    Dice que la variable escribe en el log las cabeceras con el JWT y el cuerpo de autenticación con
-    la contraseña. El cliente **redacta** ambos antes de registrarlos, y la propia línea de aviso
-    aclara que las credenciales van redactadas. Aun así es una opción de diagnóstico ruidosa y no
-    corresponde dejarla encendida en producción.
-
-## Mapas base
-
-Un scraper recorre los proveedores configurados y respalda sus tiles en `basemap-tiles`, para que el
-sistema tolere una caída del proveedor. Lleva un cursor persistente en SQLite, reintenta con
-retroceso, y tiene un cortacircuitos por tasa de error con una escalera de enfriamiento.
+- **Más réplicas de la API**: `WEB_CONCURRENCY` fija los procesos de uvicorn dentro del contenedor.
+  **Varios contenedores `web` pueden compartir un mismo Redis.**
+- **El sincronizador es uno.** Dos contenedores `worker` sincronizarían lo mismo dos veces.
+- **Redis crece hasta `--maxmemory`** y expulsa por vencimiento. **Es el único componente del sistema
+  con un tope de memoria real.**
 
 ## Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `make install` | Instala dependencias con Poetry |
-| `make up` / `make prod` | Compose de desarrollo / producción |
-| `make redis` + `make data` | Producción repartida sobre una red externa |
+| `make up` / `make prod` | Compose de desarrollo / producción, todo en uno |
+| `make redis` + `make data` | Producción repartida sobre la red externa |
 | `make local` | uvicorn con recarga, sin Docker |
-| `make test` | Construye `Dockerfile.run_test` y corre pytest adentro |
+| `make test` | Pruebas dentro de Docker |
 | `make clean` | Baja ambos stacks y borra volúmenes |
-| `make precommit` | `pre-commit run --all-files` |

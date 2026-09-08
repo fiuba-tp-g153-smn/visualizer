@@ -1,150 +1,147 @@
 ---
-title: Visualizer
+title: 11.4 Visualizer
 ---
 
-# Visualizer
+# 11.4 Visualizer
 
-`visualizer` es la aplicación con la que trabaja el pronosticador: una SPA de Angular 21 que dibuja
-las capas sobre un mapa Leaflet, ofrece las herramientas de análisis, permite emitir avisos y aloja
-tanto los tableros de estado como esta documentación.
+`visualizer` es la aplicación con la que trabaja el pronosticador, y también este sitio. **En el
+servidor es un contenedor de nginx que sirve archivos estáticos. Todo lo demás pasa en el
+navegador.** **Esa división es la que decide cómo se despliega y qué se puede cambiar sin reconstruir.**
 
-![Del catálogo estático de capas a los objetos Leaflet](../../imgs/diagrams/visualizer-capas.svg){ .diagram loading=lazy }
+![Se hornea al compilar, corre en el navegador](../../imgs/diagrams/visualizer-build-runtime.svg){ .diagram loading=lazy }
+
+## Unidades desplegables
+
+Un contenedor, `visualizer-container`, sobre `nginx:mainline-alpine-slim`. **No tiene volúmenes ni
+dependencias**: **la imagen es autocontenida**. La comprobación de salud es una conexión TCP al puerto
+80, cada 10 s.
+
+La imagen se construye en tres etapas:
+
+1. **Documentación.** `mkdocs build --strict` sobre la imagen fijada de MkDocs Material.
+2. **Compilación.** `npm run build` con las direcciones de los backends incrustadas.
+3. **Ejecución.** nginx con el paquete compilado y este sitio bajo `/docs-site/`.
+
+## Puertos y conexiones
+
+| Puerto del host | Contenedor | Quién lo necesita |
+|---|---|---|
+| `${APP_HOST_PORT}` (6010) → `80` | `visualizer-container` | El navegador |
+
+**El servidor no habla con ningún backend.** No hay `proxy_pass` en su configuración. **Quien habla es
+el navegador, con tres direcciones que se fijaron al compilar**:
+
+| Variable | A quién llama el navegador |
+|---|---|
+| `DATA_SERVICE_BASE_URL` | Teselas, índices, mapas base y estaciones |
+| `ALERTS_SERVICE_BASE_URL` | Intersección y avisos |
+| `METRICS_SERVICE_BASE_URL` | La pestaña Procesamiento del panel de estado |
+
+!!! warning "Publicar sólo este puerto deja el mapa vacío"
+    El navegador tiene que alcanzar **los tres backends por su cuenta**. Si sólo se publica el
+    visualizador, la aplicación carga y no muestra ninguna capa.
+
+## Configuración fijada al compilar
+
+Las ocho variables llegan al paquete por un complemento de webpack **durante `npm run build`**.
+En la plantilla de compose sólo cuentan los `args:` de construcción; el bloque `environment:` con los
+mismos nombres **no tiene efecto** en tiempo de ejecución.
+
+| Variable | Valor de reserva si no se define |
+|---|---|
+| `DATA_SERVICE_BASE_URL` | `https://data.mapasmn.com` |
+| `ALERTS_SERVICE_BASE_URL` | `http://localhost:8080` |
+| `METRICS_SERVICE_BASE_URL` | `http://localhost:6020` |
+| `DOCS_URL` | `/docs-site` |
+| `APP_HOST_PORT` | `4200` |
+| `SMN_API_PROMPT_FOR_TOKEN`, `IGN_PLACE_SEARCH_URL`, `NOMINATIM_SEARCH_URL` | `true` y dos URL públicas |
+
+**Tres reservas discrepan del archivo de ejemplo.** Una compilación sin variables no apunta a donde
+sugiere `.env.example`. Y `APP_HOST_PORT` **no la lee ninguna fuente de la aplicación**: sólo la usa
+la plantilla de compose para publicar el puerto. **Está en la lista por uniformidad.**
+
+!!! warning "Cambiar una dirección obliga a reconstruir la imagen"
+    Es el error de despliegue más frecuente del sistema. Editar el archivo de entorno y reiniciar el
+    contenedor **no cambia nada**.
 
 ## Rutas
 
-| Ruta | Para qué |
+| Ruta | Qué muestra |
 |---|---|
 | `/` | El mapa y toda la interacción |
-| `/docs`, `/docs/**` | Esta documentación, embebida en un marco del mismo origen |
-| `/status/processing` | Métricas de `tiles-processor` |
-| `/status/cache` | Métricas de `data-service` |
-| `/status/basemap` | Estado del respaldo de mapas base |
-| `/status/alerts` | Métricas de `alerts-service` |
+| `/docs`, `/docs/**` | Este sitio, embebido en un marco del mismo origen |
+| `/status/processing`, `/status/cache`, `/status/basemap`, `/status/alerts` | Las cuatro pestañas del panel de estado |
 
-`/status` sin sufijo redirige a `processing`; cualquier ruta desconocida redirige a `/`.
+`/status` sin sufijo redirige a `processing`. **Cualquier ruta desconocida vuelve a `/`.**
 
-## El modelo de capas
+## Cuando un backend falla
 
-Una capa es una unión discriminada. Los valores reales del código:
+| Backend caído | Lo que ve el usuario |
+|---|---|
+| `data-service` | Un cartel de estado. **La aplicación lo sondea cada 10 s** por `/health`. Las capas no cargan. |
+| `alerts-service` | El panel de avisos queda inutilizable. El resto del mapa funciona. |
+| `metrics-api` | La pestaña Procesamiento muestra un cartel y conserva los últimos datos. |
+| Un proveedor de mapas base | El navegador cae al respaldo de `data-service`, tesela por tesela. |
 
-- `LayerType`: `TILE`, `WMS`, `VECTOR`.
-- `LayerCategory`: `GOES_19`, `RADAR`, `IGN_WMS`, `ECMWF_TP`, `WEATHER_STATIONS`, `WRF`.
+Cinco errores seguidos de teselas en una capa **levantan una notificación** en pantalla.
 
-!!! note "No existe una categoría GFS"
-    Las capas de GFS usan `LayerCategory.WRF` con `modelId: 'gfs'`. Ambos modelos comparten un
-    adaptador de pronóstico, de modo que un único camino de código construye sus URLs e interpreta
-    sus etiquetas de corrida. La prueba correcta para «es una capa de modelo» es
-    `isForecastModelLayer`, no la categoría.
+## Qué guarda
 
-La jerarquía es `LayerGroup` → `LayerSubgroup` → `Layer`. El catálogo tiene 135 definiciones
-repartidas en cinco grupos: **Satélite**, **Radar**, **Modelos**, **Estaciones meteorológicas** e
-**IGN Argentina**. Las 90 capas de radar salen de una plantilla: 18 estaciones RMA por 5 productos.
+En el servidor, nada. **En el navegador, dieciséis claves** de `localStorage` con la forma
+`mapasmn.<nombre>@2026-06-10T00:00:00Z`: capas activas, mapa base, herramientas, consultas
+puntuales, escalas, unidades, zona horaria, polígonos y sus borradores, preferencias de estaciones,
+la clave de estaciones, la búsqueda de lugares y la visibilidad de avisos. **Cambiar la fecha de la
+clave reinicia todas las preferencias** de todos los usuarios.
 
-Una sola capa viene activa de fábrica: `ign-provincia`.
+## Lo que corre en el navegador
 
-## Orden de dibujado
+Sólo lo que cambia una decisión operativa:
 
-Hay **tres** bandas de z-index, no dos:
+- **El catálogo tiene 153 capas** en cinco grupos: satélite 6, radar 108 (18 radares por 6
+  productos), modelos 14, estaciones 7 y referencia del IGN 18. **Cuáles tienen datos lo decide el
+  procesador, no el catálogo.**
+- **Tres bandas de dibujado**: datos de 1 a 1000, referencia de 1001 a 2000, puntos de 2001 a 3000.
+  **Una capa sólo se reordena dentro de su banda.**
+- **Las capas activas se refrescan cada 10 s** contra el servicio de datos. Con muchas capas
+  activas, ese sondeo es tráfico constante.
+- **Las teselas de la ventana de animación se descargan por adelantado**, con tope de descargas
+  simultáneas y por capa. **Es tráfico extra al servicio de datos por cada capa animada.**
+- Los mapas base **se piden al proveedor directamente**; el servicio de datos es el respaldo.
 
-| Banda | Rango | Qué contiene |
+## Cómo se sirve este sitio
+
+nginx sirve `/docs-site/` con políticas de caché distintas por árbol:
+
+| Árbol | Caché | Por qué |
 |---|---|---|
-| `BASE` | 1–1000 | Capas de datos: satélite, radar, ECMWF, WRF, GFS |
-| `OVERLAY` | 1001–2000 | Capas de referencia: todas las del IGN |
-| `POINTS` | 2001–3000 | Capas puntuales: estaciones meteorológicas |
+| `assets/javascripts/`, `assets/stylesheets/` | Inmutable, un año | Material versiona su paquete por contenido |
+| `imgs/`, `videos/` | Inmutable, un año | Cada referencia lleva `?v=<hash>` estampado al compilar |
+| El resto de `assets/` | Una semana | Íconos y logo, sin hash |
+| Las páginas | 60 s con revalidación en segundo plano | Una edición llega en la visita siguiente |
 
-El `zIndex` que guarda cada capa es **relativo dentro de su banda**; el absoluto se calcula sumando el
-mínimo de la banda. Arrastrar reordena únicamente dentro de una banda: el orden entre bandas es fijo
-y no se puede cambiar desde la interfaz.
+`absolute_redirect off` es necesario porque el sitio usa URL de directorio; **sin eso nginx perdería el
+puerto detrás del proxy**. **Una URL inexistente bajo `/docs-site/` devuelve `404`**, no la
+aplicación.
 
-## Línea de tiempo
+## Cómo se agranda
 
-Los cuadros salen del listado de tilesets del producto. Las capas de pronóstico toman los **primeros**
-N cuadros y las históricas los **últimos** N. El control de intervalo es en segundos por cuadro, entre
-0,1 y 10, con 1 por defecto. La cantidad de cuadros sale de la lista de períodos de cada capa.
-
-La reproducción sincronizada elige como ancla la capa cuyo primer cuadro es más antiguo y alinea las
-demás con una tolerancia de ±5 minutos; si no logra alinearlas, bloquea la reproducción en lugar de
-mostrar cuadros desfasados.
-
-!!! note "Los sellos de tiempo se muestran en hora local por defecto"
-    Los identificadores de tileset **se interpretan** siempre como UTC, pero **se muestran** según la
-    preferencia de zona horaria, que viene en «Hora local». UTC es una opción que el usuario activa en
-    Configuración.
-
-## Integración con Leaflet
-
-El renderizado construye la clave de un pool a partir del identificador de la capa y el
-tileset, entre otros. La opacidad y el z-index **no** entran en esa clave, y es deliberado: cambiar
-sólo la opacidad o el orden reutiliza el mismo objeto Leaflet y se resuelve con `setOpacity` o
-`setZIndex`, sin reconstruir nada. Los pools son LRU acotados.
-
-Para que la reproducción sea fluida se agregan al mapa dos cuadros por delante del cursor con
-opacidad 0.
-
-Las capas activas se refrescan solas cada 10 segundos. Cinco errores de tile seguidos en una capa
-reportan al servicio de salud y levantan una notificación, que se limpia con la primera carga
-correcta.
-
-## Persistencia en el navegador
-
-Las claves de `localStorage` llevan la forma `mapasmn.<nombre>@<fecha>`. El sistema de capas escribe
-dos: el estado de las capas visibles y los controles compartidos de estaciones. Otras partes de la
-aplicación guardan el mapa base, la zona horaria, las unidades, las herramientas de escala y la clave
-de API de estaciones.
-
-!!! note "El estado guardado gana sobre el valor por defecto"
-    Un usuario que ya usó la aplicación no arranca con `ign-provincia`: arranca con lo que tenía la
-    última vez.
-
-## Variables de entorno
-
-!!! warning "Se hornean en la compilación, no se leen en tiempo de ejecución"
-    Las variables llegan al bundle por el `DefinePlugin` de webpack. Cambiar
-    `DATA_SERVICE_BASE_URL` exige **recompilar**, no reiniciar. Además, en la compose sólo los
-    `args:` llegan al bundle de producción; los `environment:` no. Los valores de reserva del
-    `custom-webpack.config.js` no coinciden con los de `.env.example`, así que una compilación sin
-    variables definidas apunta a destinos distintos de los que sugiere el ejemplo.
-
-Ver [Configuración y variables](../contratos/configuracion.md).
-
-## Prefetch
-
-Dos servicios calientan la caché del navegador para la ventana de animación: uno pide los tiles como
-imágenes y otro las instantáneas de estaciones como JSON, descartando el cuerpo. Ninguno retiene
-datos en memoria: la caché real es la del navegador. Al cambiar el zoom la cola se vacía, aunque las
-descargas ya lanzadas no se pueden cancelar.
-
-## Manejo de errores
-
-No hay un manejador de errores global propio. Lo que ve el usuario se reduce a dos cosas: un aviso breve cuando se
-cancela el pedido de la clave de estaciones, y un cartel de estado cuando `data-service` no responde,
-sondeado cada 10 segundos.
-
-## Documentación embebida
-
-Este sitio se construye con MkDocs Material en la etapa `docs` del `Dockerfile`, se copia a
-`public/docs-site` y lo sirve el propio nginx de la aplicación. La ruta `/docs` lo embebe en un
-iframe. Como es del mismo origen, el componente mantiene sincronizada la URL de la aplicación
-suscribiéndose al observable por página del propio Material, que también cubre las navegaciones
-instantáneas; no se inyecta ningún script en la documentación.
+**Es un servidor de archivos sin estado.** Cualquier cantidad de réplicas detrás de un proxy sirve
+lo mismo. **Lo que escala de verdad es el tráfico que el navegador le manda al servicio de datos, no
+este contenedor.**
 
 ## Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `npm start` | Servidor de desarrollo |
+| `npm start` | Servidor de desarrollo en `4200` |
 | `npm run build` | Compilación de producción |
-| `npm test` | Pruebas unitarias con Vitest |
-| `make docs` | Construye la documentación en `public/docs-site` |
-| `make docs-serve` | Vista previa de la documentación con recarga en el puerto 8000 |
-| `make diagrams` | Vuelve a renderizar los diagramas D2 a SVG |
+| `npm test` | Pruebas unitarias |
+| `make docs` / `make docs-serve` | Construye la documentación / la sirve con recarga en `8000` |
+| `make docs-check` | Rastrea el sitio construido: páginas huérfanas, anclas y rutas de video rotas |
+| `make diagrams` | Recompila los diagramas a SVG y PNG |
+| `make docs-media` | Vuelve a capturar las imágenes y clips del manual |
 | `make up` / `make prod` | Compose de desarrollo / producción |
 
 !!! note "`make docs` antes de `npm start`"
-    `public/docs-site` está en `.gitignore`. Sin haber corrido `make docs` al menos una vez, la ruta
-    `/docs` devuelve 404 en desarrollo.
-
-!!! warning "Sin verificar"
-    `APP_HOST_PORT` se inyecta en el bundle junto con el resto de las variables y está declarada en
-    los tipos, pero ninguna fuente TypeScript la lee. No pudo determinarse si quedó de una versión
-    anterior o si se reserva para un uso futuro.
+    `public/docs-site` no está versionado. Sin correr `make docs` al menos una vez, la ruta `/docs`
+    devuelve `404` en desarrollo.
