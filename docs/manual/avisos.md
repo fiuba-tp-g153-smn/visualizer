@@ -20,11 +20,11 @@ imágenes.**
 
 En la pestaña **Generar**:
 
-1. **Dibujar entra en modo de trazado.** Cada clic agrega un vértice. El polígono se cierra con un
+- **Dibujar (1) entra en modo de trazado.** Cada clic agrega un vértice. El polígono se cierra con un
    clic sobre el primer punto, o con doble clic en el último. **Cancelar sale del modo.**
-2. **Nivel de detalle**, de 1 a 5, controla con cuánta fidelidad se recorta el contorno del país.
+- **Nivel de detalle (2)**, de 1 a 5, controla con cuánta fidelidad se recorta el contorno del país.
    **Más detalle tarda más en calcularse.**
-3. **Borrar todos elimina todos los borradores**, previa confirmación.
+- **Borrar todos elimina todos los borradores**, previa confirmación.
 
 <video preload="none" loop muted playsinline title="Dibujar el polígono del aviso"
        width="100%" poster="../../videos/06-dibujar-poster.webp"
@@ -33,7 +33,7 @@ En la pestaña **Generar**:
   Tu navegador no soporta este video.
 </video>
 
-Cada borrador aparece como una tarjeta, **Borrador #N**. Muestra sus vértices, su área en km² y la hora
+Cada borrador aparece como una tarjeta (3), **Borrador #N**. Muestra sus vértices, su área en km² y la hora
 de la última modificación. **Un clic en el título centra el mapa en el polígono.** **Los botones de la
 tarjeta, y el menú del botón derecho sobre el polígono, ofrecen lo mismo**:
 
@@ -60,7 +60,7 @@ el mapa.** **La lista es exactamente la que va a quedar en el aviso.**
 
 ![El diálogo de fenómeno al generar un aviso](../imgs/manual/06-generar-dialogo.png){ .doc-figure loading=lazy }
 
-**Generar aviso abre un diálogo que pide el código de fenómeno.** **La lista la entrega el servicio de
+**Generar aviso (4) abre un diálogo que pide el código de fenómeno.** **La lista la entrega el servicio de
 avisos**; si no responde, la aplicación usa una lista propia de 27 códigos. Al confirmar, **el trabajo
 se encola y la aplicación responde de inmediato.** **A partir de ahí consulta el estado cada dos
 segundos**, hasta que el aviso está listo.

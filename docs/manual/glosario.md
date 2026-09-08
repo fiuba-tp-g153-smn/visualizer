@@ -15,6 +15,8 @@ las capas, pero no es una.**
 
 ![La pestaña Activas, donde se ven capa, bloque y período](../imgs/manual/03-activas.png){ .doc-figure loading=lazy }
 
+En la captura: el bloque de referencia (1), el bloque de datos (2) y la flecha que expande una capa (3).
+
 ## De la interfaz
 
 **Capa**

@@ -11,6 +11,8 @@ Al abrir la aplicación ves un mapa a pantalla completa y, a la izquierda, una c
 
 ![La ventana al abrir la aplicación por primera vez](../imgs/manual/02-ventana.png){ .doc-figure loading=lazy }
 
+En la captura: la barra lateral (1), los botones de zoom (2) y la atribución del fondo (3).
+
 ## La barra de la izquierda
 
 **Cada ícono abre un panel.** **Sólo hay un panel abierto por vez.** **Se cierra con la cruz del panel, o
@@ -31,6 +33,8 @@ Al pie de la columna están los botones de zoom. **El número entre el más y el
 actual.**
 
 ![El panel Capas del mapa, abierto desde la barra lateral](../imgs/manual/02-panel-capas.png){ .doc-figure loading=lazy }
+
+Todo panel tiene el mismo esqueleto: **el título (1), sus pestañas (2) y la cruz que lo cierra (3).**
 
 ## Moverse por el mapa
 
@@ -89,6 +93,9 @@ mapa ▸ General.**
 
 ![Herramientas del mapa ▸ General, con los seis indicadores](../imgs/manual/02-indicadores.png){ .doc-figure loading=lazy }
 
+En la captura están prendidas la escala (1), las coordenadas (2) y la atribución (3). **La casilla
+Controles de zoom (4) es la que oculta los botones de zoom.**
+
 | Indicador | De fábrica |
 |---|---|
 | Controles de zoom | Prendido |
@@ -106,6 +113,8 @@ cursor y los trópicos y meridianos no tienen cruz: se apagan sólo desde la cas
 El panel tiene tres pestañas: **Unidades**, **SMN** y **Atajos**.
 
 ![Configuración ▸ Unidades, con sus cuatro ajustes](../imgs/manual/02-configuracion.png){ .doc-figure loading=lazy }
+
+**Los números de la lista son los de la captura.**
 
 1. **Temperatura**: Celsius o Kelvin. De fábrica, Celsius.
 2. **Velocidad del viento**: kilómetros por hora o nudos. De fábrica, nudos.

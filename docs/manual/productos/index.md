@@ -22,6 +22,8 @@ Las dieciocho capas del IGN no son datos meteorológicos. **Están en el
 
 ![Los cinco grupos del catálogo](../../imgs/manual/02-panel-capas.png){ .doc-figure loading=lazy }
 
+En la captura: el título del panel (1), la pestaña Disponibles (2) y la cruz que lo cierra (3).
+
 ## Lo que comparten todas las capas de datos
 
 - **La hora de cada imagen es la del dato, no la de llegada.** Sale del nombre con que se publicó, y

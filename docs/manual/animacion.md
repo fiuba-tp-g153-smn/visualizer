@@ -19,14 +19,16 @@ la capa.**
 
 ![La sección Período de una capa de satélite](../imgs/manual/05-periodo.png){ .doc-figure loading=lazy }
 
+**Los números de la lista son los de la captura.**
+
 1. **El selector de cantidad de imágenes.** **Las opciones dependen de la familia**: 6, 12 o 24 en
    satélite; 6 o 12 en radar; hasta 72 en WRF.
 2. **El intervalo, en segundos por imagen**, entre 0,1 y 10.
 3. **La marca de tiempo de la imagen que estás viendo**, con su sufijo HOA o UTC.
-4. **El botón de reproducción.** **Al lado, un botón lleva a la imagen más reciente.**
-
-**Debajo hay un deslizador para moverte cuadro por cuadro.** **El deslizador sigue funcionando con la
-reproducción detenida.**
+4. **El botón de reproducción.**
+5. **El botón que lleva a la imagen más reciente.**
+6. **El deslizador para moverte cuadro por cuadro.** Sigue funcionando con la reproducción
+   detenida.
 
 <video preload="none" loop muted playsinline title="Reproducir la animación de una capa"
        width="100%" poster="../../videos/05-animacion-poster.webp"
@@ -68,7 +70,7 @@ Los colores dan una idea aproximada. **La consulta puntual devuelve el número.*
 
 ![Herramientas del mapa ▸ Dato puntual, con un valor leído en el mapa](../imgs/manual/05-consulta.png){ .doc-figure loading=lazy }
 
-1. **La herramienta viene activada de fábrica.** Si la apagaste, marcá **Activar herramienta**.
+1. **La herramienta viene activada de fábrica.** Si la apagaste, marcá **Activar herramienta** (1).
 2. Marcá, bajo Capas activas, **qué capas querés consultar.** Cada capa de datos que encendés se
    agrega sola a la lista. **Una capa sin marcar no devuelve nada.**
 3. Hacé clic en el mapa.
@@ -80,7 +82,7 @@ Los colores dan una idea aproximada. **La consulta puntual devuelve el número.*
   Tu navegador no soporta este video.
 </video>
 
-**Cada capa consultada tiene un panel** con su nombre, su instante, su corrida o elevación si
+**Cada capa consultada tiene un panel (2)** con su nombre, su instante, su corrida o elevación si
 corresponde, y el valor con su unidad. **Hasta el primer clic, el panel dice «Sin dato».** **El valor es el dato, no el color leído de la imagen.** **Si
 en ese punto no hay dato, el panel dice «Sin dato».** **Cada panel se cierra con su propia cruz.**
 
