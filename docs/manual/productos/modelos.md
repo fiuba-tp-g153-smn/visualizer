@@ -1,106 +1,80 @@
 ---
-title: Modelos de pronóstico
+title: 4.3 Modelos numéricos
 ---
 
-# Modelos de pronóstico
+# 4.3 Modelos numéricos
 
-El satélite y el radar te muestran lo que **está pasando**. Los modelos numéricos te muestran lo que
-**va a pasar**.
+El grupo Modelos tiene tres subgrupos: **ECMWF con una capa, WRF con diez y GFS con tres.** Las
+capas de modelo se diferencian de las de observación en dos cosas. **Tienen corridas, y se animan
+hacia adelante.**
 
-Un modelo toma el estado actual de la atmósfera, lo divide en una grilla tridimensional y resuelve
-las ecuaciones de la física para calcular cómo evoluciona esa grilla paso a paso hacia adelante. El
-resultado es un pronóstico: una serie de campos, uno por cada hora futura.
+![Corrida, pasos y capas](../../imgs/diagrams/modelos-corridas.svg){ .diagram loading=lazy }
 
-Cada vez que un modelo se ejecuta se llama **corrida**. Las corridas se lanzan a horas fijas y cada
-una parte de las observaciones disponibles hasta ese momento. En el control de cada capa de modelo
-podés elegir de qué corrida tomar los datos: la más reciente incorpora la información más nueva, y
-es casi siempre la que conviene.
+![El grupo Modelos, con la capa de ECMWF encendida y sus corridas](../../imgs/manual/04-3-modelos.png){ .doc-figure loading=lazy }
 
-!!! note "Un pronóstico es un escenario, no un dato"
-    Los modelos aciertan la situación general mucho mejor que el detalle. Que un modelo ponga una
-    tormenta sobre una ciudad a las 18:00 no significa que vaya a estar exactamente ahí a esa hora;
-    significa que las condiciones para que ocurra algo así están dadas en esa zona y en ese entorno
-    horario. Usá el modelo para anticipar y priorizar, y la observación para confirmar.
+## Corridas y pasos
 
-## Los tres modelos
+Una **corrida** es un pronóstico completo, identificado por su hora de inicio. Cada corrida tiene
+**pasos**: un campo por cada hora de validez. **En Corridas elegís qué corridas mostrar.** **Podés
+marcar varias a la vez, cada una con su opacidad.** **Dentro de cada corrida podés apagar la imagen o
+cada superposición por separado.**
 
-| Modelo | Alcance | Para qué se usa acá |
-|---|---|---|
-| **ECMWF** | Global | El panorama general: sistemas de presión y precipitación acumulada. |
-| **WRF** | Regional, configurado para el territorio argentino, con salidas horarias | El detalle: es el que se usa para anticipar convección severa. |
-| **GFS** | Global | Estructura de la atmósfera en altura. |
-
-La diferencia entre un modelo global y uno regional es la resolución. Un modelo global cubre todo el
-planeta con una grilla más gruesa; un modelo regional cubre sólo una porción, pero con celdas mucho
-más chicas, y por eso puede representar fenómenos más pequeños, como una tormenta individual.
+**La hora de la fila es la hora de validez del paso**, no la de la corrida. **El selector de corridas
+muestra la hora de inicio como mes, día y hora.** **La animación recorre los primeros pasos de la
+corrida**, en la cantidad que elijas en Período.
 
 ## ECMWF
 
-| Capa | Unidad | Cómo se lee |
-|---|---|---|
-| **Precipitación total** | mm | Cuánta lluvia acumulada se espera y dónde. Da la magnitud y la distribución espacial del evento. |
-| **Presión a nivel del mar** | hPa | Las isobaras: los centros de alta y baja presión y sus gradientes. Donde las isobaras están más juntas, el viento es más fuerte. |
+Una sola capa: **Precipitación total**, en mm, con escala discreta de 0.5 a 250. **Las isobaras de
+presión a nivel del mar son una superposición de esa capa**, con etiqueta cada 10 hPa. **Se prenden
+juntas, y dentro de la corrida podés apagar una u otra.**
 
-La presión a nivel del mar se dibuja como líneas, no como una capa de imagen, así que se puede
-superponer sobre cualquier otra cosa sin taparla.
+| Ventana | Arranca en | Niveles de zoom |
+|---|---|---|
+| 8, 16, 32 o 48 pasos | 48 | 3 a 7 |
 
 ## WRF
 
-Es el modelo de mayor detalle y el que aporta más capas. Vale la pena entender qué pregunta responde
-cada una, porque juntas describen los tres ingredientes de una tormenta severa: **inestabilidad**,
-**humedad** y **cortante**.
+| Capa | Unidad | Rango de la escala | Superposiciones |
+|---|---|---|---|
+| **Colmax** | dBZ | −18 a 76.5 | — |
+| **Ráfagas en superficie** | kt | 25 a 80, con marca en 35 | Barbas y contorno de umbral de ráfaga |
+| **Humedad específica 900 hPa** | g/kg | 0 a 19 | Barbas |
+| **Precipitación 1h** | mm | 0.1 a 260 | Barbas e isobaras |
+| **MUCAPE** | J/kg | 100 a 3500 | Contornos de cortante 850–500 hPa |
+| **Agua precipitable** | mm | 20 a 70 | — |
+| **Jet capas bajas** | kt | −48 a −24 | Barbas y contornos de cortante 850–700 hPa |
+| **Cortante niveles bajos** | kt | 10 a 50 | Barbas |
+| **CAPE-BRN** | J/kg | 100 a 3500 | Contornos de BRN en 10 y 45 |
+| **Granizo** | Índice SHIP, sin unidad | 0.1 a 4 | Contornos de diámetro máximo en 0.5, 3 y 5 cm |
 
-### Lo que el modelo pronostica que va a ocurrir
+**Jet capas bajas dibuja la componente meridional del viento en 850 hPa**, **por eso su escala es
+negativa**. **Granizo es un índice**, no un tamaño: el tamaño está en sus contornos, y la consulta
+puntual lo devuelve en cm.
 
-| Capa | Unidad | Cómo se lee |
+| Ventana | Arranca en | Niveles de zoom |
 |---|---|---|
-| **Colmax** | dBZ | El máximo vertical de reflectividad simulada. Es lo más parecido a "el radar del futuro": dónde y con qué intensidad el modelo desarrolla convección. La capa más directa de todas. |
-| **Precipitación 1h** | mm | El acumulado hora por hora, con isobaras y viento de superficie como contexto. |
-| **Ráfagas en superficie** | kt | Las ráfagas a 10 metros, con barbas de viento y un contorno de referencia operativo para daño por viento. |
-| **Granizo** | — | Un parámetro de granizo severo, con contornos del diámetro máximo pronosticado. |
+| 6, 12, 24, 48 o 72 pasos | 72 | 4 a 6 |
 
-### Los ingredientes: por qué ocurriría
-
-| Capa | Unidad | Cómo se lee |
-|---|---|---|
-| **MUCAPE** | J/kg | La energía disponible para la convección, calculada sobre la parcela de aire más inestable. Es la medida de **cuánto combustible** hay. Valores altos indican una atmósfera capaz de sostener corrientes ascendentes fuertes. |
-| **Humedad específica 900 hPa** | g/kg | El vapor de agua en capas bajas, con el viento en ese nivel. Es **la alimentación**: sin humedad entrando, la inestabilidad no se traduce en tormentas. |
-| **Agua precipitable** | mm | Todo el vapor de agua de la columna, integrado. Indica el potencial de lluvias abundantes. |
-| **Jet capas bajas** | kt | El viento en 850 hPa. Es el mecanismo que transporta calor y humedad desde el norte; un jet intenso suele preceder a los eventos organizados. |
-| **Cortante niveles bajos** | kt | Cuánto cambia el viento con la altura en niveles bajos. Es lo que determina si las tormentas se **organizan** o colapsan sobre sí mismas, y condiciona su potencial rotatorio. |
-| **CAPE-BRN** | J/kg | La energía convectiva acompañada de contornos del número de Richardson volumétrico, que relaciona la inestabilidad con la cortante. Ayuda a anticipar qué **tipo** de tormenta favorece el entorno. |
-
-!!! note "Inestabilidad sola no alcanza"
-    Mucha CAPE con poca cortante tiende a dar tormentas fuertes pero desorganizadas y de vida corta.
-    CAPE moderada con cortante fuerte puede dar sistemas organizados, mucho más duraderos y
-    peligrosos. Por eso las dos capas se miran juntas, y por eso existe una capa que directamente las
-    combina.
+**La hora de cada paso es la de inicio de la corrida más las horas del paso.**
 
 ## GFS
 
-Aporta la estructura de la atmósfera en altura, que es donde se define la organización de los
-sistemas.
+![La capa de 500 hPa del GFS, con sus superposiciones](../../imgs/manual/04-3-gfs.png){ .doc-figure loading=lazy }
 
-| Capa | Cómo se lee |
-|---|---|
-| **Presión a nivel del mar** | Isobaras y espesor entre niveles. El espesor es un indicador de la temperatura media de la capa: sirve para ubicar frentes y masas de aire. |
-| **500 hPa** | Viento, alturas geopotenciales, isotermas y barbas en niveles medios. Es el nivel donde se leen las vaguadas y las cuñas que dirigen los sistemas. |
-| **250 hPa** | Viento y alturas en niveles altos, donde está la corriente en chorro. La posición del chorro condiciona dónde se favorece el ascenso. |
+| Capa | Imagen de fondo | Unidad y rango | Superposiciones |
+|---|---|---|---|
+| **Presión a nivel del mar** | No tiene | — | Isobaras cada 3 hPa y espesor 1000–500 hPa cada 60 m |
+| **500 hPa** | Intensidad del viento | kt, 80 a 220 | Isotermas cada 5 °C, alturas cada 60 m y barbas |
+| **250 hPa** | Intensidad del viento | kt, 80 a 210 | Alturas cada 60 m |
 
-Estas capas son vectoriales —líneas y barbas, sin imagen de fondo—, así que se pueden superponer
-sobre satélite o radar sin ocultarlos.
+**Presión a nivel del mar no tiene escala de colores.** **Es sólo líneas, y se superpone a cualquier
+otra capa sin taparla.** **La consulta puntual sí devuelve su valor.**
 
-## Una forma de trabajar
+| Ventana | Arranca en | Pasos | Niveles de zoom |
+|---|---|---|---|
+| 8, 17, 25 o 33 pasos | 33 | Cada 3 horas hasta +48, cada 6 después | 3 a 7 |
 
-Una secuencia razonable para una jornada con potencial de tiempo severo:
-
-1. **GFS en 500 hPa** para ubicar el sistema que va a gobernar el día.
-2. **ECMWF** para el panorama de presión y precipitación acumulada.
-3. **WRF, ingredientes**: MUCAPE y humedad en capas bajas para saber dónde está el combustible, y
-   cortante para saber si se va a organizar.
-4. **WRF, Colmax** para ver dónde y cuándo el modelo efectivamente dispara la convección.
-5. **Satélite y radar** para confirmar si está ocurriendo, y dónde exactamente respecto de lo
-   pronosticado.
-
-Ese último paso es el que importa a la hora de [emitir un aviso](../avisos.md): el aviso se dibuja
-sobre lo observado, con el modelo como guía de hacia dónde va.
+!!! note "Corridas vacías"
+    **Si un subgrupo aparece gris, el servicio no tiene ninguna corrida publicada.** El botón de
+    volver a verificar consulta de nuevo. La aplicación lo hace sola cada minuto.

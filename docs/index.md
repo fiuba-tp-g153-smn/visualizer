@@ -1,15 +1,22 @@
 ---
-title: Inicio
+title: 1. Inicio
 ---
 
-# Documentación de MapaSMN
+# 1. Inicio
 
-MapaSMN es un sistema de visualización y aviso por condiciones meteorológicas extremas. Integra
-datos de satélite, radar y modelos numéricos sobre un mapa interactivo, y le da al pronosticador las
-herramientas para analizarlos y para emitir un aviso a corto plazo.
+MapaSMN es el sistema de visualización y aviso del Servicio Meteorológico Nacional para
+condiciones extremas. **Reúne satélite, radar, modelos y estaciones en un mismo mapa.** Sobre ese
+mapa, el pronosticador **dibuja el área afectada y deja listo un aviso a corto plazo.**
 
-Esta documentación está dividida en dos mitades independientes. Cada una está escrita para un lector
-distinto, y no hace falta leer la otra.
+![De los datos crudos al aviso](imgs/diagrams/vista-general.svg){ .diagram loading=lazy }
+
+El recorrido tiene cuatro etapas. Las fuentes entregan datos crudos. **El procesamiento los
+convierte en capas listas cada cinco minutos.** El mapa las muestra y las anima. **El aviso sale del
+mapa como un polígono con un fenómeno.** El circuito del organismo lo completa y lo difunde.
+
+## Dos mitades, dos lectores
+
+Esta documentación está partida en dos. **Cada mitad se lee sola**, sin pasar por la otra.
 
 <div class="grid cards" markdown>
 
@@ -17,10 +24,8 @@ distinto, y no hace falta leer la otra.
 
     **Para quien usa la aplicación.**
 
-    Qué es cada cosa en pantalla, qué significa cada producto meteorológico y cómo interpretarlo,
-    cómo animar, cómo medir y cómo emitir un aviso.
-
-    Sin requisitos técnicos previos.
+    Qué es cada cosa en pantalla, qué producto muestra cada capa, cómo animar, cómo consultar un
+    valor y cómo emitir un aviso. **No explica meteorología**: explica el programa.
 
     [Empezar por acá](manual/index.md)
 
@@ -28,10 +33,8 @@ distinto, y no hace falta leer la otra.
 
     **Para quien lo despliega, lo opera o lo audita.**
 
-    La arquitectura, los contratos entre servicios, la topología de red, el procedimiento de puesta
-    en marcha, y el análisis de seguridad del sistema.
-
-    Orientada a infraestructura, no a desarrollo.
+    Las unidades desplegables, los puertos, los contratos entre servicios, la puesta en marcha y la
+    seguridad. **Orientada a infraestructura, no a desarrollo.**
 
     [Ir a la referencia técnica](tecnica/index.md)
 
@@ -39,28 +42,26 @@ distinto, y no hace falta leer la otra.
 
 ## Qué hace el sistema
 
-- **Satélite GOES-19**: tres canales del instrumento de imágenes y los tres productos de descargas
-  eléctricas.
-- **Radar SINARAME**: las variables polarimétricas de la red, en tres elevaciones.
-- **Modelos numéricos**: ECMWF, WRF en su configuración regional argentina, y GFS.
-- **Estaciones de superficie**: las observaciones del SMN, con histórico por estación.
+- **Satélite GOES-19**: tres canales de imágenes y tres productos de descargas eléctricas.
+- **Radar SINARAME**: seis variables de cada uno de los 18 radares, en tres elevaciones.
+- **Modelos numéricos**: ECMWF, WRF en su configuración argentina, y GFS.
+- **Estaciones de superficie**: las observaciones del SMN, con historial de 48 horas por estación.
 - **Capas de referencia del IGN**: límites, hidrografía, infraestructura y más.
-- **Animación** de cualquier capa temporal, con reproducción sincronizada entre capas.
-- **Consulta puntual** del valor numérico real de una variable en un punto del mapa.
-- **Avisos a corto plazo**: trazado de polígonos, intersección con departamentos y generación de las
-  imágenes oficiales.
+- **Animación** de cualquier capa temporal, sola o sincronizada con otras.
+- **Consulta puntual** del valor numérico de una capa en un punto del mapa.
+- **Avisos a corto plazo**: polígono, departamentos afectados y las dos imágenes oficiales.
 
 ## Cómo elegir
 
 | Si querés… | Andá a |
 |---|---|
-| Entender qué muestra una capa | [Manual ▸ los productos](manual/index.md) |
-| Saber cómo se emite un aviso | [Manual ▸ avisos](manual/avisos.md) |
-| Levantar el sistema en tu propia red | [Técnica ▸ puesta en marcha](tecnica/operacion/puesta-en-marcha.md) |
-| Saber qué puertos expone y qué queda autenticado | [Técnica ▸ superficie expuesta](tecnica/seguridad/superficie.md) |
-| Evaluar si es seguro desplegarlo | [Técnica ▸ seguridad](tecnica/seguridad/index.md) |
-| Consultar una ruta HTTP o una variable de entorno | [Técnica ▸ contratos](tecnica/contratos/api.md) |
+| Saber qué producto es cada capa | [4. Qué muestra cada producto](manual/productos/index.md) |
+| Emitir un aviso | [6. Emitir un aviso a corto plazo](manual/avisos.md) |
+| Levantar el sistema en tu propia red | [14. Puesta en marcha](tecnica/operacion/puesta-en-marcha.md) |
+| Repartirlo en más de una máquina | [15. Distribuir el sistema](tecnica/operacion/distribucion.md) |
+| Saber qué puertos expone y qué queda autenticado | [19.1 Superficie expuesta](tecnica/seguridad/superficie.md) |
+| Consultar una ruta o una variable de entorno | [12. Contratos entre servicios](tecnica/contratos/index.md) |
 
----
-
-Para reportar un problema o sugerir una mejora, contactá al equipo de desarrollo.
+**El aviso no se difunde desde acá.** El sistema lo deja generado, con sus imágenes, y el circuito del
+SMN lo completa. Ese límite se repite en las dos mitades porque **define qué es y qué no es el
+sistema.**

@@ -4,46 +4,35 @@ title: Manual de usuario
 
 # Manual de usuario
 
-MapaSMN es una herramienta para mirar la atmósfera y avisar cuando se pone peligrosa.
+Este manual está escrito para el pronosticador de turno. **No explica meteorología.** **Explica el programa**: qué hace cada control, dónde está, y qué no va a hacer.
 
-Reúne en un mismo mapa lo que ven los satélites, lo que ven los radares, lo que pronostican los
-modelos numéricos y lo que miden las estaciones en tierra. Sobre ese mapa el pronosticador puede
-comparar, animar, medir un valor en un punto y —cuando la situación lo amerita— dibujar el área
-afectada y emitir un aviso a corto plazo.
+![Lo que hacés con MapaSMN](../imgs/diagrams/manual-recorrido.svg){ .diagram loading=lazy }
 
-Este manual está escrito para quien usa la aplicación. No hace falta saber nada de programación ni
-de infraestructura para leerlo: sólo se explica qué hace cada cosa, qué significa lo que se ve en
-pantalla y cómo interpretarlo desde el punto de vista meteorológico.
+**Los capítulos siguen el recorrido del diagrama.** **Primero elegís qué ver, después lo animás y lo
+medís, y al final emitís el aviso.** **El panel de estado queda para cuando algo no llega.**
 
-## Por dónde empezar
+## Los capítulos
 
-Si es la primera vez que abrís la aplicación, leé estas tres páginas en orden:
-
-1. [Primeros pasos](primeros-pasos.md) — qué es cada parte de la pantalla.
-2. [Trabajar con capas](capas.md) — cómo elegir qué se ve y cómo se ve.
-3. [El mapa de fondo](mapa-base.md) — sobre qué fondo se dibuja todo lo demás.
-
-## Qué podés ver
-
-Cada familia de datos responde una pregunta distinta sobre la atmósfera:
-
-| Familia | La pregunta que responde |
+| Capítulo | Qué resuelve |
 |---|---|
-| [Satélite](productos/satelite.md) | ¿Dónde hay nubes, qué tan altas y frías están, y dónde hay actividad eléctrica? |
-| [Radar](productos/radar.md) | ¿Dónde está lloviendo ahora mismo, con qué intensidad y de qué tipo? |
-| [Modelos de pronóstico](productos/modelos.md) | ¿Qué va a pasar en las próximas horas y días? |
-| [Estaciones](productos/estaciones.md) | ¿Qué se está midiendo efectivamente en tierra? |
-| [Capas de referencia](productos/referencia.md) | ¿Dónde queda todo esto: provincias, rutas, ríos, localidades? |
+| [2. Primeros pasos](primeros-pasos.md) | La ventana, el mapa de fondo, los indicadores y la configuración. |
+| [3. Trabajar con capas](capas.md) | Encender, ordenar y ajustar capas. Las capas de referencia del IGN. |
+| [4. Qué muestra cada producto](productos/index.md) | Qué capa es qué producto, con sus unidades, escalas y horas. |
+| [5. Ver la evolución y consultar un punto](animacion.md) | Animar una capa o varias juntas, y leer el valor en un punto. |
+| [6. Emitir un aviso a corto plazo](avisos.md) | Dibujar el área, verificar departamentos y generar el aviso. |
+| [7. El panel de estado](panel-de-estado.md) | Saber si lo que ves está actualizado. |
+| [8. Glosario](glosario.md) | Los términos de la interfaz, en una línea cada uno. |
 
-## Qué podés hacer
+![La ventana de MapaSMN, tal como se ve al abrirla](../imgs/manual/02-ventana.png){ .doc-figure loading=lazy }
 
-- [Ver la evolución en el tiempo](animacion.md) — animar una capa, o varias en paralelo con sus
-  tiempos alineados.
-- [Consultar un valor puntual](consulta-puntual.md) — preguntarle al mapa cuánto vale una variable
-  exactamente en un punto.
-- [Emitir un aviso a corto plazo](avisos.md) — dibujar el área, verificar qué departamentos abarca y
-  generar el aviso con sus imágenes oficiales.
-- [Mirar el estado del sistema](panel-de-estado.md) — comprobar si los datos que estás viendo están
-  llegando con normalidad.
+## Cómo leerlo
 
-Si aparece un término que no te resulta familiar, está explicado en el [glosario](glosario.md).
+**Cada capítulo empieza con una captura de la ventana entera**, marcada con números, para ubicar
+dónde vive la función. **Después vienen las capturas de cada panel y los clips de las secuencias.**
+**Los clips arrancan solos al llegar a ellos**, sin controles, y se repiten en bucle.
+
+**Las capturas se generan de forma automática** a partir de un estado fijo de la aplicación. **Si la
+interfaz cambia, se vuelven a generar.** Tu pantalla puede diferir en el fondo del mapa y en los datos del momento. **No en los controles.**
+
+!!! note "Si es tu primera vez"
+    **Leé el capítulo 2 y el 3 en orden.** **El resto se consulta cuando hace falta.**

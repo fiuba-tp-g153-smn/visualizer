@@ -1,93 +1,127 @@
 ---
-title: Trabajar con capas
+title: 3. Trabajar con capas
 ---
 
-# Trabajar con capas
+# 3. Trabajar con capas
 
-Todo lo que se ve sobre el mapa es una **capa**. Una imagen de satélite es una capa, la
-reflectividad de un radar es otra, los límites provinciales son otra. El trabajo cotidiano consiste
-en encender las que te interesan, apilarlas en el orden correcto y ajustar su transparencia hasta
-que la combinación diga algo.
+Todo lo que se dibuja sobre el mapa es una **capa**. **Encenderla, ordenarla y ajustarla es el
+trabajo cotidiano**, y todo pasa por el panel Capas del mapa.
 
-El panel **Capas del mapa** tiene tres pestañas: **Disponibles**, **Activas** y **Sincronización**.
-Las dos últimas indican entre paréntesis cuántas capas contienen.
+![Del catálogo al mapa](../imgs/diagrams/capas-modelo.svg){ .diagram loading=lazy }
+
+**El panel tiene tres pestañas.** Disponibles es el catálogo. Activas es lo que está en el mapa.
+Sincronización anima varias capas a la vez, y se explica en el [capítulo 5](animacion.md). Las dos
+últimas llevan un número: **cuántas capas hay activas, y cuántas elegiste sincronizar.**
+
+![El panel de capas, con la pestaña Disponibles y sus cinco grupos](../imgs/manual/03-disponibles.png){ .doc-figure loading=lazy }
 
 ## Disponibles: elegir qué ver
 
-Arriba de todo hay un buscador que filtra el catálogo completo. Es la forma más rápida de llegar a
-una capa cuando ya sabés cómo se llama.
-
-El catálogo se organiza en cinco grupos:
+Arriba hay un buscador que **filtra el catálogo completo por nombre**. Debajo, cinco grupos:
 
 | Grupo | Qué contiene |
 |---|---|
-| **Satélite** | Las imágenes del GOES-19 y sus productos de actividad eléctrica. |
-| **Radar** | Las estaciones de radar del país, con sus variables y elevaciones. |
-| **Modelos** | Los pronósticos numéricos: ECMWF, WRF y GFS. |
-| **Estaciones meteorológicas** | Las observaciones de superficie. |
-| **IGN Argentina** | Capas de referencia geográfica. |
+| **Satélite** | Tres canales de imágenes y tres productos de descargas eléctricas del GOES-19. |
+| **Radar** | Un subgrupo por radar, 18 en total, con seis variables cada uno. |
+| **Modelos** | ECMWF, WRF y GFS. |
+| **Estaciones meteorológicas** | Las siete variables de las estaciones del SMN. |
+| **IGN Argentina** | Dieciocho capas de referencia geográfica. |
 
-Encender una capa es marcar su casilla. En casi todos los subgrupos podés encender varias a la vez.
-El de estaciones es la excepción: usa botones de opción, porque muestra una sola variable por vez.
+**Cada grupo se abre en subgrupos, y cada subgrupo lista sus capas.** **Encender una capa es marcar su
+casilla.** Podés encender varias del mismo subgrupo. **Las estaciones son la excepción**: usan
+botones de opción, porque muestran una sola variable por vez.
 
-Un punto de color sobre un grupo indica que adentro hay algo encendido. Sólo aparece cuando el grupo
-está plegado, para que puedas ver de un vistazo dónde dejaste capas activas.
+<video preload="none" loop muted playsinline title="Abrir un grupo y encender una capa"
+       width="100%" poster="../../videos/03-grupo-toggle-poster.webp"
+       style="max-height: 500px">
+  <source src="../../videos/03-grupo-toggle.webm" type="video/webm" />
+  Tu navegador no soporta este video.
+</video>
 
-!!! note "Las capas apagadas y grises no están rotas"
-    Si una capa aparece atenuada es porque en este momento no tiene datos disponibles para mostrar.
-    Cada subgrupo tiene un botón **Volver a verificar disponibilidad** que vuelve a consultar. Que
-    una capa exista en el catálogo no garantiza que se esté generando en este momento.
+**Un punto de color sobre un grupo plegado avisa que adentro hay algo encendido.** **Al desplegarlo,
+el punto desaparece.**
+
+### Capas grises
+
+Una capa atenuada con la etiqueta **Sin datos** existe en el catálogo, pero **no tiene imágenes
+recientes**. Con la etiqueta **No disponible**, el servicio que la sirve no contestó. **La
+aplicación vuelve a comprobar el catálogo cada minuto.** **Si no querés esperar, el subgrupo muestra un
+botón para volver a verificar.** **Aparece sólo cuando hay alguna capa gris adentro.**
 
 ## Activas: ordenar y ajustar
 
-La pestaña **Activas** lista lo que está en el mapa, separado en tres bloques que se dibujan siempre
-en el mismo orden:
+![La pestaña Activas, con los tres bloques](../imgs/manual/03-activas.png){ .doc-figure loading=lazy }
+
+La pestaña Activas separa las capas en tres bloques. **El orden de los bloques es fijo**, y define
+quién tapa a quién.
 
 | Bloque | Qué contiene | Dónde se dibuja |
 |---|---|---|
-| **Capas puntuales** | Estaciones meteorológicas | Arriba de todo |
-| **Capas de referencia** | Las capas del IGN | En el medio |
+| **Capas puntuales** | Estaciones | Arriba de todo |
+| **Capas de referencia** | IGN | En el medio |
 | **Capas de datos** | Satélite, radar y modelos | Abajo |
 
-Ese orden no es arbitrario: garantiza que los límites provinciales y las estaciones queden visibles
-por encima de una imagen de satélite, y no tapados por ella.
+**Podés arrastrar una capa para reordenarla dentro de su bloque.** No se puede pasar una capa de un
+bloque a otro: **una imagen de satélite nunca tapa un límite provincial.** **Cada bloque tiene un botón
+para apagar de una vez todas sus capas.**
 
-Podés arrastrar una capa para cambiar su posición **dentro de su bloque**. Lo que no se puede es
-mover una capa de un bloque a otro: una imagen de satélite nunca va a taparte los límites.
+### Los tres botones de cada fila
 
-Cada bloque tiene un botón para apagar de una vez todas sus capas.
+1. **La paleta muestra u oculta la escala de colores** de esa capa sobre el mapa. **Sólo aparece si la
+   capa tiene escala y está dibujando algo.**
+2. **La flecha expande la fila** con sus controles.
+3. **La cruz apaga la capa.**
 
-### Los controles de cada capa
+### Los controles de una capa expandida
 
-Cada fila tiene un botón para mostrar u ocultar su escala de colores y otro para expandirla. Al
-expandirla aparece, según de qué tipo sea:
+![Una capa expandida, con su opacidad y su período](../imgs/manual/03-capa-expandida.png){ .doc-figure loading=lazy }
 
-- **Opacidad**: un deslizador con el porcentaje al lado. Es la herramienta más útil del panel:
-  bajarle la opacidad a una capa te deja ver la de abajo sin apagar ninguna.
-- **Elevaciones**: en las capas de radar, cuál de las tres elevaciones de antena mirar.
-- **Corridas**: en los modelos, de qué corrida de pronóstico tomar los datos.
-- **Consulta** y **Tolerancia**: en las estaciones, si mostrar la observación más reciente o la de un
-  momento determinado, y con cuánta holgura horaria aceptarla.
-- **Período**: los controles de [animación](animacion.md).
+- **Opacidad**: un deslizador con el porcentaje al lado. **Todas las capas lo tienen.** Arranca en 100 %.
+- **Elevaciones**: sólo en radar. Una casilla por elevación, cada una con su propia opacidad.
+- **Corridas**: sólo en modelos. Qué corridas mostrar, y qué superposiciones de cada una.
+- **Consulta** y **Tolerancia**: sólo en estaciones. Qué instante mostrar y con cuánta holgura.
+- **Período**: en toda capa con tiempo. Es la animación, y se explica en el
+  [capítulo 5](animacion.md).
 
-## Combinaciones que funcionan
+<video preload="none" loop muted playsinline title="Ajustar la opacidad de una capa"
+       width="100%" poster="../../videos/03-opacidad-poster.webp"
+       style="max-height: 500px">
+  <source src="../../videos/03-opacidad.webm" type="video/webm" />
+  Tu navegador no soporta este video.
+</video>
 
-Algunas superposiciones son clásicas porque cada capa cubre el punto ciego de la otra:
-
-- **Satélite infrarrojo + descargas eléctricas.** El infrarrojo te muestra dónde están los topes más
-  fríos; las descargas confirman cuál de esas celdas está realmente activa.
-- **Radar + estaciones.** El radar te dice dónde llueve; las estaciones te dicen qué está pasando en
-  el suelo, que no siempre es lo mismo.
-- **Modelo + observación.** Poner la precipitación pronosticada debajo del radar actual es la forma
-  más rápida de ver si el modelo está acertando el evento o corriéndolo de lugar.
-- **Cualquier capa de datos + Provincia.** Sin un límite de referencia encima es fácil equivocarse
-  de departamento al describir dónde está ocurriendo algo.
+**La lista de imágenes de cada capa activa se renueva sola cada diez segundos.** **No hace falta
+apagar y prender una capa para ver lo nuevo.**
 
 ## Escalas de color
 
-Cada variable se dibuja con su propia escala. El botón de la escala en la fila de la capa la muestra
-u oculta, y en **Herramientas del mapa ▸ Escalas** hay un panel flotante que junta las escalas de
-todas las capas activas que tengan una configurada.
+Cada variable tiene su propia escala. **El botón de la paleta la muestra sobre el mapa**, en la
+columna derecha. Para ver varias juntas hay una herramienta aparte: **Herramientas del mapa ▸
+Escalas**. Primero marcá **Activar herramienta**. Después elegí, bajo Variables activas, qué capas
+mostrar. **La herramienta no agrega escalas sola**: sólo lista las capas activas que tienen una
+configurada.
 
-Vale la pena tenerlas a la vista: dos capas distintas pueden usar colores parecidos con significados
-completamente distintos.
+## Las capas de referencia del IGN
+
+El grupo IGN Argentina no trae datos meteorológicos. **Trae el contexto geográfico**, provisto por el
+Instituto Geográfico Nacional. Sus capas van en el bloque de referencia: **por encima de los datos y
+por debajo de las estaciones.**
+
+![El grupo IGN Argentina, con sus subgrupos](../imgs/manual/03-referencia.png){ .doc-figure loading=lazy }
+
+| Subgrupo | Capas |
+|---|---|
+| **Límites** | Límite interdepartamental o de partido, límite internacional |
+| **Administrativo** | Localidad, sublocalidad, gobierno local, provincia |
+| **Territorial** | Área de montaña |
+| **Infraestructura** | Aeródromo, aeropuerto, helipuerto, red vial nacional |
+| **Hidrografía** | Corriente de agua, ferrocarril |
+| **Defensa y seguridad** | Cuartel de bomberos, pasos de fronteras internacionales |
+| **Otros** | Línea de transmisión eléctrica, central eléctrica, centro de esquí |
+
+**Provincia es la única que viene encendida de fábrica.** Las dieciocho se piden al IGN en el
+momento. **Seis de ellas también tienen copia en el sistema**, y esa copia responde si el IGN no lo
+hace.
+
+!!! note "Las capas del IGN no tienen período"
+    **No se animan y no tienen escala.** En su fila sólo vas a encontrar la opacidad.

@@ -1,77 +1,59 @@
 ---
-title: Radar
+title: 4.2 Radar SINARAME
 ---
 
-# Radar
+# 4.2 Radar SINARAME
 
-El radar es el complemento exacto del satélite. Donde el satélite mira los topes de las nubes desde
-arriba, el radar mira **dentro** de ellas desde abajo.
+El grupo Radar tiene un subgrupo por radar: **18 radares, seis variables cada uno, 108 capas.**
+**Cada capa es una variable de un radar.** **La elevación y el instante se eligen dentro de la capa.**
 
-Funciona emitiendo pulsos de microondas y midiendo la energía que le rebota. Lo que rebota son los
-hidrometeoros: gotas, cristales de hielo, granizo. Cuanto más grandes y más numerosos, más energía
-vuelve.
+![Radar, variable, elevación, instante](../../imgs/diagrams/radar-capas.svg){ .diagram loading=lazy }
 
-Los radares de la red SINARAME transmiten en **doble polarización**: emiten el pulso en dos
-orientaciones, horizontal y vertical, y comparan lo que vuelve de cada una. Eso no sólo dice cuánta
-precipitación hay, sino qué forma tienen las partículas, y de ahí se deduce de qué tipo son.
+![El grupo Radar, con el subgrupo de Córdoba abierto](../../imgs/manual/04-2-radar-catalogo.png){ .doc-figure loading=lazy }
 
-## Las variables
+## Los radares
 
-| Variable | Unidad | Qué representa | Cómo se usa |
+**Cada subgrupo se llama por su número y su ubicación.**
+
+| Radar | Ubicación | Radar | Ubicación | Radar | Ubicación |
+|---|---|---|---|---|---|
+| RMA 1 | Córdoba | RMA 7 | Neuquén | RMA 13 | Ituzaingó |
+| RMA 2 | Ezeiza | RMA 8 | Mercedes | RMA 14 | Bolívar |
+| RMA 3 | Las Lomitas | RMA 9 | Río Grande | RMA 15 | Patquía |
+| RMA 4 | Resistencia | RMA 10 | Bahía Blanca | RMA 16 | Villa Reynolds |
+| RMA 5 | Bernardo de Irigoyen | RMA 11 | Termas de Río Hondo | RMA 17 | Alejandro Roca |
+| RMA 6 | Mar del Plata | RMA 12 | Las Grutas | RMA 18 | Santa Isabel |
+
+## Las seis variables
+
+**Aparecen en este orden dentro de cada radar.**
+
+| Capa | Variable | Unidad | Rango de la escala |
 |---|---|---|---|
-| **DBZH** | dBZ | Reflectividad horizontal | La variable principal. Es la medida de intensidad: cuanto más alta, más precipitación. Valores muy altos indican lluvia intensa o granizo. |
-| **DBZH 450 km** | dBZ | Reflectividad horizontal de largo alcance | La misma reflectividad, pero del barrido de largo alcance: cubre unos 450 km en lugar de 240 km, a costa de menor resolución y de una única elevación. Útil para seguir sistemas que todavía están lejos del radar. |
-| **ZDR** | dB | Reflectividad diferencial | Compara el rebote horizontal con el vertical, y con eso deduce si las partículas están achatadas. Las gotas grandes caen achatadas; el granizo, que cae rotando, no. |
-| **VRAD** | m/s | Velocidad radial | Por efecto Doppler, mide si las partículas se acercan o se alejan del radar. Es la única variable que informa sobre el **viento**. |
-| **RHOHV** | — | Coeficiente de correlación | Qué tan parecidas entre sí son las partículas de una zona. Cercano a 1 con precipitación homogénea; baja con mezclas, con granizo y con ecos que no son meteorológicos. |
-| **KDP** | °/km | Fase diferencial específica | Sensible al contenido de agua líquida, y resistente a la atenuación: sigue siendo confiable detrás de una zona de lluvia muy intensa, donde la reflectividad ya no lo es. |
+| **DBZH** | Reflectividad horizontal | dBZ | −18 a 76.5 |
+| **DBZH 450 km** | Reflectividad, barrido de largo alcance | dBZ | −18 a 76.5 |
+| **KDP** | Fase diferencial específica | °/km | −1 a 6 |
+| **VRAD** | Velocidad radial | m/s | −40 a 40 |
+| **RHOHV** | Coeficiente de correlación | ρhv | 0.225 a 1.048 |
+| **ZDR** | Reflectividad diferencial | dB | −3 a 7 |
 
-### Cómo se combinan
-
-Cada variable por separado dice poco; juntas identifican el tipo de precipitación:
-
-- **Reflectividad muy alta con ZDR bajo** es la firma clásica del **granizo**. Mucha energía de
-  vuelta, pero de partículas que no están achatadas: no son gotas grandes, son piedras.
-- **Reflectividad alta con ZDR alto** es lluvia de gotas grandes: intensa, pero lluvia.
-- **RHOHV bajo** es una señal de alerta sobre el dato mismo: puede indicar una mezcla de fases (lluvia
-  y granizo juntos) o directamente un eco que no es meteorológico —pájaros, insectos, un edificio,
-  interferencia—. Conviene mirarlo antes de sacar conclusiones de una zona rara.
-- **VRAD con valores opuestos muy juntos** —una zona acercándose pegada a una alejándose— es una
-  firma de **rotación**. Es de las señales más importantes que puede dar un radar.
+**DBZH 450 km cubre unos 450 km en lugar de 240**, con menos resolución. **Es la única con una sola
+elevación.**
 
 ## Las elevaciones
 
-Cada variable está disponible en tres **elevaciones** de antena, que en la aplicación aparecen en el
-control de cada capa. La antena barre en círculos a distintos ángulos por encima del horizonte. La
-excepción es **DBZH 450 km**, cuyo barrido de largo alcance tiene una sola elevación (0.5°).
+Cada capa tiene tres elevaciones: **0.5°, 0.9° y 1.3°**. Aparecen como casillas en la fila de la
+capa. **Sólo la de 0.5° viene marcada.** **Podés marcar varias a la vez**, y **cada elevación tiene su
+propia opacidad.** DBZH 450 km tiene únicamente la de 0.5°.
 
-Esto tiene una consecuencia geométrica que conviene tener siempre presente: como el haz sale
-inclinado y la Tierra es curva, **cuanto más lejos del radar, más alto está mirando**. Cerca del
-radar la elevación más baja mide casi en superficie; a doscientos kilómetros, esa misma elevación
-está midiendo a varios kilómetros de altura.
+## Tiempo y animación
 
-!!! warning "Lo que el radar no ve"
-    Hay tres puntos ciegos que explican la mayoría de las lecturas equivocadas:
+- **La hora de cada imagen sale del nombre con que se publicó**, en HOA o UTC según Configuración.
+- **La ventana es de 6 o 12 imágenes, y arranca en 12.** La animación recorre las últimas.
+- **Las imágenes existen entre los niveles 4 y 9 de zoom.** Más cerca, se agrandan.
+- **La disponibilidad se comprueba con la elevación de 0.5°.** Si esa no tiene datos, toda la capa
+  aparece gris.
 
-    - **Debajo del haz.** Lejos del radar, la lluvia que se forma en niveles bajos pasa por debajo de
-      lo que la antena está mirando. El radar puede no verla.
-    - **Detrás de la lluvia intensa.** Una tormenta muy fuerte absorbe el pulso y debilita lo que
-      llega más allá: lo que hay atrás se subestima. KDP es la variable que menos sufre esto.
-    - **Detrás del terreno.** Un cerro bloquea el haz y deja un sector sin información, que no es lo
-      mismo que un sector sin lluvia.
-
-Comparar dos elevaciones de la misma variable ayuda a entender la estructura vertical: una zona de
-reflectividad alta que se mantiene en la elevación superior indica una tormenta profunda; una que
-desaparece al subir es precipitación somera.
-
-## Radar y satélite, juntos
-
-Es la combinación que más rinde:
-
-- El **satélite** te dice dónde está la convección profunda y cubre todo el territorio, incluso donde
-  no llega ningún radar.
-- El **radar** te dice qué está cayendo efectivamente y con qué intensidad, pero sólo dentro de su
-  alcance.
-
-Cuando las dos coinciden, la lectura es sólida. Cuando no coinciden, casi siempre es una de las
-limitaciones de arriba, y vale la pena averiguar cuál antes de decidir.
+!!! note "Un radar gris no es un error de tu computadora"
+    **Una capa con «Sin datos» significa que ese radar no publicó nada recientemente.** **Los demás
+    radares siguen funcionando por separado.**

@@ -1,145 +1,118 @@
 ---
-title: Glosario
+title: 8. Glosario
 ---
 
-# Glosario
+# 8. Glosario
 
-Los términos que aparecen en la interfaz y en este manual, explicados en una línea.
+Los términos que aparecen en la interfaz, explicados en una línea. **Los nombres de productos se
+explican sólo como qué capa son en la aplicación**, no como meteorología.
 
-## Del sistema
+![Cómo se relacionan los términos](../imgs/diagrams/glosario-conceptos.svg){ .diagram loading=lazy }
+
+**Todo depende de la capa.** El catálogo la lista, al encenderla pasa a Activas, ahí se ordena en un
+bloque, tiene un período, y varios períodos se alinean en Sincronización. **El aviso se dibuja sobre
+las capas, pero no es una.**
+
+![La pestaña Activas, donde se ven capa, bloque y período](../imgs/manual/03-activas.png){ .doc-figure loading=lazy }
+
+## De la interfaz
 
 **Capa**
-:   Cada cosa que se dibuja sobre el mapa: una imagen de satélite, una variable de radar, un límite
-    provincial. Se encienden y apagan de a una.
+:   Cada cosa que se dibuja sobre el mapa. **Se enciende con una casilla en Disponibles.**
 
-**Capa de datos, de referencia y puntual**
-:   Los tres bloques en que se ordenan las capas activas. Las de datos van abajo, las de referencia
-    en el medio y las puntuales arriba, para que nada tape a los límites ni a las estaciones.
+**Grupo y subgrupo**
+:   Los dos niveles del catálogo. Cinco grupos, 31 subgrupos, 153 capas.
 
-**Corrida**
-:   Cada ejecución de un modelo de pronóstico. Las corridas se lanzan a horas fijas; la más reciente
-    parte de las observaciones más nuevas.
+**Capa activa**
+:   Una capa encendida. **Aparece en la pestaña Activas, dentro de su bloque.**
+
+**Bloque**
+:   Los tres niveles de dibujo de las capas activas: puntuales arriba, referencia en el medio, datos
+    abajo. **Nunca se cruza de un bloque a otro.**
 
 **Mapa base**
-:   La cartografía de fondo sobre la que se dibuja todo lo demás.
+:   La cartografía de fondo. **No es una capa**: se elige en Explorador ▸ Mapa base.
 
 **Opacidad**
-:   Cuán transparente se dibuja una capa. Bajarla permite ver la capa de abajo sin apagar ninguna.
+:   Cuán transparente se dibuja una capa. De 0 a 100 %, en la fila de la capa.
+
+**Escala de colores**
+:   La leyenda de una variable. **Se muestra con el botón de la paleta**, o desde Herramientas ▸
+    Escalas.
+
+**Período**
+:   La sección de una capa activa que elige qué imagen ver y reproduce la secuencia.
+
+**Imagen, instante, paso**
+:   Cada cuadro de la secuencia. En observación se llama instante; en modelos, paso.
 
 **Sincronización**
-:   Reproducir varias capas a la vez con sus tiempos alineados, para que cada cuadro que ves de una
-    corresponda al mismo momento que el de la otra.
+:   Reproducir varias capas con sus instantes alineados, con cinco minutos de tolerancia.
 
-**ACP — Aviso a corto plazo**
-:   El producto operativo: un área delimitada, un fenómeno y una vigencia, con sus imágenes oficiales.
+**Sincronizado**
+:   La marca que lleva una capa mientras la controla la sincronización.
 
-## De satélite
+**Sin datos, No disponible**
+:   Las dos etiquetas de una capa gris. **Sin datos**: nada reciente. **No disponible**: el servicio
+    no contestó.
 
-**ABI**
-:   El instrumento de imágenes del GOES-19. Mide energía en distintas longitudes de onda.
+**Consulta y tolerancia**
+:   En estaciones: qué instante mostrar, y cuántas horas de holgura aceptar.
 
-**GLM**
-:   El instrumento que detecta relámpagos desde el satélite, de día y de noche.
+**Dato puntual**
+:   La herramienta que devuelve el valor de una capa en un punto del mapa.
 
-**Geoestacionario**
-:   Un satélite que gira junto con la Tierra y por lo tanto mira siempre la misma región. Es lo que
-    permite tener imágenes seguidas del mismo lugar.
+**HOA y UTC**
+:   Las dos zonas horarias de la aplicación. **HOA es UTC−3, fija.**
 
-**Temperatura de brillo**
-:   La temperatura que tendría que tener un cuerpo para emitir la energía que el satélite mide. Como
-    en la troposfera hace más frío cuanto más alto, funciona como una medida de altura del tope de
-    la nube.
+**Clave de acceso**
+:   La credencial de las estaciones del SMN. Se carga en Configuración ▸ SMN.
 
-**Tope de nube**
-:   La parte más alta de una nube. Cuanto más frío, más alto, y más profunda la convección.
+**Borrador**
+:   Un polígono dibujado y todavía no generado como aviso. Se numera Borrador #N.
 
-**Yunque**
-:   La extensión horizontal en la parte alta de una tormenta, donde la corriente ascendente ya no
-    puede seguir subiendo y se abre lateralmente.
+**Nivel de detalle**
+:   De 1 a 5: con cuánta fidelidad se recorta el contorno del país al calcular el área.
 
-## De radar
+**Recorte**
+:   Ajustar un polígono al territorio argentino. Tiene deshacer.
 
-**dBZ**
-:   La unidad de la reflectividad. Valores más altos indican precipitación más intensa.
+**Pendiente y activo**
+:   Los dos estados de un aviso emitido. **Pendiente**: sin formulario completado. **Activo**:
+    vigente.
 
-**Reflectividad**
-:   Cuánta energía le vuelve al radar. Depende del tamaño y la cantidad de las partículas.
+**ACP**
+:   Aviso a corto plazo: un área, un fenómeno y una vigencia, con sus dos imágenes.
 
-**Doble polarización**
-:   Emitir el pulso en dos orientaciones y comparar lo que vuelve de cada una, para deducir la forma
-    de las partículas y con eso su tipo.
+## De producto a capa
+
+**ABI, GLM**
+:   Los dos subgrupos de Satélite: canales de imágenes y productos de descargas eléctricas.
+
+**Canal 2, 9 y 13**
+:   Las tres capas de ABI: reflectancia, y dos temperaturas de brillo en K.
+
+**FED, TOE, MFA**
+:   Las tres capas de GLM, con escala logarítmica.
+
+**DBZH, KDP, VRAD, RHOHV, ZDR**
+:   Las variables de cada radar. DBZH 450 km es el barrido de largo alcance.
 
 **Elevación**
-:   El ángulo por encima del horizonte al que barre la antena. Como el haz sale inclinado, cuanto más
-    lejos del radar, más alto está mirando.
+:   Cada ángulo de barrido de un radar: 0.5°, 0.9° y 1.3°, como casillas en la capa.
 
-**Efecto Doppler**
-:   El cambio de frecuencia que permite saber si las partículas se acercan o se alejan del radar. Es
-    lo que hace medible el viento.
+**Corrida**
+:   Un pronóstico completo de un modelo, identificado por su hora de inicio. **Se elige en
+    Corridas.**
 
-**Hidrometeoro**
-:   Cualquier partícula de agua o hielo en la atmósfera: gotas, cristales, granizo.
+**Colmax, MUCAPE, CAPE-BRN, Granizo**
+:   Capas de WRF. Granizo es un índice; el tamaño está en sus contornos.
 
-**Atenuación**
-:   La pérdida de señal al atravesar precipitación intensa, que hace que se subestime lo que hay
-    detrás.
+**500 hPa, 250 hPa**
+:   Las dos capas de GFS con imagen de fondo. Presión a nivel del mar es sólo líneas.
 
-## De modelos
+**Superposición**
+:   Las líneas y barbas que una capa de modelo dibuja sobre su imagen. Se apagan por corrida.
 
-**Modelo numérico**
-:   Un programa que parte del estado actual de la atmósfera y calcula cómo evoluciona resolviendo las
-    ecuaciones de la física sobre una grilla.
-
-**Modelo global y regional**
-:   El global cubre todo el planeta con menos detalle; el regional cubre una porción con celdas más
-    chicas y por eso puede representar fenómenos más pequeños.
-
-**CAPE**
-:   La energía disponible para la convección. Es la medida de cuánto combustible tiene la atmósfera.
-
-**MUCAPE**
-:   La CAPE calculada sobre la parcela de aire más inestable de la columna, no necesariamente la de
-    superficie.
-
-**Cortante**
-:   Cuánto cambia el viento con la altura. Determina si las tormentas se organizan o se desarman
-    solas.
-
-**Convección**
-:   El ascenso de aire por flotabilidad. Es el mecanismo que forma las tormentas.
-
-**hPa — hectopascal**
-:   La unidad de presión. También se usa para nombrar niveles de la atmósfera: "500 hPa" es la altura
-    a la que la presión vale eso.
-
-**Isobara**
-:   Una línea que une puntos de igual presión. Cuanto más juntas, más fuerte el viento.
-
-**Geopotencial**
-:   La altura a la que se encuentra un nivel de presión determinado. Sus líneas describen vaguadas y
-    cuñas.
-
-**Corriente en chorro**
-:   La banda de vientos muy intensos en niveles altos. Su posición condiciona dónde se favorece el
-    ascenso.
-
-**Agua precipitable**
-:   Todo el vapor de agua de la columna atmosférica, integrado. Indica el potencial de lluvias
-    abundantes.
-
-**Barbas de viento**
-:   El símbolo que representa dirección e intensidad del viento en un punto.
-
-## De observación en superficie
-
-**Punto de rocío**
-:   La temperatura a la que el aire se saturaría. A diferencia de la humedad relativa, indica la
-    cantidad absoluta de humedad, y por eso es mejor indicador del combustible disponible.
-
-**Humedad relativa**
-:   Cuánto vapor tiene el aire respecto de lo máximo que podría tener a esa temperatura. Sube de
-    noche aunque no entre humedad nueva, simplemente porque baja la temperatura.
-
-**UTC**
-:   La hora de referencia mundial, sin husos ni horario de verano. Buena parte del material
-    meteorológico se maneja en UTC.
+**Estación convencional**
+:   El subgrupo de Estaciones meteorológicas. Una variable por vez, con ficha por clic derecho.

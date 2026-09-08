@@ -17,52 +17,55 @@ exclude_docs: |
   # Research notes from the documentation subagents; never shipped.
   tmp-docs-agents/
 
-# Explicit and exhaustive: a page missing from nav is built but unreachable,
-# and --strict is what turns that from a silent omission into a build error.
+# Explicit and exhaustive. Chapter numbers are literal text: there is no
+# numbering plugin, so the number in each label below must match the page's
+# frontmatter `title:` and its `# H1` exactly (scripts/docs-nav-check.py checks
+# the three against each other). Numbers never enter a filename or URL.
+# NOTE: --strict does NOT turn a page missing from nav into an error — MkDocs
+# only logs it at INFO level and builds it unreachable. `make docs-check` is
+# what catches that, together with broken raw-HTML <video> paths and anchors.
 nav:
-  - Inicio: index.md
+  - "1. Inicio": index.md
   - Manual de usuario:
       - manual/index.md
-      - Primeros pasos: manual/primeros-pasos.md
-      - Trabajar con capas: manual/capas.md
-      - El mapa de fondo: manual/mapa-base.md
-      - Qué muestra cada producto:
-          - Satélite: manual/productos/satelite.md
-          - Radar: manual/productos/radar.md
-          - Modelos de pronóstico: manual/productos/modelos.md
-          - Estaciones: manual/productos/estaciones.md
-          - Capas de referencia: manual/productos/referencia.md
-      - Ver la evolución en el tiempo: manual/animacion.md
-      - Consultar un valor puntual: manual/consulta-puntual.md
-      - Emitir un aviso a corto plazo: manual/avisos.md
-      - El panel de estado: manual/panel-de-estado.md
-      - Glosario: manual/glosario.md
+      - "2. Primeros pasos": manual/primeros-pasos.md
+      - "3. Trabajar con capas": manual/capas.md
+      - "4. Qué muestra cada producto":
+          - manual/productos/index.md
+          - "4.1 Satélite GOES-19": manual/productos/satelite.md
+          - "4.2 Radar SINARAME": manual/productos/radar.md
+          - "4.3 Modelos numéricos": manual/productos/modelos.md
+          - "4.4 Estaciones de superficie": manual/productos/estaciones.md
+      - "5. Ver la evolución y consultar un punto": manual/animacion.md
+      - "6. Emitir un aviso a corto plazo": manual/avisos.md
+      - "7. El panel de estado": manual/panel-de-estado.md
+      - "8. Glosario": manual/glosario.md
   - Documentación técnica:
       - tecnica/index.md
-      - Decisiones de arquitectura: tecnica/decisiones.md
-      - Flujo de datos: tecnica/flujo-de-datos.md
-      - Servicios:
-          - Tiles Processor: tecnica/servicios/tiles-processor.md
-          - Data Service: tecnica/servicios/data-service.md
-          - Alerts Service: tecnica/servicios/alerts-service.md
-          - Visualizer: tecnica/servicios/visualizer.md
-      - Contratos:
-          - API HTTP: tecnica/contratos/api.md
-          - Configuración y variables: tecnica/contratos/configuracion.md
-          - Almacenamiento y colas: tecnica/contratos/almacenamiento.md
-      - Operación:
-          - Topología de red: tecnica/operacion/topologia.md
-          - Puesta en marcha: tecnica/operacion/puesta-en-marcha.md
-          - Despliegue e infraestructura: tecnica/operacion/despliegue.md
-          - Entrega continua: tecnica/operacion/entrega-continua.md
-          - Verificación automática: tecnica/operacion/calidad.md
-          - Observabilidad: tecnica/operacion/observabilidad.md
-          - Capacidad y dimensionamiento: tecnica/operacion/capacidad.md
-      - Seguridad:
+      - "9. Decisiones de arquitectura": tecnica/decisiones.md
+      - "10. Cómo fluyen los datos": tecnica/flujo-de-datos.md
+      - "11. Los servicios":
+          - tecnica/servicios/index.md
+          - "11.1 Tiles Processor": tecnica/servicios/tiles-processor.md
+          - "11.2 Data Service": tecnica/servicios/data-service.md
+          - "11.3 Alerts Service": tecnica/servicios/alerts-service.md
+          - "11.4 Visualizer": tecnica/servicios/visualizer.md
+      - "12. Contratos entre servicios":
+          - tecnica/contratos/index.md
+          - "12.1 API HTTP": tecnica/contratos/api.md
+          - "12.2 Configuración y variables": tecnica/contratos/configuracion.md
+          - "12.3 Almacenamiento y colas": tecnica/contratos/almacenamiento.md
+      - "13. Topología de red": tecnica/operacion/topologia.md
+      - "14. Puesta en marcha": tecnica/operacion/puesta-en-marcha.md
+      - "15. Distribuir el sistema en varias máquinas": tecnica/operacion/distribucion.md
+      - "16. Capacidad y dimensionamiento": tecnica/operacion/capacidad.md
+      - "17. Despliegue y entrega continua": tecnica/operacion/despliegue.md
+      - "18. Observabilidad y verificación": tecnica/operacion/observabilidad.md
+      - "19. Seguridad":
           - tecnica/seguridad/index.md
-          - Superficie expuesta: tecnica/seguridad/superficie.md
-          - Datos y secretos: tecnica/seguridad/datos-y-secretos.md
-          - Endurecimiento: tecnica/seguridad/endurecimiento.md
+          - "19.1 Superficie expuesta": tecnica/seguridad/superficie.md
+          - "19.2 Datos y secretos": tecnica/seguridad/datos-y-secretos.md
+          - "19.3 Endurecimiento": tecnica/seguridad/endurecimiento.md
 
 theme:
   name: material

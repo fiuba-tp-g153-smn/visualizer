@@ -1,68 +1,62 @@
 ---
-title: Estaciones
+title: 4.4 Estaciones de superficie
 ---
 
-# Estaciones meteorológicas
+# 4.4 Estaciones de superficie
 
-Las estaciones son el único dato de la aplicación que se mide **directamente en el lugar**. El
-satélite infiere, el radar infiere, el modelo calcula; la estación mide. A cambio, sólo informa
-sobre el punto exacto donde está instalada.
+El grupo Estaciones meteorológicas tiene un solo subgrupo, **Estaciones convencionales**, con siete
+variables. **Se muestra una variable por vez.** Cada estación es un marcador, coloreado según su
+valor.
 
-Se dibujan como marcadores sobre el mapa, uno por estación de la red del Servicio Meteorológico
-Nacional.
-
-## Las variables disponibles
-
-Se muestra **una variable por vez** —por eso este grupo usa botones de opción y no casillas—:
-
-| Variable | Qué aporta |
-|---|---|
-| **Temperatura** | La lectura básica del estado de la masa de aire. |
-| **Punto de rocío** | La temperatura a la que el aire se saturaría. Cuanto más alto, más humedad absoluta hay disponible. |
-| **Sensación térmica** | Cómo se percibe la temperatura combinada con humedad y viento. |
-| **Humedad** | La humedad relativa. |
-| **Presión** | Útil para seguir el paso de un sistema: una caída marcada anticipa su llegada. |
-| **Visibilidad** | Se reduce con niebla, precipitación intensa o polvo. |
-| **Viento** | Dirección e intensidad medidas en superficie. |
-
-!!! note "El punto de rocío es la variable más subestimada"
-    No se mide: se calcula a partir de la temperatura y la humedad relativa. A diferencia de la
-    humedad relativa, que depende de cuán caliente esté el aire, el punto de rocío indica la cantidad
-    **absoluta** de humedad presente. Por eso es un mejor indicador del combustible disponible para
-    la convección: dos lugares con 60 % de humedad pueden tener contenidos de vapor muy distintos, y
-    el punto de rocío lo distingue de inmediato.
-
-## Ver el detalle de una estación
-
-!!! note "Se abre con el botón derecho"
-    Un clic derecho sobre un marcador abre una ficha con la observación actual y un gráfico. Desde el
-    pie de esa ficha se llega al histórico completo de las últimas 48 horas, con gráficos, un resumen
-    y la tabla de observaciones.
-
-El histórico de 48 horas es lo que convierte a la estación en algo más que un número suelto: permite
-ver la tendencia. Una caída sostenida de presión, un salto de temperatura al paso de un frente o un
-aumento del punto de rocío a lo largo de la tarde son señales que un valor aislado no muestra.
-
-## Momento de la observación
-
-En el control de la capa hay dos ajustes:
-
-- **Consulta**: si mostrar la observación **más reciente** o la de un momento **específico**.
-- **Tolerancia**: con cuánta holgura horaria aceptar una observación cercana a ese momento.
-
-La tolerancia existe porque no todas las estaciones reportan exactamente a la misma hora. Si la
-ponés muy estricta, van a aparecer menos estaciones; si la aflojás demasiado, vas a estar comparando
-mediciones de momentos distintos. Para revisar una situación pasada conviene una tolerancia
-intermedia y tener presente que el mapa resultante no es perfectamente simultáneo.
+![De la clave a la ficha](../../imgs/diagrams/estaciones-flujo.svg){ .diagram loading=lazy }
 
 ## Hace falta una clave
 
-Estas capas requieren una clave de acceso, que se carga una sola vez en **Configuración ▸ SMN** y
-queda guardada en tu navegador. Si las estaciones no muestran datos, ese es el primer lugar donde
-mirar.
+**Sin clave, las capas de estaciones no se pueden encender.** Al arrancar sin clave, la aplicación
+las apaga y las muestra grises. La clave se carga en **Configuración ▸ SMN**. El diálogo la valida
+contra el servicio antes de guardarla, y **queda guardada en tu navegador.**
 
-## Su límite
+![Configuración ▸ SMN y el diálogo de la clave de acceso](../../imgs/manual/04-4-clave.png){ .doc-figure loading=lazy }
 
-Una estación describe un punto. Entre dos estaciones puede haber ochenta kilómetros, y una tormenta
-severa puede caber entera en ese hueco sin que ninguna de las dos la registre. Las estaciones
-confirman y cuantifican lo que otras capas detectan; no sirven para descartar que algo esté pasando.
+**Si la clave deja de ser válida, la aplicación te la vuelve a pedir una vez.** Si sigue fallando,
+muestra «No se pudieron cargar las estaciones meteorológicas: tu clave no es válida.»
+
+## Las siete variables
+
+| Capa | Unidad de la escala | Rango de la escala |
+|---|---|---|
+| **Temperatura** | K, mostrada en °C o K | 228.15 a 323.15 |
+| **Punto de rocío** | K, mostrada en °C o K | La misma que temperatura |
+| **Sensación térmica** | K, mostrada en °C o K | Hasta 333.15 |
+| **Humedad** | % | 0 a 100 |
+| **Presión** | hPa | 600 a 1050 |
+| **Visibilidad** | km | 0 a 50 |
+| **Viento** | km/h, mostrada en km/h o nudos | 0 a 150 |
+
+**La temperatura y el viento siguen a Configuración ▸ Unidades**, igual que la cantidad de
+decimales. **Las siete capas comparten opacidad y posición**: cambiarla en una las cambia a todas.
+
+## Qué instante se muestra
+
+En la fila de la capa hay un control **Consulta** con dos opciones:
+
+- **Más reciente**: la última observación de cada estación. Es la opción de fábrica.
+- **Específico**: la observación de un instante elegido con el deslizador de Período.
+
+Con Específico, un botón despliega dos ajustes más. **Tolerancia es cuántas horas de holgura acepta
+la aplicación** alrededor del instante: de 0 a 24, en horas enteras, y 2 de fábrica. **Con
+tolerancia 0 sólo entran observaciones de esa hora exacta.** La casilla **Mostrar estaciones sin
+observación** deja en el mapa las que no reportaron.
+
+**El Período de las estaciones es de 6, 12 o 24 instantes, y arranca en 6.** Las observaciones
+nuevas llegan al sistema cada cinco minutos.
+
+## La ficha de una estación
+
+**Un clic derecho sobre un marcador abre su ficha.** Muestra el nombre, el identificador, las
+coordenadas y la provincia, con dos pestañas: **Actual**, con todos los valores y la hora de
+actualización, y **Gráfico**, con las últimas 48 horas de la variable.
+
+Al pie de la ficha, **Ver todas las variables y gráficos** abre una vista a pantalla completa con
+tres secciones: **Gráficos**, **Resumen** y **Observaciones**, siempre sobre las últimas 48 horas.
+**Si la estación no reportó en ese lapso, la vista lo dice** en lugar de mostrar un gráfico vacío.

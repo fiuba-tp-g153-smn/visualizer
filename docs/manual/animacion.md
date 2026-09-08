@@ -1,54 +1,90 @@
 ---
-title: Ver la evolución en el tiempo
+title: 5. Ver la evolución y consultar un punto
 ---
 
-# Ver la evolución en el tiempo
+# 5. Ver la evolución y consultar un punto
 
-Una imagen aislada dice poco. Lo que informa es el movimiento: hacia dónde se desplaza una celda, si
-crece o se debilita, si el pronóstico la lleva sobre una ciudad. Para eso está la animación.
+Toda capa con tiempo tiene una sección **Período** dentro de su fila. **Ahí se elige qué imagen ver
+y se reproduce la secuencia.** La segunda parte del capítulo es la consulta puntual: el valor
+numérico de una capa en un punto del mapa.
+
+![La línea de tiempo](../imgs/diagrams/linea-de-tiempo.svg){ .diagram loading=lazy }
+
+**Observación y pronóstico animan hacia lados distintos.** Una capa de satélite, radar o estaciones
+recorre las últimas imágenes y termina en la más reciente. **Una capa de modelo recorre los primeros
+pasos de la corrida**, empezando por la hora de inicio. **El mismo control se comporta distinto según
+la capa.**
 
 ## Animar una capa
 
-Expandí la capa en la pestaña **Activas** y buscá la sección **Período**. Adentro hay:
+![La sección Período de una capa de satélite](../imgs/manual/05-periodo.png){ .doc-figure loading=lazy }
 
-- El **selector de cantidad de imágenes**. Cuántos cuadros animar. Las opciones dependen de la capa.
-- El **intervalo**, en segundos por imagen, entre 0,1 y 10. Es la velocidad de reproducción.
-- La **marca de tiempo** de la imagen que estás viendo en este momento.
-- El **botón de reproducción**, un botón para **ir a la imagen más reciente**, y un deslizador para
-  moverte cuadro por cuadro.
+1. **El selector de cantidad de imágenes.** **Las opciones dependen de la familia**: 6, 12 o 24 en
+   satélite; 6 o 12 en radar; hasta 72 en WRF.
+2. **El intervalo, en segundos por imagen**, entre 0,1 y 10.
+3. **La marca de tiempo de la imagen que estás viendo**, con su sufijo HOA o UTC.
+4. **El botón de reproducción.** **Al lado, un botón lleva a la imagen más reciente.**
 
-!!! note "Observación y pronóstico animan hacia lados distintos"
-    Una capa de observación (satélite, radar) anima las **últimas** imágenes: te muestra cómo se
-    llegó hasta ahora. Una capa de pronóstico anima las **primeras**: te muestra qué viene. Es la
-    diferencia entre mirar para atrás y mirar para adelante, y es la razón por la que el mismo
-    control se comporta distinto según la capa.
+**Debajo hay un deslizador para moverte cuadro por cuadro.** **El deslizador sigue funcionando con la
+reproducción detenida.**
 
-El deslizador cuadro por cuadro suele ser más útil que la reproducción automática cuando estás
-tratando de identificar el momento exacto en que algo cambió.
+<video preload="none" loop muted playsinline title="Reproducir la animación de una capa"
+       width="100%" poster="../../videos/05-animacion-poster.webp"
+       style="max-height: 500px">
+  <source src="../../videos/05-animacion.webm" type="video/webm" />
+  Tu navegador no soporta este video.
+</video>
 
-Hay un botón de recarga para volver a pedir las imágenes disponibles, aunque de todos modos la lista
-se actualiza sola cada diez segundos.
+**La lista de imágenes se renueva sola cada diez segundos.** **El botón de recarga junto al título
+Período fuerza esa consulta.** Si la capa no tiene nada que mostrar, el lugar del deslizador lo dice:
+**«No hay períodos disponibles»**, o qué falta elegir antes, como una elevación o una corrida.
 
 ## Animar varias capas juntas
 
-Acá está la parte interesante. Si reproducís dos capas por separado, cada una avanza a su propio
-ritmo y en algún momento vas a estar mirando una imagen de satélite de las 15:00 junto a un radar de
-las 15:40. La conclusión que saques de esa comparación va a estar mal.
+**Si reproducís dos capas por separado, cada una avanza a su ritmo.** **La pestaña Sincronización
+alinea varias capas al mismo instante.** Elegís las capas bajo Capas activas, y la aplicación busca
+para cada cuadro una imagen de cada capa dentro de **cinco minutos de diferencia.**
 
-La pestaña **Sincronización** resuelve eso. Elegís las capas que querés reproducir juntas y el
-sistema busca la correspondencia temporal entre ellas, de modo que cada cuadro que veas de una
-corresponda al mismo momento que el de la otra.
+![La pestaña Sincronización, con dos capas alineadas](../imgs/manual/05-sincronizacion.png){ .doc-figure loading=lazy }
 
 Cuando una capa está sincronizada:
 
-- Su control de período muestra la marca **Sincronizado**.
-- Su deslizador propio queda deshabilitado: manda la sincronización.
-- Su botón de reproducción pasa a ofrecer **Desconectar de sincronización**.
+- **Su sección Período muestra la marca «Sincronizado».**
+- **Sus controles propios quedan deshabilitados**: manda la sincronización.
+- **Su botón de reproducción pasa a ofrecer «Desconectar de sincronización».**
+
+**Si una capa tiene menos imágenes que las demás, la ventana se achica a esa cantidad.** El panel lo
+avisa con «Mostrando N de M», y la capa lleva una marca con su cantidad real.
 
 !!! warning "Si no se pueden alinear, no se reproduce"
-    Si las capas elegidas no tienen momentos en común, o si sus tiempos no se pueden hacer coincidir
-    dentro de la tolerancia, el panel te lo dice y bloquea la reproducción. Es deliberado: es
-    preferible no animar a mostrarte lado a lado dos instantes distintos como si fueran simultáneos.
+    **Sin instantes en común, el panel bloquea la reproducción** y lo dice: «Las capas seleccionadas
+    no tienen períodos en común». Si el mejor alineamiento supera los cinco minutos, el mensaje es
+    «No se pudo alinear temporalmente las capas seleccionadas».
 
-Es la herramienta que conviene usar siempre que estés comparando dos fuentes, y especialmente antes
-de emitir un aviso.
+## Consultar un valor puntual
+
+Los colores dan una idea aproximada. **La consulta puntual devuelve el número.** Está en
+**Herramientas del mapa ▸ Dato puntual.**
+
+![Herramientas del mapa ▸ Dato puntual, con un valor leído en el mapa](../imgs/manual/05-consulta.png){ .doc-figure loading=lazy }
+
+1. **La herramienta viene activada de fábrica.** Si la apagaste, marcá **Activar herramienta**.
+2. Marcá, bajo Capas activas, **qué capas querés consultar.** Cada capa de datos que encendés se
+   agrega sola a la lista. **Una capa sin marcar no devuelve nada.**
+3. Hacé clic en el mapa.
+
+<video preload="none" loop muted playsinline title="Consultar el valor de una capa en un punto"
+       width="100%" poster="../../videos/05-consulta-poster.webp"
+       style="max-height: 500px">
+  <source src="../../videos/05-consulta.webm" type="video/webm" />
+  Tu navegador no soporta este video.
+</video>
+
+**Cada capa consultada tiene un panel** con su nombre, su instante, su corrida o elevación si
+corresponde, y el valor con su unidad. **Hasta el primer clic, el panel dice «Sin dato».** **El valor es el dato, no el color leído de la imagen.** **Si
+en ese punto no hay dato, el panel dice «Sin dato».** **Cada panel se cierra con su propia cruz.**
+
+La casilla **Mostrar marcador** deja una marca en el punto consultado. Con el marcador prendido
+aparece **Ubicación del visor**: **Panel fijo** junta los resultados en la columna derecha, y
+**Junto al marcador** los pega al punto. **La consulta y sus resultados se recuerdan** al volver a
+entrar.

@@ -1,72 +1,51 @@
 ---
-title: Satélite
+title: 4.1 Satélite GOES-19
 ---
 
-# Satélite
+# 4.1 Satélite GOES-19
 
-El GOES-19 es el satélite que la NOAA opera para el continente americano. Es **geoestacionario**:
-gira junto con la Tierra, siempre sobre el mismo punto del ecuador, así que mira siempre la misma
-porción del planeta. Eso es lo que permite tener una secuencia de imágenes del mismo lugar cada pocos
-minutos, que es exactamente lo que hace falta para seguir una tormenta.
+El grupo Satélite tiene dos subgrupos, uno por instrumento. **ABI trae tres canales de imágenes.
+GLM trae tres productos de descargas eléctricas.** **Las seis capas se comportan igual**: se animan hacia
+atrás y comparten la misma ventana de imágenes.
 
-Lleva dos instrumentos que aportan capas a la aplicación: el **ABI**, que toma imágenes, y el
-**GLM**, que detecta relámpagos.
+![De instrumento a capa](../../imgs/diagrams/satelite-capas.svg){ .diagram loading=lazy }
 
-## ABI: las imágenes
+![El subgrupo ABI, con el Canal 13 encendido](../../imgs/manual/04-1-satelite.png){ .doc-figure loading=lazy }
 
-El ABI mide la energía que llega desde la atmósfera en distintas longitudes de onda. De las
-longitudes infrarrojas se deduce una **temperatura de brillo**: la temperatura que tendría que tener
-un cuerpo para emitir esa cantidad de energía. Como en la troposfera hace más frío cuanto más alto
-se está, esa temperatura funciona en la práctica como una medida de altura: **cuanto más frío se ve
-un tope de nube, más alto está**.
+## ABI: los tres canales
 
-Ese es el razonamiento que hay detrás de casi todo el uso operativo del satélite.
+| Capa | Producto | Unidad de la escala | Rango de la escala |
+|---|---|---|---|
+| **Canal 2** | Reflectancia, 0.64 μm | Reflectancia | 0 a 1, en grises |
+| **Canal 9** | Temperatura de brillo, 6.9 μm | K | 183.15 a 323.15 |
+| **Canal 13** | Temperatura de brillo, 10.3 μm | K | 183.15 a 323.15 |
 
-| Capa | Qué está mirando | Cómo se lee |
-|---|---|---|
-| **Canal 2** | Luz visible reflejada | Es, esencialmente, una foto. Muestra la nubosidad con mucho detalle y textura durante el día. **De noche no sirve**: sin sol no hay luz que reflejar. |
-| **Canal 9** | Vapor de agua en la troposfera media | No muestra nubes sino humedad en altura. Los tonos más fríos indican más humedad. Sirve para ver el flujo en niveles medios: dónde entra aire húmedo y dónde hay aire seco. |
-| **Canal 13** | Temperatura de los topes de nube | El caballo de batalla. Los topes muy fríos señalan nubes convectivas profundas, típicas de las tormentas severas. Funciona igual de bien de día que de noche. |
-
-!!! note "Si tenés que elegir una sola, elegí el canal 13"
-    Está disponible las veinticuatro horas y responde la pregunta más importante: dónde hay
-    convección profunda. El canal 2 aporta detalle y textura de día, y el canal 9 aporta el contexto
-    de humedad; los dos complementan al 13, no lo reemplazan.
-
-### Qué buscar en el infrarrojo
-
-- **Un tope que se enfría rápido** entre imágenes consecutivas es una corriente ascendente que se
-  está intensificando. Animar la capa es la única forma de verlo.
-- **Un área extensa y uniformemente muy fría** suele ser un sistema convectivo organizado y de larga
-  vida, no una celda aislada.
-- **El borde del área fría** indica hacia dónde se está expandiendo el yunque, que muchas veces
-  anticipa la dirección de propagación del sistema.
+**Las escalas son fijas**: no se reajustan con cada imagen. El Canal 9 recibe valores entre 161 y
+330 K, pero **su escala recorta lo que queda fuera de 183.15 a 323.15 K.** **La consulta puntual
+devuelve el valor real, no el recortado.**
 
 ## GLM: la actividad eléctrica
 
-El GLM detecta los destellos ópticos que producen los relámpagos, de día y de noche. Su valor está
-en que la actividad eléctrica es un indicador muy confiable de que la convección es intensa: para
-que una nube se electrifique hace falta una corriente ascendente vigorosa moviendo hielo en su
-interior.
+![Descargas eléctricas sobre el Canal 13, en la pestaña Activas](../../imgs/manual/04-1-glm.png){ .doc-figure loading=lazy }
 
-| Capa | Qué mide | Para qué sirve |
+| Capa | Unidad | Rango de la escala |
 |---|---|---|
-| **Flash Extent Density** | Cuántos relámpagos atraviesan cada celda de la grilla | La más directa: dónde y cuánto está descargando. |
-| **Total Optical Energy** | La energía óptica total detectada | Distingue mucha actividad débil de pocos relámpagos muy energéticos. |
-| **Minimum Flash Area** | El área mínima de los destellos | Los destellos más chicos tienden a asociarse a corrientes ascendentes más vigorosas. |
+| **Flash Extent Density** | fl/km² | 1 a 128 |
+| **Total Optical Energy** | fJ | 0.01 a 1500 |
+| **Minimum Flash Area** | km² | 64 a 2500 |
 
-Las tres se dibujan en escala logarítmica, porque la actividad eléctrica varía en órdenes de
-magnitud: sin esa compresión, una sola celda muy activa dejaría a todo lo demás en cero visual.
+**Las tres escalas son logarítmicas.** **Las marcas de la leyenda no están a distancia pareja**: cada
+una es un múltiplo de la anterior.
 
-!!! note "La combinación más informativa"
-    Canal 13 con descargas encima. El infrarrojo te muestra todas las nubes altas y frías; las
-    descargas te dicen cuál de ellas está realmente activa **ahora**. Un tope frío sin actividad
-    eléctrica suele ser un yunque residual que ya no representa peligro; el mismo tope con descargas
-    intensas es otra cosa completamente distinta.
+## Tiempo y animación
 
-## Una limitación que conviene tener presente
+- **La hora de cada imagen sale del nombre con que se publicó.** **Se muestra en HOA o UTC según
+  Configuración**.
+- **La ventana es de 6, 12 o 24 imágenes, y arranca en 24.** **La animación recorre las últimas.**
+- **Las imágenes existen entre los niveles 3 y 7 de zoom.** **Más cerca, se agrandan.**
+- **El sistema busca imágenes nuevas cada cinco minutos.** La lista de la capa se renueva cada diez
+  segundos sin que hagas nada.
 
-El satélite ve la atmósfera **desde arriba**. Ve muy bien los topes de las nubes y muy mal lo que
-pasa debajo de ellos. Una tormenta puede tener un tope espectacular y estar dejando poca
-precipitación en superficie, o al revés. Para saber qué está llegando al suelo hay que mirar el
-[radar](radar.md) y las [estaciones](estaciones.md).
+!!! note "Los seis productos comparten disponibilidad"
+    **Si un canal aparece gris con «Sin datos», la fuente no publicó nada reciente.** **El botón de
+    volver a verificar del subgrupo consulta de nuevo.** La aplicación lo hace sola cada minuto.

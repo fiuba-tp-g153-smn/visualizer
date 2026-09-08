@@ -1,86 +1,110 @@
 ---
-title: Emitir un aviso a corto plazo
+title: 6. Emitir un aviso a corto plazo
 ---
 
-# Emitir un aviso a corto plazo
+# 6. Emitir un aviso a corto plazo
 
-Un aviso a corto plazo (ACP) es el producto operativo de esta herramienta. Todo lo demás —las capas,
-la animación, la consulta puntual— existe para sostener la decisión que se toma acá.
-
-El panel **Avisos a corto plazo** es donde delimitás el área afectada, comprobás qué departamentos
-abarca y generás el aviso con sus imágenes oficiales.
+**El aviso a corto plazo es el producto operativo de la herramienta.** **El panel Avisos a corto plazo
+es donde delimitás el área, verificás qué departamentos abarca y generás el aviso con sus
+imágenes.**
 
 ![Los pasos para emitir un aviso](../imgs/diagrams/aviso-pasos-usuario.svg){ .diagram loading=lazy }
 
 !!! note "El sistema no difunde el aviso"
-    Lo deja registrado en el sistema operativo del SMN, listo y con sus imágenes. El circuito de
-    emisión del organismo lo completa con los campos del formulario y lo difunde por sus canales.
-    Generar el aviso acá no equivale a publicarlo.
+    **Lo deja generado y registrado, con sus imágenes**, en estado pendiente. El circuito del SMN lo
+    completa con el formulario y lo difunde. **Generar el aviso acá no equivale a publicarlo.**
+
+![El panel Avisos a corto plazo, con un borrador](../imgs/manual/06-panel-avisos.png){ .doc-figure loading=lazy }
 
 ## 1. Dibujar el área
 
 En la pestaña **Generar**:
 
-1. **Dibujar** entra en modo de trazado. Cada clic agrega un vértice. El polígono se cierra haciendo
-   clic sobre el primer punto, o con doble clic en el último. **Cancelar** sale del modo.
-2. El deslizador **Nivel de detalle**, de 1 a 5, controla con cuánta fidelidad se recorta el contorno
-   del país. Más detalle es más preciso y tarda más en calcularse.
-3. **Borrar todos** elimina todos los polígonos dibujados.
+1. **Dibujar entra en modo de trazado.** Cada clic agrega un vértice. El polígono se cierra con un
+   clic sobre el primer punto, o con doble clic en el último. **Cancelar sale del modo.**
+2. **Nivel de detalle**, de 1 a 5, controla con cuánta fidelidad se recorta el contorno del país.
+   **Más detalle tarda más en calcularse.**
+3. **Borrar todos elimina todos los borradores**, previa confirmación.
 
-Cada borrador aparece como una tarjeta con la cantidad de **vértices**, su **área** y la hora de su
-última modificación. Desde la tarjeta —o con el botón derecho sobre el polígono en el mapa— podés
-editar la geometría, ocultarlo, recortarlo contra el contorno de Argentina o eliminarlo.
+<video preload="none" loop muted playsinline title="Dibujar el polígono del aviso"
+       width="100%" poster="../../videos/06-dibujar-poster.webp"
+       style="max-height: 500px">
+  <source src="../../videos/06-dibujar.webm" type="video/webm" />
+  Tu navegador no soporta este video.
+</video>
 
-!!! note "Recortar con Argentina se puede deshacer"
-    El recorte tiene su **Deshacer recorte**, así que podés probar cómo queda el área ajustada al
-    territorio y volver atrás si no te convence.
+Cada borrador aparece como una tarjeta, **Borrador #N**. Muestra sus vértices, su área en km² y la hora
+de la última modificación. **Un clic en el título centra el mapa en el polígono.** **Los botones de la
+tarjeta, y el menú del botón derecho sobre el polígono, ofrecen lo mismo**:
 
-### Cómo conviene trazar
+| Acción | Qué hace |
+|---|---|
+| **Editar geometría** | Mueve los vértices. Aparece una barra flotante con Guardar y Cancelar. |
+| **Ocultar / Mostrar** | Saca el polígono del mapa sin borrarlo. |
+| **Recortar con Argentina** | Ajusta el área al territorio. Tiene su **Deshacer recorte**. |
+| **Mostrar departamentos** | Sólo en el menú: lista los departamentos ya calculados. |
+| **Generar aviso** | Lo mismo que el botón de la tarjeta. |
+| **Eliminar** | Borra el borrador, previa confirmación. |
 
-- **Dibujá sobre lo observado, no sobre lo pronosticado.** El modelo te dice hacia dónde mirar; el
-  área se traza sobre lo que el radar y el satélite están mostrando.
-- **Tené prendido el límite interdepartamental** mientras dibujás. El aviso se emite por
-  departamento: ver esos límites mientras trazás evita incluir o dejar afuera uno por unos pocos
-  kilómetros.
-- **Menos vértices es mejor.** Un contorno simple es más fácil de leer, se procesa más rápido y no
-  corre riesgo de chocar con el límite de vértices.
+**Mientras un polígono está en edición, Dibujar queda deshabilitado.**
 
 ## 2. Verificar los departamentos
 
-La fila **Departamentos** de la tarjeta tiene un botón **Buscar** que consulta qué departamentos toca
-el polígono. El resultado se lista agrupado por provincia.
+![La lista de departamentos de un borrador, agrupada por provincia](../imgs/manual/06-departamentos.png){ .doc-figure loading=lazy }
 
-Es el paso que conviene no saltear: la lista es exactamente la que va a quedar en el aviso, y es el
-momento de corregir el trazado si abarca de más o de menos.
+La fila **Departamentos** de la tarjeta tiene un botón **Buscar**. **Calcula qué departamentos toca
+el polígono** y los lista agrupados por provincia. **Pasar el mouse por un departamento lo resalta en
+el mapa.** **La lista es exactamente la que va a quedar en el aviso.**
 
 ## 3. Generar
 
-**Generar aviso** abre un diálogo que pide el **código de fenómeno** de una lista desplegable. El
-catálogo tiene 28 entradas, de las cuales 27 se pueden seleccionar.
+![El diálogo de fenómeno al generar un aviso](../imgs/manual/06-generar-dialogo.png){ .doc-figure loading=lazy }
 
-Al confirmar, el trabajo se encola y la aplicación responde de inmediato. A partir de ahí consulta
-sola el estado, hasta que el aviso está listo.
+**Generar aviso abre un diálogo que pide el código de fenómeno.** **La lista la entrega el servicio de
+avisos**; si no responde, la aplicación usa una lista propia de 27 códigos. Al confirmar, **el trabajo
+se encola y la aplicación responde de inmediato.** **A partir de ahí consulta el estado cada dos
+segundos**, hasta que el aviso está listo.
+
+<video preload="none" loop muted playsinline title="Generar el aviso y verlo en Pendientes"
+       width="100%" poster="../../videos/06-generar-poster.webp"
+       style="max-height: 500px">
+  <source src="../../videos/06-generar.webm" type="video/webm" />
+  Tu navegador no soporta este video.
+</video>
 
 !!! warning "El botón puede aparecer deshabilitado"
-    Hay un máximo de vértices para el polígono. El trazado nunca se bloquea —podés dibujar uno más
-    complejo—, pero si lo superás, **Generar aviso** queda deshabilitado y un mensaje te indica cuál
-    es el máximo. Se resuelve simplificando el trazado o bajando el nivel de detalle.
+    **Hay un máximo de vértices por polígono.** **El trazado no se bloquea**, pero con un polígono más
+    complejo el botón queda gris y su ayuda dice cuál es el máximo. **Se resuelve simplificando el
+    trazado o bajando el nivel de detalle.**
+
+**Cuando la generación falla, la aplicación lo avisa con un mensaje** en la esquina de la pantalla.
+**Los casos son cuatro:**
+
+- El área es demasiado grande.
+- El servicio tardó de más.
+- La aplicación dejó de esperar, a los tres minutos.
+- Un error genérico.
+
+**En todos, el aviso no se creó y hay que reintentar.**
 
 !!! note "Recargar la página no duplica el aviso"
-    Si recargás mientras el aviso se está generando, la aplicación retoma el seguimiento del trabajo
-    en curso en lugar de emitir uno nuevo.
-
-Si el sistema está saturado, la emisión falla indicando que la cola está llena. En ese caso el aviso
-**no** se creó y hay que reintentar.
+    **Si recargás mientras se genera, la aplicación retoma el seguimiento del trabajo en curso.** No
+    emite uno nuevo.
 
 ## 4. Seguir los avisos emitidos
 
-La pestaña **Emitidos** tiene dos secciones, que se actualizan solas cada diez segundos:
+![La pestaña Emitidos, con las secciones Pendientes y Activos](../imgs/manual/06-emitidos.png){ .doc-figure loading=lazy }
 
-- **Pendientes**: avisos generados a los que todavía no se les completó el formulario de emisión del
-  SMN. Cada tarjeta muestra el fenómeno, los departamentos afectados y las dos imágenes.
-- **Activos**: avisos ya emitidos y vigentes, con su fenómeno, hora de emisión, hora de cese y el
-  tiempo que les queda.
+La pestaña **Emitidos** tiene dos secciones. **Las dos se renuevan solas cada diez segundos**, y **cada
+una tiene su casilla para mostrarla en el mapa**, su contador, su botón de recarga y su pliegue.
+
+- **Pendientes**: avisos generados a los que todavía no se les completó el formulario del SMN. **La
+  tarjeta muestra el fenómeno, los departamentos y los botones de las dos imágenes.**
+- **Activos**: avisos ya emitidos y vigentes, con fenómeno, hora de emisión, hora de cese y tiempo
+  restante.
+
+**Cada aviso tiene un ojo para ocultarlo del mapa**, y esa elección se recuerda. **Con el botón
+derecho sobre un aviso en el mapa aparece un menú** con su número, su estado y las mismas acciones.
 
 ### Los colores en el mapa
 
@@ -89,19 +113,15 @@ La pestaña **Emitidos** tiene dos secciones, que se actualizan solas cada diez 
 | Borrador propio | Naranja |
 | Pendiente | Gris, con trazo discontinuo |
 | Activo, con más de 30 minutos por delante | Verde |
-| Activo, con menos de 30 minutos | Amarillo |
+| Activo, con 30 minutos o menos | Amarillo |
 | Activo, con 10 minutos o menos | Rojo |
 
-Los pendientes son grises porque todavía no tienen horario de vigencia: no hay un tiempo restante
-que codificar en color. El verde-amarillo-rojo de los activos es un semáforo de vencimiento, y sirve
-para saber de un vistazo cuál va a necesitar una decisión pronto.
+**Los pendientes son grises porque todavía no tienen vigencia.** **El color de los activos sólo
+codifica el tiempo restante.**
 
 ## Las imágenes
 
-Cada aviso genera dos imágenes animadas con la plantilla oficial del SMN:
-
-- **La del área**, con acercamiento a la zona afectada y los municipios y cabeceras etiquetados.
-- **La general**, de todo el país, para ubicar el evento en contexto.
-
-Se abren desde la tarjeta del aviso pendiente con **Ver imagen del área** y **Ver imagen general**, y
-desde el diálogo se pueden abrir en una pestaña nueva.
+**Cada aviso genera dos imágenes animadas con la plantilla oficial del SMN**: la del área, con
+acercamiento a la zona afectada, y la general, de todo el país. **Se abren desde la tarjeta del aviso
+pendiente** con **Ver imagen del área** y **Ver imagen general**. **El diálogo permite abrirlas en una
+pestaña nueva.**
