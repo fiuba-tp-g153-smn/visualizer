@@ -1,0 +1,33 @@
+# Capítulo 19. Pregunta: ¿qué cruza cada límite de confianza?
+title: Límites de confianza
+subtitle: Lo que cruza cada línea punteada es lo que hay que controlar
+size: [880, 660]
+
+groups:
+  - {kind: boundary, at: [24, 264], size: [832, 136], label: ZONA PUBLICADA · ANÓNIMA}
+  - {kind: boundary, at: [24, 436], size: [520, 130], label: ZONA INTERNA · DEBERÍA SERLO}
+  - {kind: boundary, at: [568, 436], size: [288, 130], label: SISTEMAS DEL SMN, label_anchor: end}
+
+nodes:
+  nav:     {at: [40, 64], size: [200, 52], label: navegador, sub: cualquiera en internet, external: true, badge: browser}
+  edge:    {at: [40, 168], size: [200, 52], label: borde con TLS, sub: fuera de los repositorios, external: true, badge: globe}
+  vis:     {at: [40, 312], size: [184, 52], label: "6010", sub: visualizador}
+  ds:      {at: [248, 312], size: [184, 52], label: "6006", sub: datos}
+  al:      {at: [456, 312], size: [184, 52], label: "6007", sub: avisos · escribe, accent: true}
+  metrics: {at: [664, 312], size: [176, 52], label: "6020", sub: métricas}
+  interna: {at: [232, 476], size: [296, 52], label: almacén · broker · caché · MySQL, sub: "9000 · 8888 · 9333 · 23646 · 5672 · 15672 · 3306", badge: lock}
+  smn:     {at: [584, 476], size: [256, 52], label: MySQL y API del SMN, sub: taviso · estaciones, external: true, badge: database}
+
+edges:
+  - {from: nav, to: edge, label: HTTPS, label_at: [152, 148], label_anchor: start}
+  - {from: [140, 226], to: [140, 264], label: "a los cuatro puertos publicados", label_at: [152, 250], label_anchor: start}
+  - {from: ds, to: interna, label: "S3 · Redis", label_at: [330, 428], label_anchor: end}
+  - {from: al, to: interna, label: MySQL, label_at: [500, 428], label_anchor: start}
+  - {from: al, to: smn, dashed: true, label: escribe el aviso, label_at: [640, 420], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el activo crítico; sin credencial}
+  - {swatch: external, label: fuera del sistema}
+  - {swatch: dashed-arrow, label: escritura en un sistema ajeno}
+
+footnote: "· el navegador llega a 6006, 6007 y 6020 por su cuenta · los puertos de la zona interna se publican hoy en todas las interfaces"

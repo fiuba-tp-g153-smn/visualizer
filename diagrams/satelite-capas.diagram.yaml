@@ -1,0 +1,22 @@
+# Capítulo 4.1. Pregunta: ¿qué capa es qué producto del satélite, y de dónde sale su hora?
+title: Satélite GOES-19 — de instrumento a capa
+subtitle: Dos instrumentos, seis capas, todas con animación hacia atrás
+size: [880, 420]
+
+nodes:
+  goes:  {at: [24, 176], size: [168, 52], label: GOES-19, sub: NOAA · disco completo, external: true, badge: cloud}
+  abi:   {at: [256, 100], size: [168, 52], label: ABI, sub: imágenes}
+  glm:   {at: [256, 252], size: [168, 52], label: GLM, sub: descargas eléctricas}
+  ch:    {at: [488, 100], size: [368, 52], label: Canal 2 · Canal 9 · Canal 13, sub: reflectancia · vapor de agua (K) · tope de nube (K), accent: true}
+  fed:   {at: [488, 252], size: [368, 52], label: FED · TOE · MFA, sub: fl/km² · fJ · km² · escala logarítmica, accent: true}
+
+edges:
+  - {from: goes, to: abi, label: cada pocos minutos, label_at: [200, 150], label_anchor: start}
+  - {from: goes, to: glm}
+  - {from: abi, to: ch, label: 3 capas, label_at: [456, 92]}
+  - {from: glm, to: fed, label: 3 capas, label_at: [456, 244]}
+
+legend:
+  - {swatch: accent, label: lo que aparece en el panel de capas}
+
+footnote: "· la hora de cada imagen es la del nombre del archivo, en HOA o UTC según Configuración · la animación toma las últimas 6, 12 o 24"

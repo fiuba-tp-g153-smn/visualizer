@@ -1,0 +1,30 @@
+# Capítulo 15. Pregunta: ¿qué cruza el cable si el procesamiento va en otra máquina?
+title: Dos máquinas — procesamiento y lectura
+subtitle: Lo que cruza el cable y quién lo necesita
+size: [880, 520]
+
+groups:
+  - {kind: boundary, at: [24, 64], size: [400, 300], label: MÁQUINA A · PROCESAMIENTO}
+  - {kind: boundary, at: [456, 64], size: [400, 300], label: MÁQUINA B · LECTURA Y AVISOS, label_anchor: end}
+
+nodes:
+  tp:      {at: [40, 120], size: [176, 52], label: producer + workers, sub: rabbitmq · tiles_data, badge: python}
+  seaweed: {at: [232, 120], size: [176, 52], label: seaweedfs, sub: "S3 :9000 publicado", accent: true, badge: database}
+  metrics: {at: [40, 236], size: [176, 52], label: metrics-api, sub: ":6020 · lee metrics.db", badge: python}
+  sim:     {at: [232, 236], size: [176, 52], label: data-simulator, sub: mismo disco que los workers}
+  ds:      {at: [472, 120], size: [176, 52], label: data-service, sub: api + sync + redis, badge: python}
+  al:      {at: [472, 236], size: [176, 52], label: alerts-service, sub: "+ mysql", badge: python}
+  vis:     {at: [664, 236], size: [176, 52], label: visualizer, sub: ":6010", badge: browser}
+  user:    {kind: actor, at: [752, 412], label: navegador}
+
+edges:
+  - {from: ds, to: seaweed, label: "S3 · 9000 con TLS o túnel", label_at: [440, 108]}
+  - {from: al, to: seaweed, dashed: true, label: "S3, sólo si S3_ENDPOINT está definido", label_at: [452, 226], label_anchor: start}
+  - {from: user, to: vis, label: "6010 · 6006 · 6007", label_at: [764, 350], label_anchor: start}
+  - {from: user, to: metrics, label: "6020", label_at: [440, 320], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: lo único que la máquina B necesita de la A}
+  - {swatch: dashed-arrow, label: opcional}
+
+footnote: "· metrics-api se queda con los workers porque lee metrics.db del volumen tiles_data · data-simulator también, porque escribe ese mismo volumen"

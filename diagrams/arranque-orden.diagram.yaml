@@ -1,0 +1,23 @@
+# Capítulo 14. Pregunta: ¿en qué orden se levantan los stacks y qué fuerza cada paso?
+title: Orden de arranque entre stacks
+subtitle: Nada lo impone; cada flecha es una dependencia real
+size: [880, 400]
+
+nodes:
+  tp:  {at: [24, 108], size: [184, 52], label: 1 · tiles-processor, sub: almacén sano y buckets creados, accent: true, badge: python}
+  ds:  {at: [272, 108], size: [184, 52], label: 2 · data-service, sub: espera al S3 · 120 s en producción, badge: python}
+  sim: {at: [272, 236], size: [184, 52], label: data-simulator, sub: cuando exista el volumen}
+  al:  {at: [520, 236], size: [184, 52], label: alerts-service, sub: mysql sano · IGN hasta 8 min, badge: python}
+  vis: {at: [672, 108], size: [184, 52], label: 4 · visualizer, sub: sin dependencias en ejecución, badge: browser}
+
+edges:
+  - {from: tp, to: ds, label: "S3 en :9000 respondiendo", label_at: [240, 100]}
+  - {from: tp, to: sim, label: "el volumen tiles_data", label_at: [190, 216], label_anchor: start}
+  - {from: ds, to: vis, dashed: true, label: "direcciones conocidas al compilar", label_at: [564, 100]}
+  - {from: al, to: vis, dashed: true, label: "ídem", label_at: [700, 200], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el que hay que levantar primero}
+  - {swatch: dashed-arrow, label: "dependencia de compilación, no de arranque"}
+
+footnote: "· alerts-service (3) no depende de los demás para arrancar · el orden entre stacks lo aplica quien opera: compose no lo conoce"

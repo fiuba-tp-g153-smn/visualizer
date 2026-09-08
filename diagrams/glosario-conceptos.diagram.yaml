@@ -1,0 +1,28 @@
+# Capítulo 8. Pregunta: ¿cómo se relacionan los términos de la interfaz entre sí?
+title: Los términos de la interfaz
+subtitle: Cómo se relacionan entre sí
+size: [880, 460]
+
+nodes:
+  catalogo: {at: [24, 100], size: [168, 52], label: Catálogo, sub: Disponibles}
+  capa:     {at: [248, 100], size: [168, 52], label: Capa, sub: lo que se dibuja, accent: true}
+  activa:   {at: [472, 100], size: [168, 52], label: Capa activa, sub: en Activas}
+  bloque:   {at: [696, 100], size: [160, 52], label: Bloque, sub: puntos · referencia · datos}
+  periodo:  {at: [248, 260], size: [168, 52], label: Período, sub: la animación de una capa}
+  sync:     {at: [472, 260], size: [168, 52], label: Sincronización, sub: "varias capas, un instante"}
+  base:     {at: [24, 260], size: [168, 52], label: Mapa base, sub: "el fondo, no es una capa"}
+  acp:      {at: [696, 260], size: [160, 52], label: ACP, sub: aviso a corto plazo}
+
+edges:
+  - {from: catalogo, to: capa, label: lista, label_at: [220, 92]}
+  - {from: capa, to: activa, label: al encenderla, label_at: [444, 92]}
+  - {from: activa, to: bloque, label: se ordena en, label_at: [668, 92]}
+  - {from: activa, to: periodo, label: tiene un, label_at: [360, 220], label_anchor: end}
+  - {from: periodo, to: sync, label: se alinea en, label_at: [444, 252]}
+  - {from: activa, to: acp, dashed: true, label: se dibuja sobre ellas, label_at: [660, 220], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el término del que dependen todos}
+  - {swatch: dashed-arrow, label: "relación de uso, no de estructura"}
+
+footnote: "· corrida, elevación, variable y estación son propiedades de una capa; se explican en el capítulo 4"

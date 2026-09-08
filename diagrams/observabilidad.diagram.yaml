@@ -1,0 +1,26 @@
+# Capítulo 18. Pregunta: ¿qué lee cada pestaña del panel de estado, y de dónde sale ese dato?
+title: Tres APIs de métricas, un solo panel
+subtitle: Qué lee cada pestaña y dónde se guarda cada muestra
+size: [880, 480]
+
+nodes:
+  panel:   {at: [340, 68], size: [200, 52], label: "/status", sub: cuatro pestañas · cada 30 s, accent: true, badge: browser}
+  metrics: {at: [40, 200], size: [232, 52], label: metrics-api · 6020, sub: "/api/summary · /api/live", badge: python}
+  ds:      {at: [324, 200], size: [232, 52], label: data-service · 6006, sub: "/metrics/* · /sync/status", badge: python}
+  al:      {at: [608, 200], size: [232, 52], label: alerts-service · 6007, sub: "/metrics/*", badge: python}
+  tpdb:    {at: [40, 340], size: [232, 52], label: metrics.db · progress_tracker.db, sub: "+ profundidad de colas por AMQP", badge: database}
+  dsdb:    {at: [324, 340], size: [232, 52], label: metrics.sqlite, sub: ciclos y muestras de Redis, badge: database}
+  aldb:    {at: [608, 340], size: [232, 52], label: jobs.sqlite · metrics.sqlite, sub: "+ history.db, sin poda", badge: database}
+
+edges:
+  - {from: panel, to: metrics, label: Procesamiento, label_at: [232, 150], label_anchor: end}
+  - {from: panel, to: ds, label: Caché · Mapas base, label_at: [452, 170], label_anchor: start}
+  - {from: panel, to: al, label: Alertas, label_at: [650, 150], label_anchor: start}
+  - {from: metrics, to: tpdb, label: lee, label_at: [168, 302], label_anchor: start}
+  - {from: ds, to: dsdb, label: lee, label_at: [452, 302], label_anchor: start}
+  - {from: al, to: aldb, label: lee, label_at: [736, 302], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el único tablero; ninguno vive en el backend}
+
+footnote: "· cada servicio poda sus propias muestras · history.db crece sin límite · Prometheus, Grafana y Uptime Kuma quedan fuera de los repositorios"

@@ -1,0 +1,41 @@
+<svg viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="520" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Del catálogo al mapa</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Encendés una capa en Disponibles; la ordenás y ajustás en Activas</text>
+<rect x="24" y="72" width="400" height="380" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="40" y="94" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">DISPONIBLES · EL CATÁLOGO</text>
+<rect x="456" y="72" width="400" height="380" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="472" y="94" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">ACTIVAS · LO QUE ESTÁ EN EL MAPA</text>
+<rect x="40" y="112" width="368" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="224.0" y="134.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Grupo</text>
+<text x="224.0" y="150.5" font-size="11" fill="#6b7280" text-anchor="middle">Satélite · Radar · Modelos · Estaciones · IGN</text>
+<rect x="40" y="212" width="368" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="224.0" y="234.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Subgrupo</text>
+<text x="224.0" y="250.5" font-size="11" fill="#6b7280" text-anchor="middle">31 en total · un punto de color si hay algo encendido</text>
+<rect x="40" y="312" width="368" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="224.0" y="334.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Capa</text>
+<text x="224.0" y="350.5" font-size="11" fill="#6b7280" text-anchor="middle">una casilla · en estaciones, un botón de opción</text>
+<rect x="472" y="112" width="368" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="656.0" y="134.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Capas puntuales</text>
+<text x="656.0" y="150.5" font-size="11" fill="#6b7280" text-anchor="middle">estaciones · arriba de todo</text>
+<rect x="472" y="212" width="368" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="656.0" y="234.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Capas de referencia</text>
+<text x="656.0" y="250.5" font-size="11" fill="#6b7280" text-anchor="middle">IGN · en el medio</text>
+<rect x="472" y="312" width="368" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="656.0" y="334.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Capas de datos</text>
+<text x="656.0" y="350.5" font-size="11" fill="#6b7280" text-anchor="middle">satélite · radar · modelos · abajo</text>
+<line x1="224.0" y1="170.0" x2="224.0" y2="197.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="224.0,206.0 220.4,197.0 227.6,197.0" fill="#1f2937"/>
+<text x="232.0" y="196.0" font-size="11" fill="#374151" text-anchor="start">contiene</text>
+<line x1="224.0" y1="270.0" x2="224.0" y2="297.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="224.0,306.0 220.4,297.0 227.6,297.0" fill="#1f2937"/>
+<text x="232.0" y="296.0" font-size="11" fill="#374151" text-anchor="start">contiene</text>
+<line x1="414.0" y1="338.0" x2="457.0" y2="338.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="466.0,338.0 457.0,341.6 457.0,334.4" fill="#1f2937"/>
+<text x="440.0" y="348.0" font-size="11" fill="#374151" text-anchor="middle">al marcarla</text>
+<text x="472" y="400" font-size="11" font-weight="600" fill="#374151" text-anchor="start">Arrastrar reordena dentro de un bloque. Nunca entre bloques.</text>
+<text x="472" y="420" font-size="11" font-weight="400" fill="#374151" text-anchor="start">Cada bloque tiene su botón para apagar todo.</text>
+<rect x="24.0" y="463" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="474" font-size="11" fill="#374151">la misma capa, a los dos lados</text>
+<text x="24" y="500" font-size="11" fill="#6b7280">· cada capa activa trae opacidad y, según el tipo, elevaciones, corridas, consulta o período</text>
+</svg>

@@ -1,0 +1,34 @@
+# Capítulo 11.4. Pregunta: ¿dónde quedan las direcciones de los backends y quién las usa?
+title: visualizer — se hornea al compilar, corre en el navegador
+subtitle: nginx sólo sirve archivos; el navegador llama a tres backends por su cuenta
+size: [880, 660]
+
+groups:
+  - {kind: band, at: [24, 72], size: [832, 110], label: DOCKER BUILD · UNA VEZ POR DESPLIEGUE}
+  - {kind: band, at: [24, 206], size: [832, 110], label: EN EL HOST}
+  - {kind: band, at: [24, 340], size: [832, 110], label: NAVEGADOR DEL PRONOSTICADOR}
+  - {kind: band, at: [24, 474], size: [832, 110], label: BACKENDS · TRES PUERTOS PUBLICADOS}
+
+nodes:
+  args:   {at: [40, 108], size: [220, 52], label: 8 build args, sub: DATA_SERVICE_BASE_URL y otras}
+  mkdocs: {at: [316, 108], size: [200, 52], label: etapa docs, sub: mkdocs build --strict}
+  bundle: {at: [592, 108], size: [240, 52], label: bundle + /docs-site, sub: URLs fijadas por webpack, accent: true, badge: typescript}
+  nginx:  {at: [592, 242], size: [240, 52], label: nginx, sub: estáticos · sin proxy_pass}
+  app:    {at: [316, 376], size: [200, 52], label: la aplicación, sub: Angular en el navegador, badge: browser}
+  ds:     {at: [40, 510], size: [220, 52], label: data-service, sub: ":6006", badge: python}
+  al:     {at: [316, 510], size: [200, 52], label: alerts-service, sub: ":6007", badge: python}
+  met:    {at: [592, 510], size: [240, 52], label: metrics-api, sub: ":6020", badge: python}
+
+edges:
+  - {from: args, to: bundle, label: DefinePlugin, label_at: [400, 100]}
+  - {from: mkdocs, to: bundle, label: public/docs-site, label_at: [554, 100]}
+  - {from: bundle, to: nginx, label: COPY a la imagen, label_at: [724, 222], label_anchor: start}
+  - {from: nginx, to: app, label: "GET / · GET /docs-site/", label_at: [540, 350], label_anchor: start}
+  - {from: app, to: ds, label: HTTP /products, label_at: [232, 470], label_anchor: end}
+  - {from: app, to: al, label: HTTP /alerts, label_at: [424, 470], label_anchor: start}
+  - {from: app, to: met, label: HTTP /api, label_at: [604, 470], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: lo que cambia sólo con una reconstrucción}
+
+footnote: "· cambiar una URL de backend exige reconstruir la imagen · publicar sólo el puerto del visualizador deja el mapa vacío"

@@ -1,0 +1,54 @@
+<svg viewBox="0 0 880 336" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="336" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">MapaSMN — de los datos crudos al aviso</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Qué hace el sistema, de punta a punta</text>
+<rect x="24" y="148" width="136" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="92.0" y="170.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Fuentes</text>
+<text x="92.0" y="186.5" font-size="11" fill="#6b7280" text-anchor="middle">satélite, radar, modelos</text>
+<circle cx="28" cy="152" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(20.0 144.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .69-8.95 6 6 0 0 0-11.8 1.3A4 4 0 0 0 7 19z"/></g>
+<rect x="198" y="148" width="136" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="266.0" y="170.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Procesamiento</text>
+<text x="266.0" y="186.5" font-size="11" fill="#6b7280" text-anchor="middle">teselas cada 5 min</text>
+<circle cx="202" cy="152" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(194.0 144.0) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
+<rect x="372" y="148" width="136" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="440.0" y="170.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Mapa interactivo</text>
+<text x="440.0" y="186.5" font-size="11" fill="#6b7280" text-anchor="middle">capas · animación</text>
+<circle cx="376" cy="152" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(368.0 144.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M2.5 8.5h19M5.5 6.3h.01M8 6.3h.01M10.5 6.3h.01"/></g>
+<rect x="546" y="148" width="136" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="614.0" y="170.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Aviso a corto plazo</text>
+<text x="614.0" y="186.5" font-size="11" fill="#6b7280" text-anchor="middle">polígono + fenómeno</text>
+<rect x="720" y="148" width="136" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="788.0" y="170.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Circuito del SMN</text>
+<text x="788.0" y="186.5" font-size="11" fill="#6b7280" text-anchor="middle">completa y difunde</text>
+<circle cx="724" cy="152" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(716.0 144.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></g>
+<circle cx="440" cy="49" r="9" fill="none" stroke="#1f2937" stroke-width="1.8"/>
+<path d="M440 58V76M427 65H453M440 76L430 90M440 76L450 90" stroke="#1f2937" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+<text x="440" y="106" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Pronosticador</text>
+<line x1="166.0" y1="174.0" x2="183.0" y2="174.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="192.0,174.0 183.0,177.6 183.0,170.4" fill="#1f2937"/>
+<text x="179.0" y="134.0" font-size="11" fill="#374151" text-anchor="middle">datos crudos</text>
+<line x1="340.0" y1="174.0" x2="357.0" y2="174.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="366.0,174.0 357.0,177.6 357.0,170.4" fill="#1f2937"/>
+<text x="353.0" y="134.0" font-size="11" fill="#374151" text-anchor="middle">capas listas</text>
+<line x1="514.0" y1="174.0" x2="531.0" y2="174.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="540.0,174.0 531.0,177.6 531.0,170.4" fill="#1f2937"/>
+<text x="527.0" y="134.0" font-size="11" fill="#374151" text-anchor="middle">dibuja y emite</text>
+<line x1="688.0" y1="174.0" x2="705.0" y2="174.0" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="5 4"/>
+<polygon points="714.0,174.0 705.0,177.6 705.0,170.4" fill="#1f2937"/>
+<text x="701.0" y="134.0" font-size="11" fill="#374151" text-anchor="middle">queda pendiente</text>
+<line x1="440.0" y1="102.0" x2="440.0" y2="133.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="440.0,142.0 436.4,133.0 443.6,133.0" fill="#1f2937"/>
+<text x="452.0" y="126.0" font-size="11" fill="#374151" text-anchor="start">analiza</text>
+<rect x="24.0" y="279" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="290" font-size="11" fill="#374151">lo que usa el pronosticador</text>
+<rect x="235.9" y="279" width="22" height="14" rx="3" fill="#ffffff" stroke="#1f2937" stroke-width="1.2" stroke-dasharray="4 3"/>
+<text x="265.9" y="290" font-size="11" fill="#374151">fuera del sistema</text>
+<line x1="390.8" y1="286" x2="406.8" y2="286" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="4 3"/>
+<polygon points="412.8,286 405.8,282.8 405.8,289.2" fill="#1f2937"/>
+<text x="420.8" y="290" font-size="11" fill="#374151">sale del alcance del sistema</text>
+<text x="24" y="316" font-size="11" fill="#6b7280">· el sistema deja el aviso listo con sus imágenes; no lo difunde</text>
+</svg>

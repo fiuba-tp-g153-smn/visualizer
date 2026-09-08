@@ -1,0 +1,37 @@
+# Capítulo 13. Pregunta: ¿cómo se alcanzan los stacks entre sí?
+# No hay red compartida: la única costura entre stacks sale al host y vuelve por un puerto publicado.
+title: Cuatro redes, una costura
+subtitle: Dentro de un stack se resuelve por nombre; entre stacks, por un puerto del host
+size: [880, 600]
+
+groups:
+  - {kind: boundary, at: [24, 64], size: [832, 480], label: UN HOST · DOCKER}
+  - {kind: band, at: [40, 100], size: [400, 150], label: TILES-PROCESSOR · RED PROPIA}
+  - {kind: band, at: [464, 100], size: [376, 150], label: DATA-SERVICE · data_service_network}
+  - {kind: band, at: [40, 350], size: [400, 150], label: ALERTS-SERVICE · RED PROPIA}
+  - {kind: band, at: [464, 350], size: [200, 150], label: VISUALIZER}
+
+nodes:
+  tpapp:    {at: [56, 148], size: [168, 52], label: producer + workers, sub: 7 contenedores, badge: python}
+  seaweed:  {at: [256, 148], size: [168, 52], label: seaweedfs, sub: S3 en :8333 → host :9000, accent: true, badge: database}
+  ds:       {at: [480, 148], size: [168, 52], label: api + sync, sub: data-service, badge: python}
+  redis:    {at: [664, 148], size: [160, 52], label: redis, badge: redis}
+  sim:      {at: [56, 278], size: [168, 44], label: data-simulator, sub: escribe el volumen tiles_data}
+  alerts:   {at: [56, 398], size: [168, 52], label: alerts-service, badge: python}
+  mysql:    {at: [256, 398], size: [168, 52], label: mysql, badge: database}
+  nginx:    {at: [480, 398], size: [168, 52], label: nginx, sub: sólo estáticos, badge: browser}
+
+edges:
+  - {from: tpapp, to: seaweed, label: "seaweedfs:8333", label_at: [240, 140]}
+  - {from: ds, to: seaweed, dashed: true, label: "host.docker.internal:9000 · sale al host y vuelve", label_at: [452, 222]}
+  - {from: ds, to: redis, label: "redis:6379", label_at: [656, 140]}
+  - {from: alerts, to: mysql, label: "mysql:3306", label_at: [240, 390]}
+  - {from: alerts, to: seaweed, dashed: true, label: "S3_ENDPOINT, opcional", label_at: [236, 300], label_anchor: start}
+  - {from: sim, to: tpapp, label: "disco, no red", label_at: [148, 240], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el único servicio que otro stack necesita alcanzar}
+  - {swatch: dashed-arrow, label: cruza de un stack a otro por un puerto publicado}
+  - {swatch: band, label: una red de compose}
+
+footnote: "· el navegador llama a 6006, 6007, 6010 y 6020 desde afuera del host · RabbitMQ y los workers hablan sólo dentro de su banda"

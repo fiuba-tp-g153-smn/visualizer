@@ -1,0 +1,41 @@
+<svg viewBox="0 0 880 420" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="420" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Qué informa cada pestaña</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Cuatro pestañas, tres partes del sistema</text>
+<rect x="24" y="100" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="116.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Procesamiento</text>
+<text x="116.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">¿se generan las imágenes?</text>
+<rect x="248" y="100" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="340.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Caché</text>
+<text x="340.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">¿se sirven rápido?</text>
+<rect x="472" y="100" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="564.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Mapas base</text>
+<text x="564.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">¿hay cartografía de fondo?</text>
+<rect x="696" y="100" width="160" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="776.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Alertas</text>
+<text x="776.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">¿se generan los avisos?</text>
+<rect x="24" y="268" width="184" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="116.0" y="290.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">El procesador</text>
+<text x="116.0" y="306.5" font-size="11" fill="#6b7280" text-anchor="middle">quien fabrica las imágenes</text>
+<rect x="360" y="268" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="452.0" y="290.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">El servicio de datos</text>
+<text x="452.0" y="306.5" font-size="11" fill="#6b7280" text-anchor="middle">quien las sirve al mapa</text>
+<rect x="696" y="268" width="160" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="776.0" y="290.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">El servicio de avisos</text>
+<text x="776.0" y="306.5" font-size="11" fill="#6b7280" text-anchor="middle">quien genera el ACP</text>
+<line x1="116.0" y1="158.0" x2="116.0" y2="253.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="116.0,262.0 112.4,253.0 119.6,253.0" fill="#1f2937"/>
+<text x="128.0" y="220.0" font-size="11" fill="#374151" text-anchor="start">trabajos y colas</text>
+<line x1="361.3" y1="158.0" x2="425.7" y2="254.5" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="430.7,262.0 422.7,256.5 428.7,252.5" fill="#1f2937"/>
+<text x="328.0" y="220.0" font-size="11" fill="#374151" text-anchor="end">ciclos y memoria</text>
+<line x1="542.7" y1="158.0" x2="478.3" y2="254.5" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="473.3,262.0 475.3,252.5 481.3,256.5" fill="#1f2937"/>
+<text x="520.0" y="220.0" font-size="11" fill="#374151" text-anchor="start">recorrido de respaldo</text>
+<line x1="776.0" y1="158.0" x2="776.0" y2="253.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="776.0,262.0 772.4,253.0 779.6,253.0" fill="#1f2937"/>
+<text x="788.0" y="220.0" font-size="11" fill="#374151" text-anchor="start">etapas y cola</text>
+<rect x="24.0" y="363" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="374" font-size="11" fill="#374151">si acá hay errores, una capa no tiene imágenes nuevas</text>
+<text x="24" y="400" font-size="11" fill="#6b7280">· cada pestaña se refresca sola cada 30 segundos, configurable · si una parte no contesta, la pestaña conserva lo último y lo avisa</text>
+</svg>

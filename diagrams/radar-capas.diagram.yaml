@@ -1,0 +1,23 @@
+# Capítulo 4.2. Pregunta: ¿cómo se llega de un radar a una imagen en el mapa?
+title: Radar SINARAME — radar, variable, elevación, instante
+subtitle: Cada capa es una variable de un radar; la elevación y el instante se eligen en la capa
+size: [880, 420]
+
+nodes:
+  radares: {at: [24, 176], size: [176, 52], label: 18 radares RMA, sub: un subgrupo por radar}
+  vars:    {at: [232, 176], size: [232, 52], label: 6 variables, sub: DBZH · 450 km · KDP · VRAD · RHOHV · ZDR, accent: true}
+  elev:    {at: [512, 100], size: [160, 52], label: 3 elevaciones, sub: "0.5° · 0.9° · 1.3°"}
+  inst:    {at: [512, 252], size: [160, 52], label: Instantes, sub: últimas 6 o 12 imágenes}
+  mapa:    {at: [704, 176], size: [152, 52], label: Imagen en el mapa, badge: browser}
+
+edges:
+  - {from: radares, to: vars, label: una capa por par, label_at: [224, 166]}
+  - {from: vars, to: elev, label: casillas, label_at: [470, 128], label_anchor: start}
+  - {from: vars, to: inst, label: Período, label_at: [470, 246], label_anchor: start}
+  - {from: elev, to: mapa}
+  - {from: inst, to: mapa}
+
+legend:
+  - {swatch: accent, label: lo que aparece como capa}
+
+footnote: "· DBZH 450 km tiene una sola elevación · una capa gris con «Sin datos» significa que ese radar no publicó nada recientemente"

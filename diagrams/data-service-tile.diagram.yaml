@@ -1,0 +1,29 @@
+# Capítulo 10. Pregunta: ¿cómo se resuelve una petición de tesela?
+# Redis primero, el bucket como respaldo, recalentado en segundo plano.
+title: Una tesela, del navegador al bucket
+subtitle: Redis responde primero; el almacén es el respaldo
+size: [880, 500]
+
+nodes:
+  nav:   {at: [40, 76], size: [130, 44], label: navegador, badge: browser}
+  api:   {at: [260, 76], size: [150, 44], label: data-service · web, accent: true, badge: python}
+  redis: {at: [500, 76], size: [130, 44], label: Redis, badge: redis}
+  s3:    {at: [720, 76], size: [130, 44], label: tiles-data, badge: database}
+
+guides:
+  - {xs: [105, 335, 565, 785], from: 120, to: 424}
+
+edges:
+  - {from: [111, 156], to: [329, 156], step: 1, label: "GET /products/…/{z}/{x}/{y}.webp", label_at: [139, 146]}
+  - {from: [341, 196], to: [559, 196], step: 2, label: busca la clave de la tesela, label_at: [369, 186]}
+  - {from: [559, 236], to: [341, 236], step: 3, dashed: true, label: acierto → bytes, label_at: [369, 226]}
+  - {from: [341, 276], to: [779, 276], step: 4, label: falta → descarga del bucket, label_at: [369, 266]}
+  - {from: [779, 316], to: [341, 316], step: 5, dashed: true, label: bytes de la tesela, label_at: [369, 306]}
+  - {from: [341, 356], to: [559, 356], step: 6, dashed: true, label: recalienta la caché en segundo plano, label_at: [369, 346]}
+  - {from: [329, 396], to: [111, 396], step: 7, dashed: true, label: "200 image/webp · 404 · o tesela transparente", label_at: [139, 386]}
+
+legend:
+  - {swatch: solid-arrow, label: llamada}
+  - {swatch: dashed-arrow, label: respuesta o tarea en segundo plano}
+
+footnote: "· el paso 4 sólo ocurre tras una falta en Redis · una falta total responde 404 (satélite, ECMWF) o 200 transparente (radar, WRF, GFS, mapas base)"

@@ -1,0 +1,28 @@
+# Capítulo 11.1. Pregunta: ¿en qué estado puede quedar una unidad de trabajo y qué la saca de ahí?
+title: Ciclo de vida de una unidad de trabajo
+subtitle: La fila en processed_images y el destino del mensaje
+size: [880, 420]
+
+nodes:
+  nuevo:    {at: [24, 148], size: [152, 52], label: Sin registrar, sub: imagen nueva en la fuente}
+  inprog:   {at: [232, 148], size: [152, 52], label: IN_PROGRESS, sub: publicada por el producer}
+  proc:     {at: [440, 148], size: [152, 52], label: PROCESSING, sub: tomada por un worker, accent: true}
+  done:     {at: [648, 148], size: [152, 52], label: Fila borrada, sub: éxito · ack}
+  retry:    {at: [440, 292], size: [152, 52], label: Reintento, sub: retry_count + 1}
+  dlq:      {at: [648, 292], size: [152, 52], label: Cola de descarte, sub: 4 intentos agotados}
+  released: {at: [24, 292], size: [152, 52], label: Fila liberada, sub: fuente no disponible · ack}
+
+edges:
+  - {from: nuevo, to: inprog, label: el producer publica, label_at: [204, 138]}
+  - {from: inprog, to: proc, label: un worker la toma, label_at: [412, 138]}
+  - {from: proc, to: done, label: exit 0, label_at: [620, 138]}
+  - {from: proc, to: retry, label: otro error, label_at: [524, 252], label_anchor: start}
+  - {from: proc, to: dlq, label: sin reintentos, label_at: [636, 236], label_anchor: start}
+  - {from: proc, to: released, dashed: true, label: pronóstico aún no publicado, label_at: [312, 268], label_anchor: end}
+  - {from: released, to: nuevo, dashed: true, label: la redescubre el producer, label_at: [108, 260], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el único estado con TTL activo}
+  - {swatch: dashed-arrow, label: sin reintento; vuelve a empezar}
+
+footnote: "· una fila PROCESSING más vieja que JOB_TTL_MINUTES se borra en cada tick · una IN_PROGRESS vencida se recupera sólo con las tres colas vacías"

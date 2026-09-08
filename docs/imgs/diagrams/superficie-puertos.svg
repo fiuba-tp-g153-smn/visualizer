@@ -1,0 +1,46 @@
+<svg viewBox="0 0 880 500" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="500" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Puertos publicados, por quién debería alcanzarlos</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Tal como están las plantillas, todos escuchan en todas las interfaces</text>
+<rect x="24" y="64" width="832" height="110" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="40" y="86" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">PÚBLICO · LOS NECESITA EL NAVEGADOR</text>
+<rect x="24" y="198" width="832" height="100" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="40" y="220" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">SÓLO DESDE LA MÁQUINA DEL SERVICIO DE DATOS</text>
+<rect x="24" y="322" width="832" height="110" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="40" y="344" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">NUNCA FUERA DEL HOST</text>
+<rect x="40" y="100" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="132.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">6010</text>
+<text x="132.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">visualizador · estáticos</text>
+<rect x="248" y="100" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="340.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">6006</text>
+<text x="340.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">datos · estaciones con clave</text>
+<rect x="456" y="100" width="184" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="548.0" y="122.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">6007</text>
+<text x="548.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">avisos · sin credencial</text>
+<rect x="664" y="100" width="176" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="752.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">6020</text>
+<text x="752.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">métricas · escritura con clave</text>
+<rect x="40" y="234" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="132.0" y="256.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">9000</text>
+<text x="132.0" y="272.5" font-size="11" fill="#6b7280" text-anchor="middle">API S3 · identidades por bucket</text>
+<circle cx="44" cy="238" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(36.0 230.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></g>
+<rect x="40" y="358" width="280" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="180.0" y="380.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">8888 · 9333 · 23646</text>
+<text x="180.0" y="396.5" font-size="11" fill="#6b7280" text-anchor="middle">filer y coordinador sin auth · panel raíz</text>
+<circle cx="44" cy="362" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(36.0 354.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></g>
+<rect x="344" y="358" width="232" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="460.0" y="380.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">5672 · 15672</text>
+<text x="460.0" y="396.5" font-size="11" fill="#6b7280" text-anchor="middle">broker y su panel</text>
+<circle cx="348" cy="362" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(340.0 354.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
+<rect x="600" y="358" width="240" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="720.0" y="380.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">3306 · 6379</text>
+<text x="720.0" y="396.5" font-size="11" fill="#6b7280" text-anchor="middle">MySQL · Redis en la variante repartida</text>
+<circle cx="604" cy="362" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(596.0 354.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></g>
+<rect x="24.0" y="443" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="454" font-size="11" fill="#374151">alcanzable sin ninguna credencial, y escribe</text>
+<text x="24" y="480" font-size="11" fill="#6b7280">· 8888 saltea las identidades S3 del 9000: quien llegue lee, escribe y borra todo · el filtrado va en el borde o en DOCKER-USER, no en ufw</text>
+</svg>

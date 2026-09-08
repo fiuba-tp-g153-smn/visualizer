@@ -1,0 +1,30 @@
+# Capítulo 12. Pregunta: ¿por dónde pasa cada contrato entre servicios?
+title: Tres contratos, y nada más
+subtitle: Un bucket, tres APIs HTTP y la configuración de cada servicio
+size: [880, 470]
+
+groups:
+  - {kind: band, at: [24, 330], size: [832, 52]}
+
+nodes:
+  tp:      {at: [24, 96], size: [160, 52], label: tiles-processor, badge: python}
+  bucket:  {at: [248, 96], size: [176, 52], label: tiles-data, sub: prefijos acordados a mano, badge: database}
+  ds:      {at: [488, 96], size: [160, 52], label: data-service, badge: python}
+  al:      {at: [696, 96], size: [160, 52], label: alerts-service, badge: python}
+  metrics: {at: [24, 216], size: [160, 52], label: metrics-api, sub: dentro de tiles-processor, badge: python}
+  nav:     {at: [488, 236], size: [160, 52], label: navegador, sub: el único cliente HTTP, accent: true, badge: browser}
+
+edges:
+  - {from: tp, to: bucket, label: escribe, label_at: [216, 114]}
+  - {from: bucket, to: ds, label: lee, label_at: [456, 114]}
+  - {from: ds, to: nav, label: "/products · /basemap", label_at: [580, 200], label_anchor: start}
+  - {from: al, to: nav, label: "/intersect · /alerts", label_at: [700, 190], label_anchor: start}
+  - {from: metrics, to: nav, label: "/api/*", label_at: [330, 236]}
+
+texts:
+  - {at: [40, 361], text: "Configuración: cada servicio lee su .env y su settings.json · el visualizador fija sus direcciones al compilar", color: "#374151"}
+
+legend:
+  - {swatch: accent, label: llama a las tres APIs por su cuenta}
+
+footnote: "· ningún backend llama a otro por HTTP · RabbitMQ y Redis no cruzan servicios"

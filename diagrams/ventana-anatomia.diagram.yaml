@@ -1,0 +1,27 @@
+# Capítulo 2. Pregunta: ¿qué es cada parte de la ventana y desde dónde se controla?
+title: La ventana
+subtitle: Una columna de íconos, un panel y el mapa
+size: [880, 500]
+
+groups:
+  - {kind: boundary, at: [24, 64], size: [832, 396], label: LA VENTANA DEL NAVEGADOR}
+  - {kind: band, at: [40, 100], size: [176, 340], label: BARRA LATERAL}
+  - {kind: band, at: [240, 100], size: [200, 340], label: EL PANEL ABIERTO}
+  - {kind: band, at: [464, 100], size: [376, 340], label: EL MAPA}
+
+nodes:
+  paneles:  {at: [56, 136], size: [144, 52], label: 5 paneles, sub: uno abierto por vez, accent: true}
+  accesos:  {at: [56, 220], size: [144, 52], label: Estado · Docs, sub: dos accesos aparte}
+  zoom:     {at: [56, 304], size: [144, 52], label: Zoom, sub: "+ · nivel · −"}
+  panel:    {at: [256, 136], size: [168, 52], label: El panel elegido, sub: uno de los cinco}
+  mapa:     {at: [480, 136], size: [176, 52], label: El área de trabajo, sub: arrastrar y rueda}
+  indic:    {at: [480, 304], size: [200, 52], label: Indicadores, sub: escala · coordenadas · atribución}
+  lateral:  {at: [664, 136], size: [160, 52], label: Columna derecha, sub: escalas y valores}
+
+edges:
+  - {from: paneles, to: panel, label: abre, label_at: [228, 154]}
+
+legend:
+  - {swatch: accent, label: desde donde se controla todo}
+
+footnote: "· los indicadores y el zoom se apagan desde Herramientas del mapa ▸ General · la columna derecha aparece sólo con esas herramientas activas"

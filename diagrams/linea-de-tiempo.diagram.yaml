@@ -1,0 +1,27 @@
+# Capítulo 5. Pregunta: ¿qué recorre la animación, y qué significa «ahora» en cada tipo de capa?
+title: La línea de tiempo
+subtitle: Observación anima hacia atrás; pronóstico anima hacia adelante
+size: [880, 440]
+
+groups:
+  - {kind: band, at: [24, 72], size: [832, 120], label: "CAPA DE OBSERVACIÓN · SATÉLITE, RADAR, ESTACIONES"}
+  - {kind: band, at: [24, 224], size: [832, 120], label: CAPA DE PRONÓSTICO · MODELOS}
+
+nodes:
+  o1:   {at: [40, 112], size: [168, 52], label: Imagen −N, sub: la más vieja de la ventana}
+  o2:   {at: [304, 112], size: [168, 52], label: Imágenes intermedias, sub: "N = 6, 12 o 24"}
+  o3:   {at: [672, 112], size: [168, 52], label: Última imagen, sub: «ahora» · botón de reciente, accent: true}
+  f1:   {at: [40, 264], size: [168, 52], label: Inicio de corrida, sub: el primer paso, accent: true}
+  f2:   {at: [304, 264], size: [168, 52], label: Pasos siguientes, sub: N = 8 a 72}
+  f3:   {at: [672, 264], size: [168, 52], label: Paso +N, sub: el último de la ventana}
+
+edges:
+  - {from: o1, to: o2, label: reproducción, label_at: [256, 104]}
+  - {from: o2, to: o3}
+  - {from: f1, to: f2, label: reproducción, label_at: [256, 256]}
+  - {from: f2, to: f3}
+
+legend:
+  - {swatch: accent, label: donde empieza el cursor al activar la capa}
+
+footnote: "· Sincronización alinea varias capas al mismo instante con ±5 minutos de tolerancia; si no puede, no reproduce"

@@ -1,0 +1,53 @@
+<svg viewBox="0 0 880 460" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="460" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Los términos de la interfaz</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Cómo se relacionan entre sí</text>
+<rect x="24" y="100" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="108.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Catálogo</text>
+<text x="108.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">Disponibles</text>
+<rect x="248" y="100" width="168" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="332.0" y="122.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Capa</text>
+<text x="332.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">lo que se dibuja</text>
+<rect x="472" y="100" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="556.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Capa activa</text>
+<text x="556.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">en Activas</text>
+<rect x="696" y="100" width="160" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="776.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Bloque</text>
+<text x="776.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">puntos · referencia · datos</text>
+<rect x="248" y="260" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="332.0" y="282.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Período</text>
+<text x="332.0" y="298.5" font-size="11" fill="#6b7280" text-anchor="middle">la animación de una capa</text>
+<rect x="472" y="260" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="556.0" y="282.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Sincronización</text>
+<text x="556.0" y="298.5" font-size="11" fill="#6b7280" text-anchor="middle">varias capas, un instante</text>
+<rect x="24" y="260" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="108.0" y="282.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Mapa base</text>
+<text x="108.0" y="298.5" font-size="11" fill="#6b7280" text-anchor="middle">el fondo, no es una capa</text>
+<rect x="696" y="260" width="160" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="776.0" y="282.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">ACP</text>
+<text x="776.0" y="298.5" font-size="11" fill="#6b7280" text-anchor="middle">aviso a corto plazo</text>
+<line x1="198.0" y1="126.0" x2="233.0" y2="126.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="242.0,126.0 233.0,129.6 233.0,122.4" fill="#1f2937"/>
+<text x="220.0" y="92.0" font-size="11" fill="#374151" text-anchor="middle">lista</text>
+<line x1="422.0" y1="126.0" x2="457.0" y2="126.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="466.0,126.0 457.0,129.6 457.0,122.4" fill="#1f2937"/>
+<text x="444.0" y="92.0" font-size="11" fill="#374151" text-anchor="middle">al encenderla</text>
+<line x1="646.0" y1="126.0" x2="681.0" y2="126.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="690.0,126.0 681.0,129.6 681.0,122.4" fill="#1f2937"/>
+<text x="668.0" y="92.0" font-size="11" fill="#374151" text-anchor="middle">se ordena en</text>
+<line x1="511.2" y1="158.0" x2="384.1" y2="248.8" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="376.8,254.0 382.0,245.8 386.2,251.7" fill="#1f2937"/>
+<text x="360.0" y="220.0" font-size="11" fill="#374151" text-anchor="end">tiene un</text>
+<line x1="422.0" y1="286.0" x2="457.0" y2="286.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="466.0,286.0 457.0,289.6 457.0,282.4" fill="#1f2937"/>
+<text x="444.0" y="252.0" font-size="11" fill="#374151" text-anchor="middle">se alinea en</text>
+<line x1="600.0" y1="158.0" x2="724.7" y2="248.7" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="5 4"/>
+<polygon points="732.0,254.0 722.6,251.6 726.8,245.8" fill="#1f2937"/>
+<text x="660.0" y="220.0" font-size="11" fill="#374151" text-anchor="start">se dibuja sobre ellas</text>
+<rect x="24.0" y="403" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="414" font-size="11" fill="#374151">el término del que dependen todos</text>
+<line x1="270.1" y1="410" x2="286.1" y2="410" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="4 3"/>
+<polygon points="292.1,410 285.1,406.8 285.1,413.2" fill="#1f2937"/>
+<text x="300.1" y="414" font-size="11" fill="#374151">relación de uso, no de estructura</text>
+<text x="24" y="440" font-size="11" fill="#6b7280">· corrida, elevación, variable y estación son propiedades de una capa; se explican en el capítulo 4</text>
+</svg>

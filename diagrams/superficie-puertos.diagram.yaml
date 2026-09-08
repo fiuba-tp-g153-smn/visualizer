@@ -1,0 +1,24 @@
+# Capítulo 19.1. Pregunta: ¿qué escucha en cada puerto publicado, y quién debería llegar?
+title: Puertos publicados, por quién debería alcanzarlos
+subtitle: Tal como están las plantillas, todos escuchan en todas las interfaces
+size: [880, 500]
+
+groups:
+  - {kind: band, at: [24, 64], size: [832, 110], label: PÚBLICO · LOS NECESITA EL NAVEGADOR}
+  - {kind: band, at: [24, 198], size: [832, 100], label: SÓLO DESDE LA MÁQUINA DEL SERVICIO DE DATOS}
+  - {kind: band, at: [24, 322], size: [832, 110], label: NUNCA FUERA DEL HOST}
+
+nodes:
+  p6010:  {at: [40, 100], size: [184, 52], label: "6010", sub: visualizador · estáticos}
+  p6006:  {at: [248, 100], size: [184, 52], label: "6006", sub: datos · estaciones con clave}
+  p6007:  {at: [456, 100], size: [184, 52], label: "6007", sub: avisos · sin credencial, accent: true}
+  p6020:  {at: [664, 100], size: [176, 52], label: "6020", sub: métricas · escritura con clave}
+  p9000:  {at: [40, 234], size: [184, 52], label: "9000", sub: API S3 · identidades por bucket, badge: database}
+  filer:  {at: [40, 358], size: [280, 52], label: "8888 · 9333 · 23646", sub: filer y coordinador sin auth · panel raíz, accent: true, badge: lock}
+  broker: {at: [344, 358], size: [232, 52], label: "5672 · 15672", sub: broker y su panel, badge: queue}
+  db:     {at: [600, 358], size: [240, 52], label: "3306 · 6379", sub: MySQL · Redis en la variante repartida, badge: database}
+
+legend:
+  - {swatch: accent, label: "alcanzable sin ninguna credencial, y escribe"}
+
+footnote: "· 8888 saltea las identidades S3 del 9000: quien llegue lee, escribe y borra todo · el filtrado va en el borde o en DOCKER-USER, no en ufw"

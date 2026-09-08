@@ -1,0 +1,28 @@
+# Capítulo 6. Pregunta: ¿qué pasos da el pronosticador para emitir un aviso, y dónde termina el sistema?
+title: Emitir un aviso a corto plazo
+subtitle: Los pasos del pronosticador; sin servicios ni rutas
+size: [880, 420]
+
+nodes:
+  dibujar:  {at: [24, 100], size: [176, 52], label: 1 · Dibujar el área, sub: clic por vértice}
+  ajustar:  {at: [248, 100], size: [176, 52], label: 2 · Ajustar, sub: detalle · recorte}
+  verificar: {at: [472, 100], size: [176, 52], label: 3 · Verificar, sub: qué departamentos toca}
+  fenomeno: {at: [696, 100], size: [160, 52], label: 4 · Elegir el fenómeno, sub: y confirmar, accent: true}
+  espera:   {at: [696, 236], size: [160, 52], label: 5 · Se genera, sub: "sola, en segundo plano"}
+  pendiente: {at: [472, 236], size: [176, 52], label: 6 · Pendiente, sub: con sus dos imágenes}
+  smn:      {at: [248, 236], size: [176, 52], label: Circuito del SMN, sub: lo completa y difunde, external: true}
+
+edges:
+  - {from: dibujar, to: ajustar}
+  - {from: ajustar, to: verificar}
+  - {from: verificar, to: fenomeno}
+  - {from: fenomeno, to: espera}
+  - {from: espera, to: pendiente}
+  - {from: pendiente, to: smn, dashed: true, label: fuera de la aplicación, label_at: [448, 228]}
+  - {from: verificar, to: ajustar, dashed: true, label: "si abarca de más o de menos", label_at: [448, 176]}
+
+legend:
+  - {swatch: accent, label: el paso que no se puede deshacer}
+  - {swatch: external, label: fuera de la aplicación}
+
+footnote: "· generar un aviso acá no equivale a publicarlo · recargar la página no lo duplica"

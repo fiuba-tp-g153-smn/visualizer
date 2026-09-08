@@ -1,0 +1,27 @@
+# Portada del sitio. Pregunta: ¿qué hace MapaSMN de punta a punta?
+# Altitud máxima: un solo recorrido, sin nombres de servicios.
+title: MapaSMN — de los datos crudos al aviso
+subtitle: Qué hace el sistema, de punta a punta
+size: [880, 336]
+
+nodes:
+  fuentes: {at: [24, 148], size: [136, 52], label: Fuentes, sub: "satélite, radar, modelos", external: true, badge: cloud}
+  proceso: {at: [198, 148], size: [136, 52], label: Procesamiento, sub: teselas cada 5 min, badge: python}
+  mapa:    {at: [372, 148], size: [136, 52], label: Mapa interactivo, sub: capas · animación, accent: true, badge: browser}
+  aviso:   {at: [546, 148], size: [136, 52], label: Aviso a corto plazo, sub: polígono + fenómeno}
+  smn:     {at: [720, 148], size: [136, 52], label: Circuito del SMN, sub: completa y difunde, external: true, badge: database}
+  user:    {kind: actor, at: [440, 40], label: Pronosticador}
+
+edges:
+  - {from: fuentes, to: proceso, label: datos crudos, label_at: [179, 134]}
+  - {from: proceso, to: mapa, label: capas listas, label_at: [353, 134]}
+  - {from: mapa, to: aviso, label: dibuja y emite, label_at: [527, 134]}
+  - {from: aviso, to: smn, label: queda pendiente, dashed: true, label_at: [701, 134]}
+  - {from: user, to: mapa, label: analiza, label_at: [452, 126], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: lo que usa el pronosticador}
+  - {swatch: external, label: fuera del sistema}
+  - {swatch: dashed-arrow, label: sale del alcance del sistema}
+
+footnote: "· el sistema deja el aviso listo con sus imágenes; no lo difunde"

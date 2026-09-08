@@ -1,0 +1,45 @@
+<svg viewBox="0 0 880 440" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="440" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Modelos — corrida, pasos y capas</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Una corrida es un pronóstico completo; la animación recorre sus pasos hacia adelante</text>
+<rect x="24" y="72" width="832" height="120" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="40" y="94" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">UNA CORRIDA · SE ELIGE EN «CORRIDAS»</text>
+<rect x="40" y="112" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="124.0" y="134.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Hora de inicio</text>
+<text x="124.0" y="150.5" font-size="11" fill="#6b7280" text-anchor="middle">p. ej. 12 UTC</text>
+<rect x="248" y="112" width="120" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="308.0" y="142.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Paso +1 h</text>
+<rect x="408" y="112" width="120" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="468.0" y="142.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Paso +2 h</text>
+<rect x="568" y="112" width="120" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="628.0" y="142.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Paso +N h</text>
+<rect x="728" y="112" width="112" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="784.0" y="134.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Fin</text>
+<text x="784.0" y="150.5" font-size="11" fill="#6b7280" text-anchor="middle">48 a 72 h</text>
+<rect x="136" y="300" width="232" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="252.0" y="322.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Capa de imagen</text>
+<text x="252.0" y="338.5" font-size="11" fill="#6b7280" text-anchor="middle">precipitación, reflectividad, viento</text>
+<rect x="512" y="300" width="232" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="628.0" y="322.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Superposiciones</text>
+<text x="628.0" y="338.5" font-size="11" fill="#6b7280" text-anchor="middle">isobaras · contornos · barbas</text>
+<line x1="214.0" y1="138.0" x2="233.0" y2="138.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="242.0,138.0 233.0,141.6 233.0,134.4" fill="#1f2937"/>
+<line x1="374.0" y1="138.0" x2="393.0" y2="138.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="402.0,138.0 393.0,141.6 393.0,134.4" fill="#1f2937"/>
+<line x1="534.0" y1="138.0" x2="553.0" y2="138.0" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="5 4"/>
+<polygon points="562.0,138.0 553.0,141.6 553.0,134.4" fill="#1f2937"/>
+<line x1="694.0" y1="138.0" x2="713.0" y2="138.0" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="5 4"/>
+<polygon points="722.0,138.0 713.0,141.6 713.0,134.4" fill="#1f2937"/>
+<line x1="564.0" y1="170.0" x2="324.0" y2="290.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="316.0,294.0 322.4,286.8 325.7,293.2" fill="#1f2937"/>
+<text x="280.0" y="250.0" font-size="11" fill="#374151" text-anchor="end">en cada paso</text>
+<line x1="628.0" y1="170.0" x2="628.0" y2="285.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="628.0,294.0 624.4,285.0 631.6,285.0" fill="#1f2937"/>
+<text x="640.0" y="250.0" font-size="11" fill="#374151" text-anchor="start">en cada paso</text>
+<rect x="24.0" y="383" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="394" font-size="11" fill="#374151">el cuadro que muestra el mapa</text>
+<line x1="247.3" y1="390" x2="263.3" y2="390" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="4 3"/>
+<polygon points="269.3,390 262.3,386.8 262.3,393.2" fill="#1f2937"/>
+<text x="277.3" y="394" font-size="11" fill="#374151">pasos omitidos</text>
+<text x="24" y="420" font-size="11" fill="#6b7280">· la hora de la fila es la hora de validez del paso, no la de la corrida · ECMWF tiene una sola capa; la presión es una superposición de esa capa</text>
+</svg>

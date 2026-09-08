@@ -1,0 +1,40 @@
+<svg viewBox="0 0 880 440" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="440" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">La línea de tiempo</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Observación anima hacia atrás; pronóstico anima hacia adelante</text>
+<rect x="24" y="72" width="832" height="120" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="40" y="94" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">CAPA DE OBSERVACIÓN · SATÉLITE, RADAR, ESTACIONES</text>
+<rect x="24" y="224" width="832" height="120" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="40" y="246" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">CAPA DE PRONÓSTICO · MODELOS</text>
+<rect x="40" y="112" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="124.0" y="134.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Imagen −N</text>
+<text x="124.0" y="150.5" font-size="11" fill="#6b7280" text-anchor="middle">la más vieja de la ventana</text>
+<rect x="304" y="112" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="388.0" y="134.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Imágenes intermedias</text>
+<text x="388.0" y="150.5" font-size="11" fill="#6b7280" text-anchor="middle">N = 6, 12 o 24</text>
+<rect x="672" y="112" width="168" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="756.0" y="134.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Última imagen</text>
+<text x="756.0" y="150.5" font-size="11" fill="#6b7280" text-anchor="middle">«ahora» · botón de reciente</text>
+<rect x="40" y="264" width="168" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="124.0" y="286.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Inicio de corrida</text>
+<text x="124.0" y="302.5" font-size="11" fill="#6b7280" text-anchor="middle">el primer paso</text>
+<rect x="304" y="264" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="388.0" y="286.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Pasos siguientes</text>
+<text x="388.0" y="302.5" font-size="11" fill="#6b7280" text-anchor="middle">N = 8 a 72</text>
+<rect x="672" y="264" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="756.0" y="286.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Paso +N</text>
+<text x="756.0" y="302.5" font-size="11" fill="#6b7280" text-anchor="middle">el último de la ventana</text>
+<line x1="214.0" y1="138.0" x2="289.0" y2="138.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="298.0,138.0 289.0,141.6 289.0,134.4" fill="#1f2937"/>
+<text x="256.0" y="104.0" font-size="11" fill="#374151" text-anchor="middle">reproducción</text>
+<line x1="478.0" y1="138.0" x2="657.0" y2="138.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="666.0,138.0 657.0,141.6 657.0,134.4" fill="#1f2937"/>
+<line x1="214.0" y1="290.0" x2="289.0" y2="290.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="298.0,290.0 289.0,293.6 289.0,286.4" fill="#1f2937"/>
+<text x="256.0" y="256.0" font-size="11" fill="#374151" text-anchor="middle">reproducción</text>
+<line x1="478.0" y1="290.0" x2="657.0" y2="290.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="666.0,290.0 657.0,293.6 657.0,286.4" fill="#1f2937"/>
+<rect x="24.0" y="383" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="394" font-size="11" fill="#374151">donde empieza el cursor al activar la capa</text>
+<text x="24" y="420" font-size="11" fill="#6b7280">· Sincronización alinea varias capas al mismo instante con ±5 minutos de tolerancia; si no puede, no reproduce</text>
+</svg>

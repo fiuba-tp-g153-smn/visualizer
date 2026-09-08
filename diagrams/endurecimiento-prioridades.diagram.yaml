@@ -1,0 +1,29 @@
+# Capítulo 19.3. Pregunta: ¿qué hay que cambiar antes de exponer el sistema, y en qué orden?
+title: Antes de exponerlo
+subtitle: Tres cambios bloquean; el resto se puede hacer después
+size: [880, 420]
+
+groups:
+  - {kind: band, at: [24, 250], size: [832, 110]}
+
+nodes:
+  b1: {at: [24, 108], size: [200, 52], label: 1 · quién crea un aviso, sub: "VPN, proxy con auth o código", accent: true}
+  b2: {at: [252, 108], size: [200, 52], label: 2 · cerrar puertos internos, sub: borde o DOCKER-USER, accent: true}
+  b3: {at: [480, 108], size: [200, 52], label: 3 · sin permisos de esquema, sub: en el usuario de MySQL del SMN, accent: true}
+  go: {at: [708, 108], size: [148, 52], label: exponer, sub: recién ahora, external: true}
+
+edges:
+  - {from: b1, to: b2}
+  - {from: b2, to: b3}
+  - {from: b3, to: go, label: ""}
+
+texts:
+  - {at: [40, 280], text: "Importantes, después:", weight: 600, color: "#374151"}
+  - {at: [40, 300], text: "documentación interactiva apagada · cabeceras de seguridad · límites de memoria y CPU · identidades del almacén acotadas · intersección con tope", color: "#374151"}
+  - {at: [40, 328], text: "Higiene: contenedores sin root · credenciales del broker por rol · CI reactivada · imágenes por resumen · retención de GIF · respaldos", color: "#374151"}
+
+legend:
+  - {swatch: accent, label: bloqueante}
+  - {swatch: external, label: la decisión que espera a los tres}
+
+footnote: "· casi todo es configuración de despliegue, no código · la excepción es acotar las rutas de intersección"

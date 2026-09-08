@@ -1,0 +1,25 @@
+# Capítulo 4. Pregunta: ¿qué familias de producto hay y cuántas capas trae cada una?
+title: Cuatro familias, 135 capas de datos
+subtitle: Qué contiene cada grupo del catálogo
+size: [880, 380]
+
+nodes:
+  sat:  {at: [24, 100], size: [196, 52], label: Satélite GOES-19, sub: 3 canales ABI + 3 productos GLM}
+  rad:  {at: [244, 100], size: [196, 52], label: Radar SINARAME, sub: 18 radares × 6 variables}
+  mod:  {at: [464, 100], size: [196, 52], label: Modelos numéricos, sub: ECMWF 1 · WRF 10 · GFS 3}
+  est:  {at: [684, 100], size: [172, 52], label: Estaciones, sub: "7 variables, una por vez"}
+  t1:   {at: [24, 220], size: [196, 52], label: 4.1, sub: imágenes y descargas eléctricas, external: true}
+  t2:   {at: [244, 220], size: [196, 52], label: 4.2, sub: variables y elevaciones, external: true}
+  t3:   {at: [464, 220], size: [196, 52], label: 4.3, sub: corridas y pasos, external: true}
+  t4:   {at: [684, 220], size: [172, 52], label: 4.4, sub: "clave, ficha e historial", external: true}
+
+edges:
+  - {from: sat, to: t1}
+  - {from: rad, to: t2}
+  - {from: mod, to: t3}
+  - {from: est, to: t4}
+
+legend:
+  - {swatch: external, label: el sub-capítulo que lo describe}
+
+footnote: "· las 18 capas de referencia del IGN están en el capítulo 3: no son datos meteorológicos"

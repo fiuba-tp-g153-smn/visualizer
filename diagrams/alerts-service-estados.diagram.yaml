@@ -1,0 +1,25 @@
+# Capítulo 11.3. Pregunta: ¿en qué puede terminar un trabajo de generación?
+title: Estados de un trabajo de generación
+subtitle: Lo que devuelve GET /alerts/jobs/{job_id}
+size: [880, 400]
+
+nodes:
+  post:      {at: [212, 56], size: [152, 44], label: "POST /alerts"}
+  rechazado: {at: [24, 176], size: [152, 52], label: 503 · rechazado, sub: cola llena · sin job_id, external: true}
+  queued:    {at: [212, 176], size: [152, 52], label: queued, sub: en la cola acotada}
+  proc:      {at: [400, 176], size: [152, 52], label: processing, sub: un worker lo tomó, accent: true}
+  done:      {at: [588, 176], size: [152, 52], label: done, sub: alert_id en MySQL}
+  failed:    {at: [400, 296], size: [152, 52], label: failed, sub: tres códigos de error}
+
+edges:
+  - {from: post, to: queued, label: 202 · encolado, label_at: [300, 148], label_anchor: start}
+  - {from: post, to: rechazado, label: 503 · cola llena, label_at: [124, 128], label_anchor: end}
+  - {from: queued, to: proc, label: un worker lo toma, label_at: [382, 166]}
+  - {from: proc, to: done, label: dos GIF + fila, label_at: [570, 166]}
+  - {from: proc, to: failed, label: error o 150 s, label_at: [484, 268], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el único estado con tiempo límite}
+  - {swatch: external, label: no se crea ningún trabajo}
+
+footnote: "· error_code ∈ timeout · area_too_large · generation_failed · un render lento vence primero (120 s) y se reporta como generation_failed"

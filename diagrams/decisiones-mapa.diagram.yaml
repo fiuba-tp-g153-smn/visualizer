@@ -1,0 +1,28 @@
+# Capítulo 9. Pregunta: ¿qué decisión obliga a cuál?
+# Dos restricciones de origen arriba; lo que cada una fuerza, debajo.
+title: Decisiones de arquitectura — qué fuerza a qué
+subtitle: Las flechas apuntan a lo que cada decisión obliga
+size: [880, 470]
+
+groups:
+  - {kind: band, at: [24, 336], size: [832, 60]}
+
+nodes:
+  repos:   {at: [140, 76], size: [200, 52], label: Cuatro repositorios, sub: cuatro stacks independientes, accent: true}
+  ram:     {at: [540, 76], size: [200, 52], label: Datos geoespaciales pesados, sub: gigabytes en RAM por archivo, accent: true}
+  s3:      {at: [24, 200], size: [176, 52], label: Almacén S3 en el medio, sub: única costura de datos}
+  http:    {at: [242, 200], size: [176, 52], label: HTTP desde el navegador, sub: sin proxy en el visualizador}
+  sub:     {at: [460, 200], size: [176, 52], label: Un subproceso por unidad, sub: la RAM vuelve al sistema}
+  colas:   {at: [678, 200], size: [176, 52], label: Colas pesada y livianas, sub: dos tipos de worker}
+
+edges:
+  - {from: repos, to: s3, label: nada comparte código ni base, label_at: [168, 168], label_anchor: end}
+  - {from: repos, to: http, label: cada API es pública, label_at: [312, 168], label_anchor: start}
+  - {from: ram, to: sub, label: glibc no devuelve arenas, label_at: [580, 168], label_anchor: end}
+  - {from: ram, to: colas, label: pocos trabajos caros, label_at: [704, 168], label_anchor: start}
+
+texts:
+  - {at: [40, 360], text: "Lo que se paga:", weight: 600, color: "#374151"}
+  - {at: [40, 380], text: "el almacén es el punto de falla compartido · el navegador necesita tres puertos abiertos · un VPS con mucha RAM en lugar de máquinas efímeras", color: "#374151"}
+
+footnote: "· sin Kubernetes, reintentos en la aplicación y configuración horneada del visualizador: derivan de las mismas dos raíces"

@@ -1,0 +1,27 @@
+# Capítulo 17. Pregunta: ¿qué pasa entre un push a main y los contenedores nuevos?
+title: Del push a main a los contenedores
+subtitle: Idéntico en los cuatro repositorios; sólo cambia lo que verifica cada uno
+size: [880, 460]
+
+nodes:
+  dev:     {kind: actor, at: [72, 100], label: push a main}
+  ci:      {at: [160, 112], size: [176, 52], label: test.yml · ci.yml, sub: gitleaks + pruebas}
+  deploy:  {at: [392, 112], size: [176, 52], label: deploy.yml, sub: "needs: test", accent: true}
+  coolify: {at: [624, 112], size: [176, 52], label: Coolify, sub: webhook con bearer, external: true, badge: cloud}
+  vps:     {at: [624, 248], size: [176, 52], label: el VPS, sub: docker compose up --build, badge: cloud}
+  trivy:   {at: [392, 248], size: [176, 52], label: image-scan · Trivy, sub: en paralelo · no bloquea}
+
+edges:
+  - {from: dev, to: ci, label: dispara, label_at: [120, 100], label_anchor: start}
+  - {from: ci, to: deploy, label: si gitleaks pasa, label_at: [364, 104]}
+  - {from: deploy, to: coolify, label: "POST · 30 s", label_at: [596, 104]}
+  - {from: coolify, to: vps, label: "construye y levanta", label_at: [724, 214], label_anchor: start}
+  - {from: coolify, to: deploy, dashed: true, label: "sondeo ≤ 600 s + salud 60 s", label_at: [596, 190]}
+  - {from: deploy, to: trivy, dashed: true, label: "no está en needs", label_at: [492, 214], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el único trabajo que despliega}
+  - {swatch: dashed-arrow, label: no condiciona el resultado}
+  - {swatch: external, label: fuera de los repositorios}
+
+footnote: "· en tiles-processor lint, tipos y pruebas llevan if: false y cuentan como aprobados · en visualizer las pruebas no bloquean"

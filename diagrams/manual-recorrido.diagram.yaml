@@ -1,0 +1,23 @@
+# Portada del manual. Pregunta: ¿qué se hace con la aplicación, y en qué orden lo cuenta este manual?
+title: Lo que hacés con MapaSMN
+subtitle: Los capítulos siguen este recorrido
+size: [880, 320]
+
+nodes:
+  capas:    {at: [24, 140], size: [148, 52], label: Elegir capas, sub: "capítulos 2, 3 y 4"}
+  evol:     {at: [212, 140], size: [148, 52], label: Ver la evolución, sub: capítulo 5}
+  punto:    {at: [400, 140], size: [148, 52], label: Consultar un punto, sub: capítulo 5}
+  aviso:    {at: [588, 140], size: [148, 52], label: Emitir un aviso, sub: capítulo 6, accent: true}
+  estado:   {at: [776, 140], size: [80, 52], label: Estado, sub: cap. 7}
+  user:     {kind: actor, at: [474, 40], label: Pronosticador}
+
+edges:
+  - {from: capas, to: evol, label: animar, label_at: [192, 128]}
+  - {from: evol, to: punto, label: medir, label_at: [380, 128]}
+  - {from: punto, to: aviso, label: decidir, label_at: [568, 128]}
+  - {from: aviso, to: estado, label: seguir, label_at: [762, 128]}
+
+legend:
+  - {swatch: accent, label: el producto operativo}
+
+footnote: "· el glosario (capítulo 8) explica los términos de la interfaz, no la meteorología"

@@ -1,0 +1,27 @@
+# Capítulo 11.2. Pregunta: ¿qué hace cada uno de los dos contenedores de data-service?
+title: data-service — una imagen, dos roles
+subtitle: El sincronizador llena Redis; la API lo lee y responde al navegador
+size: [880, 400]
+
+nodes:
+  smn:       {at: [24, 60], size: [168, 52], label: API del SMN, sub: observaciones, external: true, badge: cloud}
+  s3:        {at: [24, 148], size: [168, 52], label: tiles-data, sub: S3 en el host · :9000, badge: database}
+  providers: {at: [24, 236], size: [168, 52], label: IGN · Esri · Google, sub: mapas base, external: true, badge: globe}
+  sync:      {at: [240, 148], size: [176, 52], label: data-service-sync, sub: APP_ROLE=worker, badge: python}
+  redis:     {at: [464, 148], size: [136, 52], label: Redis, sub: 5 GB · volatile-ttl, badge: redis}
+  api:       {at: [648, 148], size: [176, 52], label: data-service-api, sub: APP_ROLE=web, accent: true, badge: python}
+  nav:       {at: [668, 268], size: [136, 52], label: navegador, external: true, badge: browser}
+
+edges:
+  - {from: smn, to: sync, label: cada 5 min, label_at: [200, 100], label_anchor: start}
+  - {from: s3, to: sync, label: lista lo nuevo, label_at: [216, 138]}
+  - {from: providers, to: sync, label: respaldo cada 7 días, label_at: [200, 250], label_anchor: start}
+  - {from: sync, to: redis, label: escribe teselas e índices, label_at: [440, 138]}
+  - {from: redis, to: api, label: lee, label_at: [624, 138]}
+  - {from: nav, to: api, label: "GET /products · /basemap", label_at: [724, 244], label_anchor: end}
+
+legend:
+  - {swatch: accent, label: el contenedor que atiende HTTP}
+  - {swatch: external, label: fuera del sistema}
+
+footnote: "· ante una falta en Redis la API lee el bucket directamente y recalienta · APP_ROLE=all arranca los dos papeles en un contenedor"

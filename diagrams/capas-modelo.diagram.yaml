@@ -1,0 +1,30 @@
+# Capítulo 3. Pregunta: ¿cómo pasa una capa del catálogo al mapa, y en qué orden se dibuja?
+title: Del catálogo al mapa
+subtitle: Encendés una capa en Disponibles; la ordenás y ajustás en Activas
+size: [880, 520]
+
+groups:
+  - {kind: band, at: [24, 72], size: [400, 380], label: DISPONIBLES · EL CATÁLOGO}
+  - {kind: band, at: [456, 72], size: [400, 380], label: ACTIVAS · LO QUE ESTÁ EN EL MAPA}
+
+nodes:
+  grupo:    {at: [40, 112], size: [368, 52], label: Grupo, sub: Satélite · Radar · Modelos · Estaciones · IGN}
+  sub:      {at: [40, 212], size: [368, 52], label: Subgrupo, sub: 31 en total · un punto de color si hay algo encendido}
+  capa:     {at: [40, 312], size: [368, 52], label: Capa, sub: "una casilla · en estaciones, un botón de opción", accent: true}
+  puntos:   {at: [472, 112], size: [368, 52], label: Capas puntuales, sub: estaciones · arriba de todo}
+  ref:      {at: [472, 212], size: [368, 52], label: Capas de referencia, sub: IGN · en el medio}
+  datos:    {at: [472, 312], size: [368, 52], label: Capas de datos, sub: satélite · radar · modelos · abajo, accent: true}
+
+edges:
+  - {from: grupo, to: sub, label: contiene, label_at: [232, 196], label_anchor: start}
+  - {from: sub, to: capa, label: contiene, label_at: [232, 296], label_anchor: start}
+  - {from: capa, to: datos, label: al marcarla, label_at: [440, 348]}
+
+texts:
+  - {at: [472, 400], text: "Arrastrar reordena dentro de un bloque. Nunca entre bloques.", weight: 600, color: "#374151"}
+  - {at: [472, 420], text: "Cada bloque tiene su botón para apagar todo.", color: "#374151"}
+
+legend:
+  - {swatch: accent, label: "la misma capa, a los dos lados"}
+
+footnote: "· cada capa activa trae opacidad y, según el tipo, elevaciones, corridas, consulta o período"

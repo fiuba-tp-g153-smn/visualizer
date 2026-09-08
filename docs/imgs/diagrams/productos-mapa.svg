@@ -1,0 +1,40 @@
+<svg viewBox="0 0 880 380" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="380" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Cuatro familias, 135 capas de datos</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Qué contiene cada grupo del catálogo</text>
+<rect x="24" y="100" width="196" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="122.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Satélite GOES-19</text>
+<text x="122.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">3 canales ABI + 3 productos GLM</text>
+<rect x="244" y="100" width="196" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="342.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Radar SINARAME</text>
+<text x="342.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">18 radares × 6 variables</text>
+<rect x="464" y="100" width="196" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="562.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Modelos numéricos</text>
+<text x="562.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">ECMWF 1 · WRF 10 · GFS 3</text>
+<rect x="684" y="100" width="172" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="770.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Estaciones</text>
+<text x="770.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">7 variables, una por vez</text>
+<rect x="24" y="220" width="196" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="122.0" y="242.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">4.1</text>
+<text x="122.0" y="258.5" font-size="11" fill="#6b7280" text-anchor="middle">imágenes y descargas eléctricas</text>
+<rect x="244" y="220" width="196" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="342.0" y="242.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">4.2</text>
+<text x="342.0" y="258.5" font-size="11" fill="#6b7280" text-anchor="middle">variables y elevaciones</text>
+<rect x="464" y="220" width="196" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="562.0" y="242.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">4.3</text>
+<text x="562.0" y="258.5" font-size="11" fill="#6b7280" text-anchor="middle">corridas y pasos</text>
+<rect x="684" y="220" width="172" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="770.0" y="242.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">4.4</text>
+<text x="770.0" y="258.5" font-size="11" fill="#6b7280" text-anchor="middle">clave, ficha e historial</text>
+<line x1="122.0" y1="158.0" x2="122.0" y2="205.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="122.0,214.0 118.4,205.0 125.6,205.0" fill="#1f2937"/>
+<line x1="342.0" y1="158.0" x2="342.0" y2="205.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="342.0,214.0 338.4,205.0 345.6,205.0" fill="#1f2937"/>
+<line x1="562.0" y1="158.0" x2="562.0" y2="205.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="562.0,214.0 558.4,205.0 565.6,205.0" fill="#1f2937"/>
+<line x1="770.0" y1="158.0" x2="770.0" y2="205.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="770.0,214.0 766.4,205.0 773.6,205.0" fill="#1f2937"/>
+<rect x="24.0" y="323" width="22" height="14" rx="3" fill="#ffffff" stroke="#1f2937" stroke-width="1.2" stroke-dasharray="4 3"/>
+<text x="54.0" y="334" font-size="11" fill="#374151">el sub-capítulo que lo describe</text>
+<text x="24" y="360" font-size="11" fill="#6b7280">· las 18 capas de referencia del IGN están en el capítulo 3: no son datos meteorológicos</text>
+</svg>

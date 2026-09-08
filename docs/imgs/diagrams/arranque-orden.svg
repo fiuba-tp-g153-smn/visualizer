@@ -1,0 +1,46 @@
+<svg viewBox="0 0 880 400" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="400" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Orden de arranque entre stacks</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Nada lo impone; cada flecha es una dependencia real</text>
+<rect x="24" y="108" width="184" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="116.0" y="130.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">1 · tiles-processor</text>
+<text x="116.0" y="146.5" font-size="11" fill="#6b7280" text-anchor="middle">almacén sano y buckets creados</text>
+<circle cx="28" cy="112" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(20.0 104.0) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
+<rect x="272" y="108" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="364.0" y="130.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">2 · data-service</text>
+<text x="364.0" y="146.5" font-size="11" fill="#6b7280" text-anchor="middle">espera al S3 · 120 s en producción</text>
+<circle cx="276" cy="112" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(268.0 104.0) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
+<rect x="272" y="236" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="364.0" y="258.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">data-simulator</text>
+<text x="364.0" y="274.5" font-size="11" fill="#6b7280" text-anchor="middle">cuando exista el volumen</text>
+<rect x="520" y="236" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="612.0" y="258.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">alerts-service</text>
+<text x="612.0" y="274.5" font-size="11" fill="#6b7280" text-anchor="middle">mysql sano · IGN hasta 8 min</text>
+<circle cx="524" cy="240" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(516.0 232.0) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
+<rect x="672" y="108" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="764.0" y="130.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">4 · visualizer</text>
+<text x="764.0" y="146.5" font-size="11" fill="#6b7280" text-anchor="middle">sin dependencias en ejecución</text>
+<circle cx="676" cy="112" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(668.0 104.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2"/><path d="M2.5 8.5h19M5.5 6.3h.01M8 6.3h.01M10.5 6.3h.01"/></g>
+<line x1="214.0" y1="134.0" x2="257.0" y2="134.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="266.0,134.0 257.0,137.6 257.0,130.4" fill="#1f2937"/>
+<text x="240.0" y="100.0" font-size="11" fill="#374151" text-anchor="middle">S3 en :9000 respondiendo</text>
+<line x1="178.0" y1="166.0" x2="294.0" y2="225.9" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="302.0,230.0 292.4,229.1 295.7,222.7" fill="#1f2937"/>
+<text x="190.0" y="216.0" font-size="11" fill="#374151" text-anchor="start">el volumen tiles_data</text>
+<line x1="462.0" y1="134.0" x2="657.0" y2="134.0" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="5 4"/>
+<polygon points="666.0,134.0 657.0,137.6 657.0,130.4" fill="#1f2937"/>
+<text x="564.0" y="100.0" font-size="11" fill="#374151" text-anchor="middle">direcciones conocidas al compilar</text>
+<line x1="650.0" y1="230.0" x2="719.1" y2="171.8" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="5 4"/>
+<polygon points="726.0,166.0 721.4,174.6 716.8,169.0" fill="#1f2937"/>
+<text x="700.0" y="200.0" font-size="11" fill="#374151" text-anchor="start">ídem</text>
+<rect x="24.0" y="343" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="354" font-size="11" fill="#374151">el que hay que levantar primero</text>
+<line x1="258.70000000000005" y1="350" x2="274.70000000000005" y2="350" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="4 3"/>
+<polygon points="280.70000000000005,350 273.70000000000005,346.8 273.70000000000005,353.2" fill="#1f2937"/>
+<text x="288.70000000000005" y="354" font-size="11" fill="#374151">dependencia de compilación, no de arranque</text>
+<text x="24" y="380" font-size="11" fill="#6b7280">· alerts-service (3) no depende de los demás para arrancar · el orden entre stacks lo aplica quien opera: compose no lo conoce</text>
+</svg>

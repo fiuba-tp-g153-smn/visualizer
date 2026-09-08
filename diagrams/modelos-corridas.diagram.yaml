@@ -1,0 +1,30 @@
+# Capítulo 4.3. Pregunta: ¿qué es una corrida, qué es un paso, y qué elige cada control?
+title: Modelos — corrida, pasos y capas
+subtitle: Una corrida es un pronóstico completo; la animación recorre sus pasos hacia adelante
+size: [880, 440]
+
+groups:
+  - {kind: band, at: [24, 72], size: [832, 120], label: UNA CORRIDA · SE ELIGE EN «CORRIDAS»}
+
+nodes:
+  init:   {at: [40, 112], size: [168, 52], label: Hora de inicio, sub: p. ej. 12 UTC}
+  p1:     {at: [248, 112], size: [120, 52], label: Paso +1 h}
+  p2:     {at: [408, 112], size: [120, 52], label: Paso +2 h}
+  pn:     {at: [568, 112], size: [120, 52], label: Paso +N h, accent: true}
+  fin:    {at: [728, 112], size: [112, 52], label: Fin, sub: 48 a 72 h}
+  raster: {at: [136, 300], size: [232, 52], label: Capa de imagen, sub: "precipitación, reflectividad, viento"}
+  vector: {at: [512, 300], size: [232, 52], label: Superposiciones, sub: isobaras · contornos · barbas}
+
+edges:
+  - {from: init, to: p1}
+  - {from: p1, to: p2}
+  - {from: p2, to: pn, dashed: true}
+  - {from: pn, to: fin, dashed: true}
+  - {from: pn, to: raster, label: en cada paso, label_at: [280, 250], label_anchor: end}
+  - {from: pn, to: vector, label: en cada paso, label_at: [640, 250], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el cuadro que muestra el mapa}
+  - {swatch: dashed-arrow, label: pasos omitidos}
+
+footnote: "· la hora de la fila es la hora de validez del paso, no la de la corrida · ECMWF tiene una sola capa; la presión es una superposición de esa capa"

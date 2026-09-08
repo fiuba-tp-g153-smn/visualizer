@@ -1,0 +1,25 @@
+# Capítulo 12.2. Pregunta: ¿de dónde sale cada valor de configuración y cuál gana?
+title: De dónde sale la configuración, y cuál gana
+subtitle: Variables de entorno para el despliegue; settings.json para la política de producto
+size: [880, 440]
+
+groups:
+  - {kind: band, at: [24, 64], size: [832, 200], label: LOS TRES SERVICIOS EN PYTHON}
+  - {kind: band, at: [24, 288], size: [832, 104], label: EL VISUALIZADOR}
+
+nodes:
+  env:   {at: [40, 100], size: [200, 52], label: ".env", sub: secretos y direcciones, badge: lock}
+  json:  {at: [40, 188], size: [200, 52], label: settings.json, sub: política de producto}
+  svc:   {at: [420, 144], size: [232, 52], label: el proceso, sub: lee las dos al arrancar, accent: true, badge: python}
+  args:  {at: [40, 324], size: [200, 52], label: build args, sub: 8 direcciones y banderas, badge: lock}
+  bundle: {at: [420, 324], size: [232, 52], label: bundle en el navegador, sub: fijado por webpack al compilar, badge: browser}
+
+edges:
+  - {from: env, to: svc, label: "gana en tiles-processor y data-service", label_at: [250, 112], label_anchor: start}
+  - {from: json, to: svc, label: "gana en alerts-service, para sus claves", label_at: [250, 236], label_anchor: start}
+  - {from: args, to: bundle, label: DefinePlugin · una vez por build, label_at: [536, 314]}
+
+legend:
+  - {swatch: accent, label: donde se resuelve la precedencia}
+
+footnote: "· data-service no arranca sin settings.json · alerts-service tampoco · tiles-processor lo lleva dentro de la imagen"

@@ -1,0 +1,35 @@
+# Capítulo 11.1. Pregunta: ¿por qué colas van las unidades de trabajo y quién las toma?
+title: tiles-processor — tres colas, dos tipos de worker
+subtitle: El ruteo depende del producto porque los trabajos no pesan lo mismo
+size: [880, 560]
+
+groups:
+  - {kind: band, at: [232, 72], size: [224, 328], label: RABBITMQ}
+
+nodes:
+  producer: {at: [24, 216], size: [136, 52], label: producer, sub: enruta por producto, badge: python}
+  q_main:   {at: [252, 104], size: [184, 52], label: tiles_work_queue, sub: ABI · GLM · ECMWF · GFS, badge: queue}
+  q_radar:  {at: [252, 200], size: [184, 52], label: tiles_radar_light_queue, sub: radar, badge: queue}
+  q_wrf:    {at: [252, 296], size: [184, 52], label: tiles_wrf_light_queue, sub: WRF, badge: queue}
+  normal:   {at: [520, 128], size: [168, 52], label: worker1 · worker2, sub: WORKER_TYPE=normal, accent: true, badge: python}
+  light:    {at: [520, 272], size: [168, 52], label: worker-light1..3, sub: WORKER_TYPE=light, badge: python}
+  bucket:   {at: [736, 200], size: [120, 52], label: tiles-data, sub: SeaweedFS, badge: database}
+  dlq:      {at: [252, 440], size: [184, 52], label: tiles_dead_letter_queue, sub: nadie la consume, badge: queue}
+
+edges:
+  - {from: producer, to: q_main, label: pesados, label_at: [168, 176], label_anchor: start}
+  - {from: producer, to: q_radar, label: radar, label_at: [172, 236], label_anchor: start}
+  - {from: producer, to: q_wrf, label: WRF, label_at: [168, 312], label_anchor: start}
+  - {from: q_main, to: normal, label: prioridad estricta, label_at: [452, 122], label_anchor: start}
+  - {from: [456, 206], to: [520, 176], dashed: true, label: si la pesada está vacía, label_at: [540, 198], label_anchor: start}
+  - {from: q_radar, to: light, label: round robin, label_at: [470, 292], label_anchor: start}
+  - {from: q_wrf, to: light}
+  - {from: normal, to: bucket, label: suben teselas, label_at: [700, 176], label_anchor: start}
+  - {from: light, to: bucket}
+  - {from: [344, 400], to: [344, 440], label: "4 intentos agotados", label_at: [356, 424], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: los que absorben los trabajos caros}
+  - {swatch: dashed-arrow, label: sólo cuando no hay trabajo pesado}
+
+footnote: "· las tres colas declaran tiles_dlx como intercambio de descarte · los reintentos son republicaciones propias, no redeliveries"

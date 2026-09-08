@@ -1,0 +1,42 @@
+# Contexto del sistema: los cuatro servicios desplegables y lo que cruza cada
+# frontera. Altitud alta a propósito; el detalle de cada servicio vive en su
+# propio capítulo. Pregunta que responde: ¿qué partes tiene MapaSMN y qué
+# entra y sale de cada una?
+title: MapaSMN — contexto del sistema
+subtitle: Qué servicios lo componen y qué cruza cada frontera
+size: [880, 640]
+
+groups:
+  - {kind: boundary, at: [24, 64], size: [216, 480], label: FUENTES EXTERNAS}
+  - {kind: boundary, at: [280, 64], size: [576, 400], label: MAPASMN · UN HOST, label_anchor: end}
+
+nodes:
+  noaa:     {at: [40, 112], size: [168, 52], label: NOAA GOES-19, sub: S3 público · ABI y GLM, external: true, badge: cloud}
+  radar:    {at: [40, 212], size: [168, 52], label: Radar y modelos, sub: SINARAME · WRF · ECMWF · GFS, external: true, badge: folder}
+  ign:      {at: [40, 312], size: [168, 52], label: IGN, sub: WMS · WFS · mapas base, external: true, badge: globe}
+  smn:      {at: [40, 452], size: [168, 52], label: SMN, sub: API de estaciones · taviso, external: true, badge: database}
+
+  tp:       {at: [312, 112], size: [160, 52], label: tiles-processor, sub: productor + workers, badge: python}
+  bucket:   {at: [312, 236], size: [160, 52], label: tiles-data, sub: SeaweedFS · S3, badge: database}
+  ds:       {at: [552, 236], size: [160, 52], label: data-service, sub: API web + sync · Redis, badge: python}
+  al:       {at: [312, 372], size: [160, 52], label: alerts-service, sub: intersección + ACP · MySQL, badge: python}
+  vis:      {at: [608, 372], size: [160, 52], label: visualizer, sub: Angular · nginx, accent: true, badge: browser}
+  user:     {kind: actor, at: [688, 500], label: Pronosticador}
+
+edges:
+  - {from: noaa, to: tp, label: descarga ABI y GLM, label_at: [260, 100]}
+  - {from: radar, to: tp, label: archivos crudos, label_at: [232, 268], label_anchor: start}
+  - {from: tp, to: bucket, label: teselas · COG · GeoJSON, label_at: [400, 206], label_anchor: start}
+  - {from: bucket, to: ds, label: sincroniza, label_at: [512, 256]}
+  - {from: ign, to: al, label: límites WFS, label_at: [244, 356], label_anchor: start}
+  - {from: al, to: smn, label: escribe el aviso, dashed: true, label_at: [244, 440], label_anchor: start}
+  - {from: ds, to: vis, label: HTTP /products, label_at: [660, 318], label_anchor: start}
+  - {from: al, to: vis, label: HTTP /alerts, label_at: [540, 388]}
+  - {from: user, to: vis, label: usa, label_at: [700, 480], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: la interfaz del pronosticador}
+  - {swatch: external, label: fuera del sistema}
+  - {swatch: dashed-arrow, label: escritura en un sistema del SMN}
+
+footnote: "· RabbitMQ y Redis viven dentro de su servicio y no cruzan fronteras · el navegador pide los mapas de fondo al IGN directamente"

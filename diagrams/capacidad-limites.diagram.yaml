@@ -1,0 +1,25 @@
+# Capítulo 16. Pregunta: ¿dónde se acota el consumo, y dónde no?
+title: Dónde se acota el consumo, y dónde no
+subtitle: Lo único con un tope real de memoria es Redis
+size: [880, 520]
+
+groups:
+  - {kind: band, at: [24, 72], size: [832, 110], label: TILES-PROCESSOR}
+  - {kind: band, at: [24, 206], size: [832, 110], label: DATA-SERVICE}
+  - {kind: band, at: [24, 340], size: [832, 110], label: ALERTS-SERVICE}
+
+nodes:
+  workers: {at: [40, 108], size: [240, 52], label: 5 workers × 2 unidades, sub: WORKER_CONCURRENCY · colas separadas}
+  sub:     {at: [320, 108], size: [240, 52], label: un subproceso por unidad, sub: tope de 30 min · sin límite de RAM, accent: true}
+  disc:    {at: [600, 108], size: [240, 52], label: descubrimiento cada 5 min, sub: la avalancha se vuelve retraso}
+  redis:   {at: [40, 242], size: [240, 52], label: "Redis --maxmemory 5 GB", sub: el único tope real, badge: redis}
+  api:     {at: [320, 242], size: [240, 52], label: API sin límite de peticiones, sub: consultas puntuales ocupan hilos, accent: true}
+  basemap: {at: [600, 242], size: [240, 52], label: mapas base sin caché, sub: 8 en paralelo · 4 s de plazo}
+  pool:    {at: [40, 376], size: [240, 52], label: cola 16 · 2 workers · 150 s, sub: rechaza con 503 al llenarse}
+  inter:   {at: [320, 376], size: [240, 52], label: intersección sin tope, sub: en el hilo de la API, accent: true}
+  gifs:    {at: [600, 376], size: [240, 52], label: GIF sin retención, sub: el volumen sólo crece}
+
+legend:
+  - {swatch: accent, label: donde falta el límite}
+
+footnote: "· ningún contenedor declara mem_limit ni cpus · un worker que crece hace que el sistema operativo elija una víctima, y puede ser la base o la caché"

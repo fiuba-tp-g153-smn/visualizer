@@ -1,0 +1,32 @@
+<svg viewBox="0 0 880 420" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="420" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Antes de exponerlo</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Tres cambios bloquean; el resto se puede hacer después</text>
+<rect x="24" y="250" width="832" height="110" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<rect x="24" y="108" width="200" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="124.0" y="130.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">1 · quién crea un aviso</text>
+<text x="124.0" y="146.5" font-size="11" fill="#6b7280" text-anchor="middle">VPN, proxy con auth o código</text>
+<rect x="252" y="108" width="200" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="352.0" y="130.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">2 · cerrar puertos internos</text>
+<text x="352.0" y="146.5" font-size="11" fill="#6b7280" text-anchor="middle">borde o DOCKER-USER</text>
+<rect x="480" y="108" width="200" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="580.0" y="130.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">3 · sin permisos de esquema</text>
+<text x="580.0" y="146.5" font-size="11" fill="#6b7280" text-anchor="middle">en el usuario de MySQL del SMN</text>
+<rect x="708" y="108" width="148" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="782.0" y="130.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">exponer</text>
+<text x="782.0" y="146.5" font-size="11" fill="#6b7280" text-anchor="middle">recién ahora</text>
+<line x1="230.0" y1="134.0" x2="237.0" y2="134.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="246.0,134.0 237.0,137.6 237.0,130.4" fill="#1f2937"/>
+<line x1="458.0" y1="134.0" x2="465.0" y2="134.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="474.0,134.0 465.0,137.6 465.0,130.4" fill="#1f2937"/>
+<line x1="686.0" y1="134.0" x2="693.0" y2="134.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="702.0,134.0 693.0,137.6 693.0,130.4" fill="#1f2937"/>
+<text x="40" y="280" font-size="11" font-weight="600" fill="#374151" text-anchor="start">Importantes, después:</text>
+<text x="40" y="300" font-size="11" font-weight="400" fill="#374151" text-anchor="start">documentación interactiva apagada · cabeceras de seguridad · límites de memoria y CPU · identidades del almacén acotadas · intersección con tope</text>
+<text x="40" y="328" font-size="11" font-weight="400" fill="#374151" text-anchor="start">Higiene: contenedores sin root · credenciales del broker por rol · CI reactivada · imágenes por resumen · retención de GIF · respaldos</text>
+<rect x="24.0" y="363" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="374" font-size="11" fill="#374151">bloqueante</text>
+<rect x="139.0" y="363" width="22" height="14" rx="3" fill="#ffffff" stroke="#1f2937" stroke-width="1.2" stroke-dasharray="4 3"/>
+<text x="169.0" y="374" font-size="11" fill="#374151">la decisión que espera a los tres</text>
+<text x="24" y="400" font-size="11" fill="#6b7280">· casi todo es configuración de despliegue, no código · la excepción es acotar las rutas de intersección</text>
+</svg>

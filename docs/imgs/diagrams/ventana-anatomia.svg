@@ -1,0 +1,40 @@
+<svg viewBox="0 0 880 500" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="500" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">La ventana</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Una columna de íconos, un panel y el mapa</text>
+<rect x="24" y="64" width="832" height="396" rx="14" fill="none" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="8 6"/>
+<text x="40" y="86" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">LA VENTANA DEL NAVEGADOR</text>
+<rect x="40" y="100" width="176" height="340" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="56" y="122" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">BARRA LATERAL</text>
+<rect x="240" y="100" width="200" height="340" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="256" y="122" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">EL PANEL ABIERTO</text>
+<rect x="464" y="100" width="376" height="340" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
+<text x="480" y="122" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">EL MAPA</text>
+<rect x="56" y="136" width="144" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="128.0" y="158.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">5 paneles</text>
+<text x="128.0" y="174.5" font-size="11" fill="#6b7280" text-anchor="middle">uno abierto por vez</text>
+<rect x="56" y="220" width="144" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="128.0" y="242.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Estado · Docs</text>
+<text x="128.0" y="258.5" font-size="11" fill="#6b7280" text-anchor="middle">dos accesos aparte</text>
+<rect x="56" y="304" width="144" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="128.0" y="326.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Zoom</text>
+<text x="128.0" y="342.5" font-size="11" fill="#6b7280" text-anchor="middle">+ · nivel · −</text>
+<rect x="256" y="136" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="340.0" y="158.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">El panel elegido</text>
+<text x="340.0" y="174.5" font-size="11" fill="#6b7280" text-anchor="middle">uno de los cinco</text>
+<rect x="480" y="136" width="176" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="568.0" y="158.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">El área de trabajo</text>
+<text x="568.0" y="174.5" font-size="11" fill="#6b7280" text-anchor="middle">arrastrar y rueda</text>
+<rect x="480" y="304" width="200" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="580.0" y="326.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Indicadores</text>
+<text x="580.0" y="342.5" font-size="11" fill="#6b7280" text-anchor="middle">escala · coordenadas · atribución</text>
+<rect x="664" y="136" width="160" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="744.0" y="158.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">Columna derecha</text>
+<text x="744.0" y="174.5" font-size="11" fill="#6b7280" text-anchor="middle">escalas y valores</text>
+<line x1="206.0" y1="162.0" x2="241.0" y2="162.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="250.0,162.0 241.0,165.6 241.0,158.4" fill="#1f2937"/>
+<text x="228.0" y="154.0" font-size="11" fill="#374151" text-anchor="middle">abre</text>
+<rect x="24.0" y="443" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="454" font-size="11" fill="#374151">desde donde se controla todo</text>
+<text x="24" y="480" font-size="11" fill="#6b7280">· los indicadores y el zoom se apagan desde Herramientas del mapa ▸ General · la columna derecha aparece sólo con esas herramientas activas</text>
+</svg>

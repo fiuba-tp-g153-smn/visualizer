@@ -1,0 +1,30 @@
+# Capítulo 15. Pregunta: ¿hasta dónde se puede repartir sin cambiar código?
+title: Cuatro máquinas — hasta dónde llega la separación
+subtitle: Cada caja punteada es un host; cada flecha, un puerto que cruza el cable
+size: [880, 560]
+
+groups:
+  - {kind: boundary, at: [24, 64], size: [400, 180], label: A · PROCESAMIENTO}
+  - {kind: boundary, at: [456, 64], size: [400, 180], label: B · ALMACÉN DE OBJETOS, label_anchor: end}
+  - {kind: boundary, at: [24, 280], size: [400, 180], label: C · LECTURA}
+  - {kind: boundary, at: [456, 280], size: [400, 180], label: D · AVISOS Y WEB, label_anchor: end}
+
+nodes:
+  tp:      {at: [40, 128], size: [176, 52], label: producer + workers, sub: rabbitmq · metrics-api · sim, badge: python}
+  seaweed: {at: [568, 128], size: [176, 52], label: seaweedfs, sub: "S3 :9000 · filer 8888 cerrado", accent: true, badge: database}
+  dsapi:   {at: [40, 344], size: [176, 52], label: data-service-api, sub: APP_ROLE=web, badge: python}
+  dssync:  {at: [232, 344], size: [176, 52], label: sync + redis, sub: APP_ROLE=worker, badge: python}
+  al:      {at: [472, 344], size: [176, 52], label: alerts-service + mysql, badge: python}
+  vis:     {at: [664, 344], size: [176, 52], label: visualizer, badge: browser}
+
+edges:
+  - {from: tp, to: seaweed, label: "S3 · sube productos", label_at: [392, 144]}
+  - {from: dssync, to: seaweed, label: "S3 · lee lo nuevo", label_at: [420, 262], label_anchor: end}
+  - {from: dsapi, to: dssync, label: "redis :6379 · sin contraseña", label_at: [224, 336]}
+  - {from: al, to: seaweed, dashed: true, label: "S3, opcional", label_at: [612, 262], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el punto que todos alcanzan}
+  - {swatch: dashed-arrow, label: opcional}
+
+footnote: "· A exige editar la plantilla: seaweedfs:8333 está escrito a mano en el compose · nada de esto se probó; ver el texto del capítulo"

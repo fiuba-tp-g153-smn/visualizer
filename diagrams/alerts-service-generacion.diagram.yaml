@@ -1,0 +1,30 @@
+# Capítulo 11.3. Pregunta: ¿qué pasa entre el POST y el aviso listo?
+title: Generación de un aviso a corto plazo
+subtitle: La API responde en seguida; el trabajo pesado va a una cola acotada
+size: [880, 560]
+
+nodes:
+  vis:   {at: [40, 76], size: [120, 44], label: visualizer, badge: browser}
+  api:   {at: [220, 76], size: [120, 44], label: "POST /alerts", accent: true, badge: python}
+  pool:  {at: [400, 76], size: [120, 44], label: cola + pool, sub: 16 · 2 workers, badge: python}
+  sub:   {at: [580, 76], size: [120, 44], label: subproceso, sub: renderizado, badge: python}
+  mysql: {at: [760, 76], size: [120, 44], label: MySQL, sub: taviso_temporal, badge: database}
+
+guides:
+  - {xs: [100, 280, 460, 640, 820], from: 120, to: 470}
+
+edges:
+  - {from: [106, 156], to: [274, 156], step: 1, label: polígono + phenomenon_code, label_at: [134, 146]}
+  - {from: [286, 196], to: [454, 196], step: 2, label: encola (try_submit), label_at: [314, 186]}
+  - {from: [274, 236], to: [106, 236], step: 3, dashed: true, label: "202 {job_id} · 503 si la cola está llena", label_at: [134, 226]}
+  - {from: [466, 276], to: [634, 276], step: 4, label: intersección → geometrías WKB, label_at: [494, 266]}
+  - {from: [634, 316], to: [466, 316], step: 5, dashed: true, label: dos GIF (120 s como máximo), label_at: [494, 306]}
+  - {from: [466, 356], to: [814, 356], step: 6, label: "INSERT … Procesado='N'", label_at: [494, 346]}
+  - {from: [106, 396], to: [274, 396], step: 7, label: "GET /alerts/jobs/{job_id} cada 2 s", label_at: [134, 386]}
+  - {from: [274, 436], to: [106, 436], step: 8, dashed: true, label: queued · processing · done · failed, label_at: [134, 426]}
+
+legend:
+  - {swatch: solid-arrow, label: llamada}
+  - {swatch: dashed-arrow, label: respuesta}
+
+footnote: "· el trabajo completo tiene 150 s; el cliente deja de sondear a los 180 s · el registro en memoria guarda 256 trabajos, jobs.sqlite es el durable"

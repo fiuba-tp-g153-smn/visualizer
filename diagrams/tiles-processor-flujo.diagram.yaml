@@ -1,0 +1,30 @@
+# Capítulo 10. Pregunta: ¿qué pasa con una unidad de trabajo, del descubrimiento a la subida?
+# Camino feliz; los reintentos y descartes están en tiles-processor-estados.
+title: Una unidad de trabajo, de punta a punta
+subtitle: Camino feliz entre el productor, el broker, un worker y el almacén
+size: [880, 500]
+
+nodes:
+  prod:   {at: [40, 76], size: [120, 44], label: producer, badge: python}
+  mq:     {at: [220, 76], size: [120, 44], label: RabbitMQ, badge: queue}
+  worker: {at: [400, 76], size: [120, 44], label: worker, accent: true, badge: python}
+  sub:    {at: [580, 76], size: [120, 44], label: subproceso, badge: python}
+  s3:     {at: [760, 76], size: [120, 44], label: tiles-data, badge: database}
+
+guides:
+  - {xs: [100, 280, 460, 640, 820], from: 120, to: 420}
+
+edges:
+  - {from: [106, 156], to: [814, 156], step: 1, label: lista los tilesets ya generados (deduplicación), label_at: [134, 146]}
+  - {from: [106, 196], to: [274, 196], step: 2, label: publica la unidad (JSON), label_at: [134, 186]}
+  - {from: [454, 236], to: [286, 236], step: 3, label: "basic_get (pull, sin auto_ack)", label_at: [314, 226]}
+  - {from: [466, 276], to: [634, 276], step: 4, label: spawn con el archivo ya descargado, label_at: [494, 266]}
+  - {from: [646, 316], to: [814, 316], step: 5, label: sube teselas · COG · GeoJSON, label_at: [674, 306]}
+  - {from: [634, 356], to: [466, 356], step: 6, dashed: true, label: código de salida, label_at: [494, 346]}
+  - {from: [454, 396], to: [286, 396], step: 7, dashed: true, label: ack, label_at: [314, 386]}
+
+legend:
+  - {swatch: solid-arrow, label: llamada}
+  - {swatch: dashed-arrow, label: respuesta}
+
+footnote: "· el productor marca IN_PROGRESS en SQLite antes del paso 2 y el worker borra la fila tras el paso 7 · descarga del archivo crudo omitida"

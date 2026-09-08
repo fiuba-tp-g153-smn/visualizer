@@ -1,0 +1,31 @@
+# Capítulo 11. Pregunta: ¿qué contenedores levanta cada stack en producción?
+# Contención en vez de flechas: cada banda es un proyecto de compose.
+title: Los cuatro stacks y sus contenedores
+subtitle: Lo que docker compose levanta en producción, stack por stack
+size: [880, 600]
+
+groups:
+  - {kind: band, at: [24, 72], size: [832, 104], label: TILES-PROCESSOR · 9 CONTENEDORES}
+  - {kind: band, at: [24, 200], size: [832, 104], label: DATA-SERVICE · 3 CONTENEDORES}
+  - {kind: band, at: [24, 328], size: [832, 104], label: ALERTS-SERVICE · 2 CONTENEDORES}
+  - {kind: band, at: [24, 456], size: [832, 104], label: VISUALIZER · 1 CONTENEDOR}
+
+nodes:
+  rabbit:   {at: [40, 112], size: [120, 44], label: rabbitmq, sub: "4.2.9", badge: queue}
+  seaweed:  {at: [180, 112], size: [120, 44], label: seaweedfs, sub: "4.45", badge: database}
+  producer: {at: [320, 112], size: [120, 44], label: producer, badge: python}
+  workers:  {at: [460, 112], size: [120, 44], label: worker1 · 2, sub: normal, badge: python}
+  lights:   {at: [600, 112], size: [120, 44], label: worker-light1..3, sub: light, badge: python}
+  metrics:  {at: [740, 112], size: [116, 44], label: metrics-api, sub: ":6020", badge: python}
+  redis:    {at: [40, 240], size: [120, 44], label: redis, sub: "8.10", badge: redis}
+  dsapi:    {at: [180, 240], size: [140, 44], label: data-service-api, sub: APP_ROLE=web, accent: true, badge: python}
+  dssync:   {at: [360, 240], size: [140, 44], label: data-service-sync, sub: APP_ROLE=worker, badge: python}
+  mysql:    {at: [40, 368], size: [120, 44], label: alerts-mysql, sub: "8.4", badge: database}
+  alerts:   {at: [180, 368], size: [140, 44], label: alerts-service, sub: API + scheduler, badge: python}
+  nginx:    {at: [40, 496], size: [140, 44], label: visualizer, sub: nginx · estáticos, badge: browser}
+
+legend:
+  - {swatch: accent, label: el único que atiende al navegador con caché}
+  - {swatch: band, label: un proyecto de compose = una red propia}
+
+footnote: "· ninguna banda comparte red con otra: el tráfico entre stacks pasa por puertos publicados en el host (capítulo 13)"

@@ -1,0 +1,26 @@
+# Capítulo 4.4. Pregunta: ¿qué hace falta para ver estaciones y qué se abre desde un marcador?
+title: Estaciones — de la clave a la ficha
+subtitle: Sin clave no hay estaciones; con clave, una variable por vez
+size: [880, 400]
+
+nodes:
+  clave:   {at: [24, 100], size: [176, 52], label: Clave de acceso, sub: Configuración ▸ SMN, badge: lock}
+  capa:    {at: [248, 100], size: [176, 52], label: Una variable, sub: botones de opción, accent: true}
+  marca:   {at: [472, 100], size: [176, 52], label: Marcadores, sub: un color por valor}
+  ficha:   {at: [696, 100], size: [160, 52], label: Ficha, sub: clic derecho}
+  hist:    {at: [696, 236], size: [160, 52], label: Historial, sub: últimas 48 horas}
+  consulta: {at: [248, 236], size: [176, 52], label: Consulta, sub: más reciente · específica}
+  tol:     {at: [472, 236], size: [176, 52], label: Tolerancia, sub: 0 a 24 horas · 2 por defecto}
+
+edges:
+  - {from: clave, to: capa, label: habilita, label_at: [224, 92]}
+  - {from: capa, to: marca, label: dibuja, label_at: [448, 92]}
+  - {from: marca, to: ficha, label: clic derecho, label_at: [672, 92]}
+  - {from: ficha, to: hist, label: desde el pie, label_at: [788, 200], label_anchor: start}
+  - {from: consulta, to: marca, label: qué momento, label_at: [352, 200], label_anchor: end}
+  - {from: tol, to: marca, label: cuánta holgura, label_at: [568, 224], label_anchor: end}
+
+legend:
+  - {swatch: accent, label: la capa que ves en el panel}
+
+footnote: "· la clave se guarda en tu navegador, una vez por computadora · sin clave, las capas de estaciones se apagan solas al arrancar"

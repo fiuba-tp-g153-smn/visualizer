@@ -1,0 +1,36 @@
+<svg viewBox="0 0 880 420" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+<rect width="880" height="420" fill="#ffffff"/>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">Satélite GOES-19 — de instrumento a capa</text>
+<text x="24" y="52" font-size="11" fill="#6b7280">Dos instrumentos, seis capas, todas con animación hacia atrás</text>
+<rect x="24" y="176" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="6 5"/>
+<text x="108.0" y="198.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">GOES-19</text>
+<text x="108.0" y="214.5" font-size="11" fill="#6b7280" text-anchor="middle">NOAA · disco completo</text>
+<circle cx="28" cy="180" r="13" fill="#ffffff" stroke="#d1d5db"/>
+<g transform="translate(20.0 172.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .69-8.95 6 6 0 0 0-11.8 1.3A4 4 0 0 0 7 19z"/></g>
+<rect x="256" y="100" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="340.0" y="122.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">ABI</text>
+<text x="340.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">imágenes</text>
+<rect x="256" y="252" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
+<text x="340.0" y="274.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">GLM</text>
+<text x="340.0" y="290.5" font-size="11" fill="#6b7280" text-anchor="middle">descargas eléctricas</text>
+<rect x="488" y="100" width="368" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="672.0" y="122.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Canal 2 · Canal 9 · Canal 13</text>
+<text x="672.0" y="138.5" font-size="11" fill="#6b7280" text-anchor="middle">reflectancia · vapor de agua (K) · tope de nube (K)</text>
+<rect x="488" y="252" width="368" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
+<text x="672.0" y="274.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">FED · TOE · MFA</text>
+<text x="672.0" y="290.5" font-size="11" fill="#6b7280" text-anchor="middle">fl/km² · fJ · km² · escala logarítmica</text>
+<line x1="198.0" y1="172.5" x2="241.4" y2="158.3" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="250.0,155.5 242.6,161.7 240.3,154.9" fill="#1f2937"/>
+<text x="200.0" y="150.0" font-size="11" fill="#374151" text-anchor="start">cada pocos minutos</text>
+<line x1="198.0" y1="231.5" x2="241.4" y2="245.7" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="250.0,248.5 240.3,249.1 242.6,242.3" fill="#1f2937"/>
+<line x1="430.0" y1="126.0" x2="473.0" y2="126.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="482.0,126.0 473.0,129.6 473.0,122.4" fill="#1f2937"/>
+<text x="456.0" y="92.0" font-size="11" fill="#374151" text-anchor="middle">3 capas</text>
+<line x1="430.0" y1="278.0" x2="473.0" y2="278.0" stroke="#1f2937" stroke-width="1.5"/>
+<polygon points="482.0,278.0 473.0,281.6 473.0,274.4" fill="#1f2937"/>
+<text x="456.0" y="244.0" font-size="11" fill="#374151" text-anchor="middle">3 capas</text>
+<rect x="24.0" y="363" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
+<text x="54.0" y="374" font-size="11" fill="#374151">lo que aparece en el panel de capas</text>
+<text x="24" y="400" font-size="11" fill="#6b7280">· la hora de cada imagen es la del nombre del archivo, en HOA o UTC según Configuración · la animación toma las últimas 6, 12 o 24</text>
+</svg>

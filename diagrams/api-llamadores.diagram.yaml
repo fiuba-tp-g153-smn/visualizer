@@ -1,0 +1,24 @@
+# Capítulo 12.1. Pregunta: ¿quién llama a qué API y con qué credencial?
+title: Quién llama a cada API, y con qué credencial
+subtitle: Casi todo es anónimo; las excepciones caben en una fila
+size: [880, 460]
+
+nodes:
+  nav:      {at: [24, 196], size: [168, 52], label: navegador, sub: cualquier cliente del puerto, external: true, badge: browser}
+  operador: {kind: actor, at: [796, 176], label: operador}
+  ds:       {at: [376, 76], size: [232, 52], label: data-service · 6006, sub: 47 rutas anónimas, badge: python}
+  al:       {at: [376, 196], size: [232, 52], label: alerts-service · 6007, sub: "16 rutas, ninguna autenticada", accent: true, badge: python}
+  metrics:  {at: [376, 316], size: [232, 52], label: metrics-api · 6020, sub: lectura anónima, badge: python}
+
+edges:
+  - {from: nav, to: ds, label: "/weather-stations/* con X-API-Key", label_at: [200, 132], label_anchor: start}
+  - {from: nav, to: al, label: "POST /alerts sin credencial", label_at: [284, 214]}
+  - {from: nav, to: metrics, label: "GET /api/*", label_at: [200, 302], label_anchor: start}
+  - {from: operador, to: ds, label: "/weather-stations/admin/* con X-Admin-Password", label_at: [770, 130], label_anchor: end}
+  - {from: operador, to: metrics, label: "POST /api/import con X-API-Key", label_at: [770, 300], label_anchor: end}
+
+legend:
+  - {swatch: accent, label: la superficie que hay que proteger primero}
+  - {swatch: external, label: fuera del sistema}
+
+footnote: "· los tres backends responden CORS con origen * · las cabeceras se comparan en tiempo constante donde existen"

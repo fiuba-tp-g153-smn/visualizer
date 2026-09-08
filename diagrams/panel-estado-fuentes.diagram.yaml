@@ -1,0 +1,24 @@
+# Capítulo 7. Pregunta: ¿sobre qué informa cada pestaña del panel de estado?
+title: Qué informa cada pestaña
+subtitle: Cuatro pestañas, tres partes del sistema
+size: [880, 420]
+
+nodes:
+  proc:  {at: [24, 100], size: [184, 52], label: Procesamiento, sub: "¿se generan las imágenes?"}
+  cache: {at: [248, 100], size: [184, 52], label: Caché, sub: "¿se sirven rápido?"}
+  base:  {at: [472, 100], size: [184, 52], label: Mapas base, sub: "¿hay cartografía de fondo?"}
+  aler:  {at: [696, 100], size: [160, 52], label: Alertas, sub: "¿se generan los avisos?"}
+  tp:    {at: [24, 268], size: [184, 52], label: El procesador, sub: quien fabrica las imágenes, accent: true}
+  ds:    {at: [360, 268], size: [184, 52], label: El servicio de datos, sub: quien las sirve al mapa}
+  al:    {at: [696, 268], size: [160, 52], label: El servicio de avisos, sub: quien genera el ACP}
+
+edges:
+  - {from: proc, to: tp, label: trabajos y colas, label_at: [128, 220], label_anchor: start}
+  - {from: cache, to: ds, label: ciclos y memoria, label_at: [328, 220], label_anchor: end}
+  - {from: base, to: ds, label: recorrido de respaldo, label_at: [520, 220], label_anchor: start}
+  - {from: aler, to: al, label: etapas y cola, label_at: [788, 220], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: "si acá hay errores, una capa no tiene imágenes nuevas"}
+
+footnote: "· cada pestaña se refresca sola cada 30 segundos, configurable · si una parte no contesta, la pestaña conserva lo último y lo avisa"

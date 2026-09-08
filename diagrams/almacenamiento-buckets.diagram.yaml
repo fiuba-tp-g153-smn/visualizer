@@ -1,0 +1,30 @@
+# Capítulo 12.3. Pregunta: ¿quién escribe y quién lee cada bucket?
+title: Un almacén, cinco buckets
+subtitle: Quién escribe y quién lee cada uno
+size: [880, 500]
+
+groups:
+  - {kind: band, at: [232, 64], size: [432, 380], label: SEAWEEDFS · API S3 EN :8333}
+
+nodes:
+  tp:       {at: [24, 100], size: [152, 52], label: tiles-processor, badge: python}
+  al:       {at: [24, 376], size: [152, 52], label: alerts-service, badge: python}
+  ds:       {at: [704, 220], size: [152, 52], label: data-service, badge: python}
+  tiles:    {at: [256, 96], size: [384, 44], label: tiles-data, sub: teselas · COG · GeoJSON · GRIB, accent: true, badge: database}
+  basemap:  {at: [256, 164], size: [384, 44], label: basemap-tiles, sub: respaldo de mapas base, badge: database}
+  stations: {at: [256, 232], size: [384, 44], label: weather-stations-data, sub: instantáneas y padrón, badge: database}
+  apikeys:  {at: [256, 300], size: [384, 44], label: api-keys, sub: "un objeto por clave, sólo el hash", badge: lock}
+  inter:    {at: [256, 368], size: [384, 44], label: intersection-data, sub: capas del IGN simplificadas, badge: database}
+
+edges:
+  - {from: tp, to: tiles, label: escribe, label_at: [196, 108]}
+  - {from: tiles, to: ds, label: lee, label_at: [672, 150], label_anchor: start}
+  - {from: ds, to: basemap, label: escribe y lee, label_at: [672, 200], label_anchor: start}
+  - {from: ds, to: stations, label: escribe y lee, label_at: [672, 262], label_anchor: start}
+  - {from: ds, to: apikeys, label: escribe y lee, label_at: [672, 310], label_anchor: start}
+  - {from: al, to: inter, label: escribe y lee, label_at: [180, 378], label_anchor: start}
+
+legend:
+  - {swatch: accent, label: el contrato entre tiles-processor y data-service}
+
+footnote: "· el script de arranque del almacén crea tiles-data, intersection-data y basemap-tiles · data-service crea api-keys · nadie crea weather-stations-data"
