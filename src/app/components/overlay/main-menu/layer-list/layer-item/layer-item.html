@@ -3,6 +3,7 @@
   [class.mode-available]="mode === LayerItemMode.AVAILABLE"
   [class.mode-active]="mode === LayerItemMode.ACTIVE"
   [class.is-unavailable]="isUnavailable()"
+  [attr.data-testid]="'layers-row-' + layer.id"
 >
   @if (mode === LayerItemMode.AVAILABLE) {
     <div
@@ -18,6 +19,7 @@
           (change)="onRadioSelected()"
           color="primary"
           class="layer-radio"
+          data-testid="layers-row-radio"
           [matTooltip]="isUnavailable() ? '' : layer.description || 'Sin descripción'"
         >
           <span class="layer-option-name">{{ layerShortName() }}</span>
@@ -29,6 +31,7 @@
           (change)="toggleActive($event.checked)"
           color="primary"
           class="layer-checkbox"
+          data-testid="layers-row-checkbox"
           [matTooltip]="isUnavailable() ? '' : layer.description || 'Sin descripción'"
         >
           <span class="layer-option-name">{{ layerShortName() }}</span>
@@ -48,6 +51,7 @@
               (click)="toggleScale()"
               [matTooltip]="isScaleSelected() ? 'Ocultar escala' : 'Mostrar escala'"
               class="scale-toggle-btn"
+              data-testid="layers-row-scale-toggle"
               [class.scale-active]="isScaleSelected()"
             >
               <mat-icon>palette</mat-icon>
@@ -58,6 +62,7 @@
             (click)="toggleExpansion()"
             [matTooltip]="isExpanded() ? 'Contraer' : 'Expandir'"
             class="expand-btn"
+            data-testid="layers-row-expand"
             tabindex="0"
           >
             <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -83,6 +88,7 @@
             (click)="toggleScale()"
             [matTooltip]="isScaleSelected() ? 'Ocultar escala' : 'Mostrar escala'"
             class="scale-toggle-btn"
+            data-testid="layers-row-scale-toggle"
             [class.scale-active]="isScaleSelected()"
           >
             <mat-icon>palette</mat-icon>
@@ -93,6 +99,7 @@
           (click)="toggleExpansion()"
           [matTooltip]="isExpanded() ? 'Contraer' : 'Expandir'"
           class="expand-btn"
+          data-testid="layers-row-expand"
           tabindex="0"
         >
           <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -103,6 +110,7 @@
             mat-icon-button
             (click)="deactivateLayer()"
             class="close-btn"
+            data-testid="layers-row-close"
             matTooltip="Desactivar capa"
           >
             <mat-icon>close</mat-icon>
@@ -122,6 +130,7 @@
           step="0.01"
           discrete
           class="control-slider"
+          data-testid="layers-opacity-slider"
           [displayWith]="formatOpacity"
         >
           <input
@@ -466,7 +475,11 @@
                 <span class="control-label">
                   Período
                   @if (isSynced()) {
-                    <span class="sync-badge" matTooltip="Controlado por sincronización">
+                    <span
+                      class="sync-badge"
+                      data-testid="layers-sync-badge"
+                      matTooltip="Controlado por sincronización"
+                    >
                       <mat-icon>sync</mat-icon>
                       Sincronizado
                     </span>
@@ -482,6 +495,7 @@
                       : 'Actualizar períodos disponibles (se actualiza automáticamente cada 10 segundos)'
                   "
                   class="reload-btn"
+                  data-testid="layers-period-refresh"
                 >
                   @if (isLoadingConfig()) {
                     <app-loading-spinner [diameter]="18" />
@@ -522,6 +536,7 @@
                     step="1"
                     discrete
                     class="control-slider"
+                    data-testid="layers-time-slider"
                     [displayWith]="formatTimeIndex"
                     [disabled]="isSynced()"
                   >
@@ -546,6 +561,7 @@
                           : 'Reproducir'
                     "
                     class="play-btn"
+                    data-testid="layers-time-play"
                     [class.synced]="isSynced()"
                   >
                     <mat-icon>{{
@@ -555,7 +571,9 @@
                 </div>
 
                 <div class="time-controls-row">
-                  <span class="time-current">{{ getTimeLabel(currentTimeIndex()) }}</span>
+                  <span class="time-current" data-testid="layers-time-current">{{
+                    getTimeLabel(currentTimeIndex())
+                  }}</span>
 
                   <button
                     mat-icon-button
@@ -563,6 +581,7 @@
                     [disabled]="isSynced() || currentTimeIndex() === latestTimeIndex()"
                     matTooltip="Ir a la imagen más reciente"
                     class="latest-btn"
+                    data-testid="layers-time-latest"
                   >
                     <mat-icon>update</mat-icon>
                   </button>
@@ -571,6 +590,7 @@
                     <mat-form-field
                       appearance="fill"
                       class="images-count-select"
+                      data-testid="layers-image-count-select"
                       [matTooltip]="
                         !isImageCountSelectOpen() && imageCount() === maxImageCountOption()
                           ? imageCount() + ' imágenes'
@@ -611,6 +631,7 @@
                       [attr.max]="PLAYBACK_SPEED_LIMITS.MAX"
                       step="0.1"
                       class="speed-input"
+                      data-testid="layers-speed-input"
                       placeholder="1.0"
                       [disabled]="isSynced()"
                     />

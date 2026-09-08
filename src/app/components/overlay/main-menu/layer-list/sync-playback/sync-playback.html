@@ -26,6 +26,7 @@
                     step="1"
                     discrete
                     class="control-slider"
+                    data-testid="layers-sync-slider"
                     [displayWith]="formatFrameLabel"
                   >
                     <input
@@ -43,6 +44,7 @@
                     [disabled]="!canPlay()"
                     [matTooltip]="state().isPlaying ? 'Pausar' : 'Reproducir'"
                     class="play-btn"
+                    data-testid="layers-sync-play"
                   >
                     <mat-icon>{{ state().isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
                   </button>
@@ -139,7 +141,7 @@
         </span>
         <div class="layers-list">
           @for (item of eligibleLayers(); track item.layer.id) {
-            <div class="layer-row">
+            <div class="layer-row" [attr.data-testid]="'layers-sync-pick-' + item.layer.id">
               <mat-checkbox
                 [checked]="isLayerSelected(item.layer.id)"
                 (change)="toggleLayer(item.layer.id)"

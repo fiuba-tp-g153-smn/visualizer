@@ -5,6 +5,7 @@
     @for (alert of pendingAlerts(); track alert.alertId) {
       <app-alert-list-item
         mode="pending"
+        [attr.data-testid]="'alerts-pending-' + alert.alertId"
         [title]="'Aviso #' + alert.alertId"
         [hidden]="isHidden(alert.alertId)"
         [details]="getDetailRows(alert)"
@@ -22,10 +23,20 @@
 
         <app-detail-item icon="image" label="Imágenes:">
           <div class="gif-actions">
-            <button mat-icon-button (click)="openAreaGif(alert)" matTooltip="Ver imagen del área">
+            <button
+              mat-icon-button
+              (click)="openAreaGif(alert)"
+              matTooltip="Ver imagen del área"
+              data-testid="alerts-pending-gif-area"
+            >
               <mat-icon>zoom_in</mat-icon>
             </button>
-            <button mat-icon-button (click)="openGralGif(alert)" matTooltip="Ver imagen general">
+            <button
+              mat-icon-button
+              (click)="openGralGif(alert)"
+              matTooltip="Ver imagen general"
+              data-testid="alerts-pending-gif-general"
+            >
               <mat-icon>public</mat-icon>
             </button>
           </div>

@@ -1,5 +1,5 @@
 @if (visible()) {
-  <div class="scale-tools-container">
+  <div class="scale-tools-container" data-testid="map-scale-tools">
     @for (entry of entries(); track entry.layerId) {
       <app-scale-tool-panel [entry]="entry" (close)="onClose(entry.layerId)" />
     }

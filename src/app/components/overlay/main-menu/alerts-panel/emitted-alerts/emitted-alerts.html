@@ -1,7 +1,11 @@
-<div class="emitted-alerts">
+<div class="emitted-alerts" data-testid="alerts-emitted">
   <div class="section">
     <div class="section-header">
-      <mat-checkbox [checked]="showPending()" (change)="onTogglePending($event.checked)">
+      <mat-checkbox
+        [checked]="showPending()"
+        (change)="onTogglePending($event.checked)"
+        data-testid="alerts-pending-toggle"
+      >
         Pendientes
       </mat-checkbox>
       @if (showPending()) {

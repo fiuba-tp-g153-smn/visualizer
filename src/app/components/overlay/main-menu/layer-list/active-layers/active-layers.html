@@ -10,6 +10,7 @@
       @if (group.layers.length > 0) {
         <mat-expansion-panel
           class="active-group-panel"
+          [attr.data-testid]="'layers-active-group-' + group.id"
           [expanded]="group.expanded()"
           (expandedChange)="group.setExpanded($event)"
         >
@@ -22,6 +23,7 @@
               <button
                 mat-icon-button
                 class="clear-group-button"
+                data-testid="layers-active-group-clear"
                 (click)="group.clearGroup($event)"
                 [matTooltip]="'Desactivar todas las capas de ' + group.name.toLowerCase()"
               >
@@ -29,7 +31,12 @@
               </button>
             </mat-panel-description>
           </mat-expansion-panel-header>
-          <div cdkDropList (cdkDropListDropped)="group.onDrop($event)" class="active-layers-list">
+          <div
+            cdkDropList
+            (cdkDropListDropped)="group.onDrop($event)"
+            class="active-layers-list"
+            data-testid="layers-active-droplist"
+          >
             @for (layer of group.layers; track layer.id; let isLast = $last) {
               <div cdkDrag class="active-layer-item">
                 <app-layer-item [layer]="layer" [mode]="LayerItemMode.ACTIVE" />

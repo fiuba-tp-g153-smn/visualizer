@@ -19,10 +19,11 @@
           <span>No hay mapas base configurados.</span>
         </div>
       } @else {
-        <div class="base-map-grid">
+        <div class="base-map-grid" data-testid="explorer-basemap-grid">
           @for (baseMap of baseMaps(); track baseMap.id) {
             <div
               class="base-map-card"
+              [attr.data-testid]="'explorer-basemap-' + baseMap.id"
               [class.active]="isActive(baseMap.id)"
               (click)="selectBaseMap(baseMap.id)"
             >

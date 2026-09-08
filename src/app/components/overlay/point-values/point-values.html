@@ -1,4 +1,8 @@
-<div class="point-value-container" [class.near-marker]="layoutMode() === PointValuesLayoutMode.NEAR_MARKER">
+<div
+  class="point-value-container"
+  data-testid="map-point-values"
+  [class.near-marker]="layoutMode() === PointValuesLayoutMode.NEAR_MARKER"
+>
   @if (visible()) {
     @if (layoutMode() === PointValuesLayoutMode.NEAR_MARKER) {
       <div class="point-value-column">

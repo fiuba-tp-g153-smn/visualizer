@@ -2,7 +2,7 @@
   <mat-tab-group class="settings-tabs" animationDuration="0ms">
     <mat-tab>
       <ng-template mat-tab-label>
-        <div class="tab-label-container">
+        <div class="tab-label-container" data-testid="settings-tab-units">
           <mat-icon class="tab-icon">tune</mat-icon>
           <span class="tab-label">Unidades</span>
         </div>
@@ -15,6 +15,7 @@
               [value]="unitsSettings.temperatureUnit()"
               (change)="onTemperatureUnitChange($event.value)"
               class="units-selector-group"
+              data-testid="settings-temperature-group"
             >
               <mat-radio-button
                 [value]="TEMPERATURE_UNITS.CELSIUS"
@@ -39,6 +40,7 @@
               [value]="unitsSettings.windSpeedUnit()"
               (change)="onWindSpeedUnitChange($event.value)"
               class="units-selector-group"
+              data-testid="settings-wind-group"
             >
               <mat-radio-button
                 [value]="WIND_SPEED_UNITS.KILOMETERS_PER_HOUR"
@@ -63,6 +65,7 @@
               [value]="timezoneSettings.mode()"
               (change)="onTimezoneModeChange($event.value)"
               class="units-selector-group"
+              data-testid="settings-timezone-group"
             >
               <mat-radio-button
                 [value]="TIMEZONE_MODES.HOA"
@@ -93,6 +96,7 @@
                 max="3"
                 step="1"
                 class="precision-input"
+                data-testid="settings-decimal-precision"
                 matTooltip="Cantidad de decimales a mostrar (0-3)"
               />
               <span class="precision-label">decimales</span>
@@ -104,7 +108,7 @@
 
     <mat-tab>
       <ng-template mat-tab-label>
-        <div class="tab-label-container">
+        <div class="tab-label-container" data-testid="settings-tab-smn">
           <mat-icon class="tab-icon">vpn_key</mat-icon>
           <span class="tab-label">SMN</span>
         </div>
@@ -115,14 +119,31 @@
             <h3 class="setting-title">API Key estaciones SMN</h3>
             <div class="token-control">
               @if (hasUserApiKey()) {
-                <button mat-flat-button color="primary" type="button" (click)="setSmnApiKey()">
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="button"
+                  data-testid="settings-api-key-set"
+                  (click)="setSmnApiKey()"
+                >
                   Cambiar API Key
                 </button>
-                <button mat-stroked-button type="button" (click)="clearSmnApiKey()">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  data-testid="settings-api-key-clear"
+                  (click)="clearSmnApiKey()"
+                >
                   Borrar API Key
                 </button>
               } @else {
-                <button mat-flat-button color="primary" type="button" (click)="setSmnApiKey()">
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="button"
+                  data-testid="settings-api-key-set"
+                  (click)="setSmnApiKey()"
+                >
                   Configurar API Key
                 </button>
               }
@@ -134,7 +155,7 @@
 
     <mat-tab>
       <ng-template mat-tab-label>
-        <div class="tab-label-container">
+        <div class="tab-label-container" data-testid="settings-tab-shortcuts">
           <mat-icon class="tab-icon">keyboard</mat-icon>
           <span class="tab-label">Atajos</span>
         </div>

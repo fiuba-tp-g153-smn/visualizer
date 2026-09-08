@@ -1,8 +1,8 @@
 @if (activeSection(); as section) {
-  <mat-card class="menu-panel">
+  <mat-card class="menu-panel" data-testid="menu-panel">
     <mat-toolbar class="menu-header">
-      <span>{{ section.title }}</span>
-      <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú">
+      <span data-testid="menu-panel-title">{{ section.title }}</span>
+      <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú" data-testid="menu-close">
         <mat-icon>close</mat-icon>
       </button>
     </mat-toolbar>

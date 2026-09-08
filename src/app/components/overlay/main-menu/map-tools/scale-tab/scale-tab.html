@@ -5,6 +5,7 @@
       (change)="onToolEnabledChange($event.checked)"
       color="primary"
       matTooltip="Activar o desactivar la herramienta de escalas"
+      data-testid="tools-scales-enable"
     >
       Activar herramienta
     </mat-checkbox>
@@ -24,7 +25,7 @@
       } @else {
         <div class="source-list">
           @for (item of scaleTools.displayItems(); track item.layerId) {
-            <div class="source-row">
+            <div class="source-row" [attr.data-testid]="'tools-scales-layer-' + item.layerId">
               <mat-checkbox
                 [checked]="scaleTools.isLayerSelected(item.layerId)"
                 (change)="toggleScaleLayer(item.layerId)"

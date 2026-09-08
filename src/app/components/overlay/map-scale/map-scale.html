@@ -1,5 +1,5 @@
 @if (visible() && scaleText()) {
-  <div class="scale-container">
+  <div class="scale-container" data-testid="map-scale">
     <app-panel-close-button class="close-button" ariaLabel="Cerrar escala" (pressed)="onClose()" />
     <div class="scale-bar" [style.width.px]="scaleWidth()">
       <span class="scale-text">{{ scaleText() }}</span>

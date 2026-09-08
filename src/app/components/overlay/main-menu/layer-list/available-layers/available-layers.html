@@ -1,7 +1,12 @@
 <div class="available-layers">
   <div class="search-container">
     <mat-icon>search</mat-icon>
-    <input type="text" placeholder="Buscar capas" [(ngModel)]="searchText" />
+    <input
+      type="text"
+      placeholder="Buscar capas"
+      data-testid="layers-search-input"
+      [(ngModel)]="searchText"
+    />
   </div>
 
   @if (hasSearch() && filteredGroups().length === 0) {
@@ -16,6 +21,7 @@
     @for (group of filteredGroups(); track group.id; let isLast = $last) {
       <mat-expansion-panel
         class="group-panel"
+        [attr.data-testid]="'layers-group-' + group.id"
         [expanded]="group._shouldExpandGroup"
         #groupPanel="matExpansionPanel"
       >
@@ -35,6 +41,7 @@
           @for (subgroup of group.subgroups; track subgroup.id; let isLastSub = $last) {
             <mat-expansion-panel
               class="subgroup-panel"
+              [attr.data-testid]="'layers-subgroup-' + subgroup.id"
               [expanded]="subgroup._shouldExpandSubgroup"
               #subPanel="matExpansionPanel"
             >
@@ -61,6 +68,7 @@
                           : 'Volver a verificar disponibilidad'
                       "
                       class="recheck-btn"
+                      data-testid="layers-recheck-availability"
                     >
                       @if (isSubgroupRechecking(subgroup.id)) {
                         <app-loading-spinner [diameter]="18" />

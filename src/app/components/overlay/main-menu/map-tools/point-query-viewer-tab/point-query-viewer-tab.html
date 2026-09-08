@@ -5,6 +5,7 @@
       (change)="onToolEnabledChange($event.checked)"
       color="primary"
       matTooltip="Activar o desactivar la herramienta de consulta de valores puntuales"
+      data-testid="tools-point-enable"
     >
       Activar herramienta
     </mat-checkbox>
@@ -16,6 +17,7 @@
         color="primary"
         matTooltip="Mostrar un marcador en el punto de consulta"
         class="marker-checkbox"
+        data-testid="tools-point-show-marker"
       >
         Mostrar marcador
       </mat-checkbox>
@@ -28,8 +30,8 @@
             [value]="viewer.panelMode()"
             (change)="onPanelModeChange($event.value)"
           >
-            <mat-radio-button [value]="panelModes.FIXED">Panel fijo</mat-radio-button>
-            <mat-radio-button [value]="panelModes.NEAR_MARKER">Junto al marcador</mat-radio-button>
+            <mat-radio-button [value]="panelModes.FIXED" data-testid="tools-point-mode-fixed">Panel fijo</mat-radio-button>
+            <mat-radio-button [value]="panelModes.NEAR_MARKER" data-testid="tools-point-mode-near-marker">Junto al marcador</mat-radio-button>
           </mat-radio-group>
         </div>
       }
@@ -50,7 +52,7 @@
       } @else {
         <div class="source-list">
           @for (item of viewer.displayItems(); track item.layerId) {
-            <div class="source-row">
+            <div class="source-row" [attr.data-testid]="'tools-point-layer-' + item.layerId">
               <mat-checkbox
                 [checked]="viewer.isSourceSelected(item.layerId)"
                 (change)="viewer.toggleSourceSelection(item.layerId, $event.checked)"

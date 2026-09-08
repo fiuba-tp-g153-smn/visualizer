@@ -7,7 +7,7 @@
   >
     <mat-tab>
       <ng-template mat-tab-label>
-        <div class="tab-label-container">
+        <div class="tab-label-container" data-testid="alerts-tab-generate">
           <mat-icon class="tab-icon">draw</mat-icon>
           <span class="tab-label">Generar</span>
         </div>
@@ -25,6 +25,7 @@
                   : 'Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último.'
               "
               class="control-button"
+              data-testid="alerts-draw-toggle"
               [class.cancel]="isDrawing()"
               [disabled]="isEditing()"
             >
@@ -37,6 +38,7 @@
               [disabled]="polygonCount() === 0"
               matTooltip="Eliminar todos los polígonos"
               class="control-button delete-button"
+              data-testid="alerts-delete-all"
             >
               <mat-icon>delete_sweep</mat-icon>
               Borrar todos
@@ -55,6 +57,7 @@
               discrete
               showTickMarks
               class="simplification-slider"
+              data-testid="alerts-detail-level-slider"
             >
               <input
                 matSliderThumb
@@ -82,6 +85,7 @@
               @for (polygon of polygons(); track polygon.id) {
                 <app-alert-list-item
                   mode="draft"
+                  [attr.data-testid]="'alerts-draft-' + polygon.id"
                   [title]="polygon.name || 'Borrador #' + polygon.draftNumber"
                   [hidden]="!polygon.visible"
                   [details]="getDetailRows(polygon)"
@@ -92,6 +96,7 @@
                       mat-icon-button
                       (click)="editPolygon(polygon.id)"
                       matTooltip="Editar geometría del polígono"
+                      data-testid="alerts-draft-edit"
                       [disabled]="isLoadingAlerts(polygon)"
                     >
                       <mat-icon>edit_location</mat-icon>
@@ -101,6 +106,7 @@
                         mat-icon-button
                         (click)="cutPolygon(polygon.id)"
                         matTooltip="Recortar con Argentina"
+                        data-testid="alerts-draft-cut"
                         [disabled]="isLoadingCut(polygon) || isLoadingAlerts(polygon)"
                       >
                         @if (isLoadingCut(polygon)) {
@@ -115,6 +121,7 @@
                         color="accent"
                         (click)="undoCut(polygon.id)"
                         matTooltip="Deshacer recorte"
+                        data-testid="alerts-draft-undo-cut"
                         [disabled]="isLoadingAlerts(polygon)"
                       >
                         <mat-icon>undo</mat-icon>
@@ -124,6 +131,7 @@
                       mat-icon-button
                       (click)="toggleVisibility(polygon.id)"
                       [matTooltip]="polygon.visible ? 'Ocultar' : 'Mostrar'"
+                      data-testid="alerts-draft-visibility"
                     >
                       <mat-icon>{{ polygon.visible ? 'visibility' : 'visibility_off' }}</mat-icon>
                     </button>
@@ -132,6 +140,7 @@
                       color="warn"
                       (click)="deletePolygon(polygon.id)"
                       matTooltip="Eliminar"
+                      data-testid="alerts-draft-delete"
                       [disabled]="isLoadingAlerts(polygon)"
                     >
                       <mat-icon>delete</mat-icon>
@@ -151,6 +160,7 @@
                     <app-detail-item icon="map" label="Departamentos:">
                       <app-detail-chip
                         tooltip="Detectar departamentos afectados"
+                        data-testid="alerts-departments-search"
                         [disabled]="isLoadingDepartments(polygon)"
                         (clicked)="loadDepartments(polygon.id)"
                       >
@@ -173,6 +183,7 @@
                     [matTooltip]="'Supera el máximo de ' + maxVertices() + ' vértices permitidos'"
                     [matTooltipDisabled]="!exceedsMaxVertices(polygon)"
                     class="generate-alert-button"
+                    data-testid="alerts-generate"
                   >
                     @if (isLoadingAlerts(polygon)) {
                       <ng-container>
@@ -199,7 +210,7 @@
 
     <mat-tab>
       <ng-template mat-tab-label>
-        <div class="tab-label-container">
+        <div class="tab-label-container" data-testid="alerts-tab-emitted">
           <mat-icon class="tab-icon">notifications_active</mat-icon>
           <span class="tab-label">Emitidos</span>
         </div>

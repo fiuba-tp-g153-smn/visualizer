@@ -10,6 +10,7 @@
       (click)="togglePanel(section.id)"
       [matTooltip]="section.tooltip"
       matTooltipPosition="right"
+      [attr.data-testid]="'sidebar-panel-' + section.id"
     >
       <mat-icon>{{ section.icon }}</mat-icon>
     </button>
@@ -20,13 +21,20 @@
   <a
     mat-icon-button
     routerLink="/status"
+    data-testid="sidebar-status-link"
     matTooltip="Rendimiento y estado"
     matTooltipPosition="right"
   >
     <mat-icon>assessment</mat-icon>
   </a>
 
-  <a mat-icon-button routerLink="/docs" matTooltip="Documentación" matTooltipPosition="right">
+  <a
+    mat-icon-button
+    routerLink="/docs"
+    data-testid="sidebar-docs-link"
+    matTooltip="Documentación"
+    matTooltipPosition="right"
+  >
     <mat-icon>help</mat-icon>
   </a>
 </mat-card>

@@ -1,10 +1,10 @@
 @if (visible()) {
-  <div class="zoom-controls">
-    <button mat-icon-button class="zoom-button" (click)="zoomIn.emit()" [disabled]="!canZoomIn()">
+  <div class="zoom-controls" data-testid="map-zoom-controls">
+    <button mat-icon-button class="zoom-button" (click)="zoomIn.emit()" [disabled]="!canZoomIn()" data-testid="map-zoom-in">
       <mat-icon>add</mat-icon>
     </button>
-    <div class="zoom-level">{{ currentZoom() }}</div>
-    <button mat-icon-button class="zoom-button" (click)="zoomOut.emit()" [disabled]="!canZoomOut()">
+    <div class="zoom-level" data-testid="map-zoom-level">{{ currentZoom() }}</div>
+    <button mat-icon-button class="zoom-button" (click)="zoomOut.emit()" [disabled]="!canZoomOut()" data-testid="map-zoom-out">
       <mat-icon>remove</mat-icon>
     </button>
   </div>

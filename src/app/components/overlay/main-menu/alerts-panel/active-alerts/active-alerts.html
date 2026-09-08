@@ -5,6 +5,7 @@
     @for (alert of activeAlerts(); track alert.alertId) {
       <app-alert-list-item
         mode="active"
+        [attr.data-testid]="'alerts-active-' + alert.alertId"
         [title]="'Aviso #' + alert.alertId"
         [hidden]="isHidden(alert.alertId)"
         [details]="getDetailRows(alert)"

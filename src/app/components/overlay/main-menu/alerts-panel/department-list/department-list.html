@@ -3,6 +3,7 @@
     [expanded]="expanded()"
     [tooltip]="expanded() ? 'Ocultar lista' : 'Ver lista'"
     (clicked)="toggle()"
+    data-testid="alerts-departments-toggle"
   >
     {{ departments().length }}
     <mat-icon class="chevron" [class.chevron--expanded]="expanded()">expand_more</mat-icon>
@@ -15,6 +16,7 @@
       <div class="province-group">
         <button
           class="province-header"
+          data-testid="alerts-department-province"
           (click)="toggleProvince(group.province)"
           (mouseenter)="onProvinceHover(group)"
           (mouseleave)="onLeave()"

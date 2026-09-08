@@ -4,6 +4,7 @@
     (change)="onZoomChange($event.checked)"
     color="primary"
     matTooltip="Mostrar controles de zoom (+/-) en el mapa"
+    data-testid="tools-toggle-zoom"
   >
     Controles de zoom
   </mat-checkbox>
@@ -13,6 +14,7 @@
     (change)="onScaleChange($event.checked)"
     color="primary"
     matTooltip="Mostrar escala gráfica de referencia en el mapa"
+    data-testid="tools-toggle-scale"
   >
     Escala
   </mat-checkbox>
@@ -22,6 +24,7 @@
     (change)="onCoordinatesChange($event.checked)"
     color="primary"
     matTooltip="Mostrar coordenadas del cursor en el mapa"
+    data-testid="tools-toggle-coordinates"
   >
     Coordenadas
   </mat-checkbox>
@@ -31,6 +34,7 @@
     (change)="onCursorLinesChange($event.checked)"
     color="primary"
     matTooltip="Mostrar líneas de latitud y longitud que siguen al cursor"
+    data-testid="tools-toggle-cursor-lines"
   >
     Líneas de cursor
   </mat-checkbox>
@@ -40,6 +44,7 @@
     (change)="onGraticuleChange($event.checked)"
     color="primary"
     matTooltip="Mostrar grilla con trópicos y meridianos importantes"
+    data-testid="tools-toggle-graticule"
   >
     Trópicos y meridianos
   </mat-checkbox>
@@ -49,6 +54,7 @@
     (change)="onAttributionChange($event.checked)"
     color="primary"
     matTooltip="Mostrar atribución de fuentes de datos en el mapa"
+    data-testid="tools-toggle-attribution"
   >
     Atribución
   </mat-checkbox>
