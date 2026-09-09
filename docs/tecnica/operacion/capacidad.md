@@ -5,8 +5,8 @@ title: 16. Capacidad y dimensionamiento
 # 16. Capacidad y dimensionamiento
 
 Qué acota el consumo de cada servicio, qué pasa cuando algo se satura y **qué hay que medir antes de
-fijar límites**. **Esta página no da un tamaño de servidor**: da los parámetros con los que calcularlo
-para un despliegue concreto.
+fijar límites**. El perfil [Beta-1](beta-1.md) fue medido por el equipo por debajo de 8 GB; esta página
+explica qué sostiene esa selección y qué puede hacer que deje de entrar.
 
 ![Dónde se acota el consumo, y dónde no](../../imgs/diagrams/capacidad-limites.svg){ .diagram loading=lazy }
 
@@ -22,8 +22,9 @@ para un despliegue concreto.
 
 | Mecanismo | Valor | Efecto |
 |---|---|---|
-| Workers | 5: dos pesados, tres livianos | Colas separadas por costo del producto |
-| Unidades simultáneas por worker | 2, `WORKER_CONCURRENCY` | Diez unidades en vuelo como máximo |
+| Workers de producción completa | 5: dos pesados, tres livianos | Colas separadas por costo del producto |
+| Workers de Beta-1 | 2: uno pesado, uno liviano | Conserva ambas clases con menos trabajos simultáneos |
+| Unidades simultáneas por worker | 2, `WORKER_CONCURRENCY` | Diez unidades en vuelo en producción; cuatro en Beta-1 |
 | Un subproceso por unidad | Tope de 30 minutos, **fijo en el código** | La memoria vuelve al sistema al terminar |
 | Carriles de subida al bucket | 32, 16 y 4 según tamaño | Acotan las transferencias simultáneas |
 | Descarga en flujo a disco | — | Los archivos grandes no se cargan enteros |
@@ -36,8 +37,9 @@ geoespaciales fragmentan el montículo y no lo devuelven; **descartar el proceso
 
 **La banda 2 del satélite es el trabajo más caro.** **Su malla completa tiene unos 470 millones de
 puntos.** El procesador la carga como enteros de 16 bits y la promedia en bloques de 4 × 4 antes de
-aplicar escala. **No hay una medición versionada del pico de memoria**: **el número hay que obtenerlo
-del despliegue**. La banda 2 **viene apagada** en la configuración versionada.
+aplicar escala. **No hay una medición detallada y reproducible del pico de memoria versionada**: el
+número hay que volver a obtener en cada despliegue. La banda 2 está activa en la configuración de
+producción completa y **apagada en Beta-1**.
 
 ### Qué pasa si aparecen muchos datos de golpe
 
@@ -60,7 +62,8 @@ hasta agotar el host. **El límite de memoria por contenedor es la protección q
 3. Dejar margen y fijar ahí el límite del contenedor.
 4. Repetir para los workers livianos, que pueden ir bastante más ajustados.
 
-**La cantidad de workers se cambia regenerando la plantilla.** Ver [11.1 Tiles Processor](../servicios/tiles-processor.md).
+En la producción completa, la cantidad de workers se cambia regenerando la plantilla. Beta-1 tiene
+su topología congelada en un archivo propio. Ver [11.1 Tiles Processor](../servicios/tiles-processor.md).
 
 ## Servicio de datos
 
@@ -117,18 +120,18 @@ segundo pueden pisarse.**
 ## Almacenamiento
 
 El almacén crece con **los productos habilitados y la retención por prefijo**. **El catálogo es más
-amplio que lo que un despliegue genera**: la configuración versionada ya apaga la banda visible, dos
-productos de descargas, cuatro de radar, ocho de WRF y varios de modelos. **Antes de estimar disco hay
-que responder qué se va a habilitar.** La tabla de días está en
+amplio que lo que un despliegue genera**. La producción completa mantiene el catálogo general; Beta-1
+apaga la banda visible, dos productos de descargas, ocho de WRF y varios de modelos, y restringe el
+radar a RMA1, RMA2 y RMA8. **Antes de estimar disco hay que responder qué perfil se va a usar.** La tabla de días está en
 [11.1 Tiles Processor](../servicios/tiles-processor.md).
 
 **Respaldar el almacén exige dos volúmenes a la vez**: los datos y el índice. **Por separado no sirven.**
 
 ## Qué medir para dimensionar de verdad
 
-**No hay ninguna medición de referencia versionada en los repositorios.** Los directorios de
-resultados existen localmente pero no están en control de versiones. Lo mínimo a obtener del propio
-despliegue:
+Beta-1 cuenta con la observación del equipo de que el conjunto permanece por debajo de 8 GB, pero
+**no hay una medición de referencia reproducible versionada** con picos por producto, duración,
+entrada y margen. Lo mínimo a obtener del propio despliegue:
 
 1. Pico de memoria de un worker por tipo de producto habilitado.
 2. Duración de una unidad de trabajo por tipo de producto.

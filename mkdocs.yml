@@ -57,6 +57,7 @@ nav:
           - "12.3 Almacenamiento y colas": tecnica/contratos/almacenamiento.md
       - "13. Topología de red": tecnica/operacion/topologia.md
       - "14. Puesta en marcha": tecnica/operacion/puesta-en-marcha.md
+      - "14.1 Beta-1, el sistema completo y liviano": tecnica/operacion/beta-1.md
       - "15. Distribuir el sistema en varias máquinas": tecnica/operacion/distribucion.md
       - "16. Capacidad y dimensionamiento": tecnica/operacion/capacidad.md
       - "17. Despliegue y entrega continua": tecnica/operacion/despliegue.md

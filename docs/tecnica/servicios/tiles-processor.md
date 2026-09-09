@@ -13,7 +13,8 @@ sobre RabbitMQ, y **el componente que más memoria consume**. No expone ninguna 
 
 ## Unidades desplegables
 
-**Nueve contenedores en la plantilla de producción, todos en la misma red de compose.**
+La producción completa usa **nueve contenedores**. [Beta-1](../operacion/beta-1.md) conserva los mismos
+roles con seis: omite un worker normal y dos livianos. Todos viven en la misma red de Compose.
 
 | Contenedor | Imagen | Papel |
 |---|---|---|
@@ -31,7 +32,9 @@ aparte.**
 
 !!! note "`settings.json` viaja dentro de la imagen"
     **En producción ningún contenedor monta el archivo.** **Cambiar un producto habilitado exige
-    reconstruir la imagen.** En desarrollo sí se monta.
+    reconstruir la imagen.** La plantilla de desarrollo tampoco lo monta. Beta-1 es la excepción:
+    monta `settings-beta-1.json` como sólo lectura en productor, workers y métricas para congelar el
+    perfil sin reemplazar la configuración general.
 
 ## Puertos
 
@@ -55,16 +58,16 @@ el healthcheck del contenedor.**
 
 | Destino | Protocolo | Para qué |
 |---|---|---|
-| Bucket público `noaa-goes19` de NOAA | S3 anónimo | Imágenes ABI y GLM |
+| Bucket público `noaa-goes19` de NOAA | S3 anónimo | Imágenes ABI de GOES-19 |
 | Espejos de ECMWF y NOMADS de NOAA | HTTPS | GRIB de modelos globales |
 | `/app/data/radar_h5`, `/app/data/wrf_nc`, `/app/data/glm_h5` | **Sistema de archivos** | Radar, WRF y GLM en `mode: "local"` |
 | `rabbitmq:5672` | AMQP | Colas, por nombre de servicio |
 | `seaweedfs:8333` | S3 | Subida de productos, por nombre de servicio |
 
-Las tres fuentes locales **no llegan por red**. Las escribe el replicador de datos
-(`data-simulator`) directamente en el volumen `tiles_data`, o cualquier proceso del organismo que
-tenga ese directorio montado. **Es un acoplamiento de disco, no de puerto.** Ver
-[13. Topología de red](../operacion/topologia.md).
+Las tres fuentes locales **no llegan por una API del procesador**. En una instalación operativa, los
+procesos del organismo que reciben los feeds vivos escriben en esos directorios. `data-simulator`
+puede hacerlo con capturas históricas sólo cuando se arma un laboratorio sin feeds. **Es un
+acoplamiento de disco, no de puerto.** Ver [13. Topología de red](../operacion/topologia.md).
 
 ## Qué guarda
 
@@ -75,8 +78,9 @@ tenga ese directorio montado. **Es un acoplamiento de disco, no de puerto.** Ver
 | `tiles_data` | `/app/data` de producer, workers y métricas | Crudos de radar, WRF y GLM; `progress_tracker.db`; `metrics.db` | Sí para las métricas |
 | `rabbitmq_data` | `/var/lib/rabbitmq` | Colas y mensajes pendientes | No: el productor vuelve a publicar |
 
-**Las siete unidades de aplicación comparten `tiles_data`.** **Es un volumen local, no una carpeta de
-red.** **Esa es la razón por la que producer y workers tienen que estar en la misma máquina.**
+En producción completa, **las siete unidades de aplicación comparten `tiles_data`**; en Beta-1 son
+cuatro. Es un volumen local —un bind mount en Beta-1—, no una carpeta de red. **Esa es la razón por la
+que producer y workers tienen que estar en la misma máquina.**
 
 ## Cuando algo falla
 
@@ -108,11 +112,11 @@ red.** **Esa es la razón por la que producer y workers tienen que estar en la m
 
 ## Qué produce
 
-Qué se genera lo decide `settings.json`, con un interruptor por producto y una lista de estaciones de
-radar. **La configuración versionada ya recorta el catálogo**: la banda visible, dos de los tres
-productos de descargas, seis de diez productos de radar, dos de diez de WRF, la presión de ECMWF y los
-niveles altos de GFS **vienen apagados**. **Conviene leer el archivo del despliegue, no dar por sentado
-el catálogo.**
+Qué se genera lo decide el archivo de configuración, con un interruptor por producto y una lista de
+estaciones de radar. La producción completa usa `settings.json`. **Beta-1 usa
+`settings-beta-1.json`**: apaga la banda visible, dos productos de descargas, ocho de diez productos
+WRF, la presión de ECMWF y los niveles altos de GFS, y limita el radar a RMA1, RMA2 y RMA8. **Conviene
+leer el archivo del perfil desplegado, no dar por sentado el catálogo.**
 
 | Fuente | Productos posibles | Salida | Prefijo del bucket |
 |---|---|---|---|
@@ -173,14 +177,15 @@ las tres colas están vacías**, para no confundir un arranque en frío con trab
 
 ## Cómo se agranda
 
-**La cantidad de workers se cambia regenerando la plantilla**, no editándola:
+En producción completa, **la cantidad de workers se cambia regenerando la plantilla**, no editándola:
 
 ```
 ./scripts/generate-compose.sh --light 3 2
 ```
 
-**Dos workers normales y tres livianos es el dimensionamiento de producción.** Cada worker procesa dos
-unidades a la vez (`WORKER_CONCURRENCY`).
+**Dos workers normales y tres livianos es el dimensionamiento de producción completa.** Beta-1 fija
+uno de cada tipo en su propia plantilla. Cada worker procesa dos unidades a la vez
+(`WORKER_CONCURRENCY`).
 
 !!! warning "La plantilla versionada difiere de lo que el script produce"
     La plantilla de producción **fue editada a mano** después de generarla. Regenerarla hoy

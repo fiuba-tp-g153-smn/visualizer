@@ -190,11 +190,14 @@ sin variables no apunta a donde sugiere `.env.example`.**
 
 ## El repositorio de orquestación
 
-Existe un repositorio que incluye a los cuatro como submódulos y **genera cada `.env` a partir de uno
-solo**, con plantillas por servicio. Tres cosas a tener en cuenta si se usa:
+`mapasmn` incluye a los cuatro como submódulos y **genera cada `.env` a partir de uno solo**, con
+plantillas por servicio. Es la fuente de configuración de [Beta-1](../operacion/beta-1.md):
 
 - Sus plantillas siguen escribiendo `host.docker.internal:${S3_TILES_DATA_PORT}` para el almacén.
-- Emite variables que nadie lee: `SEAWEEDFS_FILER_ENDPOINT`, `SEAWEEDFS_TILE_TTL`,
-  `SEAWEEDFS_RADAR_TILE_TTL`, `TILE_FORMAT` y `DOCS_HOST_PORT`. Un puerto `6011` de documentación
-  **ya no existe**.
-- Sus copias de los submódulos están **más viejas** que las ramas principales.
+- `DOCS_URL=/docs-site` apunta a la documentación que viaja dentro del visualizador; **no existe un
+  contenedor ni un puerto de documentación separado**.
+- Las URL del visualizador se fijan al compilar y tienen que ser alcanzables desde el navegador. Los
+  valores `localhost` sirven sólo si navegador y servicios corren en la misma máquina.
+- Una revisión del meta-repositorio fija revisiones exactas de los cuatro submódulos. En operación se
+  actualizan con `git submodule update --init --recursive`; `make update` avanza a las puntas remotas y
+  se reserva para preparar una nueva versión integrada.
