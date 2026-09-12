@@ -120,24 +120,24 @@ leer el archivo del perfil desplegado, no dar por sentado el catálogo.**
 
 | Fuente | Productos posibles | Salida | Prefijo del bucket |
 |---|---|---|---|
-| GOES-19 ABI | Bandas 13, 9 y 2 | Teselas + COG | `tiles/band_*`, `cog/band_*` |
-| GOES-19 GLM | Densidad de destellos, energía óptica, área mínima | Teselas + COG | `tiles/glm_*`, `cog/glm_*` |
-| Radar SINARAME | Diez variables por radar, tres elevaciones | Teselas + COG | `tiles/radar/`, `cog/radar/` |
-| WRF-ARG4K | Diez productos | Teselas, COG, contornos y barbas | `tiles/wrf/`, `cog/wrf/`, `geojson/wrf/` |
-| ECMWF | Precipitación total; presión a nivel del mar | Teselas + COG; sólo isobaras GeoJSON | `tiles/models/ecmwf/`, `geojson/models/ecmwf/` |
-| GFS | Presión a nivel del mar; 500 y 250 hPa | COG + GeoJSON; teselas en altura | `tiles/models/gfs/`, `geojson/models/gfs/` |
+| GOES-19 ABI | Canales 13, 9 y 2 | Teselas + COG | `tiles/goes19/abi/`, `cog/goes19/abi/` |
+| GOES-19 GLM | Densidad de destellos, energía óptica, área mínima | Teselas + COG | `tiles/goes19/glm/`, `cog/goes19/glm/` |
+| Radar SINARAME | Diez variables por radar, tres elevaciones | Teselas + COG | `tiles/radar/sinarame/`, `cog/radar/sinarame/` |
+| WRF-ARG4K | Diez productos | Teselas, COG, contornos y barbas | `tiles/wrf-arg4k/`, `cog/wrf-arg4k/`, `geojson/wrf-arg4k/` |
+| ECMWF | Precipitación total; presión a nivel del mar | Teselas + COG; sólo isobaras GeoJSON | `tiles/ecmwf-ifs/`, `geojson/ecmwf-ifs/` |
+| GFS | Presión a nivel del mar; 500 y 250 hPa | COG + GeoJSON; teselas en altura | `tiles/gfs/`, `geojson/gfs/` |
 
 Las variables de radar y su subvolumen de origen:
 
 | Producto | Subvolumen | Unidad |
 |---|---|---|
-| `DBZH`, `ZH`, `TH`, `RHOHV`, `ZDR`, `KDP`, `PHIDP` | 01 | dBZ, dBZ, dBZ, —, dB, °/km, ° |
-| `DBZH_450KM` | **04** | dBZ |
-| `VRAD`, `WRAD` | **02** | m/s |
+| `dbzh`, `zh`, `th`, `rhohv`, `zdr`, `kdp`, `phidp` | 01 | dBZ, dBZ, dBZ, —, dB, °/km, ° |
+| `dbzh-450km` | **04** | dBZ |
+| `vrad`, `wrad` | **02** | m/s |
 
 !!! note "Las elevaciones son índices, no ángulos"
     Los tres barridos publicados son los índices `0`, `1` y `2` del archivo. **El ángulo real sólo
-    queda en el registro.** **`DBZH_450KM` tiene un solo barrido**, así que sólo publica `elev0`.
+    queda en el registro.** **`dbzh-450km` tiene un solo barrido**, así que sólo publica `elev0`.
 
 ## Memoria
 
@@ -155,9 +155,9 @@ Las variables de radar y su subvolumen de origen:
 
 | Prefijos | Días |
 |---|---|
-| `tiles/band_`, `cog/band_`, `tiles/glm_`, `cog/glm_`, `tiles/radar`, `cog/radar` | 1 |
-| `tiles/wrf`, `cog/wrf`, `geojson/wrf`, `tiles/models/ecmwf`, `cog/models/ecmwf`, `geojson/models/ecmwf` | 2 |
-| `grib/models/ecmwf`, `tiles/models/gfs`, `cog/models/gfs`, `geojson/models/gfs`, `grib/models/gfs` | 1 |
+| `tiles/goes19/abi`, `cog/goes19/abi`, `tiles/goes19/glm`, `cog/goes19/glm`, `tiles/radar/sinarame`, `cog/radar/sinarame` | 1 |
+| `tiles/wrf-arg4k`, `cog/wrf-arg4k`, `geojson/wrf-arg4k`, `tiles/ecmwf-ifs`, `cog/ecmwf-ifs`, `geojson/ecmwf-ifs` | 2 |
+| `grib/ecmwf-ifs`, `tiles/gfs`, `cog/gfs`, `geojson/gfs`, `grib/gfs` | 1 |
 
 !!! warning "Cambiar la retención no toca lo ya escrito"
     **SeaweedFS estampa el vencimiento al escribir.** **Modificar `retention_days` sólo afecta a los
