@@ -174,7 +174,7 @@ export const GFS_SUBGROUP: LayerSubgroup = {
           pointQuery: geopotentialPointQuery({ min: 4800, max: 6000, totalSteps: 20 }),
         }),
         // Último para que las barbas queden por encima de los contornos.
-        { kind: 'barb-tile', id: 'gfs-500hpa-barbs' } as BarbTileRender,
+        { kind: 'barb-tile', id: 'gfs/500hpa-barbs' } as BarbTileRender,
       ],
     },
     {

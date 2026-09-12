@@ -128,10 +128,10 @@ export interface EcmwfTpTileLayer extends TileLayer {
  * cómo se arman las URLs y cómo se parsea la etiqueta de corrida; de eso se
  * ocupa el adaptador en `config/layers/forecast-model.ts`.
  */
-export type ForecastModelId = 'wrf' | 'gfs';
+export type ForecastModelId = 'wrf-arg4k' | 'gfs';
 
 /**
- * Capa de modelo numérico por corrida/paso. Cada producto (Colmax, Rafagas,
+ * Capa de modelo numérico por corrida/paso. Cada producto (colmax, rafagas,
  * 500 hPa, ...) es una capa independiente identificada por `productId`. Las
  * corridas y los pasos de pronóstico (fxxx) se descubren dinámicamente vía
  * data-service.
@@ -143,7 +143,7 @@ export interface ForecastModelTileLayer extends TileLayer {
    * único modelo con esta forma antes de incorporar GFS.
    */
   modelId?: ForecastModelId;
-  /** Identificador del producto (ej. 'Colmax', 'Rafagas', '500hpa'). */
+  /** Identificador del producto (ej. 'colmax', 'rafagas', '500hpa'). */
   productId: string;
   /**
    * `false` para productos que son solo contornos y no tienen pirámide raster

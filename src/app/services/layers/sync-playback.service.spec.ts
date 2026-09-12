@@ -56,7 +56,7 @@ function createMockGoesLayer(
     type: LayerType.TILE,
     category: LayerCategory.GOES_19,
     isForecast: false,
-    channel: 'ch-13',
+    channel: 'c13',
     minNativeZoom: 0,
     maxNativeZoom: 8,
     zIndexGroup: ActiveLayerGroupId.BASE,

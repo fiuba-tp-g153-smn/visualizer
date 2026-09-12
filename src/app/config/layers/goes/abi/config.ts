@@ -20,7 +20,7 @@ const ABI_DEFAULTS = {
   isForecast: false,
 };
 
-const idPrefix = 'goes-19/abi';
+const idPrefix = 'goes19/abi';
 
 /**
  * Definición de capas satelitales ABI (GOES-19)
@@ -34,24 +34,24 @@ export const ABI_SUBGROUP: LayerSubgroup = {
   layers: [
     {
       ...ABI_DEFAULTS,
-      id: `${idPrefix}/ch-2`,
-      channel: 'ch-2',
+      id: `${idPrefix}/c02`,
+      channel: 'c02',
       scale: ABI_CH2_SCALE,
       name: 'Canal 2',
       description: 'Banda visible (0.64 μm)',
     },
     {
       ...ABI_DEFAULTS,
-      id: `${idPrefix}/ch-9`,
-      channel: 'ch-9',
+      id: `${idPrefix}/c09`,
+      channel: 'c09',
       scale: ABI_CH9_SCALE,
       name: 'Canal 9',
       description: 'Banda de vapor de agua (6.9 μm)',
     },
     {
       ...ABI_DEFAULTS,
-      id: `${idPrefix}/ch-13`,
-      channel: 'ch-13',
+      id: `${idPrefix}/c13`,
+      channel: 'c13',
       scale: ABI_CH13_SCALE,
       name: 'Canal 13',
       description: 'Banda infrarroja (10.3 μm)',

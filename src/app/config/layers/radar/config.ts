@@ -50,12 +50,12 @@ const RADAR_DEFAULTS = {
 
 const satelitePrefix = 'radar';
 enum RadarProduct {
-  DBZH = 'DBZH',
-  DBZH_450KM = 'DBZH_450KM',
-  KDP = 'KDP',
-  VRAD = 'VRAD',
-  RHOHV = 'RHOHV',
-  ZDR = 'ZDR',
+  DBZH = 'dbzh',
+  DBZH_450KM = 'dbzh-450km',
+  KDP = 'kdp',
+  VRAD = 'vrad',
+  RHOHV = 'rhohv',
+  ZDR = 'zdr',
 }
 
 const products = Object.values(RadarProduct) as readonly RadarProduct[];

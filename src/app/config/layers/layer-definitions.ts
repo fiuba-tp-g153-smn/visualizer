@@ -25,7 +25,7 @@ import {
  */
 export const LAYER_DEFINITIONS: LayerGroup[] = [
   {
-    id: 'goes-19',
+    id: 'goes19',
     name: 'Satélite',
     description: 'Capas satelitales GOES-19',
     icon: 'satellite_alt',

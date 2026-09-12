@@ -81,7 +81,7 @@ describe('LayerControlService — weather stations no-data toggle', () => {
 });
 
 describe('LayerControlService — ECMWF reactivation after full deactivation', () => {
-  const ECMWF_LAYER_ID = 'ecmwf/total-precipitation';
+  const ECMWF_LAYER_ID = 'ecmwf-ifs/tp';
   const FORECAST_LATEST = '20260520T0000Z';
   const FORECAST_PREVIOUS = '20260519T1200Z';
 
@@ -196,8 +196,8 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
 });
 
 describe('LayerControlService — forecast secondary render controls', () => {
-  const ECMWF_LAYER_ID = 'ecmwf/total-precipitation';
-  const WRF_LAYER_ID = 'wrf/Precipitacion1h';
+  const ECMWF_LAYER_ID = 'ecmwf-ifs/tp';
+  const WRF_LAYER_ID = 'wrf-arg4k/precipitacion-1h';
   const GFS_MSLP_LAYER_ID = 'gfs/mslp';
   const ECMWF_FORECAST = '20260520T0000Z';
   const WRF_FORECAST = '20260430_060000';
@@ -274,13 +274,13 @@ describe('LayerControlService — forecast secondary render controls', () => {
     service.setEcmwfTpForecastRenderVisible(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
-      'ecmwf-mslp-isobars',
+      'ecmwf-ifs/mslp-isobars',
       false,
     );
     service.setEcmwfTpForecastRenderOpacity(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
-      'ecmwf-mslp-isobars',
+      'ecmwf-ifs/mslp-isobars',
       0.35,
     );
     TestBed.flushEffects();
@@ -298,7 +298,7 @@ describe('LayerControlService — forecast secondary render controls', () => {
       // PRIMARY_RENDER_ID stays selected by default — only the isobars overlay
       // (the only one explicitly hidden) drops out of the selection.
       selectedRenderIds: ['primary'],
-      renderOpacity: { 'ecmwf-mslp-isobars': 0.35 },
+      renderOpacity: { 'ecmwf-ifs/mslp-isobars': 0.35 },
     });
   });
 
@@ -329,7 +329,7 @@ describe('LayerControlService — forecast secondary render controls', () => {
     service.setEcmwfTpForecastRenderVisible(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
-      'ecmwf-mslp-isobars',
+      'ecmwf-ifs/mslp-isobars',
       false,
     );
 
@@ -365,17 +365,17 @@ describe('LayerControlService — forecast secondary render controls', () => {
     service.setWrfForecastRenderVisible(
       WRF_LAYER_ID,
       WRF_FORECAST,
-      'wrf-Precipitacion1h-barbs',
+      'wrf-arg4k-precipitacion-1h-barbs',
       false,
     );
-    service.setWrfForecastRenderOpacity(WRF_LAYER_ID, WRF_FORECAST, 'wrf-Precipitacion1h-slp', 0.6);
+    service.setWrfForecastRenderOpacity(WRF_LAYER_ID, WRF_FORECAST, 'wrf-arg4k-precipitacion-1h-slp', 0.6);
 
     const controls = service.getControls(WRF_LAYER_ID) as WrfLayerControls;
     expect(controls.forecast.renderControls[WRF_FORECAST]).toEqual({
       // PRIMARY_RENDER_ID stays selected by default — only the barbs render
       // (the only one explicitly hidden) drops out of the selection.
-      selectedRenderIds: ['primary', 'wrf-Precipitacion1h-slp'],
-      renderOpacity: { 'wrf-Precipitacion1h-slp': 0.6 },
+      selectedRenderIds: ['primary', 'wrf-arg4k-precipitacion-1h-slp'],
+      renderOpacity: { 'wrf-arg4k-precipitacion-1h-slp': 0.6 },
     });
   });
 

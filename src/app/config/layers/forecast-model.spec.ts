@@ -26,7 +26,7 @@ describe('forecastModelAdapter', () => {
   it('falls back to WRF when a layer declares no model', () => {
     // Las capas WRF fueron las únicas con esta forma antes de GFS y por eso no
     // marcan `modelId`; si el default cambiara, sus URLs apuntarían a GFS.
-    expect(adapterForLayer(modelLayer({})).id).toBe('wrf');
+    expect(adapterForLayer(modelLayer({})).id).toBe('wrf-arg4k');
   });
 
   it('routes GFS layers to the GFS adapter', () => {
@@ -74,8 +74,8 @@ describe('secondary point queries per model', () => {
       -34.5,
       -64.25,
     );
-    const wrfUrl = forecastModelAdapter('wrf').buildSecondaryPointQueryUrl(
-      'MUCAPE',
+    const wrfUrl = forecastModelAdapter('wrf-arg4k').buildSecondaryPointQueryUrl(
+      'mucape',
       INIT_TAG,
       'F003',
       'shear_850_500',
@@ -96,14 +96,14 @@ describe('run listings', () => {
 
   it('reads WRF init runs', () => {
     const response = { init_runs: [{ init_tag: INIT_TAG, step_count: 72 }] };
-    expect(forecastModelAdapter('wrf').readRunTags(response)).toEqual([INIT_TAG]);
+    expect(forecastModelAdapter('wrf-arg4k').readRunTags(response)).toEqual([INIT_TAG]);
   });
 
   it('treats a listing with no runs as empty rather than throwing', () => {
     // El data-service responde 200 con la lista vacía mientras el sync todavía
     // no encontró corridas; la UI debe quedar vacía, no romperse.
     expect(forecastModelAdapter('gfs').readRunTags({})).toEqual([]);
-    expect(forecastModelAdapter('wrf').readRunTags({})).toEqual([]);
+    expect(forecastModelAdapter('wrf-arg4k').readRunTags({})).toEqual([]);
   });
 });
 
@@ -152,7 +152,7 @@ describe('GFS step timestamps', () => {
     // WRF rotula 'F003' y GFS 'f003'; cruzarlos daría 404 en todos los tiles.
     const time = new Date(Date.UTC(2026, 7, 8, 9, 0, 0));
     expect(forecastModelAdapter('gfs').fxxxForRunAndTime(CYCLE, time)).toBe('f003');
-    expect(forecastModelAdapter('wrf').fxxxForRunAndTime(INIT_TAG, new Date(0))).toBeNull();
+    expect(forecastModelAdapter('wrf-arg4k').fxxxForRunAndTime(INIT_TAG, new Date(0))).toBeNull();
   });
 });
 

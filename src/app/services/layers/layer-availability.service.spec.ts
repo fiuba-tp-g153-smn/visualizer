@@ -23,7 +23,7 @@ import {
 
 // --------------------------------------------------------------------- helpers
 
-function goesLayer(id = 'goes/abi/ch-13'): Layer {
+function goesLayer(id = 'goes/abi/c13'): Layer {
   return {
     id,
     name: 'Canal 13',
@@ -36,7 +36,7 @@ function goesLayer(id = 'goes/abi/ch-13'): Layer {
   } as unknown as Layer;
 }
 
-function ecmwfLayer(id = 'ecmwf/total-precipitation'): Layer {
+function ecmwfLayer(id = 'ecmwf-ifs/tp'): Layer {
   return {
     id,
     name: 'Precipitación total',
@@ -282,8 +282,8 @@ describe('LayerAvailabilityService — weather stations', () => {
 
 describe('LayerAvailabilityService — primeAll probing', () => {
   it('marks probed layers available/empty from the probe result', async () => {
-    const withData = goesLayer('goes/abi/ch-2');
-    const withoutData = goesLayer('goes/abi/ch-9');
+    const withData = goesLayer('goes/abi/c02');
+    const withoutData = goesLayer('goes/abi/c09');
     const probe = vi.fn((layer: Layer) => of(layer.id === withData.id));
     const { service } = setup({ allLayers: [withData, withoutData], probe });
 
@@ -296,7 +296,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
   });
 
   it('leaves a layer unknown (never empty) when its probe errors', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new Error('network')));
     const { service } = setup({ allLayers: [layer], probe });
 
@@ -307,7 +307,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
   });
 
   it('does not probe layers that already have a live config', async () => {
-    const active = goesLayer('goes/abi/ch-13');
+    const active = goesLayer('goes/abi/c13');
     const configs = new Map<string, LayerConfig>([[active.id, goesConfig(active.id, 4)]]);
     const probe = vi.fn(() => of(true));
     const { service } = setup({ allLayers: [active], configs, probe });
@@ -333,7 +333,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
 
 describe('LayerAvailabilityService — data-service health gating', () => {
   it('does not probe while the data-service is known to be down', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => of(true));
     const { service } = setup({ allLayers: [layer], probe, isAvailable: signal(false) });
 
@@ -347,7 +347,7 @@ describe('LayerAvailabilityService — data-service health gating', () => {
   });
 
   it('reports a network-level failure (status 0) to the health tracker', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 0 })));
     const reportFailure = vi.fn();
     const { service } = setup({ allLayers: [layer], probe, reportFailure });
@@ -360,7 +360,7 @@ describe('LayerAvailabilityService — data-service health gating', () => {
   });
 
   it('does not report a plain HTTP error (e.g. 404) as a service outage', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 404 })));
     const reportFailure = vi.fn();
     const { service } = setup({ allLayers: [layer], probe, reportFailure });
@@ -374,7 +374,7 @@ describe('LayerAvailabilityService — data-service health gating', () => {
 
 describe('LayerAvailabilityService — manual recheck', () => {
   it('re-probes a single product when the service is up', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => of(false));
     const { service } = setup({ allLayers: [layer], probe });
 
@@ -385,7 +385,7 @@ describe('LayerAvailabilityService — manual recheck', () => {
   });
 
   it('forces a health check first when down, and re-probes once recovered', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const isAvailable = signal(false);
     const checkNow = vi.fn(async () => isAvailable.set(true)); // service comes back
     const probe = vi.fn(() => of(true));
@@ -399,7 +399,7 @@ describe('LayerAvailabilityService — manual recheck', () => {
   });
 
   it('does not probe when the health recheck shows the service is still down', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const isAvailable = signal(false);
     const checkNow = vi.fn(async () => {}); // still down
     const probe = vi.fn(() => of(true));

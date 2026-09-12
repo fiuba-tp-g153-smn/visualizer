@@ -30,17 +30,17 @@ describe('pivot', () => {
 
 describe('typeColor', () => {
   it('is deterministic and returns a hex from the palette', () => {
-    expect(typeColor('radar_DBZH')).toBe(typeColor('radar_DBZH'));
-    expect(typeColor('radar_DBZH')).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(typeColor('radar_sinarame_dbzh')).toBe(typeColor('radar_sinarame_dbzh'));
+    expect(typeColor('radar_sinarame_dbzh')).toMatch(/^#[0-9a-f]{6}$/i);
   });
 });
 
 describe('buildTypeColorMap', () => {
   it('gives a type the same color regardless of input order (stable)', () => {
-    const a = buildTypeColorMap(['radar_DBZH', 'goes_band_13', 'glm_fed']);
-    const b = buildTypeColorMap(['glm_fed', 'goes_band_13', 'radar_DBZH']);
-    expect(a('goes_band_13')).toBe(b('goes_band_13'));
-    expect(a('goes_band_13')).toMatch(/^#[0-9a-f]{6}$/i);
+    const a = buildTypeColorMap(['radar_sinarame_dbzh', 'goes19_abi_c13', 'goes19_goes19_glm_fed']);
+    const b = buildTypeColorMap(['goes19_goes19_glm_fed', 'goes19_abi_c13', 'radar_sinarame_dbzh']);
+    expect(a('goes19_abi_c13')).toBe(b('goes19_abi_c13'));
+    expect(a('goes19_abi_c13')).toMatch(/^#[0-9a-f]{6}$/i);
   });
 
   it('assigns a distinct color per type even past the palette length', () => {

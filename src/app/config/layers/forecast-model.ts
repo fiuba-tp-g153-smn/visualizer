@@ -88,7 +88,7 @@ interface GfsCycleListResponse {
 }
 
 const WRF_ADAPTER: ForecastModelAdapter = {
-  id: 'wrf',
+  id: 'wrf-arg4k',
   displayName: 'WRF',
   buildTileUrl: buildWrfTileUrl,
   buildBarbTileUrl: buildWrfBarbTileUrl,
@@ -118,7 +118,7 @@ const GFS_ADAPTER: ForecastModelAdapter = {
 };
 
 const ADAPTERS: Readonly<Record<ForecastModelId, ForecastModelAdapter>> = {
-  wrf: WRF_ADAPTER,
+  'wrf-arg4k': WRF_ADAPTER,
   gfs: GFS_ADAPTER,
 };
 
@@ -127,7 +127,7 @@ const ADAPTERS: Readonly<Record<ForecastModelId, ForecastModelAdapter>> = {
  * esta forma antes de incorporar GFS y por eso no marca `modelId` en su config.
  */
 export function forecastModelAdapter(modelId?: ForecastModelId): ForecastModelAdapter {
-  return ADAPTERS[modelId ?? 'wrf'];
+  return ADAPTERS[modelId ?? 'wrf-arg4k'];
 }
 
 /** Adaptador de una capa concreta. */

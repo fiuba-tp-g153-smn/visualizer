@@ -38,9 +38,9 @@ describe('MetricsService', () => {
   });
 
   it('getJobs includes type and outcome when provided', () => {
-    service.getJobs({ limit: 50, offset: 50, type: 'radar_DBZH', outcome: 'dlq' }).subscribe();
+    service.getJobs({ limit: 50, offset: 50, type: 'radar_sinarame_dbzh', outcome: 'dlq' }).subscribe();
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/jobs'));
-    expect(req.request.params.get('type')).toBe('radar_DBZH');
+    expect(req.request.params.get('type')).toBe('radar_sinarame_dbzh');
     expect(req.request.params.get('outcome')).toBe('dlq');
     req.flush([]);
   });
