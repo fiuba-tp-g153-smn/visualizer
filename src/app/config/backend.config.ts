@@ -44,7 +44,7 @@ export function buildEcmwfTpPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/total-precipitation/${forecastTs}/${periodTs}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf-ifs/total-precipitation/${forecastTs}/${periodTs}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**
@@ -52,7 +52,7 @@ export function buildEcmwfTpPointQueryUrl(
  * Renderizada como overlay vectorial sobre TP.
  */
 export function buildEcmwfMslpGeojsonUrl(forecastTs: string, timestampTs: string): string {
-  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}.json`;
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf-ifs/mean-sea-level-pressure/${forecastTs}/${timestampTs}.json`;
 }
 
 /**
@@ -64,7 +64,7 @@ export function buildEcmwfMslpPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf-ifs/mean-sea-level-pressure/${forecastTs}/${timestampTs}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**

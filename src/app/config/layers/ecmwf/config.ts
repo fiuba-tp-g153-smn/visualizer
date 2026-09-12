@@ -29,7 +29,7 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
   layers: [
     {
       ...ECMWF_TP_DEFAULTS,
-      id: 'ecmwf-ifs/tp',
+      id: 'ecmwf-ifs/total-precipitation',
       variable: 'tp',
       name: 'Precipitación total',
       description:
@@ -38,7 +38,7 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
       // MSLP isobars are rendered as a secondary vector overlay over TP raster.
       // Always tied to TP visually: same toggle, same timeline, same forecast run.
       secondaryRender: {
-        id: 'ecmwf-ifs/mslp-isobars',
+        id: 'ecmwf-ifs/mean-sea-level-pressure-isobars',
         buildUrl: buildEcmwfMslpGeojsonUrl,
         buildPointQueryUrl: buildEcmwfMslpPointQueryUrl,
         pointQuery: {

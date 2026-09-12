@@ -38,28 +38,28 @@ describe('GFS adapter URLs', () => {
   const gfs = forecastModelAdapter('gfs');
 
   it('builds a tile template with Leaflet placeholders', () => {
-    expect(gfs.buildTileUrl('500hpa', CYCLE, 'f003')).toContain(
-      `/products/gfs/500hpa/${CYCLE}/f003/{z}/{x}/{y}.webp`,
+    expect(gfs.buildTileUrl('geopotential-500hpa', CYCLE, 'f003')).toContain(
+      `/products/gfs/geopotential-500hpa/${CYCLE}/f003/{z}/{x}/{y}.webp`,
     );
   });
 
   it('builds a barb tile URL with concrete coordinates', () => {
-    expect(gfs.buildBarbTileUrl('500hpa', CYCLE, 'f003', 4, 5, 9)).toContain(
-      `/products/gfs/500hpa/${CYCLE}/f003/barbs/4/5/9.json`,
+    expect(gfs.buildBarbTileUrl('geopotential-500hpa', CYCLE, 'f003', 4, 5, 9)).toContain(
+      `/products/gfs/geopotential-500hpa/${CYCLE}/f003/barbs/4/5/9.json`,
     );
   });
 
   it('builds a point query URL', () => {
-    expect(gfs.buildPointQueryUrl('mslp', CYCLE, 'f000', -34.5, -64.25)).toContain(
-      `/products/gfs/mslp/${CYCLE}/f000/point?lat=-34.5&lon=-64.25`,
+    expect(gfs.buildPointQueryUrl('mean-sea-level-pressure', CYCLE, 'f000', -34.5, -64.25)).toContain(
+      `/products/gfs/mean-sea-level-pressure/${CYCLE}/f000/point?lat=-34.5&lon=-64.25`,
     );
   });
 
   it('builds a secondary point query URL', () => {
     expect(
-      gfs.buildSecondaryPointQueryUrl('500hpa', CYCLE, 'f003', 'geopotential', -34.5, -64.25),
+      gfs.buildSecondaryPointQueryUrl('geopotential-500hpa', CYCLE, 'f003', 'geopotential', -34.5, -64.25),
     ).toContain(
-      `/products/gfs/500hpa/${CYCLE}/f003/secondary/geopotential/point?lat=-34.5&lon=-64.25`,
+      `/products/gfs/geopotential-500hpa/${CYCLE}/f003/secondary/geopotential/point?lat=-34.5&lon=-64.25`,
     );
   });
 });

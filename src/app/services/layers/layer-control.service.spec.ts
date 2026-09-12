@@ -81,7 +81,7 @@ describe('LayerControlService — weather stations no-data toggle', () => {
 });
 
 describe('LayerControlService — ECMWF reactivation after full deactivation', () => {
-  const ECMWF_LAYER_ID = 'ecmwf-ifs/tp';
+  const ECMWF_LAYER_ID = 'ecmwf-ifs/total-precipitation';
   const FORECAST_LATEST = '20260520T0000Z';
   const FORECAST_PREVIOUS = '20260519T1200Z';
 
@@ -196,9 +196,9 @@ describe('LayerControlService — ECMWF reactivation after full deactivation', (
 });
 
 describe('LayerControlService — forecast secondary render controls', () => {
-  const ECMWF_LAYER_ID = 'ecmwf-ifs/tp';
+  const ECMWF_LAYER_ID = 'ecmwf-ifs/total-precipitation';
   const WRF_LAYER_ID = 'wrf-arg4k/precipitacion-1h';
-  const GFS_MSLP_LAYER_ID = 'gfs/mslp';
+  const GFS_MSLP_LAYER_ID = 'gfs/mean-sea-level-pressure';
   const ECMWF_FORECAST = '20260520T0000Z';
   const WRF_FORECAST = '20260430_060000';
   const GFS_CYCLE = '20260808T0600Z';
@@ -274,13 +274,13 @@ describe('LayerControlService — forecast secondary render controls', () => {
     service.setEcmwfTpForecastRenderVisible(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
-      'ecmwf-ifs/mslp-isobars',
+      'ecmwf-ifs/mean-sea-level-pressure-isobars',
       false,
     );
     service.setEcmwfTpForecastRenderOpacity(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
-      'ecmwf-ifs/mslp-isobars',
+      'ecmwf-ifs/mean-sea-level-pressure-isobars',
       0.35,
     );
     TestBed.flushEffects();
@@ -298,7 +298,7 @@ describe('LayerControlService — forecast secondary render controls', () => {
       // PRIMARY_RENDER_ID stays selected by default — only the isobars overlay
       // (the only one explicitly hidden) drops out of the selection.
       selectedRenderIds: ['primary'],
-      renderOpacity: { 'ecmwf-ifs/mslp-isobars': 0.35 },
+      renderOpacity: { 'ecmwf-ifs/mean-sea-level-pressure-isobars': 0.35 },
     });
   });
 
@@ -329,7 +329,7 @@ describe('LayerControlService — forecast secondary render controls', () => {
     service.setEcmwfTpForecastRenderVisible(
       ECMWF_LAYER_ID,
       ECMWF_FORECAST,
-      'ecmwf-ifs/mslp-isobars',
+      'ecmwf-ifs/mean-sea-level-pressure-isobars',
       false,
     );
 
@@ -402,8 +402,8 @@ describe('LayerControlService — forecast secondary render controls', () => {
 
     const controls = service.getControls(GFS_MSLP_LAYER_ID) as WrfLayerControls;
     expect(controls.forecast.renderControls[GFS_CYCLE].selectedRenderIds).toEqual([
-      'gfs-mslp-thickness',
-      'gfs-mslp-isobars',
+      'gfs-mean-sea-level-pressure-thickness',
+      'gfs-mean-sea-level-pressure-isobars',
     ]);
   });
 
@@ -428,8 +428,8 @@ describe('LayerControlService — forecast secondary render controls', () => {
     const service = TestBed.inject(LayerControlService);
     service.activateLayer(GFS_MSLP_LAYER_ID);
 
-    service.setWrfForecastRenderVisible(GFS_MSLP_LAYER_ID, GFS_CYCLE, 'gfs-mslp-thickness', false);
-    service.setWrfForecastRenderVisible(GFS_MSLP_LAYER_ID, GFS_CYCLE, 'gfs-mslp-isobars', false);
+    service.setWrfForecastRenderVisible(GFS_MSLP_LAYER_ID, GFS_CYCLE, 'gfs-mean-sea-level-pressure-thickness', false);
+    service.setWrfForecastRenderVisible(GFS_MSLP_LAYER_ID, GFS_CYCLE, 'gfs-mean-sea-level-pressure-isobars', false);
 
     const controls = service.getControls(GFS_MSLP_LAYER_ID) as WrfLayerControls;
     expect(controls.forecast.renderControls[GFS_CYCLE].selectedRenderIds).toEqual([]);

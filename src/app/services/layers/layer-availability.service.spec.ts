@@ -36,7 +36,7 @@ function goesLayer(id = 'goes/abi/c13'): Layer {
   } as unknown as Layer;
 }
 
-function ecmwfLayer(id = 'ecmwf-ifs/tp'): Layer {
+function ecmwfLayer(id = 'ecmwf-ifs/total-precipitation'): Layer {
   return {
     id,
     name: 'Precipitación total',

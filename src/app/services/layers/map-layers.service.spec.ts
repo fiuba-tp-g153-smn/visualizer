@@ -8,7 +8,7 @@ const STEP = 'f003';
 
 function config(layersByStep: Record<string, readonly string[]>): WrfTileLayerConfig {
   return {
-    layerId: 'gfs/mslp',
+    layerId: 'gfs/mean-sea-level-pressure',
     type: LayerType.TILE,
     category: LayerCategory.WRF,
     availableTilesets: [],

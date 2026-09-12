@@ -63,8 +63,8 @@ export interface Shot {
 
 const CH13 = 'goes19/abi/c13';
 const GLM_FED = 'goes19/glm/fed';
-const ECMWF_TP = 'ecmwf-ifs/tp';
-const GFS_MSLP = 'gfs/mslp';
+const ECMWF_TP = 'ecmwf-ifs/total-precipitation';
+const GFS_MSLP = 'gfs/mean-sea-level-pressure';
 const PROVINCIA = 'ign-provincia';
 const DEPARTAMENTOS = 'ign-limite-interdepartamental-o-de-partido';
 
@@ -81,7 +81,7 @@ const ecmwf = (zIndex: number) => ({
   forecast: {
     selectedForecastIndices: [0],
     forecastOpacityByIndex: {},
-    secondaryRenderControlsByIndex: { '0': { selectedRenderIds: ['primary', 'ecmwf-ifs/mslp-isobars'], renderOpacity: {} } },
+    secondaryRenderControlsByIndex: { '0': { selectedRenderIds: ['primary', 'ecmwf-ifs/mean-sea-level-pressure-isobars'], renderOpacity: {} } },
   },
 });
 
