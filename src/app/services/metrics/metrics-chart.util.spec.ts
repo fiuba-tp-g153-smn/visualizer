@@ -37,8 +37,8 @@ describe('typeColor', () => {
 
 describe('buildTypeColorMap', () => {
   it('gives a type the same color regardless of input order (stable)', () => {
-    const a = buildTypeColorMap(['radar_sinarame_dbzh', 'goes19_abi_c13', 'goes19_goes19_glm_fed']);
-    const b = buildTypeColorMap(['goes19_goes19_glm_fed', 'goes19_abi_c13', 'radar_sinarame_dbzh']);
+    const a = buildTypeColorMap(['radar_sinarame_dbzh', 'goes19_abi_c13', 'goes19_glm_fed']);
+    const b = buildTypeColorMap(['goes19_glm_fed', 'goes19_abi_c13', 'radar_sinarame_dbzh']);
     expect(a('goes19_abi_c13')).toBe(b('goes19_abi_c13'));
     expect(a('goes19_abi_c13')).toMatch(/^#[0-9a-f]{6}$/i);
   });

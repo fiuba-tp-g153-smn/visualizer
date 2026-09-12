@@ -61,9 +61,9 @@ export interface Shot {
 
 // ── Layer ids and seed fragments ─────────────────────────────────────────────
 
-const CH13 = 'goes-19/abi/ch-13';
-const GLM_FED = 'goes-19/glm/glm-fed';
-const ECMWF_TP = 'ecmwf/total-precipitation';
+const CH13 = 'goes19/abi/c13';
+const GLM_FED = 'goes19/glm/fed';
+const ECMWF_TP = 'ecmwf-ifs/tp';
 const GFS_MSLP = 'gfs/mslp';
 const PROVINCIA = 'ign-provincia';
 const DEPARTAMENTOS = 'ign-limite-interdepartamental-o-de-partido';
@@ -81,7 +81,7 @@ const ecmwf = (zIndex: number) => ({
   forecast: {
     selectedForecastIndices: [0],
     forecastOpacityByIndex: {},
-    secondaryRenderControlsByIndex: { '0': { selectedRenderIds: ['primary', 'ecmwf-mslp-isobars'], renderOpacity: {} } },
+    secondaryRenderControlsByIndex: { '0': { selectedRenderIds: ['primary', 'ecmwf-ifs/mslp-isobars'], renderOpacity: {} } },
   },
 });
 
@@ -173,8 +173,8 @@ export const SHOTS: Shot[] = [
   {
     id: '03-disponibles', kind: 'shot', output: 'docs/imgs/manual/03-disponibles.png', viewport: SHOT, route: '/',
     seed: seed({ 'active-layers': [wms(PROVINCIA, 1), goes(CH13, 2)] }),
-    steps: [...openPanel('layers')], waitFor: '[data-testid="layers-group-goes-19"]', clip: PANEL,
-    annotate: ['[data-testid="layers-search-input"]', '[data-testid="layers-group-goes-19"]'],
+    steps: [...openPanel('layers')], waitFor: '[data-testid="layers-group-goes19"]', clip: PANEL,
+    annotate: ['[data-testid="layers-search-input"]', '[data-testid="layers-group-goes19"]'],
   },
   {
     id: '03-activas', kind: 'shot', output: 'docs/imgs/manual/03-activas.png', viewport: SHOT, route: '/',
@@ -224,7 +224,7 @@ export const SHOTS: Shot[] = [
       { do: 'click', target: '[data-testid="layers-active-group-base"] [data-testid="layers-active-group-clear"]', pauseMs: 1200 },
       { do: 'waitTiles' },
       { do: 'click', target: '[data-testid="layers-tab-available"]', pauseMs: 900 },
-      { do: 'click', target: '[data-testid="layers-group-goes-19"] mat-expansion-panel-header', pauseMs: 900 },
+      { do: 'click', target: '[data-testid="layers-group-goes19"] mat-expansion-panel-header', pauseMs: 900 },
       { do: 'click', target: '[data-testid="layers-subgroup-abi"] mat-expansion-panel-header', pauseMs: 900 },
       { do: 'click', target: row(CH13, '[data-testid="layers-row-checkbox"]'), pauseMs: 1200 },
       { do: 'waitTiles' },
@@ -238,7 +238,7 @@ export const SHOTS: Shot[] = [
     seed: seed({ 'active-layers': [wms(PROVINCIA, 1), goes(CH13, 1)] }),
     steps: [
       ...openPanel('layers'),
-      { do: 'click', target: '[data-testid="layers-group-goes-19"] mat-expansion-panel-header', pauseMs: 900 },
+      { do: 'click', target: '[data-testid="layers-group-goes19"] mat-expansion-panel-header', pauseMs: 900 },
       { do: 'click', target: '[data-testid="layers-subgroup-abi"] mat-expansion-panel-header', pauseMs: 900 },
     ],
     waitFor: row(CH13, '[data-testid="layers-row-checkbox"]'),
@@ -258,7 +258,7 @@ export const SHOTS: Shot[] = [
       { do: 'click', target: '[data-testid="layers-group-radar"] mat-expansion-panel-header', pauseMs: 900 },
       { do: 'click', target: '[data-testid="layers-subgroup-rma1"] mat-expansion-panel-header', pauseMs: 900 },
     ],
-    waitFor: '[data-testid="layers-row-radar/RMA1/DBZH"]', clip: PANEL,
+    waitFor: '[data-testid="layers-row-radar/RMA1/dbzh"]', clip: PANEL,
   },
   {
     id: '04-2-radar-mapa', kind: 'shot', output: 'docs/imgs/manual/04-2-radar-mapa.png', viewport: SHOT, route: '/',
