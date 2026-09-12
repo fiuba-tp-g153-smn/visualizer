@@ -13,7 +13,7 @@ export const WIND_SPEED_UNIT_ALIASES = {
 } as const;
 
 export const RADAR_UNITS = {
-  REFLECTIVITY: 'dBZ', // Reflectividad (DBZH, ZH, TH)
+  REFLECTIVITY: 'dBZ', // Reflectividad (DBZH)
   DIFFERENTIAL_REFLECTIVITY: 'dB', // Reflectividad diferencial (ZDR)
   VELOCITY: 'm/s', // Velocidad radial (VRAD)
   CORRELATION: 'ρhv', // Coeficiente de correlación (RHOHV)
