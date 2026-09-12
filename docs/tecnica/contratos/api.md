@@ -5,8 +5,7 @@ title: 12.1 API HTTP
 # 12.1 API HTTP
 
 Tres servicios exponen HTTP y **el navegador es el único cliente de los tres**. Esta página lista las
-rutas tal como están en el código, con parámetros, códigos de error y autenticación. Es una
-referencia: **se consulta, no se lee de corrido**.
+rutas tal como están en el código, con parámetros, códigos de error y autenticación.
 
 ![Quién llama a cada API, y con qué credencial](../../imgs/diagrams/api-llamadores.svg){ .diagram loading=lazy }
 
@@ -32,7 +31,7 @@ Base: `DATA_SERVICE_BASE_URL`, puerto `6006` en el ejemplo. **Todo es anónimo s
 ### Satélite
 
 **El router de satélite se queda con la ruta comodín `/products/{product_id}`.** El único producto es
-`goes-19`, con los instrumentos `abi` y `glm`.
+`goes19`, con los instrumentos `abi` y `glm`.
 
 | Método | Ruta | Parámetros | Errores |
 |---|---|---|---|
