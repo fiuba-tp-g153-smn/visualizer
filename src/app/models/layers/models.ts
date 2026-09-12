@@ -143,7 +143,7 @@ export interface ForecastModelTileLayer extends TileLayer {
    * único modelo con esta forma antes de incorporar GFS.
    */
   modelId?: ForecastModelId;
-  /** Identificador del producto (ej. 'colmax', 'rafagas', '500hpa'). */
+  /** Identificador del producto (ej. 'colmax', 'rafagas', 'geopotential-500hpa'). */
   productId: string;
   /**
    * `false` para productos que son solo contornos y no tienen pirámide raster

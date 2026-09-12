@@ -48,7 +48,7 @@ const RADAR_DEFAULTS = {
   isForecast: false,
 };
 
-const satelitePrefix = 'radar';
+const satelitePrefix = 'radar-sinarame';
 enum RadarProduct {
   DBZH = 'dbzh',
   DBZH_450KM = 'dbzh-450km',

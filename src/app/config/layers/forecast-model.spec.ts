@@ -67,7 +67,7 @@ describe('GFS adapter URLs', () => {
 describe('secondary point queries per model', () => {
   it('sends each model to its own route', () => {
     const gfsUrl = forecastModelAdapter('gfs').buildSecondaryPointQueryUrl(
-      '500hpa',
+      'geopotential-500hpa',
       CYCLE,
       'f003',
       'temperature',
@@ -84,7 +84,7 @@ describe('secondary point queries per model', () => {
     );
 
     expect(gfsUrl).toContain('/products/gfs/');
-    expect(wrfUrl).toContain('/products/wrf/');
+    expect(wrfUrl).toContain('/products/wrf-arg4k/');
   });
 });
 
