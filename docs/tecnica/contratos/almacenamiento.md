@@ -49,9 +49,9 @@ servicio sólo comprueba el de claves.
 | COG de WRF | `cog/wrf-arg4k/{product_id}/{init_tag}/{fxxx}.tif` y `{fxxx}.{variable}.tif` |
 | GeoJSON de WRF | `geojson/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/{layer}.json` |
 | Barbas de WRF | `geojson/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/barbs/{z}/{x}/{y}.json` |
-| Teselas de ECMWF | `tiles/ecmwf-ifs/tp/{forecast_ts}/{period_ts}/{z}/{x}/{y}.webp` |
+| Teselas de ECMWF | `tiles/ecmwf-ifs/total-precipitation/{forecast_ts}/{period_ts}/{z}/{x}/{y}.webp` |
 | COG de ECMWF | `cog/ecmwf-ifs/{tp,mslp}/{forecast_ts}/{...}.tif` |
-| Isobaras de ECMWF | `geojson/ecmwf-ifs/mslp/{forecast_ts}/{image_id}.json` |
+| Isobaras de ECMWF | `geojson/ecmwf-ifs/mean-sea-level-pressure/{forecast_ts}/{image_id}.json` |
 | Teselas de GFS | `tiles/gfs/{seg}/{cycle}/{cycle}_{fxxx}/{z}/{x}/{y}.webp` |
 | COG de GFS | `cog/gfs/{seg}/{cycle}/{cycle}_{fxxx}.tif` y `{seg}/{cycle}/{variable}/{cycle}_{fxxx}.tif` |
 | GeoJSON de GFS | `geojson/gfs/{seg}/{cycle}/{cycle}_{fxxx}_{layer}.json` |

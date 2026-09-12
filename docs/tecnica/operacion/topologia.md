@@ -4,10 +4,9 @@ title: 13. Topología de red
 
 # 13. Topología de red
 
-Cómo están cableados los cuatro stacks entre sí. **Es lo primero que hay que entender para decidir
-dónde va un firewall**, y tiene una particularidad: **no hay una red compartida entre los stacks.**
-**Cada uno vive en su propia red de compose**, y lo que cruza de uno a otro lo hace **por un puerto
-publicado en el host** o por el disco.
+Cómo están cableados los cuatro stacks entre sí, y dónde puede ir un firewall. **No hay una red
+compartida entre los stacks.** **Cada uno vive en su propia red de compose**, y lo que cruza de uno a
+otro lo hace **por un puerto publicado en el host** o por el disco.
 
 ![Cuatro redes, una costura](../../imgs/diagrams/topologia-red.svg){ .diagram loading=lazy }
 
@@ -43,7 +42,7 @@ host. Es el único mecanismo del sistema que **asume una sola máquina**, y tien
    bloquear el resto.
 
 `alerts-service` usa el mismo camino para su respaldo, **sólo si `S3_ENDPOINT` está definido**. **La
-alternativa limpia es una red de compose común**, con el servicio de datos apuntando a `seaweedfs:8333`.
+alternativa es una red de compose común**, con el servicio de datos apuntando a `seaweedfs:8333`.
 **Es un cambio de configuración.** Lo que costaría repartir los stacks en más de una máquina está en
 [15. Distribuir el sistema](distribucion.md).
 
@@ -52,12 +51,12 @@ alternativa limpia es una red de compose común**, con el servicio de datos apun
 Tres de las fuentes del procesador, radar, WRF y descargas eléctricas, están configuradas como
 **locales**: el productor mira directorios dentro de su raíz de datos. **El procesador no ofrece una
 API de ingreso para esos archivos.** En Beta-1, los feeds vivos del organismo deben escribir en los
-bind mounts `tiles-processor/data/{radar_h5,wrf_nc,glm_h5}`. En un laboratorio sin esos feeds,
+bind mounts `tiles-processor/data/{radar-sinarame,wrf-arg4k,goes19-glm}`. En un laboratorio sin esos feeds,
 `data-simulator` puede montar la misma raíz y depositar capturas históricas con marcas actuales.
 
 Para el firewall, esto significa **ningún puerto extra**. Para la topología, significa que **el
-proceso que escribe el feed o el replicador necesita acceso al almacenamiento de entrada del
-procesador. La guía específica está en [14.1 Beta-1](beta-1.md).
+proceso que escribe el feed, o el replicador, necesita acceso al almacenamiento de entrada del
+procesador**. La guía específica está en [14.1 Beta-1](beta-1.md).
 
 ## Puertos
 

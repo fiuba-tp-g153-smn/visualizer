@@ -60,7 +60,7 @@ el healthcheck del contenedor.**
 |---|---|---|
 | Bucket público `noaa-goes19` de NOAA | S3 anónimo | Imágenes ABI de GOES-19 |
 | Espejos de ECMWF y NOMADS de NOAA | HTTPS | GRIB de modelos globales |
-| `/app/data/radar_h5`, `/app/data/wrf_nc`, `/app/data/glm_h5` | **Sistema de archivos** | Radar, WRF y GLM en `mode: "local"` |
+| `/app/data/radar-sinarame`, `/app/data/wrf-arg4k`, `/app/data/goes19-glm` | **Sistema de archivos** | Radar, WRF y GLM en `mode: "local"` |
 | `rabbitmq:5672` | AMQP | Colas, por nombre de servicio |
 | `seaweedfs:8333` | S3 | Subida de productos, por nombre de servicio |
 

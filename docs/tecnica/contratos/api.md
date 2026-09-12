@@ -46,24 +46,24 @@ Base: `DATA_SERVICE_BASE_URL`, puerto `6006` en el ejemplo. **Todo es anónimo s
 | Método | Ruta | Parámetros | Errores |
 |---|---|---|---|
 | `GET` | `/products/radar` | — | — |
-| `GET` | `/products/radar/{radar_id}` | — | — |
-| `GET` | `/products/radar/{radar_id}/{variable_id}` | — | — |
-| `GET` | `/products/radar/{radar_id}/{variable_id}/{elevation_id}` | — | — |
-| `GET` | `/products/radar/{r}/{v}/{e}/{tileset_id}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`; **una tesela ausente devuelve `200` transparente** |
-| `GET` | `/products/radar/{r}/{v}/{e}/{tileset_id}/point` | `lat`, `lon` | `404` |
+| `GET` | `/products/radar-sinarame/{radar_id}` | — | — |
+| `GET` | `/products/radar-sinarame/{radar_id}/{variable_id}` | — | — |
+| `GET` | `/products/radar-sinarame/{radar_id}/{variable_id}/{elevation_id}` | — | — |
+| `GET` | `/products/radar-sinarame/{r}/{v}/{e}/{tileset_id}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`; **una tesela ausente devuelve `200` transparente** |
+| `GET` | `/products/radar-sinarame/{r}/{v}/{e}/{tileset_id}/point` | `lat`, `lon` | `404` |
 
 ### ECMWF
 
 | Método | Ruta | Parámetros | Errores |
 |---|---|---|---|
-| `GET` | `/products/ecmwf/total-precipitation` | `If-None-Match` | `304` |
-| `GET` | `/products/ecmwf/total-precipitation/{forecast_ts}` | `If-None-Match` | `304`, `404` |
-| `GET` | `/products/ecmwf/total-precipitation/{forecast_ts}/{period_ts}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`, `400` zoom fuera de 3–7, `404` |
-| `GET` | `/products/ecmwf/total-precipitation/{forecast_ts}/{period_ts}/point` | `lat`, `lon` | `404` |
-| `GET` | `/products/ecmwf/mean-sea-level-pressure` | `If-None-Match` | `304` |
-| `GET` | `/products/ecmwf/mean-sea-level-pressure/{forecast_ts}` | `If-None-Match` | `304`, `404` |
-| `GET` | `/products/ecmwf/mean-sea-level-pressure/{forecast_ts}/{timestamp_ts}.json` | `If-None-Match` | `304`, `404` |
-| `GET` | `/products/ecmwf/mean-sea-level-pressure/{forecast_ts}/{timestamp_ts}/point` | `lat`, `lon` | `404` |
+| `GET` | `/products/ecmwf-ifs/total-precipitation` | `If-None-Match` | `304` |
+| `GET` | `/products/ecmwf-ifs/total-precipitation/{forecast_ts}` | `If-None-Match` | `304`, `404` |
+| `GET` | `/products/ecmwf-ifs/total-precipitation/{forecast_ts}/{period_ts}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`, `400` zoom fuera de 3–7, `404` |
+| `GET` | `/products/ecmwf-ifs/total-precipitation/{forecast_ts}/{period_ts}/point` | `lat`, `lon` | `404` |
+| `GET` | `/products/ecmwf-ifs/mean-sea-level-pressure` | `If-None-Match` | `304` |
+| `GET` | `/products/ecmwf-ifs/mean-sea-level-pressure/{forecast_ts}` | `If-None-Match` | `304`, `404` |
+| `GET` | `/products/ecmwf-ifs/mean-sea-level-pressure/{forecast_ts}/{timestamp_ts}.json` | `If-None-Match` | `304`, `404` |
+| `GET` | `/products/ecmwf-ifs/mean-sea-level-pressure/{forecast_ts}/{timestamp_ts}/point` | `lat`, `lon` | `404` |
 
 **La presión a nivel del mar no tiene teselas**: son isobaras en GeoJSON.
 
@@ -71,13 +71,13 @@ Base: `DATA_SERVICE_BASE_URL`, puerto `6006` en el ejemplo. **Todo es anónimo s
 
 | Método | Ruta | Parámetros | Errores |
 |---|---|---|---|
-| `GET` | `/products/wrf/{product_id}` | `If-None-Match` | `304` |
-| `GET` | `/products/wrf/{product_id}/{init_tag}` | `If-None-Match` | `304`, `404` |
-| `GET` | `/products/wrf/{product_id}/{init_tag}/{fxxx}/point` | `lat`, `lon` | `404` |
-| `GET` | `/products/wrf/{product_id}/{init_tag}/{fxxx}/secondary/{variable}/point` | `lat`, `lon` | `404` |
-| `GET` | `/products/wrf/{product_id}/{init_tag}/{fxxx}/{layer}.json` | `If-None-Match` | `304`, `404` |
-| `GET` | `/products/wrf/{product_id}/{init_tag}/{fxxx}/barbs/{z}/{x}/{y}.json` | `If-None-Match` | `304`, `400` si `z` no está en 2, 4, 6, 8, 10, 12; ausencia devuelve `200` con colección vacía |
-| `GET` | `/products/wrf/{product_id}/{init_tag}/{fxxx}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`, `400` zoom fuera de 4–9; ausencia devuelve `200` transparente |
+| `GET` | `/products/wrf-arg4k/{product_id}` | `If-None-Match` | `304` |
+| `GET` | `/products/wrf-arg4k/{product_id}/{init_tag}` | `If-None-Match` | `304`, `404` |
+| `GET` | `/products/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/point` | `lat`, `lon` | `404` |
+| `GET` | `/products/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/secondary/{variable}/point` | `lat`, `lon` | `404` |
+| `GET` | `/products/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/{layer}.json` | `If-None-Match` | `304`, `404` |
+| `GET` | `/products/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/barbs/{z}/{x}/{y}.json` | `If-None-Match` | `304`, `400` si `z` no está en 2, 4, 6, 8, 10, 12; ausencia devuelve `200` con colección vacía |
+| `GET` | `/products/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`, `400` zoom fuera de 4–9; ausencia devuelve `200` transparente |
 
 ### GFS
 
