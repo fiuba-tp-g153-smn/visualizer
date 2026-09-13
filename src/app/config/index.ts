@@ -9,6 +9,7 @@
 
 // Data service backend configuration
 export {
+  buildAvailabilityUrl,
   buildConfigUrl,
   buildTileUrl,
   buildSatellitePointQueryUrl,

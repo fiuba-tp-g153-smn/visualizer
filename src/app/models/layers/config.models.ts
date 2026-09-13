@@ -54,3 +54,20 @@ export interface WrfTileLayerConfig extends TileLayerConfig {
   /** layers["init_tag/fxxx"] = ['barbs', 'slp', ...] (overlay GeoJSON layer names). */
   layersByStep: Readonly<Record<string, readonly string[]>>;
 }
+
+/**
+ * Respuesta de `/products/availability`: qué productos tienen datos ahora.
+ *
+ * `products` va indexado por la MISMA ruta que usaría un sondeo individual
+ * (`radar-sinarame/RMA2/dbzh/elev0`, `goes19/abi/c13`, `wrf-arg4k/granizo`),
+ * así que el cliente hace un lookup en vez de una petición.
+ *
+ * `domains` lista los segmentos iniciales que el backend efectivamente pudo
+ * responder. Una clave ausente significa "sin datos" SÓLO si su dominio está
+ * listado; si el dominio falta (índice que el sync todavía no escribió) lo
+ * honesto es "desconocido" y hay que sondear ese producto por separado.
+ */
+export interface ProductAvailabilitySnapshot {
+  readonly products: Readonly<Record<string, boolean>>;
+  readonly domains: readonly string[];
+}

@@ -18,6 +18,7 @@ import {
   LayerCategory,
   LayerConfig,
   LayerType,
+  ProductAvailabilitySnapshot,
   WmsLayer,
 } from '../../models';
 
@@ -105,6 +106,7 @@ function ecmwfConfig(
 interface Mocks {
   configs: Map<string, LayerConfig>;
   probe: (layer: Layer) => Observable<boolean>;
+  availability: () => Observable<ProductAvailabilitySnapshot>;
   loadingLayerIds: ReturnType<typeof signal<ReadonlySet<string>>>;
   weatherStationsTilesetIds: string[];
   hasKey: boolean;
@@ -122,6 +124,11 @@ function setup(overrides: Partial<Mocks> = {}): {
   const mocks: Mocks = {
     configs: overrides.configs ?? new Map(),
     probe: overrides.probe ?? ((_layer: Layer): Observable<boolean> => of(true)),
+    // Default: the backend knows nothing, so every layer falls back to its
+    // individual probe — which keeps the pre-bundling tests meaningful.
+    availability:
+      overrides.availability ??
+      ((): Observable<ProductAvailabilitySnapshot> => of({ products: {}, domains: [] })),
     loadingLayerIds: overrides.loadingLayerIds ?? signal<ReadonlySet<string>>(new Set()),
     weatherStationsTilesetIds: overrides.weatherStationsTilesetIds ?? [],
     hasKey: overrides.hasKey ?? false,
@@ -150,6 +157,7 @@ function setup(overrides: Partial<Mocks> = {}): {
           hasConfig: (id: string) => mocks.configs.has(id),
           getConfig: (id: string) => mocks.configs.get(id),
           probeLayerAvailability: (layer: Layer) => mocks.probe(layer),
+          fetchProductAvailability: () => mocks.availability(),
         },
       },
       {
@@ -418,3 +426,160 @@ async function flushMicrotasks(): Promise<void> {
     await Promise.resolve();
   }
 }
+
+// ------------------------------------------------- bundled availability probe
+
+function radarLayer(id = 'radar-sinarame/RMA2/dbzh'): Layer {
+  return {
+    id,
+    name: 'Reflectividad',
+    type: LayerType.TILE,
+    category: LayerCategory.RADAR,
+    zIndexGroup: ActiveLayerGroupId.BASE,
+    availableElevations: [{ id: 'elev0', angle: 0.5, description: '0.5°' }],
+  } as unknown as Layer;
+}
+
+describe('bundled availability snapshot', () => {
+  it('resolves every product from ONE request instead of one per product', async () => {
+    // The regression this replaces: 18 radars x 6 variables = 108 GETs a minute.
+    const radars = Array.from({ length: 18 }, (_, r) =>
+      ['dbzh', 'dbzh-450km', 'kdp', 'vrad', 'rhohv', 'zdr'].map((v) =>
+        radarLayer(`radar-sinarame/RMA${r + 1}/${v}`),
+      ),
+    ).flat();
+    const products: Record<string, boolean> = {};
+    for (const layer of radars) {
+      products[`${layer.id}/elev0`] = true;
+    }
+    const probe = vi.fn(() => of(true));
+    const availability = vi.fn(() => of({ products, domains: ['radar-sinarame'] }));
+    const { service } = setup({ allLayers: radars, probe, availability });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(availability).toHaveBeenCalledTimes(1);
+    expect(probe).not.toHaveBeenCalled();
+    expect(service.state(radars[0])).toBe('available');
+  });
+
+  it('greys a product the snapshot reports as empty', async () => {
+    const layer = radarLayer();
+    const { service } = setup({
+      allLayers: [layer],
+      availability: () =>
+        of({
+          products: { 'radar-sinarame/RMA2/dbzh/elev0': false },
+          domains: ['radar-sinarame'],
+        }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.isUnavailable(layer)).toBe(true);
+  });
+
+  it('treats a key missing from a COVERED domain as empty', async () => {
+    const layer = radarLayer();
+    const { service } = setup({
+      allLayers: [layer],
+      availability: () => of({ products: {}, domains: ['radar-sinarame'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.state(layer)).toBe('empty');
+  });
+
+  it('falls back to an individual probe when the domain is NOT covered', async () => {
+    // A cold index (service just restarted) must not grey every row.
+    const layer = radarLayer();
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({
+      allLayers: [layer],
+      probe,
+      availability: () => of({ products: {}, domains: ['gfs'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(service.state(layer)).toBe('available');
+  });
+
+  it('falls back to individual probes when the bundled call fails', async () => {
+    const layer = goesLayer();
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({
+      allLayers: [layer],
+      probe,
+      availability: () => throwError(() => new HttpErrorResponse({ status: 500 })),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(probe).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the service down when the bundled call fails at network level', async () => {
+    const reportFailure = vi.fn();
+    const { service } = setup({
+      allLayers: [goesLayer()],
+      reportFailure,
+      availability: () => throwError(() => new HttpErrorResponse({ status: 0 })),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(reportFailure).toHaveBeenCalled();
+  });
+
+  it('a single-product recheck stays a single probe, not the bundle', async () => {
+    // The user pressed THIS product's button and wants its own fresh answer.
+    const layer = goesLayer();
+    const probe = vi.fn(() => of(true));
+    const availability = vi.fn(() => of({ products: {}, domains: [] }));
+    const { service } = setup({ allLayers: [layer], probe, availability });
+
+    await service.recheck(layer);
+
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(availability).not.toHaveBeenCalled();
+  });
+
+  it('a subgroup recheck uses the bundle', async () => {
+    const layers = [radarLayer('radar-sinarame/RMA2/dbzh'), radarLayer('radar-sinarame/RMA2/kdp')];
+    const probe = vi.fn(() => of(true));
+    const availability = vi.fn(() =>
+      of({
+        products: {
+          'radar-sinarame/RMA2/dbzh/elev0': true,
+          'radar-sinarame/RMA2/kdp/elev0': false,
+        },
+        domains: ['radar-sinarame'],
+      }),
+    );
+    const { service } = setup({ allLayers: layers, probe, availability });
+
+    await service.recheckMany(layers);
+
+    expect(availability).toHaveBeenCalledTimes(1);
+    expect(probe).not.toHaveBeenCalled();
+    expect(service.state(layers[0])).toBe('available');
+    expect(service.state(layers[1])).toBe('empty');
+  });
+});

@@ -6,6 +6,8 @@ import {
   Layer,
   LayerCategory,
   LayerType,
+  ProductAvailabilitySnapshot,
+  RadarTileLayer,
   WrfTileLayerConfig,
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
@@ -33,6 +35,30 @@ const PROBEABLE_TILE_CATEGORIES: ReadonlySet<LayerCategory> = new Set([
   LayerCategory.ECMWF_TP,
   LayerCategory.WRF,
 ]);
+
+/**
+ * The product path a layer occupies in the bundled availability snapshot —
+ * the same string an individual probe would put in its URL.
+ *
+ * Radar is the one category whose probe path is not just the layer id: its
+ * tilesets are indexed per elevation, and the probe reads the first one.
+ * Returns null when the layer has no probeable path at all.
+ */
+function availabilityPath(layer: Layer): string | null {
+  if (layer.category !== LayerCategory.RADAR) {
+    return layer.id;
+  }
+  const elevations = (layer as RadarTileLayer).availableElevations;
+  if (!elevations || elevations.length === 0) {
+    return null;
+  }
+  return `${layer.id}/${elevations[0].id}`;
+}
+
+/** Leading path segment, which is what `snapshot.domains` lists. */
+function domainOf(path: string): string {
+  return path.split('/')[0];
+}
 
 /** How many probes may be in flight at once during a prime pass. */
 const PROBE_CONCURRENCY = 6;
@@ -116,7 +142,22 @@ export class LayerAvailabilityService {
    * product so a newly-published (or newly-emptied) one updates right away.
    */
   async recheck(layer: Layer): Promise<void> {
-    await this.recheckMany([layer]);
+    if (!this.healthService.isAvailable()) {
+      await this.healthService.checkNow();
+      if (!this.healthService.isAvailable()) {
+        return; // still down — the row stays 'unreachable'
+      }
+    }
+    // Deliberately the individual probe, not the bundled snapshot: the user
+    // pressed this button for THIS product and expects its own fresh answer,
+    // not one that may be a few seconds stale from the shared memo.
+    if (
+      layer.type === LayerType.TILE &&
+      PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
+      !this.configService.hasConfig(layer.id)
+    ) {
+      await this.probeOne(layer);
+    }
   }
 
   /**
@@ -140,7 +181,9 @@ export class LayerAvailabilityService {
         PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
         !this.configService.hasConfig(layer.id),
     );
-    await this.runThrottled(toProbe, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
+    // A subgroup recheck is a broad check, so it takes the bundled path. A
+    // single-product recheck goes through `recheck`, which probes just that one.
+    await this.probeBundled(toProbe);
   }
 
   /**
@@ -204,18 +247,82 @@ export class LayerAvailabilityService {
     }
     this.priming = true;
     try {
-      const layers = this.layersService
-        .getAllLayers()
-        .filter(
-          (layer) =>
-            layer.type === LayerType.TILE &&
-            PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
-            // Active layers derive availability from their live config — no probe needed.
-            !this.configService.hasConfig(layer.id),
-        );
-      await this.runThrottled(layers, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
+      await this.probeBundled(this.probeableLayers());
     } finally {
       this.priming = false;
+    }
+  }
+
+  /** TILE products we can probe and haven't already loaded a live config for. */
+  private probeableLayers(): Layer[] {
+    return this.layersService
+      .getAllLayers()
+      .filter(
+        (layer) =>
+          layer.type === LayerType.TILE &&
+          PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
+          // Active layers derive availability from their live config — no probe needed.
+          !this.configService.hasConfig(layer.id),
+      );
+  }
+
+  /**
+   * Resolve a batch of layers from ONE bundled request.
+   *
+   * This used to be a GET per layer, throttled six at a time: the radar grid
+   * alone is 18 radars x 6 variables = 108 requests, re-run every minute, per
+   * client. Every answer comes from an index the backend already holds, so it
+   * now answers for all of them at once.
+   *
+   * Only layers the snapshot could not speak for fall back to an individual
+   * probe — a domain whose index the sync loop has not written yet. In the
+   * steady state that list is empty and the whole pass is one request.
+   */
+  private async probeBundled(layers: readonly Layer[]): Promise<void> {
+    if (layers.length === 0) {
+      return;
+    }
+    let snapshot: ProductAvailabilitySnapshot;
+    try {
+      snapshot = await firstValueFrom(this.configService.fetchProductAvailability());
+    } catch (err) {
+      // The bundled call is the same kind of request as a probe, so a
+      // network-level failure means the same thing: the service is down.
+      this.reportIfUnreachable(err);
+      await this.runThrottled(layers, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
+      return;
+    }
+
+    const uncovered = layers.filter((layer) => !this.applySnapshot(layer, snapshot));
+    await this.runThrottled(uncovered, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
+  }
+
+  /**
+   * Set one layer's state from the snapshot. Returns false when the snapshot
+   * has nothing to say about it, so the caller can probe it individually.
+   */
+  private applySnapshot(layer: Layer, snapshot: ProductAvailabilitySnapshot): boolean {
+    const path = availabilityPath(layer);
+    if (path === null) {
+      return false;
+    }
+    const hasData = snapshot.products[path];
+    if (hasData !== undefined) {
+      this.setProbeState(layer.id, hasData ? 'available' : 'empty');
+      return true;
+    }
+    // Key absent: "no data" only if the backend covered this domain at all.
+    // Otherwise its index is still cold and greying the row would be a guess.
+    if (snapshot.domains.includes(domainOf(path))) {
+      this.setProbeState(layer.id, 'empty');
+      return true;
+    }
+    return false;
+  }
+
+  private reportIfUnreachable(err: unknown): void {
+    if (err instanceof HttpErrorResponse && err.status === 0) {
+      this.healthService.reportFailure();
     }
   }
 

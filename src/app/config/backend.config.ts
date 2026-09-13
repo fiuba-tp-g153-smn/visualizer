@@ -13,6 +13,17 @@ export function buildConfigUrl(pathToProduct: string): string {
 }
 
 /**
+ * URL del snapshot de disponibilidad de TODOS los productos a la vez.
+ *
+ * Existe para que el sondeo general no sea una petición por producto: sólo la
+ * grilla de radares son 18 x 6 = 108, y se re-sondea con un temporizador. Los
+ * botones de re-verificación individuales siguen usando `buildConfigUrl`.
+ */
+export function buildAvailabilityUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/products/availability`;
+}
+
+/**
  * Construye URL de tiles para un producto específico
  * @param pathToTileset - Ruta específica del tileset (e.g., "goes19/abi/ch-2/202601010000")
  * @returns URL template para Leaflet con formato desde environment
