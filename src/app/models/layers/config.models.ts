@@ -58,16 +58,18 @@ export interface WrfTileLayerConfig extends TileLayerConfig {
 /**
  * Respuesta de `/products/availability`: qué productos tienen datos ahora.
  *
- * `products` va indexado por la MISMA ruta que usaría un sondeo individual
- * (`radar-sinarame/RMA2/dbzh/elev0`, `goes19/abi/c13`, `wrf-arg4k/granizo`),
- * así que el cliente hace un lookup en vez de una petición.
+ * `available` son rutas de producto, las MISMAS que usaría un sondeo
+ * individual (`radar-sinarame/RMA2/dbzh/elev0`, `goes19/abi/c13`,
+ * `wrf-arg4k/granizo`), así que el cliente hace un lookup en vez de una
+ * petición.
  *
- * `domains` lista los segmentos iniciales que el backend efectivamente pudo
- * responder. Una clave ausente significa "sin datos" SÓLO si su dominio está
- * listado; si el dominio falta (índice que el sync todavía no escribió) lo
- * honesto es "desconocido" y hay que sondear ese producto por separado.
+ * La lista es COMPLETA: el backend la arma recorriendo el mismo camino de
+ * lectura que recorrería el endpoint por producto (Redis y, si está frío, S3),
+ * así que un producto ausente no tiene datos y no hace falta sondearlo.
+ *
+ * `domains` es diagnóstico: qué dominios aportaron al menos un producto.
  */
 export interface ProductAvailabilitySnapshot {
-  readonly products: Readonly<Record<string, boolean>>;
+  readonly available: readonly string[];
   readonly domains: readonly string[];
 }

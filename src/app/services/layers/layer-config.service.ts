@@ -341,15 +341,16 @@ export class LayerConfigService {
    *
    * The bundled counterpart to `probeLayerAvailability`: the eager pass used to
    * be one GET per product, and the radar grid alone is 18 x 6 = 108 of them on
-   * a 60s timer, per client. `domains` says which leading path segments the
-   * backend actually answered for, so a caller can tell "this product has no
-   * data" (domain listed, key absent or false) from "the backend does not know
-   * yet" (domain missing) instead of greying rows on a cold index.
+   * a 60s timer, per client.
+   *
+   * The list is complete: the backend builds it through the same read path an
+   * individual probe would take (Redis, falling back to S3 when the index is
+   * cold), so a product missing from `available` genuinely has no data.
    */
   fetchProductAvailability(): Observable<ProductAvailabilitySnapshot> {
     return this.http.get<ProductAvailabilitySnapshot>(buildAvailabilityUrl()).pipe(
       map((resp) => ({
-        products: resp.products ?? {},
+        available: resp.available ?? [],
         domains: resp.domains ?? [],
       })),
     );

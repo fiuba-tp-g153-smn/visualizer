@@ -128,7 +128,7 @@ function setup(overrides: Partial<Mocks> = {}): {
     // individual probe — which keeps the pre-bundling tests meaningful.
     availability:
       overrides.availability ??
-      ((): Observable<ProductAvailabilitySnapshot> => of({ products: {}, domains: [] })),
+      ((): Observable<ProductAvailabilitySnapshot> => of({ available: [], domains: [] })),
     loadingLayerIds: overrides.loadingLayerIds ?? signal<ReadonlySet<string>>(new Set()),
     weatherStationsTilesetIds: overrides.weatherStationsTilesetIds ?? [],
     hasKey: overrides.hasKey ?? false,
@@ -448,12 +448,9 @@ describe('bundled availability snapshot', () => {
         radarLayer(`radar-sinarame/RMA${r + 1}/${v}`),
       ),
     ).flat();
-    const products: Record<string, boolean> = {};
-    for (const layer of radars) {
-      products[`${layer.id}/elev0`] = true;
-    }
+    const available = radars.map((layer) => `${layer.id}/elev0`);
     const probe = vi.fn(() => of(true));
-    const availability = vi.fn(() => of({ products, domains: ['radar-sinarame'] }));
+    const availability = vi.fn(() => of({ available, domains: ['radar-sinarame'] }));
     const { service } = setup({ allLayers: radars, probe, availability });
 
     service.primeAll();
@@ -465,15 +462,14 @@ describe('bundled availability snapshot', () => {
     expect(service.state(radars[0])).toBe('available');
   });
 
-  it('greys a product the snapshot reports as empty', async () => {
+  it('greys a product the snapshot omits, without probing it', async () => {
+    // The snapshot is complete, so absence is an answer — not a reason to ask.
     const layer = radarLayer();
+    const probe = vi.fn(() => of(true));
     const { service } = setup({
       allLayers: [layer],
-      availability: () =>
-        of({
-          products: { 'radar-sinarame/RMA2/dbzh/elev0': false },
-          domains: ['radar-sinarame'],
-        }),
+      probe,
+      availability: () => of({ available: [], domains: ['radar-sinarame'] }),
     });
 
     service.primeAll();
@@ -481,39 +477,29 @@ describe('bundled availability snapshot', () => {
     await Promise.resolve();
 
     expect(service.isUnavailable(layer)).toBe(true);
+    expect(probe).not.toHaveBeenCalled();
   });
 
-  it('treats a key missing from a COVERED domain as empty', async () => {
-    const layer = radarLayer();
-    const { service } = setup({
-      allLayers: [layer],
-      availability: () => of({ products: {}, domains: ['radar-sinarame'] }),
-    });
-
-    service.primeAll();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(service.state(layer)).toBe('empty');
-  });
-
-  it('falls back to an individual probe when the domain is NOT covered', async () => {
-    // A cold index (service just restarted) must not grey every row.
-    const layer = radarLayer();
+  it('probes nothing at all when most products are empty', async () => {
+    // The regression: with ~125 products and only a handful carrying data, an
+    // earlier design treated absence as "unknown" and probed the other ~113
+    // every sweep — which is the entire cost the bundle exists to remove.
+    const layers = Array.from({ length: 40 }, (_, i) => radarLayer(`radar-sinarame/RMA${i}/dbzh`));
     const probe = vi.fn(() => of(true));
     const { service } = setup({
-      allLayers: [layer],
+      allLayers: layers,
       probe,
-      availability: () => of({ products: {}, domains: ['gfs'] }),
+      availability: () =>
+        of({ available: ['radar-sinarame/RMA0/dbzh/elev0'], domains: ['radar-sinarame'] }),
     });
 
     service.primeAll();
     await Promise.resolve();
     await Promise.resolve();
-    await Promise.resolve();
 
-    expect(probe).toHaveBeenCalledTimes(1);
-    expect(service.state(layer)).toBe('available');
+    expect(probe).not.toHaveBeenCalled();
+    expect(service.state(layers[0])).toBe('available');
+    expect(service.state(layers[7])).toBe('empty');
   });
 
   it('falls back to individual probes when the bundled call fails', async () => {
@@ -552,7 +538,7 @@ describe('bundled availability snapshot', () => {
     // The user pressed THIS product's button and wants its own fresh answer.
     const layer = goesLayer();
     const probe = vi.fn(() => of(true));
-    const availability = vi.fn(() => of({ products: {}, domains: [] }));
+    const availability = vi.fn(() => of({ available: [], domains: [] }));
     const { service } = setup({ allLayers: [layer], probe, availability });
 
     await service.recheck(layer);
@@ -563,16 +549,10 @@ describe('bundled availability snapshot', () => {
 
   it('a subgroup recheck uses the bundle', async () => {
     const layers = [radarLayer('radar-sinarame/RMA2/dbzh'), radarLayer('radar-sinarame/RMA2/kdp')];
-    const probe = vi.fn(() => of(true));
     const availability = vi.fn(() =>
-      of({
-        products: {
-          'radar-sinarame/RMA2/dbzh/elev0': true,
-          'radar-sinarame/RMA2/kdp/elev0': false,
-        },
-        domains: ['radar-sinarame'],
-      }),
+      of({ available: ['radar-sinarame/RMA2/dbzh/elev0'], domains: ['radar-sinarame'] }),
     );
+    const probe = vi.fn(() => of(true));
     const { service } = setup({ allLayers: layers, probe, availability });
 
     await service.recheckMany(layers);
@@ -581,5 +561,86 @@ describe('bundled availability snapshot', () => {
     expect(probe).not.toHaveBeenCalled();
     expect(service.state(layers[0])).toBe('available');
     expect(service.state(layers[1])).toBe('empty');
+  });
+});
+
+// ------------------------------------------- stale config after deactivation
+
+describe('a cached config that reports no data', () => {
+  it('does not freeze the row as greyed after check-then-uncheck', async () => {
+    // Activating a product before its first period exists caches an empty
+    // config. That config is only refreshed while the layer is active, so on
+    // deactivation it is stale — and it used to grey the row permanently,
+    // because the eager sweep skipped anything holding a config at all.
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const { service } = setup({
+      allLayers: [layer],
+      configs,
+      availability: () => of({ available: [layer.id], domains: ['goes'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.isUnavailable(layer)).toBe(false);
+    expect(service.state(layer)).toBe('available');
+  });
+
+  it('defers instead of asserting empty before anything has checked', () => {
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const { service } = setup({ allLayers: [layer], configs });
+
+    // Nothing has confirmed or denied it yet, so the row stays interactive
+    // rather than being greyed on the strength of a stale config alone.
+    expect(service.state(layer)).toBe('unknown');
+    expect(service.isUnavailable(layer)).toBe(false);
+  });
+
+  it('greys the row once the snapshot confirms there is no data', async () => {
+    // The row must still end up greyed when the product really is empty —
+    // deferring is a delay, not a refusal to ever grey.
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const { service } = setup({
+      allLayers: [layer],
+      configs,
+      availability: () => of({ available: [], domains: ['goes'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.state(layer)).toBe('empty');
+    expect(service.isUnavailable(layer)).toBe(true);
+  });
+
+  it('lets a config that HAS data answer without any probe', async () => {
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 3)]]);
+    const availability = vi.fn(() => of({ available: [], domains: [] }));
+    const { service } = setup({ allLayers: [layer], configs, availability });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.state(layer)).toBe('available');
+    expect(availability).not.toHaveBeenCalled();
+  });
+
+  it('lets the recheck button work on a greyed row', async () => {
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({ allLayers: [layer], configs, probe });
+
+    await service.recheck(layer);
+
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(service.state(layer)).toBe('available');
   });
 });
