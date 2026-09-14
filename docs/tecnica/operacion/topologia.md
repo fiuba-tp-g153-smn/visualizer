@@ -4,10 +4,9 @@ title: 13. Topología de red
 
 # 13. Topología de red
 
-Cómo están cableados los cuatro stacks entre sí. **Es lo primero que hay que entender para decidir
-dónde va un firewall**, y tiene una particularidad: **no hay una red compartida entre los stacks.**
-**Cada uno vive en su propia red de compose**, y lo que cruza de uno a otro lo hace **por un puerto
-publicado en el host** o por el disco.
+Cómo están cableados los cuatro stacks entre sí, y dónde puede ir un firewall. **No hay una red
+compartida entre los stacks.** **Cada uno vive en su propia red de compose**, y lo que cruza de uno a
+otro lo hace **por un puerto publicado en el host** o por el disco.
 
 ![Cuatro redes, una costura](../../imgs/diagrams/topologia-red.svg){ .diagram loading=lazy }
 
@@ -24,9 +23,9 @@ publicado en el host** o por el disco.
 `redis`, `mysql`. **Entre stacks, no.** **Un contenedor de `data-service` no puede resolver `seaweedfs`.**
 
 !!! note "El repositorio de orquestación no cambia esto"
-    Existe un repositorio que incluye las cuatro plantillas en **un solo proyecto** de compose. En
-    ese modelo, `tiles-processor` y `visualizer` comparten la red por defecto del proyecto, pero
-    `data-service` y `alerts-service` siguen en las suyas. **La costura de abajo existe igual.**
+    `mapasmn` incluye las cuatro plantillas en **un solo proyecto** de Compose; Beta-1 usa ese modelo.
+    `tiles-processor` y `visualizer` comparten la red por defecto del proyecto, pero `data-service` y
+    `alerts-service` siguen en las suyas. **La costura de abajo existe igual.**
 
 ## La costura: el tráfico entre stacks pasa por el host
 
@@ -43,21 +42,21 @@ host. Es el único mecanismo del sistema que **asume una sola máquina**, y tien
    bloquear el resto.
 
 `alerts-service` usa el mismo camino para su respaldo, **sólo si `S3_ENDPOINT` está definido**. **La
-alternativa limpia es una red de compose común**, con el servicio de datos apuntando a `seaweedfs:8333`.
+alternativa es una red de compose común**, con el servicio de datos apuntando a `seaweedfs:8333`.
 **Es un cambio de configuración.** Lo que costaría repartir los stacks en más de una máquina está en
 [15. Distribuir el sistema](distribucion.md).
 
 ## La otra costura: el disco
 
 Tres de las fuentes del procesador, radar, WRF y descargas eléctricas, están configuradas como
-**locales**: el productor mira directorios dentro de su volumen `tiles_data`. **Esos archivos no
-llegan por red.** Los escribe el replicador de datos, `data-simulator`, que **monta la ruta del mismo
-volumen en el host** y deposita ahí copias renombradas al momento actual. **En el despliegue actual no
-hay un feed en vivo del organismo.**
+**locales**: el productor mira directorios dentro de su raíz de datos. **El procesador no ofrece una
+API de ingreso para esos archivos.** En Beta-1, los feeds vivos del organismo deben escribir en los
+bind mounts `tiles-processor/data/{radar-sinarame,wrf-arg4k,goes19-glm}`. En un laboratorio sin esos feeds,
+`data-simulator` puede montar la misma raíz y depositar capturas históricas con marcas actuales.
 
 Para el firewall, esto significa **ningún puerto extra**. Para la topología, significa que **el
-replicador tiene que correr en la máquina del procesador**. Si algún día un proceso del organismo
-entrega esos archivos, **ese proceso será el nuevo canal a mapear**.
+proceso que escribe el feed, o el replicador, necesita acceso al almacenamiento de entrada del
+procesador**. La guía específica está en [14.1 Beta-1](beta-1.md).
 
 ## Puertos
 
@@ -82,10 +81,10 @@ El mapa completo, con autenticación y recomendación por puerto, está en
 
 ## Orden de arranque
 
-**Dentro de un stack, compose respeta las dependencias.** **Entre stacks no hay coordinación.** El orden
-correcto y lo que fuerza cada paso están en [14. Puesta en marcha](puesta-en-marcha.md). En una
-línea: primero el procesador, después el servicio de datos, el de avisos cuando se quiera, y el
-visualizador en cualquier momento.
+**Dentro de un stack, Compose respeta las dependencias.** En despliegues independientes no hay
+coordinación entre stacks: primero va el procesador, después datos, avisos cuando se quiera y el
+visualizador en cualquier momento. Beta-1 inicia los cuatro desde un solo comando; los servicios
+mantienen sus propias esperas y comprobaciones. Ver [14. Puesta en marcha](puesta-en-marcha.md).
 
 ## Volúmenes
 
@@ -105,7 +104,7 @@ visualizador en cualquier momento.
 apagando sus productos en `settings.json`.
 
 **Completo:** agrega `alerts-service` con su MySQL, el acceso a la base operativa y a la API del SMN,
-y el replicador de datos si no hay feeds en vivo.
+y conecta los feeds vivos. El replicador de datos sólo hace falta en un laboratorio que no los tenga.
 
 **El visualizador degrada bien sin el servicio de avisos**: el panel correspondiente queda inutilizable y
 el resto funciona. **Lo que no tolera es la falta del servicio de datos.**
@@ -123,4 +122,4 @@ proceso**: si el contenedor está caído, el tick no ocurre.
 | Respaldo de mapas base | 7 días | Sincronizador |
 | Padrón y observaciones de estaciones | 5 minutos | Sincronizador |
 | Refresco de capas del IGN | Domingos 03:00 UTC | Servicio de avisos |
-| Replicación de radar, WRF y descargas | 10 minutos; WRF cada 6 horas | `data-simulator` |
+| Simulación de radar, WRF y descargas, **sólo en laboratorio** | 10 minutos; WRF cada 6 horas | `data-simulator` |

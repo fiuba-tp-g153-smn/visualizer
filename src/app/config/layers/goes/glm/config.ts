@@ -31,7 +31,7 @@ export const GLM_SUBGROUP: LayerSubgroup = {
   layers: [
     {
       ...GLM_DEFAULTS,
-      id: 'goes-19/glm/glm-fed',
+      id: 'goes19/glm/fed',
       variable: 'fed',
       scale: GLM_FED_SCALE,
       name: 'Flash Extent Density',
@@ -39,7 +39,7 @@ export const GLM_SUBGROUP: LayerSubgroup = {
     },
     {
       ...GLM_DEFAULTS,
-      id: 'goes-19/glm/glm-toe',
+      id: 'goes19/glm/toe',
       variable: 'toe',
       scale: GLM_TOE_SCALE,
       name: 'Total Optical Energy',
@@ -47,7 +47,7 @@ export const GLM_SUBGROUP: LayerSubgroup = {
     },
     {
       ...GLM_DEFAULTS,
-      id: 'goes-19/glm/glm-mfa',
+      id: 'goes19/glm/mfa',
       variable: 'mfa',
       scale: GLM_MFA_SCALE,
       name: 'Minimum Flash Area',

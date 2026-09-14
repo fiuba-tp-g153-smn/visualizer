@@ -18,12 +18,13 @@ import {
   LayerCategory,
   LayerConfig,
   LayerType,
+  ProductAvailabilitySnapshot,
   WmsLayer,
 } from '../../models';
 
 // --------------------------------------------------------------------- helpers
 
-function goesLayer(id = 'goes/abi/ch-13'): Layer {
+function goesLayer(id = 'goes/abi/c13'): Layer {
   return {
     id,
     name: 'Canal 13',
@@ -36,7 +37,7 @@ function goesLayer(id = 'goes/abi/ch-13'): Layer {
   } as unknown as Layer;
 }
 
-function ecmwfLayer(id = 'ecmwf/total-precipitation'): Layer {
+function ecmwfLayer(id = 'ecmwf-ifs/total-precipitation'): Layer {
   return {
     id,
     name: 'Precipitación total',
@@ -105,6 +106,7 @@ function ecmwfConfig(
 interface Mocks {
   configs: Map<string, LayerConfig>;
   probe: (layer: Layer) => Observable<boolean>;
+  availability: () => Observable<ProductAvailabilitySnapshot>;
   loadingLayerIds: ReturnType<typeof signal<ReadonlySet<string>>>;
   weatherStationsTilesetIds: string[];
   hasKey: boolean;
@@ -122,6 +124,11 @@ function setup(overrides: Partial<Mocks> = {}): {
   const mocks: Mocks = {
     configs: overrides.configs ?? new Map(),
     probe: overrides.probe ?? ((_layer: Layer): Observable<boolean> => of(true)),
+    // Default: the backend knows nothing, so every layer falls back to its
+    // individual probe — which keeps the pre-bundling tests meaningful.
+    availability:
+      overrides.availability ??
+      ((): Observable<ProductAvailabilitySnapshot> => of({ available: [], domains: [] })),
     loadingLayerIds: overrides.loadingLayerIds ?? signal<ReadonlySet<string>>(new Set()),
     weatherStationsTilesetIds: overrides.weatherStationsTilesetIds ?? [],
     hasKey: overrides.hasKey ?? false,
@@ -150,6 +157,7 @@ function setup(overrides: Partial<Mocks> = {}): {
           hasConfig: (id: string) => mocks.configs.has(id),
           getConfig: (id: string) => mocks.configs.get(id),
           probeLayerAvailability: (layer: Layer) => mocks.probe(layer),
+          fetchProductAvailability: () => mocks.availability(),
         },
       },
       {
@@ -282,8 +290,8 @@ describe('LayerAvailabilityService — weather stations', () => {
 
 describe('LayerAvailabilityService — primeAll probing', () => {
   it('marks probed layers available/empty from the probe result', async () => {
-    const withData = goesLayer('goes/abi/ch-2');
-    const withoutData = goesLayer('goes/abi/ch-9');
+    const withData = goesLayer('goes/abi/c02');
+    const withoutData = goesLayer('goes/abi/c09');
     const probe = vi.fn((layer: Layer) => of(layer.id === withData.id));
     const { service } = setup({ allLayers: [withData, withoutData], probe });
 
@@ -296,7 +304,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
   });
 
   it('leaves a layer unknown (never empty) when its probe errors', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new Error('network')));
     const { service } = setup({ allLayers: [layer], probe });
 
@@ -307,7 +315,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
   });
 
   it('does not probe layers that already have a live config', async () => {
-    const active = goesLayer('goes/abi/ch-13');
+    const active = goesLayer('goes/abi/c13');
     const configs = new Map<string, LayerConfig>([[active.id, goesConfig(active.id, 4)]]);
     const probe = vi.fn(() => of(true));
     const { service } = setup({ allLayers: [active], configs, probe });
@@ -333,7 +341,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
 
 describe('LayerAvailabilityService — data-service health gating', () => {
   it('does not probe while the data-service is known to be down', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => of(true));
     const { service } = setup({ allLayers: [layer], probe, isAvailable: signal(false) });
 
@@ -347,7 +355,7 @@ describe('LayerAvailabilityService — data-service health gating', () => {
   });
 
   it('reports a network-level failure (status 0) to the health tracker', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 0 })));
     const reportFailure = vi.fn();
     const { service } = setup({ allLayers: [layer], probe, reportFailure });
@@ -360,7 +368,7 @@ describe('LayerAvailabilityService — data-service health gating', () => {
   });
 
   it('does not report a plain HTTP error (e.g. 404) as a service outage', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 404 })));
     const reportFailure = vi.fn();
     const { service } = setup({ allLayers: [layer], probe, reportFailure });
@@ -374,7 +382,7 @@ describe('LayerAvailabilityService — data-service health gating', () => {
 
 describe('LayerAvailabilityService — manual recheck', () => {
   it('re-probes a single product when the service is up', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => of(false));
     const { service } = setup({ allLayers: [layer], probe });
 
@@ -385,7 +393,7 @@ describe('LayerAvailabilityService — manual recheck', () => {
   });
 
   it('forces a health check first when down, and re-probes once recovered', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const isAvailable = signal(false);
     const checkNow = vi.fn(async () => isAvailable.set(true)); // service comes back
     const probe = vi.fn(() => of(true));
@@ -399,7 +407,7 @@ describe('LayerAvailabilityService — manual recheck', () => {
   });
 
   it('does not probe when the health recheck shows the service is still down', async () => {
-    const layer = goesLayer('goes/abi/ch-2');
+    const layer = goesLayer('goes/abi/c02');
     const isAvailable = signal(false);
     const checkNow = vi.fn(async () => {}); // still down
     const probe = vi.fn(() => of(true));
@@ -418,3 +426,221 @@ async function flushMicrotasks(): Promise<void> {
     await Promise.resolve();
   }
 }
+
+// ------------------------------------------------- bundled availability probe
+
+function radarLayer(id = 'radar-sinarame/RMA2/dbzh'): Layer {
+  return {
+    id,
+    name: 'Reflectividad',
+    type: LayerType.TILE,
+    category: LayerCategory.RADAR,
+    zIndexGroup: ActiveLayerGroupId.BASE,
+    availableElevations: [{ id: 'elev0', angle: 0.5, description: '0.5°' }],
+  } as unknown as Layer;
+}
+
+describe('bundled availability snapshot', () => {
+  it('resolves every product from ONE request instead of one per product', async () => {
+    // The regression this replaces: 18 radars x 6 variables = 108 GETs a minute.
+    const radars = Array.from({ length: 18 }, (_, r) =>
+      ['dbzh', 'dbzh-450km', 'kdp', 'vrad', 'rhohv', 'zdr'].map((v) =>
+        radarLayer(`radar-sinarame/RMA${r + 1}/${v}`),
+      ),
+    ).flat();
+    const available = radars.map((layer) => `${layer.id}/elev0`);
+    const probe = vi.fn(() => of(true));
+    const availability = vi.fn(() => of({ available, domains: ['radar-sinarame'] }));
+    const { service } = setup({ allLayers: radars, probe, availability });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(availability).toHaveBeenCalledTimes(1);
+    expect(probe).not.toHaveBeenCalled();
+    expect(service.state(radars[0])).toBe('available');
+  });
+
+  it('greys a product the snapshot omits, without probing it', async () => {
+    // The snapshot is complete, so absence is an answer — not a reason to ask.
+    const layer = radarLayer();
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({
+      allLayers: [layer],
+      probe,
+      availability: () => of({ available: [], domains: ['radar-sinarame'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.isUnavailable(layer)).toBe(true);
+    expect(probe).not.toHaveBeenCalled();
+  });
+
+  it('probes nothing at all when most products are empty', async () => {
+    // The regression: with ~125 products and only a handful carrying data, an
+    // earlier design treated absence as "unknown" and probed the other ~113
+    // every sweep — which is the entire cost the bundle exists to remove.
+    const layers = Array.from({ length: 40 }, (_, i) => radarLayer(`radar-sinarame/RMA${i}/dbzh`));
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({
+      allLayers: layers,
+      probe,
+      availability: () =>
+        of({ available: ['radar-sinarame/RMA0/dbzh/elev0'], domains: ['radar-sinarame'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(probe).not.toHaveBeenCalled();
+    expect(service.state(layers[0])).toBe('available');
+    expect(service.state(layers[7])).toBe('empty');
+  });
+
+  it('falls back to individual probes when the bundled call fails', async () => {
+    const layer = goesLayer();
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({
+      allLayers: [layer],
+      probe,
+      availability: () => throwError(() => new HttpErrorResponse({ status: 500 })),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(probe).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the service down when the bundled call fails at network level', async () => {
+    const reportFailure = vi.fn();
+    const { service } = setup({
+      allLayers: [goesLayer()],
+      reportFailure,
+      availability: () => throwError(() => new HttpErrorResponse({ status: 0 })),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(reportFailure).toHaveBeenCalled();
+  });
+
+  it('a single-product recheck stays a single probe, not the bundle', async () => {
+    // The user pressed THIS product's button and wants its own fresh answer.
+    const layer = goesLayer();
+    const probe = vi.fn(() => of(true));
+    const availability = vi.fn(() => of({ available: [], domains: [] }));
+    const { service } = setup({ allLayers: [layer], probe, availability });
+
+    await service.recheck(layer);
+
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(availability).not.toHaveBeenCalled();
+  });
+
+  it('a subgroup recheck uses the bundle', async () => {
+    const layers = [radarLayer('radar-sinarame/RMA2/dbzh'), radarLayer('radar-sinarame/RMA2/kdp')];
+    const availability = vi.fn(() =>
+      of({ available: ['radar-sinarame/RMA2/dbzh/elev0'], domains: ['radar-sinarame'] }),
+    );
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({ allLayers: layers, probe, availability });
+
+    await service.recheckMany(layers);
+
+    expect(availability).toHaveBeenCalledTimes(1);
+    expect(probe).not.toHaveBeenCalled();
+    expect(service.state(layers[0])).toBe('available');
+    expect(service.state(layers[1])).toBe('empty');
+  });
+});
+
+// ------------------------------------------- stale config after deactivation
+
+describe('a cached config that reports no data', () => {
+  it('does not freeze the row as greyed after check-then-uncheck', async () => {
+    // Activating a product before its first period exists caches an empty
+    // config. That config is only refreshed while the layer is active, so on
+    // deactivation it is stale — and it used to grey the row permanently,
+    // because the eager sweep skipped anything holding a config at all.
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const { service } = setup({
+      allLayers: [layer],
+      configs,
+      availability: () => of({ available: [layer.id], domains: ['goes'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.isUnavailable(layer)).toBe(false);
+    expect(service.state(layer)).toBe('available');
+  });
+
+  it('defers instead of asserting empty before anything has checked', () => {
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const { service } = setup({ allLayers: [layer], configs });
+
+    // Nothing has confirmed or denied it yet, so the row stays interactive
+    // rather than being greyed on the strength of a stale config alone.
+    expect(service.state(layer)).toBe('unknown');
+    expect(service.isUnavailable(layer)).toBe(false);
+  });
+
+  it('greys the row once the snapshot confirms there is no data', async () => {
+    // The row must still end up greyed when the product really is empty —
+    // deferring is a delay, not a refusal to ever grey.
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const { service } = setup({
+      allLayers: [layer],
+      configs,
+      availability: () => of({ available: [], domains: ['goes'] }),
+    });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.state(layer)).toBe('empty');
+    expect(service.isUnavailable(layer)).toBe(true);
+  });
+
+  it('lets a config that HAS data answer without any probe', async () => {
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 3)]]);
+    const availability = vi.fn(() => of({ available: [], domains: [] }));
+    const { service } = setup({ allLayers: [layer], configs, availability });
+
+    service.primeAll();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.state(layer)).toBe('available');
+    expect(availability).not.toHaveBeenCalled();
+  });
+
+  it('lets the recheck button work on a greyed row', async () => {
+    const layer = goesLayer();
+    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
+    const probe = vi.fn(() => of(true));
+    const { service } = setup({ allLayers: [layer], configs, probe });
+
+    await service.recheck(layer);
+
+    expect(probe).toHaveBeenCalledTimes(1);
+    expect(service.state(layer)).toBe('available');
+  });
+});

@@ -58,6 +58,7 @@ Esta documentación está partida en dos. **Cada mitad se lee sola**, sin pasar 
 | Saber qué producto es cada capa | [4. Qué muestra cada producto](manual/productos/index.md) |
 | Emitir un aviso | [6. Emitir un aviso a corto plazo](manual/avisos.md) |
 | Levantar el sistema en tu propia red | [14. Puesta en marcha](tecnica/operacion/puesta-en-marcha.md) |
+| Desplegar Beta-1 completo en una VM de 8 GB | [14.1 Beta-1](tecnica/operacion/beta-1.md) |
 | Repartirlo en más de una máquina | [15. Distribuir el sistema](tecnica/operacion/distribucion.md) |
 | Saber qué puertos expone y qué queda autenticado | [19.1 Superficie expuesta](tecnica/seguridad/superficie.md) |
 | Consultar una ruta o una variable de entorno | [12. Contratos entre servicios](tecnica/contratos/index.md) |

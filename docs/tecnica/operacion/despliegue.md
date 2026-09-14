@@ -4,14 +4,37 @@ title: 17. Despliegue y entrega continua
 
 # 17. Despliegue y entrega continua
 
-Los cuatro servicios se despliegan igual: **un push a `main` dispara un workflow de GitHub Actions
-que llama a un webhook de Coolify, espera a que el despliegue termine y comprueba que la aplicación
-responda.** **Todo corre con Docker Compose sobre un servidor virtual**, detrás de un proxy inverso con
-TLS que no está en los repositorios.
+Hay dos unidades de entrega. En el modelo independiente, **un push a `main` de cada servicio dispara
+un workflow de GitHub Actions que llama a un webhook de Coolify**. En
+[Beta-1](beta-1.md), una revisión de `mapasmn` fija conjuntamente los cuatro commits y se despliega
+como un solo proyecto Compose en una VM de 8 GB. Los dos modelos necesitan un proxy inverso con TLS
+si se exponen; ese perímetro no está en los repositorios.
 
 ![Del push a main a los contenedores](../../imgs/diagrams/despliegue.svg){ .diagram loading=lazy }
 
-## Los nueve workflows
+## Publicar una versión Beta-1
+
+Beta-1 separa la publicación del código de la publicación de la integración:
+
+1. El cambio se prueba y se publica en el repositorio del componente.
+2. `mapasmn` actualiza el puntero de ese submódulo al commit elegido.
+3. Se revisa el modelo resultante de `compose.beta-1.yaml` y la configuración congelada del
+   procesador.
+4. Se publica el commit de `mapasmn`. **Ese commit es la versión desplegable.**
+5. En la VM se ejecutan `git pull --ff-only`, `git submodule update --init --recursive` y
+   `make beta-1`.
+
+Actualizar un componente directamente dentro de la VM rompe esa reproducibilidad. `make update`
+también avanza los cuatro submódulos a sus puntas remotas; es una herramienta de mantenimiento para
+preparar el paso 2, no el comando de despliegue.
+
+El retroceso parte del commit anterior de `mapasmn`: al volver a él y sincronizar los submódulos se
+restauran juntas las revisiones anteriores. Los volúmenes persisten, por lo que cualquier migración de
+datos requiere su propio procedimiento de compatibilidad.
+
+## Despliegues independientes por Coolify
+
+### Los nueve workflows
 
 | Repositorio | Workflow | Disparador | Qué hace |
 |---|---|---|---|
@@ -21,7 +44,7 @@ TLS que no está en los repositorios.
 | `data-service`, `alerts-service`, `visualizer` | El de pruebas | Push y pull request fuera de `main`, y llamada desde `deploy.yml` | gitleaks y pruebas |
 | Los mismos tres | `deploy.yml` | Push a `main` | Pruebas, Trivy en paralelo, y despliegue |
 
-## Qué bloquea de verdad un despliegue
+### Qué bloquea de verdad un despliegue
 
 La intención aparente y el efecto real **no coinciden**.
 
@@ -44,7 +67,7 @@ La intención aparente y el efecto real **no coinciden**.
     vive en un workflow aparte que `deploy.yml` no invoca.** Además, **todas las excepciones de Trivy
     de `alerts-service` vencieron el 1 de septiembre de 2026**, y dos de `data-service` en julio.
 
-## La secuencia de despliegue
+### La secuencia de despliegue
 
 **Idéntica en los cuatro repositorios**:
 

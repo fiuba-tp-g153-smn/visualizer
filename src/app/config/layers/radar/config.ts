@@ -48,14 +48,14 @@ const RADAR_DEFAULTS = {
   isForecast: false,
 };
 
-const satelitePrefix = 'radar';
+const satelitePrefix = 'radar-sinarame';
 enum RadarProduct {
-  DBZH = 'DBZH',
-  DBZH_450KM = 'DBZH_450KM',
-  KDP = 'KDP',
-  VRAD = 'VRAD',
-  RHOHV = 'RHOHV',
-  ZDR = 'ZDR',
+  DBZH = 'dbzh',
+  DBZH_450KM = 'dbzh-450km',
+  KDP = 'kdp',
+  VRAD = 'vrad',
+  RHOHV = 'rhohv',
+  ZDR = 'zdr',
 }
 
 const products = Object.values(RadarProduct) as readonly RadarProduct[];
@@ -76,8 +76,18 @@ const RADAR_SCALES: Record<RadarProduct, LayerScale> = {
  * Nombre visible del producto cuando su id no se lee bien como etiqueta.
  * Sin entrada, se muestra el id tal cual (DBZH, VRAD, …).
  */
-const RADAR_PRODUCT_LABELS: Partial<Record<RadarProduct, string>> = {
+/**
+ * Etiqueta visible de cada momento. El Record es total a propósito: los ids son
+ * minúsculas para S3 y las URLs, así que un producto sin entrada caía al id
+ * crudo y se mostraba en minúscula en el panel de capas.
+ */
+const RADAR_PRODUCT_LABELS: Record<RadarProduct, string> = {
+  [RadarProduct.DBZH]: 'DBZH',
   [RadarProduct.DBZH_450KM]: 'DBZH 450 km',
+  [RadarProduct.KDP]: 'KDP',
+  [RadarProduct.VRAD]: 'VRAD',
+  [RadarProduct.RHOHV]: 'RHOHV',
+  [RadarProduct.ZDR]: 'ZDR',
 };
 
 /**
@@ -427,7 +437,7 @@ export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
   description: `Capas del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
   expanded: false,
   layers: products.map((product) => {
-    const label = RADAR_PRODUCT_LABELS[product] ?? product;
+    const label = RADAR_PRODUCT_LABELS[product];
     return {
       ...RADAR_DEFAULTS,
       id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,

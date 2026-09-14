@@ -17,7 +17,8 @@ Sincronización anima varias capas a la vez, y se explica en el [capítulo 5](an
 
 ## Disponibles: elegir qué ver
 
-Arriba hay un buscador que **filtra el catálogo completo por nombre**. Debajo, cinco grupos:
+Arriba hay un buscador (1) que **filtra el catálogo completo por nombre**. Debajo, los cinco grupos,
+empezando por Satélite (2):
 
 | Grupo | Qué contiene |
 |---|---|
@@ -58,8 +59,8 @@ quién tapa a quién.
 | Bloque | Qué contiene | Dónde se dibuja |
 |---|---|---|
 | **Capas puntuales** | Estaciones | Arriba de todo |
-| **Capas de referencia** | IGN | En el medio |
-| **Capas de datos** | Satélite, radar y modelos | Abajo |
+| **Capas de referencia** (1) | IGN | En el medio |
+| **Capas de datos** (2) | Satélite, radar y modelos | Abajo |
 
 **Podés arrastrar una capa para reordenarla dentro de su bloque.** No se puede pasar una capa de un
 bloque a otro: **una imagen de satélite nunca tapa un límite provincial.** **Cada bloque tiene un botón
@@ -67,16 +68,16 @@ para apagar de una vez todas sus capas.**
 
 ### Los tres botones de cada fila
 
-1. **La paleta muestra u oculta la escala de colores** de esa capa sobre el mapa. **Sólo aparece si la
-   capa tiene escala y está dibujando algo.**
-2. **La flecha expande la fila** con sus controles.
-3. **La cruz apaga la capa.**
+![Una capa expandida, con su opacidad y su período](../imgs/manual/03-capa-expandida.png){ .doc-figure loading=lazy }
+
+- **La paleta (2) muestra u oculta la escala de colores** de esa capa sobre el mapa. **Sólo aparece
+  si la capa tiene escala y está dibujando algo.**
+- **La flecha expande la fila** con sus controles. Es el (3) de la captura de Activas.
+- **La cruz (3) apaga la capa.**
 
 ### Los controles de una capa expandida
 
-![Una capa expandida, con su opacidad y su período](../imgs/manual/03-capa-expandida.png){ .doc-figure loading=lazy }
-
-- **Opacidad**: un deslizador con el porcentaje al lado. **Todas las capas lo tienen.** Arranca en 100 %.
+- **Opacidad** (1): un deslizador con el porcentaje al lado. **Todas las capas lo tienen.** Arranca en 100 %.
 - **Elevaciones**: sólo en radar. Una casilla por elevación, cada una con su propia opacidad.
 - **Corridas**: sólo en modelos. Qué corridas mostrar, y qué superposiciones de cada una.
 - **Consulta** y **Tolerancia**: sólo en estaciones. Qué instante mostrar y con cuánta holgura.

@@ -118,8 +118,8 @@ export const GFS_SUBGROUP: LayerSubgroup = {
   layers: [
     {
       ...GFS_DEFAULTS,
-      id: 'gfs/mslp',
-      productId: 'mslp',
+      id: 'gfs/mean-sea-level-pressure',
+      productId: 'mean-sea-level-pressure',
       name: 'Presión a nivel del mar',
       pointQueryLabel: 'Presión a nivel del mar',
       description:
@@ -132,7 +132,7 @@ export const GFS_SUBGROUP: LayerSubgroup = {
       // puntual funciona: este rango es el que lo ubica en la barra.
       pointQueryScaleRange: { min: 950, max: 1050, totalSteps: 100 },
       secondaryRenders: [
-        contourRender('mslp', 'thickness', {
+        contourRender('mean-sea-level-pressure', 'thickness', {
           valueProperty: 'thickness_gpm',
           styleFor: thicknessStyleFor,
           labelFor: integerLabelFor,
@@ -140,7 +140,7 @@ export const GFS_SUBGROUP: LayerSubgroup = {
           minLabelLengthDeg: 6.0,
           pointQuery: THICKNESS_POINT_QUERY,
         }),
-        contourRender('mslp', 'isobars', {
+        contourRender('mean-sea-level-pressure', 'isobars', {
           valueProperty: 'pressure_hpa',
           styleFor: isobarStyleFor,
           labelFor: integerLabelFor,
@@ -151,22 +151,22 @@ export const GFS_SUBGROUP: LayerSubgroup = {
     },
     {
       ...GFS_DEFAULTS,
-      id: 'gfs/500hpa',
-      productId: '500hpa',
-      name: '500 hPa',
+      id: 'gfs/geopotential-500hpa',
+      productId: 'geopotential-500hpa',
+      name: 'Geopotencial 500 hPa',
       pointQueryLabel: 'Intensidad del viento en 500 hPa',
       description:
         'Viento en 500 hPa (kt) — GFS. Geopotencial cada 60 m, isotermas cada 5 °C y barbas de viento.',
       scale: GFS_WIND_500_SCALE,
       secondaryRenders: [
-        contourRender('500hpa', 'isotherms', {
+        contourRender('geopotential-500hpa', 'isotherms', {
           valueProperty: 'temp_c',
           styleFor: isothermStyleFor,
           labelFor: isothermLabelFor,
           textpathOptions: ISOTHERM_TEXTPATH_OPTIONS,
           pointQuery: TEMPERATURE_500_POINT_QUERY,
         }),
-        contourRender('500hpa', 'heights', {
+        contourRender('geopotential-500hpa', 'heights', {
           valueProperty: 'height_gpm',
           styleFor: heights500StyleFor,
           labelFor: integerLabelFor,
@@ -174,19 +174,19 @@ export const GFS_SUBGROUP: LayerSubgroup = {
           pointQuery: geopotentialPointQuery({ min: 4800, max: 6000, totalSteps: 20 }),
         }),
         // Último para que las barbas queden por encima de los contornos.
-        { kind: 'barb-tile', id: 'gfs-500hpa-barbs' } as BarbTileRender,
+        { kind: 'barb-tile', id: 'gfs/geopotential-500hpa-barbs' } as BarbTileRender,
       ],
     },
     {
       ...GFS_DEFAULTS,
-      id: 'gfs/250hpa',
-      productId: '250hpa',
-      name: '250 hPa',
+      id: 'gfs/geopotential-250hpa',
+      productId: 'geopotential-250hpa',
+      name: 'Geopotencial 250 hPa',
       pointQueryLabel: 'Intensidad del viento en 250 hPa',
       description: 'Viento en 250 hPa (kt) — GFS. Geopotencial cada 60 m.',
       scale: GFS_WIND_250_SCALE,
       secondaryRenders: [
-        contourRender('250hpa', 'heights', {
+        contourRender('geopotential-250hpa', 'heights', {
           valueProperty: 'height_gpm',
           styleFor: heights250StyleFor,
           labelFor: integerLabelFor,

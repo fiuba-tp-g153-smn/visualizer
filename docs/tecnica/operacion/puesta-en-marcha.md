@@ -5,8 +5,9 @@ title: 14. Puesta en marcha
 # 14. Puesta en marcha
 
 Cómo levantar el sistema por primera vez, en un laboratorio o en un servidor propio. **Está escrito
-para alguien que no participó del desarrollo.** **El orden importa entre stacks, y nada lo impone**:
-**compose sólo conoce las dependencias dentro de cada uno**.
+para alguien que no participó del desarrollo.** Hay dos caminos: **Beta-1 reúne los cuatro componentes
+en una VM de 8 GB y es el recomendado para una instalación nueva**; el camino independiente conserva
+cuatro stacks y exige coordinarlos.
 
 ![Orden de arranque entre stacks](../../imgs/diagrams/arranque-orden.svg){ .diagram loading=lazy }
 
@@ -19,9 +20,10 @@ para alguien que no participó del desarrollo.** **El orden importa entre stacks
 
 | Decisión | Dónde impacta |
 |---|---|
+| **Beta-1 o despliegues independientes** | Beta-1 prioriza una VM y una versión integrada. Los stacks separados priorizan ciclos de entrega autónomos. |
 | **Qué productos se van a generar** | Es lo que más mueve CPU, RAM y disco. El catálogo es más amplio que lo que un despliegue suele activar. |
 | **Una o varias máquinas** | Hoy todo está pensado para una. Ver [15. Distribuir el sistema](distribucion.md). |
-| **Si se despliega el servicio de avisos** | Es el único que necesita credenciales del SMN y acceso a su base. Sin él, el mapa funciona igual. |
+| **Si se despliega el servicio de avisos** | Necesita acceso a su base operativa. `data-service` necesita por separado credenciales de la API del SMN para las estaciones. Sin avisos, el mapa funciona igual. |
 | **Cuántos workers de procesamiento** | Se fija regenerando la plantilla, no editándola. |
 | **De dónde salen radar, WRF y descargas** | Son fuentes locales. Sin un feed, hace falta el replicador de datos. |
 
@@ -29,22 +31,47 @@ para alguien que no participó del desarrollo.** **El orden importa entre stacks
 
 | Herramienta | Para qué |
 |---|---|
-| Docker y Docker Compose | Todo. **Es el único requisito para correr el sistema.** |
-| `make` | Los atajos de cada repositorio; opcional |
+| Docker y Docker Compose 2.20 o posterior | Construir y correr los contenedores; `mapasmn` usa `include:` |
+| Git, `make`, shell POSIX y `envsubst` | Clonar submódulos, ejecutar los atajos y generar la configuración integrada |
 | Python 3.12 y 3.13, Poetry 2.3.2 | Sólo para trabajar sobre los servicios fuera de contenedor |
 | Node 24 y npm 11 | Ídem para el visualizador |
 
 ## Variables de entorno
 
-**Cada repositorio trae un `.env.example` que es la fuente de verdad.** Copiarlo a `.env` y completar los
-secretos. **La lista completa está en [12.2 Configuración y variables](../contratos/configuracion.md).**
+En Beta-1, **el `.env.example` de `mapasmn` es la fuente de verdad**: `make setup` crea el `.env` raíz y
+deriva los cuatro archivos internos. Sólo se edita el de la raíz. En despliegues independientes, cada
+repositorio trae su propio `.env.example`. **La lista completa está en
+[12.2 Configuración y variables](../contratos/configuracion.md).**
 
 !!! danger "El ejemplo del servicio de avisos está pensado para desarrollo"
     Trae `MANAGE_DB_SCHEMAS=true`. Apuntado a la base del SMN, el arranque ejecutaría migraciones
     destructivas sobre un sistema ajeno. **Revisar esa línea antes de copiar el archivo**, y sobre
     todo darle al usuario de base de datos un permiso sin DDL.
 
-## Orden de arranque
+## Camino recomendado: Beta-1
+
+Beta-1 conserva los cuatro componentes, usa un worker normal y uno liviano, y recorta los productos
+activos para operar con datos reales en una VM de 8 GB.
+
+```sh
+git clone --recurse-submodules git@github.com:fiuba-tp-g153-smn/mapasmn.git
+cd mapasmn
+make setup
+# Editar .env, conectar los feeds vivos y volver a ejecutar make setup.
+make beta-1
+```
+
+Las direcciones de datos, avisos y métricas del `.env` **tienen que ser alcanzables desde el navegador**.
+En una VM remota no pueden quedar en `localhost`. Radar, GLM y WRF entran en vivo por los directorios
+montados del procesador; GOES-19, ECMWF y GFS se descargan de sus fuentes públicas.
+
+La explicación completa, incluidos el espíritu del perfil, los directorios de los feeds y la
+verificación, está en [14.1 Beta-1](beta-1.md).
+
+## Camino independiente: orden de arranque
+
+Cuando cada repositorio se despliega como un stack separado, **el orden importa y nada lo impone**:
+Compose sólo conoce las dependencias dentro de cada uno.
 
 1. **`tiles-processor`.** Levanta el broker, el almacén, el productor, los workers y la API de
    métricas. Va primero porque **el almacén crea los buckets** y los demás dependen de que existan.
@@ -55,7 +82,7 @@ secretos. **La lista completa está en [12.2 Configuración y variables](../cont
 4. **`visualizer`.** No depende de nadie para arrancar. **Sin los otros carga igual, vacío.**
 5. **`data-simulator`**, si no hay feeds. Necesita la ruta del volumen `tiles_data` en el host.
 
-## Levantar cada stack
+## Levantar cada stack por separado
 
 ### tiles-processor
 
@@ -63,8 +90,9 @@ secretos. **La lista completa está en [12.2 Configuración y variables](../cont
 make prod
 ```
 
-El panel del broker queda en `15672` y la API de métricas en `6020`. **En desarrollo, `make up` levanta
-un worker normal y uno liviano en lugar de dos y tres.**
+El panel del broker queda en `15672` y la API de métricas en `6020`. La plantilla de desarrollo
+versionada, igual que la producción completa, levanta dos workers normales y tres livianos. **El
+perfil que usa uno de cada tipo es Beta-1.**
 
 Para cambiar la cantidad de workers se **regenera** la plantilla:
 

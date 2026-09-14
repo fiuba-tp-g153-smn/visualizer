@@ -5,8 +5,7 @@ title: 12.2 Configuración y variables
 # 12.2 Configuración y variables
 
 Cada servicio se configura por dos vías. **Las variables de entorno llevan lo específico del
-despliegue y lo secreto. `settings.json` lleva la política de producto.** **Esta página documenta
-nombres, formas y precedencia.** **Nunca valores.**
+despliegue y lo secreto. `settings.json` lleva la política de producto.**
 
 ![De dónde sale la configuración, y cuál gana](../../imgs/diagrams/configuracion-fuentes.svg){ .diagram loading=lazy }
 
@@ -51,7 +50,7 @@ vacía y ninguna es obligatoria por código.
 | `ECMWF_OPENDATA_SOURCES` | No (`ecmwf,azure,aws`) | Espejos en orden de preferencia |
 | `ECMWF_TP_SMOOTHING_RESOLUTION_DEG`, `GFS_TILE_SMOOTHING_RESOLUTION_DEG` | No (0.01) | Remuestreo; `0` lo desactiva |
 | `GFS_SUBSET_ENDPOINT` | Sí si GFS está activo | Endpoint de recorte GRIB de NOAA |
-| `{GOES19,RADAR,GLM_FOLDER,WRF}_S3_ACCESS_KEY` / `_SECRET_KEY` | No | Credenciales de los buckets de entrada. **Sin definir, acceso anónimo; a medias, el arranque falla.** |
+| `{GOES19_ABI,GOES19_GLM,RADAR_SINARAME,WRF_ARG4K,ECMWF_IFS,GFS}_S3_ACCESS_KEY` / `_SECRET_KEY` | No | Credenciales de los buckets de entrada. **Sin definir, acceso anónimo; a medias, el arranque falla.** |
 
 Las siguientes **no las lee el proceso**: las consumen el script de arranque del almacén o la
 plantilla. **Todas menos las de Prometheus son obligatorias para que el almacén arranque.**
@@ -76,8 +75,8 @@ plantilla. **Todas menos las de Prometheus son obligatorias para que el almacén
 | `sources.<fuente>.products.<id>` | **Qué productos se generan** |
 | `sources.<fuente>.input.mode` | `local` o `s3` |
 | `sources.<fuente>.zoom_levels`, `retention_days` | Rango de zoom y días de retención por prefijo |
-| `sources.{radar,wrf}.light_queue` | Qué productos van a las colas livianas |
-| `sources.goes19.max_hours_back`, `sources.gfs.max_steps_per_tick` | Cuánto mira hacia atrás; cuántos pasos por pasada |
+| `sources.{radar-sinarame,wrf-arg4k}.light_queue` | Qué productos van a las colas livianas |
+| `sources.goes19-abi.max_hours_back`, `sources.gfs.max_steps_per_tick` | Cuánto mira hacia atrás; cuántos pasos por pasada |
 
 ## data-service
 
@@ -190,11 +189,14 @@ sin variables no apunta a donde sugiere `.env.example`.**
 
 ## El repositorio de orquestación
 
-Existe un repositorio que incluye a los cuatro como submódulos y **genera cada `.env` a partir de uno
-solo**, con plantillas por servicio. Tres cosas a tener en cuenta si se usa:
+`mapasmn` incluye a los cuatro como submódulos y **genera cada `.env` a partir de uno solo**, con
+plantillas por servicio. Es la fuente de configuración de [Beta-1](../operacion/beta-1.md):
 
 - Sus plantillas siguen escribiendo `host.docker.internal:${S3_TILES_DATA_PORT}` para el almacén.
-- Emite variables que nadie lee: `SEAWEEDFS_FILER_ENDPOINT`, `SEAWEEDFS_TILE_TTL`,
-  `SEAWEEDFS_RADAR_TILE_TTL`, `TILE_FORMAT` y `DOCS_HOST_PORT`. Un puerto `6011` de documentación
-  **ya no existe**.
-- Sus copias de los submódulos están **más viejas** que las ramas principales.
+- `DOCS_URL=/docs-site` apunta a la documentación que viaja dentro del visualizador; **no existe un
+  contenedor ni un puerto de documentación separado**.
+- Las URL del visualizador se fijan al compilar y tienen que ser alcanzables desde el navegador. Los
+  valores `localhost` sirven sólo si navegador y servicios corren en la misma máquina.
+- Una revisión del meta-repositorio fija revisiones exactas de los cuatro submódulos. En operación se
+  actualizan con `git submodule update --init --recursive`; `make update` avanza a las puntas remotas y
+  se reserva para preparar una nueva versión integrada.

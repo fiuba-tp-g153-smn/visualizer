@@ -25,6 +25,8 @@ medís, y al final emitís el aviso.** **El panel de estado queda para cuando al
 
 ![La ventana de MapaSMN, tal como se ve al abrirla](../imgs/manual/02-ventana.png){ .doc-figure loading=lazy }
 
+**La barra lateral (1), los botones de zoom (2) y la atribución (3) se explican en el capítulo 2.**
+
 ## Cómo leerlo
 
 **Cada capítulo empieza con una captura de la ventana entera**, marcada con números, para ubicar

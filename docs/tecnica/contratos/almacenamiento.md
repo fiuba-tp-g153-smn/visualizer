@@ -5,8 +5,8 @@ title: 12.3 Almacenamiento y colas
 # 12.3 Almacenamiento y colas
 
 Los servicios no comparten base de datos. **Se comunican por un almacén de objetos compatible con S3
-y, dentro de `tiles-processor`, por colas de RabbitMQ.** **Esta página es la referencia de ambos y el
-único lugar donde se describe el trazado de claves.**
+y, dentro de `tiles-processor`, por colas de RabbitMQ.** **Es la única página donde se describe el
+trazado de claves.**
 
 ![Un almacén, cinco buckets: quién escribe y quién lee cada uno](../../imgs/diagrams/almacenamiento-buckets.svg){ .diagram loading=lazy }
 
@@ -39,26 +39,26 @@ servicio sólo comprueba el de claves.
 
 | Producto | Plantilla de clave |
 |---|---|
-| Teselas del ABI | `tiles/band_{13,9,2}/{stem}/{z}/{x}/{y}.webp` |
-| COG del ABI | `cog/band_{13,9,2}/{image_id}.tif` |
-| Teselas de GLM | `tiles/glm_{fed,toe,mfa}/{stem}/{z}/{x}/{y}.webp` |
-| COG de GLM | `cog/glm_{fed,toe,mfa}/{image_id}.tif` |
-| Teselas de radar | `tiles/radar/{radar_id}/{variable}/elev{N}/{timestamp}/{z}/{x}/{y}.webp` |
-| COG de radar | `cog/radar/{radar_id}/{variable}/elev{N}/{timestamp}.tif` |
-| Teselas de WRF | `tiles/wrf/{product_id}/{init_tag}/{fxxx}/{z}/{x}/{y}.webp` |
-| COG de WRF | `cog/wrf/{product_id}/{init_tag}/{fxxx}.tif` y `{fxxx}.{variable}.tif` |
-| GeoJSON de WRF | `geojson/wrf/{product_id}/{init_tag}/{fxxx}/{layer}.json` |
-| Barbas de WRF | `geojson/wrf/{product_id}/{init_tag}/{fxxx}/barbs/{z}/{x}/{y}.json` |
-| Teselas de ECMWF | `tiles/models/ecmwf/total_precipitation/{forecast_ts}/{period_ts}/{z}/{x}/{y}.webp` |
-| COG de ECMWF | `cog/models/ecmwf/{total_precipitation,mean_sea_level_pressure}/{forecast_ts}/{...}.tif` |
-| Isobaras de ECMWF | `geojson/models/ecmwf/mean_sea_level_pressure/{forecast_ts}/{image_id}.json` |
-| Teselas de GFS | `tiles/models/gfs/{seg}/{cycle}/{cycle}_{fxxx}/{z}/{x}/{y}.webp` |
-| COG de GFS | `cog/models/gfs/{seg}/{cycle}/{cycle}_{fxxx}.tif` y `{seg}/{cycle}/{variable}/{cycle}_{fxxx}.tif` |
-| GeoJSON de GFS | `geojson/models/gfs/{seg}/{cycle}/{cycle}_{fxxx}_{layer}.json` |
-| Barbas de GFS | `geojson/models/gfs/{seg}/{cycle}/{cycle}_{fxxx}_barbs/{z}/{x}/{y}.json` |
-| GRIB cacheado | `grib/models/ecmwf/{product}/{forecast_ts}.grib`, `grib/models/gfs/{cycle_ts}/{image_id}.grib2` |
+| Teselas del ABI | `tiles/goes19/abi/{c13,c09,c02}/{stem}/{z}/{x}/{y}.webp` |
+| COG del ABI | `cog/goes19/abi/{c13,c09,c02}/{image_id}.tif` |
+| Teselas de GLM | `tiles/goes19/glm/{fed,toe,mfa}/{stem}/{z}/{x}/{y}.webp` |
+| COG de GLM | `cog/goes19/glm/{fed,toe,mfa}/{image_id}.tif` |
+| Teselas de radar | `tiles/radar/sinarame/{radar_id}/{product_id}/elev{N}/{timestamp}/{z}/{x}/{y}.webp` |
+| COG de radar | `cog/radar/sinarame/{radar_id}/{product_id}/elev{N}/{timestamp}.tif` |
+| Teselas de WRF | `tiles/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/{z}/{x}/{y}.webp` |
+| COG de WRF | `cog/wrf-arg4k/{product_id}/{init_tag}/{fxxx}.tif` y `{fxxx}.{variable}.tif` |
+| GeoJSON de WRF | `geojson/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/{layer}.json` |
+| Barbas de WRF | `geojson/wrf-arg4k/{product_id}/{init_tag}/{fxxx}/barbs/{z}/{x}/{y}.json` |
+| Teselas de ECMWF | `tiles/ecmwf-ifs/total-precipitation/{forecast_ts}/{period_ts}/{z}/{x}/{y}.webp` |
+| COG de ECMWF | `cog/ecmwf-ifs/{tp,mslp}/{forecast_ts}/{...}.tif` |
+| Isobaras de ECMWF | `geojson/ecmwf-ifs/mean-sea-level-pressure/{forecast_ts}/{image_id}.json` |
+| Teselas de GFS | `tiles/gfs/{seg}/{cycle}/{cycle}_{fxxx}/{z}/{x}/{y}.webp` |
+| COG de GFS | `cog/gfs/{seg}/{cycle}/{cycle}_{fxxx}.tif` y `{seg}/{cycle}/{variable}/{cycle}_{fxxx}.tif` |
+| GeoJSON de GFS | `geojson/gfs/{seg}/{cycle}/{cycle}_{fxxx}_{layer}.json` |
+| Barbas de GFS | `geojson/gfs/{seg}/{cycle}/{cycle}_{fxxx}_barbs/{z}/{x}/{y}.json` |
+| GRIB cacheado | `grib/ecmwf-ifs/{tp,mslp}/{forecast_ts}.grib`, `grib/gfs/{cycle_ts}/{image_id}.grib2` |
 
-`{seg}` toma los valores `mean_sea_level_pressure`, `500hpa` y `250hpa`.
+`{seg}` toma los valores `mslp`, `500hpa` y `250hpa`.
 
 !!! warning "Los prefijos están duplicados a mano en los dos lados"
     `tiles-processor` los declara en su configuración de ciclo de vida y `data-service` los repite

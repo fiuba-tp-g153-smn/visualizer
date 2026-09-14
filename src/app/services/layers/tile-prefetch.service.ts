@@ -202,7 +202,7 @@ export class TilePrefetchService {
 
   /**
    * Builds the full list of tile URLs for a given tileset path, zoom level, and tile range.
-   * @param pathToTileset - Tileset path passed to buildTileUrl (e.g. "goes-19/abi/ch-2/202501010000")
+   * @param pathToTileset - Tileset path passed to buildTileUrl (e.g. "goes19/abi/ch-2/202501010000")
    * @param zoom - Zoom level to use in the URL
    * @param tileRange - Inclusive tile coordinate range to iterate
    * @param tms - When true, flips the Y axis for TMS tile scheme (used by radar layers)

@@ -6,6 +6,8 @@ import {
   Layer,
   LayerCategory,
   LayerType,
+  ProductAvailabilitySnapshot,
+  RadarTileLayer,
   WrfTileLayerConfig,
 } from '../../models';
 import { LayerConfigService } from './layer-config.service';
@@ -33,6 +35,25 @@ const PROBEABLE_TILE_CATEGORIES: ReadonlySet<LayerCategory> = new Set([
   LayerCategory.ECMWF_TP,
   LayerCategory.WRF,
 ]);
+
+/**
+ * The product path a layer occupies in the bundled availability snapshot —
+ * the same string an individual probe would put in its URL.
+ *
+ * Radar is the one category whose probe path is not just the layer id: its
+ * tilesets are indexed per elevation, and the probe reads the first one.
+ * Returns null when the layer has no probeable path at all.
+ */
+function availabilityPath(layer: Layer): string | null {
+  if (layer.category !== LayerCategory.RADAR) {
+    return layer.id;
+  }
+  const elevations = (layer as RadarTileLayer).availableElevations;
+  if (!elevations || elevations.length === 0) {
+    return null;
+  }
+  return `${layer.id}/${elevations[0].id}`;
+}
 
 /** How many probes may be in flight at once during a prime pass. */
 const PROBE_CONCURRENCY = 6;
@@ -80,10 +101,17 @@ export class LayerAvailabilityService {
       return 'available';
     }
 
-    // A live config (a product we already loaded) is the freshest truth and
-    // stays usable even mid-outage; prefer it over health/probe state.
-    if (this.configService.hasConfig(layer.id)) {
-      return this.tileConfigHasData(layer) ? 'available' : 'empty';
+    // A live config that HAS data is the freshest truth and stays usable even
+    // mid-outage, so it wins outright.
+    //
+    // A config that says "empty" does not. Configs are cached forever and only
+    // refreshed while a layer is active, so activating a product before its
+    // first period exists and then deactivating it used to freeze the row as
+    // greyed — permanently, because the eager sweep skips anything holding a
+    // config. Falling through to the probe state lets the bundled snapshot
+    // keep answering, and the row un-greys on its own once data lands.
+    if (this.configService.hasConfig(layer.id) && this.tileConfigHasData(layer)) {
+      return 'available';
     }
 
     // Data-service confirmed down: nothing can load, so a product we never
@@ -116,7 +144,22 @@ export class LayerAvailabilityService {
    * product so a newly-published (or newly-emptied) one updates right away.
    */
   async recheck(layer: Layer): Promise<void> {
-    await this.recheckMany([layer]);
+    if (!this.healthService.isAvailable()) {
+      await this.healthService.checkNow();
+      if (!this.healthService.isAvailable()) {
+        return; // still down — the row stays 'unreachable'
+      }
+    }
+    // Deliberately the individual probe, not the bundled snapshot: the user
+    // pressed this button for THIS product and expects its own fresh answer,
+    // not one that may be a few seconds stale from the shared memo.
+    if (
+      layer.type === LayerType.TILE &&
+      PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
+      !this.hasLoadedDataConfig(layer)
+    ) {
+      await this.probeOne(layer);
+    }
   }
 
   /**
@@ -131,16 +174,19 @@ export class LayerAvailabilityService {
         return; // still down — the rows stay 'unreachable'
       }
     }
-    // Products served by the data-service that we haven't loaded yet: re-probe.
-    // (Live-config products and weather stations reflect their own state and
-    // recover from the health check above alone.)
+    // Products the data-service serves that are not already shown as having
+    // data: re-check. A greyed row is exactly what this button is for, so a
+    // cached but empty config must not exclude it. (Weather stations reflect
+    // their own state and recover from the health check above alone.)
     const toProbe = layers.filter(
       (layer) =>
         layer.type === LayerType.TILE &&
         PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
-        !this.configService.hasConfig(layer.id),
+        !this.hasLoadedDataConfig(layer),
     );
-    await this.runThrottled(toProbe, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
+    // A subgroup recheck is a broad check, so it takes the bundled path. A
+    // single-product recheck goes through `recheck`, which probes just that one.
+    await this.probeBundled(toProbe);
   }
 
   /**
@@ -204,18 +250,71 @@ export class LayerAvailabilityService {
     }
     this.priming = true;
     try {
-      const layers = this.layersService
-        .getAllLayers()
-        .filter(
-          (layer) =>
-            layer.type === LayerType.TILE &&
-            PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
-            // Active layers derive availability from their live config — no probe needed.
-            !this.configService.hasConfig(layer.id),
-        );
-      await this.runThrottled(layers, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
+      await this.probeBundled(this.probeableLayers());
     } finally {
       this.priming = false;
+    }
+  }
+
+  /** TILE products whose availability the bundled snapshot should answer for. */
+  private probeableLayers(): Layer[] {
+    return this.layersService.getAllLayers().filter(
+      (layer) =>
+        layer.type === LayerType.TILE &&
+        PROBEABLE_TILE_CATEGORIES.has(layer.category) &&
+        // A config that already shows data answers for itself. One that shows
+        // none does not: it is only refreshed while the layer is active, so
+        // on an inactive layer it is stale and the snapshot must keep it current.
+        !this.hasLoadedDataConfig(layer),
+    );
+  }
+
+  /** True when a cached config exists AND reports data — the only case that
+   * makes a probe redundant. */
+  private hasLoadedDataConfig(layer: Layer): boolean {
+    return this.configService.hasConfig(layer.id) && this.tileConfigHasData(layer);
+  }
+
+  /**
+   * Resolve a batch of layers from ONE bundled request.
+   *
+   * This used to be a GET per layer, throttled six at a time: the radar grid
+   * alone is 18 radars x 6 variables = 108 requests, re-run every minute, per
+   * client.
+   *
+   * The snapshot is complete — the backend builds it through the very same
+   * read path an individual probe would take, so a product missing from it has
+   * no data and needs no follow-up. Individual probes remain only for the
+   * single-product recheck button and for when this request itself fails.
+   */
+  private async probeBundled(layers: readonly Layer[]): Promise<void> {
+    if (layers.length === 0) {
+      return;
+    }
+    let snapshot: ProductAvailabilitySnapshot;
+    try {
+      snapshot = await firstValueFrom(this.configService.fetchProductAvailability());
+    } catch (err) {
+      // The bundled call is the same kind of request as a probe, so a
+      // network-level failure means the same thing: the service is down.
+      this.reportIfUnreachable(err);
+      await this.runThrottled(layers, (layer) => this.probeOne(layer), PROBE_CONCURRENCY);
+      return;
+    }
+
+    const confirmed = new Set(snapshot.available);
+    for (const layer of layers) {
+      const path = availabilityPath(layer);
+      if (path === null) {
+        continue; // nothing to look up (e.g. a radar with no elevations)
+      }
+      this.setProbeState(layer.id, confirmed.has(path) ? 'available' : 'empty');
+    }
+  }
+
+  private reportIfUnreachable(err: unknown): void {
+    if (err instanceof HttpErrorResponse && err.status === 0) {
+      this.healthService.reportFailure();
     }
   }
 

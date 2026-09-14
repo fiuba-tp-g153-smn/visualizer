@@ -5,7 +5,7 @@ const TILE_FORMAT = 'webp' as const;
 
 /**
  * Construye URL de configuración de canal para un producto específico
- * @param pathToProduct - Ruta específica del producto (e.g., "goes-19/abi/ch-2")
+ * @param pathToProduct - Ruta específica del producto (e.g., "goes19/abi/ch-2")
  * @returns URL para obtener la configuración del canal
  */
 export function buildConfigUrl(pathToProduct: string): string {
@@ -13,8 +13,19 @@ export function buildConfigUrl(pathToProduct: string): string {
 }
 
 /**
+ * URL del snapshot de disponibilidad de TODOS los productos a la vez.
+ *
+ * Existe para que el sondeo general no sea una petición por producto: sólo la
+ * grilla de radares son 18 x 6 = 108, y se re-sondea con un temporizador. Los
+ * botones de re-verificación individuales siguen usando `buildConfigUrl`.
+ */
+export function buildAvailabilityUrl(): string {
+  return `${DATA_SERVICE_BASE_URL}/products/availability`;
+}
+
+/**
  * Construye URL de tiles para un producto específico
- * @param pathToTileset - Ruta específica del tileset (e.g., "goes-19/abi/ch-2/202601010000")
+ * @param pathToTileset - Ruta específica del tileset (e.g., "goes19/abi/ch-2/202601010000")
  * @returns URL template para Leaflet con formato desde environment
  */
 export function buildTileUrl(pathToProduct: string): string {
@@ -44,7 +55,7 @@ export function buildEcmwfTpPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/total-precipitation/${forecastTs}/${periodTs}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf-ifs/total-precipitation/${forecastTs}/${periodTs}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**
@@ -52,7 +63,7 @@ export function buildEcmwfTpPointQueryUrl(
  * Renderizada como overlay vectorial sobre TP.
  */
 export function buildEcmwfMslpGeojsonUrl(forecastTs: string, timestampTs: string): string {
-  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}.json`;
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf-ifs/mean-sea-level-pressure/${forecastTs}/${timestampTs}.json`;
 }
 
 /**
@@ -64,14 +75,14 @@ export function buildEcmwfMslpPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/ecmwf/mean-sea-level-pressure/${forecastTs}/${timestampTs}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/ecmwf-ifs/mean-sea-level-pressure/${forecastTs}/${timestampTs}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**
  * Construye la URL de un tile WRF para Leaflet (con placeholders {z}/{x}/{y}).
  */
 export function buildWrfTileUrl(productId: string, initTag: string, fxxx: string): string {
-  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/{z}/{x}/{y}.${TILE_FORMAT}`;
+  return `${DATA_SERVICE_BASE_URL}/products/wrf-arg4k/${productId}/${initTag}/${fxxx}/{z}/{x}/{y}.${TILE_FORMAT}`;
 }
 
 /**
@@ -84,7 +95,7 @@ export function buildWrfPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/wrf-arg4k/${productId}/${initTag}/${fxxx}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**
@@ -99,7 +110,7 @@ export function buildWrfSecondaryPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/secondary/${variable}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/wrf-arg4k/${productId}/${initTag}/${fxxx}/secondary/${variable}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**
@@ -113,7 +124,7 @@ export function buildWrfBarbTileUrl(
   x: number,
   y: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/barbs/${z}/${x}/${y}.json`;
+  return `${DATA_SERVICE_BASE_URL}/products/wrf-arg4k/${productId}/${initTag}/${fxxx}/barbs/${z}/${x}/${y}.json`;
 }
 
 /**
@@ -125,12 +136,12 @@ export function buildWrfGeojsonUrl(
   fxxx: string,
   layer: string,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/wrf/${productId}/${initTag}/${fxxx}/${layer}.json`;
+  return `${DATA_SERVICE_BASE_URL}/products/wrf-arg4k/${productId}/${initTag}/${fxxx}/${layer}.json`;
 }
 
 /**
  * Construye la URL de un tile GFS para Leaflet (con placeholders {z}/{x}/{y}).
- * `productId` es el segmento de la API: 'mslp' | '500hpa' | '250hpa'.
+ * `productId` es el segmento de la API: 'mean-sea-level-pressure' | 'geopotential-500hpa' | 'geopotential-250hpa'.
  */
 export function buildGfsTileUrl(productId: string, cycle: string, fxxx: string): string {
   return `${DATA_SERVICE_BASE_URL}/products/gfs/${productId}/${cycle}/${fxxx}/{z}/{x}/{y}.${TILE_FORMAT}`;
@@ -203,7 +214,7 @@ export function buildRadarPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/radar/${radarId}/${variableId}/${elevationId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/radar-sinarame/${radarId}/${variableId}/${elevationId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**

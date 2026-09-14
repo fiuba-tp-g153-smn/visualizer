@@ -24,7 +24,7 @@ describe('GFS menu registration', () => {
   });
 
   it('publishes the three SMN charts', () => {
-    expect(LAYERS.map((l) => l.id)).toEqual(['gfs/mslp', 'gfs/500hpa', 'gfs/250hpa']);
+    expect(LAYERS.map((l) => l.id)).toEqual(['gfs/mean-sea-level-pressure', 'gfs/geopotential-500hpa', 'gfs/geopotential-250hpa']);
   });
 });
 
@@ -50,7 +50,7 @@ describe('GFS layer routing', () => {
 });
 
 describe('presión a nivel del mar', () => {
-  const mslp = () => layer('gfs/mslp');
+  const mslp = () => layer('gfs/mean-sea-level-pressure');
 
   it('declares no raster pyramid', () => {
     expect(hasRasterPyramid(mslp())).toBe(false);
@@ -63,12 +63,12 @@ describe('presión a nivel del mar', () => {
 
   it('draws isobars and thickness', () => {
     const ids = (mslp().secondaryRenders ?? []).map((r) => r.id);
-    expect(ids).toEqual(['gfs-mslp-thickness', 'gfs-mslp-isobars']);
+    expect(ids).toEqual(['gfs-mean-sea-level-pressure-thickness', 'gfs-mean-sea-level-pressure-isobars']);
   });
 
   it('highlights the four air-mass thickness levels the SMN charts colour', () => {
     const thickness = (mslp().secondaryRenders ?? []).find(
-      (r) => r.id === 'gfs-mslp-thickness',
+      (r) => r.id === 'gfs-mean-sea-level-pressure-thickness',
     ) as SecondaryVectorRender;
     const plain = thickness.styleFor(5340);
     for (const level of [5280, 5400, 5580, 5700]) {
@@ -80,21 +80,21 @@ describe('presión a nivel del mar', () => {
 
 describe('niveles isobáricos', () => {
   it('shades wind speed on both levels', () => {
-    expect(layer('gfs/500hpa').scale).toBeDefined();
-    expect(layer('gfs/250hpa').scale).toBeDefined();
-    expect(hasRasterPyramid(layer('gfs/500hpa'))).toBe(true);
-    expect(hasRasterPyramid(layer('gfs/250hpa'))).toBe(true);
+    expect(layer('gfs/geopotential-500hpa').scale).toBeDefined();
+    expect(layer('gfs/geopotential-250hpa').scale).toBeDefined();
+    expect(hasRasterPyramid(layer('gfs/geopotential-500hpa'))).toBe(true);
+    expect(hasRasterPyramid(layer('gfs/geopotential-250hpa'))).toBe(true);
   });
 
   it('puts the barbs last so they stack above the contours', () => {
-    const renders = layer('gfs/500hpa').secondaryRenders ?? [];
+    const renders = layer('gfs/geopotential-500hpa').secondaryRenders ?? [];
     expect(renders.filter(isBarb)).toHaveLength(1);
     expect(isBarb(renders[renders.length - 1])).toBe(true);
   });
 
   it('only 500 hPa carries barbs', () => {
-    expect((layer('gfs/250hpa').secondaryRenders ?? []).filter(isBarb)).toHaveLength(0);
-    expect((layer('gfs/mslp').secondaryRenders ?? []).filter(isBarb)).toHaveLength(0);
+    expect((layer('gfs/geopotential-250hpa').secondaryRenders ?? []).filter(isBarb)).toHaveLength(0);
+    expect((layer('gfs/mean-sea-level-pressure').secondaryRenders ?? []).filter(isBarb)).toHaveLength(0);
   });
 
   it('reads each contour from the property tiles-processor writes', () => {
@@ -104,11 +104,11 @@ describe('niveles isobáricos', () => {
         if (!isBarb(render)) byId.set(render.id, render.valueProperty);
       }
     }
-    expect(byId.get('gfs-mslp-isobars')).toBe('pressure_hpa');
-    expect(byId.get('gfs-mslp-thickness')).toBe('thickness_gpm');
-    expect(byId.get('gfs-500hpa-heights')).toBe('height_gpm');
-    expect(byId.get('gfs-500hpa-isotherms')).toBe('temp_c');
-    expect(byId.get('gfs-250hpa-heights')).toBe('height_gpm');
+    expect(byId.get('gfs-mean-sea-level-pressure-isobars')).toBe('pressure_hpa');
+    expect(byId.get('gfs-mean-sea-level-pressure-thickness')).toBe('thickness_gpm');
+    expect(byId.get('gfs-geopotential-500hpa-heights')).toBe('height_gpm');
+    expect(byId.get('gfs-geopotential-500hpa-isotherms')).toBe('temp_c');
+    expect(byId.get('gfs-geopotential-250hpa-heights')).toBe('height_gpm');
   });
 
   it('names every overlay exactly as its URL does', () => {
@@ -143,17 +143,17 @@ describe('dato puntual de variables secundarias', () => {
   }
 
   it('exposes exactly the COGs tiles-processor uploads per product', () => {
-    expect(pointQueryVariables('gfs/mslp')).toEqual(['thickness']);
-    expect(pointQueryVariables('gfs/500hpa').sort()).toEqual(['geopotential', 'temperature']);
-    expect(pointQueryVariables('gfs/250hpa')).toEqual(['geopotential']);
+    expect(pointQueryVariables('gfs/mean-sea-level-pressure')).toEqual(['thickness']);
+    expect(pointQueryVariables('gfs/geopotential-500hpa').sort()).toEqual(['geopotential', 'temperature']);
+    expect(pointQueryVariables('gfs/geopotential-250hpa')).toEqual(['geopotential']);
   });
 
   it('does not offer a temperature query at 250 hPa', () => {
-    expect(pointQueryVariables('gfs/250hpa')).not.toContain('temperature');
+    expect(pointQueryVariables('gfs/geopotential-250hpa')).not.toContain('temperature');
   });
 
   it('leaves the isobars without a query, since that is the primary COG', () => {
-    const isobars = (layer('gfs/mslp').secondaryRenders ?? []).find(
+    const isobars = (layer('gfs/mean-sea-level-pressure').secondaryRenders ?? []).find(
       (render) => !isBarb(render) && render.backendLayerName === 'isobars',
     );
     expect(isobars?.pointQuery).toBeUndefined();
@@ -165,9 +165,9 @@ describe('dato puntual de variables secundarias', () => {
         .filter((render) => !isBarb(render))
         .map((render) => [render.id, render.pointQuery?.variable]),
     );
-    expect(renders.get('gfs-500hpa-heights')).toBe('geopotential');
-    expect(renders.get('gfs-500hpa-isotherms')).toBe('temperature');
-    expect(renders.get('gfs-250hpa-heights')).toBe('geopotential');
+    expect(renders.get('gfs-geopotential-500hpa-heights')).toBe('geopotential');
+    expect(renders.get('gfs-geopotential-500hpa-isotherms')).toBe('temperature');
+    expect(renders.get('gfs-geopotential-250hpa-heights')).toBe('geopotential');
   });
 
   it('reuses the menu label so adding a query never renames the overlay', () => {
@@ -176,13 +176,13 @@ describe('dato puntual de variables secundarias', () => {
         .filter((render) => !isBarb(render))
         .map((render) => [render.id, render.pointQuery?.name]),
     );
-    expect(names.get('gfs-mslp-thickness')).toBe('Espesores 1000/500');
-    expect(names.get('gfs-500hpa-heights')).toBe('Geopotencial');
-    expect(names.get('gfs-500hpa-isotherms')).toBe('Isotermas');
+    expect(names.get('gfs-mean-sea-level-pressure-thickness')).toBe('Espesores 1000/500');
+    expect(names.get('gfs-geopotential-500hpa-heights')).toBe('Geopotencial');
+    expect(names.get('gfs-geopotential-500hpa-isotherms')).toBe('Isotermas');
   });
 
   it('returns temperature in the unit the conversion helper recognises', () => {
-    const isotherms = (layer('gfs/500hpa').secondaryRenders ?? []).find(
+    const isotherms = (layer('gfs/geopotential-500hpa').secondaryRenders ?? []).find(
       (render) => !isBarb(render) && render.backendLayerName === 'isotherms',
     );
     expect(isotherms?.pointQuery?.unit).toBe('°C');
@@ -205,6 +205,6 @@ describe('dato puntual de variables secundarias', () => {
         (render) => render.pointQuery?.variable === 'geopotential',
       )?.pointQuery?.scaleRange;
 
-    expect(rangeFor('gfs/250hpa')!.min).toBeGreaterThan(rangeFor('gfs/500hpa')!.max);
+    expect(rangeFor('gfs/geopotential-250hpa')!.min).toBeGreaterThan(rangeFor('gfs/geopotential-500hpa')!.max);
   });
 });

@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, map, of, catchError, switchMap } from 'rxjs';
-import { buildConfigUrl } from '../../config';
+import { buildAvailabilityUrl, buildConfigUrl } from '../../config';
 import { ForecastModelAdapter, adapterForLayer } from '../../config/layers/forecast-model';
 import {
   Layer,
@@ -18,6 +18,7 @@ import {
   EcmwfTpTileLayerConfig,
   WrfTileLayer,
   WrfTileLayerConfig,
+  ProductAvailabilitySnapshot,
 } from '../../models';
 import { LayersService } from './layers.service';
 import {
@@ -333,6 +334,26 @@ export class LayerConfigService {
       default:
         return of(false);
     }
+  }
+
+  /**
+   * One snapshot of which products currently have data, for every domain.
+   *
+   * The bundled counterpart to `probeLayerAvailability`: the eager pass used to
+   * be one GET per product, and the radar grid alone is 18 x 6 = 108 of them on
+   * a 60s timer, per client.
+   *
+   * The list is complete: the backend builds it through the same read path an
+   * individual probe would take (Redis, falling back to S3 when the index is
+   * cold), so a product missing from `available` genuinely has no data.
+   */
+  fetchProductAvailability(): Observable<ProductAvailabilitySnapshot> {
+    return this.http.get<ProductAvailabilitySnapshot>(buildAvailabilityUrl()).pipe(
+      map((resp) => ({
+        available: resp.available ?? [],
+        domains: resp.domains ?? [],
+      })),
+    );
   }
 
   /**

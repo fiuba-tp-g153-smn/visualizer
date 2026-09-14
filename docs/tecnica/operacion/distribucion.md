@@ -5,9 +5,7 @@ title: 15. Distribuir el sistema en varias máquinas
 # 15. Distribuir el sistema en varias máquinas
 
 Toda la documentación describe un sistema que corre en **una sola máquina**, porque así corre hoy.
-La primera pregunta de quien lo hereda es si tiene que ser así. **La respuesta corta: no, pero casi
-nada del reparto está probado.** Este capítulo separa lo que ata los stacks a un host, lo que ya está
-preparado para separarse y lo que costaría cada topología.
+¿Tiene que ser así? **No, pero casi nada del reparto está probado.**
 
 ![Dos máquinas: procesamiento y lectura](../../imgs/diagrams/distribucion-dos-maquinas.svg){ .diagram loading=lazy }
 
@@ -19,7 +17,7 @@ las plantillas.
 | Atadura | Dónde está | Qué implica |
 |---|---|---|
 | **El servicio de datos llega al almacén por el propio host.** `S3_TILES_DATA_ENDPOINT` vale `host.docker.internal:9000`, y la plantilla agrega el alias `host-gateway`. | `.env.example` y plantilla de `data-service` | El puerto `9000` se resuelve **en la máquina donde corre `data-service`**. Si el almacén está en otra, ese valor tiene que cambiar. Filtrar el puerto rompe el arranque. Ver [13. Topología de red](topologia.md). |
-| **El replicador de datos escribe en el volumen del procesador.** | `TILES_DATA_DIR` de `data-simulator` | Es un acoplamiento de disco, no de red. **Tiene que correr donde esté el volumen `tiles_data`.** |
+| **Los feeds locales escriben en el almacenamiento del procesador.** | `radar-sinarame`, `goes19-glm` y `wrf-arg4k` bajo su raíz de datos | Es un acoplamiento de disco, no una API. El proceso institucional —o `data-simulator` en laboratorio— necesita acceso a esa raíz. |
 | **Productor, workers y API de métricas comparten un volumen local.** Las bases SQLite usan WAL y un `flock` entre migraciones. | `tiles_data` en las siete unidades del procesador | **No se pueden repartir** sin reemplazar el volumen, y WAL no funciona sobre NFS ni SMB. Es la atadura más dura. |
 | **Las direcciones internas del procesador están escritas a mano.** `seaweedfs:8333` y `rabbitmq` son literales en la plantilla, no variables. | Plantilla de producción de `tiles-processor` | Mover el almacén o el broker fuera del stack exige **editar la plantilla y el script que la genera**. |
 
@@ -66,8 +64,8 @@ servicios**, así que el procesamiento puede quedarse con la RAM de la caché o 
 
 ### Dos máquinas: procesamiento y lectura
 
-La máquina **A** corre `tiles-processor` completo, con su almacén, su broker, la API de métricas y el
-replicador. La máquina **B** corre `data-service`, `alerts-service` y `visualizer`.
+La máquina **A** corre `tiles-processor` completo, con su almacén, su broker, la API de métricas y la
+entrada de feeds locales. La máquina **B** corre `data-service`, `alerts-service` y `visualizer`.
 
 | Cruza el cable | De | A | Notas |
 |---|---|---|---|
@@ -88,7 +86,7 @@ lectura remoto en vez de uno local.
 
 ![Cuatro máquinas: hasta dónde llega la separación](../../imgs/diagrams/distribucion-cuatro-maquinas.svg){ .diagram loading=lazy }
 
-**A** procesa: productor, workers, broker, API de métricas y replicador, todos sobre el mismo volumen.
+**A** procesa: productor, workers, broker, API de métricas y entrada de feeds, sobre la misma raíz de datos.
 **B** es el almacén de objetos. **C** lee: la API del servicio de datos, su sincronizador y Redis.
 **D** atiende avisos y web: `alerts-service` con su MySQL, y `visualizer`.
 
@@ -111,7 +109,8 @@ los workers. **Qué hay que tocar:** las dos plantillas del procesador, el `.env
 - **Productor y workers entre máquinas.** Comparten `tiles_data`, y sus bases SQLite exigen disco
   local. Haría falta un almacén de estado en red y otro mecanismo de bloqueo.
 - **La API de métricas lejos de los workers.** Lee `metrics.db` del mismo volumen.
-- **El replicador lejos del productor.** Escribe ese volumen.
+- **La entrada de feeds lejos del productor.** El proceso que recibe o replica los datos tiene que
+  escribir en la raíz que observa el productor.
 
 ## Dónde vive el estado
 

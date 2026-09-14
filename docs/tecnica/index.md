@@ -20,11 +20,25 @@ fallas. Quien lo use como herramienta tiene su propio [manual](../manual/index.m
 
 ![Contexto del sistema: los cuatro servicios y lo que cruza cada frontera](../imgs/diagrams/sistema-contexto.svg){ .diagram loading=lazy }
 
+## Dos perfiles de despliegue
+
+| Perfil | Cuándo usarlo | Punto de entrada |
+|---|---|---|
+| **Beta-1, una VM de 8 GB** | Una instalación completa, liviana y conectada a fuentes reales | [14.1 Beta-1](operacion/beta-1.md) |
+| Cuatro despliegues independientes | Operación con infraestructura y ciclos de entrega separados | [17. Despliegue](operacion/despliegue.md) |
+
+**Beta-1 es la forma más corta de levantar el sistema completo.** El
+meta-repositorio `mapasmn` fija las cuatro revisiones, genera la configuración
+desde un solo `.env` y las inicia con un solo proyecto Compose. El perfil
+independiente conserva la autonomía de cada componente y permite operarlos por
+separado.
+
 ## Los cuatro servicios
 
-Son **cuatro repositorios independientes**, con su propia imagen y su propio despliegue. **No
-comparten base de datos ni código.** Se comunican por un almacén de objetos compatible con S3 y por
-HTTP.
+Son **cuatro repositorios independientes**, con su propia imagen y capacidad de
+desplegarse por separado. **No comparten base de datos ni código.** También
+pueden quedar fijados y orquestados juntos desde `mapasmn`, como hace Beta-1. Se
+comunican por un almacén de objetos compatible con S3 y por HTTP.
 
 | Servicio | Qué hace | Unidades desplegables | Escucha en |
 |---|---|---|---|
@@ -64,6 +78,7 @@ Ninguno de los dos cruza una frontera entre servicios.
 | Consultar una ruta, una variable o un prefijo del bucket | [12. Contratos entre servicios](contratos/index.md) |
 | Decidir dónde va el firewall | [13. Topología de red](operacion/topologia.md) |
 | Levantarlo por primera vez | [14. Puesta en marcha](operacion/puesta-en-marcha.md) |
+| Levantar Beta-1 en una VM de 8 GB | [14.1 Beta-1](operacion/beta-1.md) |
 | Repartirlo en más de una máquina | [15. Distribuir el sistema](operacion/distribucion.md) |
 | Dimensionar RAM, CPU y disco | [16. Capacidad y dimensionamiento](operacion/capacidad.md) |
 | Saber cómo llega un cambio a producción | [17. Despliegue y entrega continua](operacion/despliegue.md) |

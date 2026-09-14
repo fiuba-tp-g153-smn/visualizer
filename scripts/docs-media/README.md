@@ -13,8 +13,9 @@ npx tsx scripts/docs-media/capture.ts --list                     # qué hay y qu
 
 ## Qué hace
 
-`capture.ts` levanta `ng serve` en el puerto `4299` (o reutiliza uno que ya
-escuche ahí, o el que indique `DOCS_MEDIA_BASE_URL`), abre Chromium con
+`capture.ts` levanta `ng serve` en el puerto `4299` (`DOCS_MEDIA_PORT` lo
+cambia; si ya hay algo escuchando ahí lo reutiliza, y `DOCS_MEDIA_BASE_URL`
+apunta a otro servidor entero), abre Chromium con
 Playwright y recorre `shots.config.ts`. Por cada entrada:
 
 1. **Siembra el estado** escribiendo las claves de `localStorage` que la
@@ -92,5 +93,5 @@ Registro de qué usó cada corrida versionada:
 
 ## Requisitos
 
-Node 24 (`.nvmrc`-menos: usar `nvm use 24`), `npx playwright install chromium`
+Node 24 —no hay `.nvmrc`, así que `nvm use 24`—, `npx playwright install chromium`
 una vez, `ffmpeg` en el `PATH`, y los backends de la tabla alcanzables.

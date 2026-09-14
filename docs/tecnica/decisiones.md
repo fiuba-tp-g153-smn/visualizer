@@ -15,12 +15,27 @@ esas dos raíces hasta sus consecuencias. Conviene leerlo antes de proponer un c
 **Contexto.** Los componentes tienen ritmos distintos. Uno procesa archivos pesados por lotes. Otro
 atiende peticiones cortas. Otro hace cálculo geométrico bajo demanda. Otro corre en el navegador.
 
-**Decisión.** Cuatro repositorios, cuatro imágenes, cuatro despliegues. **No comparten base de datos
-ni código.**
+**Decisión.** Cuatro repositorios y cuatro imágenes, con contratos explícitos entre ellos. **No
+comparten base de datos ni código.** Cada componente puede desplegarse solo; el meta-repositorio
+`mapasmn` puede además fijar las cuatro revisiones y desplegarlas como una unidad.
 
-**Consecuencia.** Cada uno escala y se despliega solo. Un problema de memoria en el procesamiento no
-afecta la latencia de la API. A cambio, **un cambio de contrato exige coordinar dos repositorios**, y
-hay infraestructura duplicada a propósito.
+**Consecuencia.** Cada uno escala y puede entregarse solo. Un problema de memoria en el procesamiento
+no afecta la latencia de la API. A cambio, **un cambio de contrato exige coordinar dos repositorios**.
+Cuando se usa `mapasmn`, actualizar el puntero de cada submódulo convierte esa coordinación en una
+versión integrada y reproducible.
+
+## Un perfil integrado para una máquina chica
+
+**Contexto.** La autonomía de los componentes no resuelve por sí sola cómo instalar el sistema
+completo en una VM con 8 GB ni qué combinación de productos cabe allí.
+
+**Decisión.** Beta-1 conserva los cuatro componentes y las fuentes reales, pero fija un worker normal,
+uno liviano y un catálogo reducido en archivos propios. `mapasmn` los levanta con un solo `.env` y un
+solo proyecto Compose.
+
+**Consecuencia.** La versión desplegada queda explícita y el camino inicial se reduce a un único
+procedimiento. El perfil no escala automáticamente ni impone límites de memoria: habilitar productos
+o workers fuera de él invalida el dimensionamiento. Ver [14.1 Beta-1](operacion/beta-1.md).
 
 ## Un almacén de objetos como costura
 
@@ -139,11 +154,12 @@ vez: **cambiar una dirección obliga a reconstruir la imagen.**
 
 ## Docker Compose sobre un VPS, sin Kubernetes
 
-**Contexto.** Cuatro stacks, un puñado de contenedores, un equipo chico. Y un requisito duro: **mucha
-RAM, siempre encendida**. Una máquina efímera no sirve para este procesamiento.
+**Contexto.** Cuatro componentes, un puñado de contenedores, un equipo chico. Y un requisito duro:
+**memoria siempre disponible**. Una máquina efímera no sirve para este procesamiento.
 
-**Decisión.** Compose sobre un servidor virtual siempre activo, detrás de un proxy inverso, con
-despliegue por webhook desde integración continua.
+**Decisión.** Compose sobre un servidor virtual siempre activo, detrás de un proxy inverso. Los
+componentes pueden desplegarse por webhook de forma independiente; Beta-1 usa el proyecto integrado
+de `mapasmn` en una VM de 8 GB.
 
 **Consecuencia.** La operación cabe en una persona. **No hay reprogramación automática ni escalado
 horizontal**: si el host cae, hay que intervenir. Las plantillas nacieron para una máquina; el

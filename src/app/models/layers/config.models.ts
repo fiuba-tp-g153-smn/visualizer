@@ -54,3 +54,22 @@ export interface WrfTileLayerConfig extends TileLayerConfig {
   /** layers["init_tag/fxxx"] = ['barbs', 'slp', ...] (overlay GeoJSON layer names). */
   layersByStep: Readonly<Record<string, readonly string[]>>;
 }
+
+/**
+ * Respuesta de `/products/availability`: qué productos tienen datos ahora.
+ *
+ * `available` son rutas de producto, las MISMAS que usaría un sondeo
+ * individual (`radar-sinarame/RMA2/dbzh/elev0`, `goes19/abi/c13`,
+ * `wrf-arg4k/granizo`), así que el cliente hace un lookup en vez de una
+ * petición.
+ *
+ * La lista es COMPLETA: el backend la arma recorriendo el mismo camino de
+ * lectura que recorrería el endpoint por producto (Redis y, si está frío, S3),
+ * así que un producto ausente no tiene datos y no hace falta sondearlo.
+ *
+ * `domains` es diagnóstico: qué dominios aportaron al menos un producto.
+ */
+export interface ProductAvailabilitySnapshot {
+  readonly available: readonly string[];
+  readonly domains: readonly string[];
+}
