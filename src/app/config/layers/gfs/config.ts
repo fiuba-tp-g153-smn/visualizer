@@ -153,7 +153,7 @@ export const GFS_SUBGROUP: LayerSubgroup = {
       ...GFS_DEFAULTS,
       id: 'gfs/geopotential-500hpa',
       productId: 'geopotential-500hpa',
-      name: '500 hPa',
+      name: 'Geopotencial 500 hPa',
       pointQueryLabel: 'Intensidad del viento en 500 hPa',
       description:
         'Viento en 500 hPa (kt) — GFS. Geopotencial cada 60 m, isotermas cada 5 °C y barbas de viento.',
@@ -181,7 +181,7 @@ export const GFS_SUBGROUP: LayerSubgroup = {
       ...GFS_DEFAULTS,
       id: 'gfs/geopotential-250hpa',
       productId: 'geopotential-250hpa',
-      name: '250 hPa',
+      name: 'Geopotencial 250 hPa',
       pointQueryLabel: 'Intensidad del viento en 250 hPa',
       description: 'Viento en 250 hPa (kt) — GFS. Geopotencial cada 60 m.',
       scale: GFS_WIND_250_SCALE,
