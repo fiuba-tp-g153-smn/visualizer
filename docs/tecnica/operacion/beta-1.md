@@ -44,28 +44,37 @@ submódulo `tiles-processor`:
 Esos archivos se versionan juntos. Una revisión de `mapasmn` identifica el
 orquestador y las revisiones exactas de los cuatro submódulos.
 
-## Las fuentes son reales
+## Conectar cada producto con su fuente
 
-Beta-1 toma GOES-19, ECMWF y GFS directamente de sus fuentes públicas. Las
-fuentes internas del organismo entran por el sistema de archivos:
+Beta-1 busca que todos los productos habilitados reciban datos reales. La instalación no queda
+atada a una procedencia única. Cada fuente puede leer una carpeta local o un bucket S3. ECMWF IFS y
+GFS admiten además sus proveedores públicos. El operador debe revisar los seis bloques de
+`settings-beta-1.json` y elegir la alternativa que corresponda a la infraestructura disponible.
 
-| Fuente | Variable que define la carpeta del host | Productos activos |
+| Fuente | Modo incluido como punto de partida | Alternativas |
 |---|---|---|
-| GLM | `GOES19_GLM_INPUT_DIR` | FED |
-| Radar SINARAME | `RADAR_SINARAME_INPUT_DIR` | Seis productos de RMA1, RMA2 y RMA8 |
-| WRF-ARG4K | `WRF_ARG4K_INPUT_DIR` | Colmax y Ráfagas |
+| GOES-19 ABI | `s3`, bucket público de NOAA | S3 propio o carpeta local |
+| GOES-19 GLM | `local` | S3 propio |
+| Radar SINARAME | `local` | S3 propio |
+| WRF-ARG4K | `local` | S3 propio |
+| ECMWF IFS | `external-provider-opendata` | S3 propio o carpeta local |
+| GFS | `external-provider-nomads` | S3 propio o carpeta local |
 
-Esas carpetas se montan como `/app/data/{goes19-glm,radar-sinarame,wrf-arg4k}` en el
-productor y los workers. La integración prevista es que los sistemas que ya
-reciben los datos vivos los repliquen allí. El productor examina los
-directorios cada cinco minutos y encola lo nuevo: no hace falta reiniciarlo
-ante cada ingreso.
+El modo `local` requiere una ruta absoluta en `<PREFIX>_INPUT_DIR` y un bind mount de sólo lectura
+en `docker-compose-beta-1.yaml`. El Compose versionado contiene únicamente los tres mounts que
+corresponden a su configuración inicial. Al cambiar otra fuente a `local`, se debe agregar su mount.
+Al cambiar una fuente local a S3, se debe eliminar el mount que deja de utilizarse.
 
-El feed debe conservar los nombres, marcas temporales y estructura esperados
-por el procesador. Para no exponer archivos incompletos, escribir cada archivo
-con un nombre temporal dentro del mismo sistema de archivos y renombrarlo al
-terminar la copia. El renombre es atómico; una copia directa al nombre final
-no lo es.
+El modo `s3` define el bucket y sus opciones dentro del bloque `input`. Puede utilizar un nombre de
+bucket o una dirección `s3://bucket/prefix`, junto con `s3_endpoint`, `s3_prefix`, `s3_region`,
+`s3_secure` y `s3_addressing_style` cuando sean necesarios. Las credenciales se cargan mediante el
+par `<PREFIX>_S3_ACCESS_KEY` y `<PREFIX>_S3_SECRET_KEY`. Los dos valores vacíos indican acceso
+anónimo; configurar sólo uno hace fallar el arranque.
+
+Los procesos que escriben una carpeta local deben conservar los nombres y marcas temporales que
+espera el procesador. Conviene copiar cada archivo con un nombre temporal y renombrarlo cuando esté
+completo. El productor examina las fuentes cada cinco minutos, por lo que no necesita reiniciarse
+ante un nuevo ingreso.
 
 El contrato general de cada fuente está en
 [Tiles Processor](../servicios/tiles-processor.md#con-quién-habla). Los
@@ -88,7 +97,7 @@ La VM necesita:
 - Git, `make`, un shell POSIX y `envsubst` de GNU gettext;
 - espacio para datos crudos, objetos procesados, Redis y MySQL;
 - acceso saliente a las fuentes públicas, IGN y la API del SMN;
-- conectividad desde los feeds internos hacia los tres directorios de entrada.
+- conectividad con cada bucket, proveedor o carpeta elegida para los productos activos.
 
 En Debian o Ubuntu, la parte que no trae Docker se instala con:
 
@@ -135,12 +144,9 @@ ALERTS_SERVICE_BASE_URL=https://alerts.example.org
 METRICS_SERVICE_BASE_URL=https://metrics.example.org
 DOCS_URL=/docs-site
 
-GOES19_ABI_INPUT_DIR=/srv/mapasmn/input/goes19-abi
 GOES19_GLM_INPUT_DIR=/srv/mapasmn/input/goes19-glm
 RADAR_SINARAME_INPUT_DIR=/srv/mapasmn/input/radar-sinarame
 WRF_ARG4K_INPUT_DIR=/srv/mapasmn/input/wrf-arg4k
-ECMWF_IFS_INPUT_DIR=/srv/mapasmn/input/ecmwf-ifs
-GFS_INPUT_DIR=/srv/mapasmn/input/gfs
 ```
 
 Las bases URL se incorporan al visualizador durante la construcción. Deben
@@ -160,25 +166,23 @@ ajeno: revisarla antes del primer arranque.
 
 ## 3. Conectar los feeds
 
-Docker Compose exige las seis rutas aunque una fuente utilice S3 o un proveedor externo. Deben ser
-absolutas y existir antes del arranque. Con los valores del ejemplo se crean de esta manera:
+Con la configuración inicial, Docker Compose requiere las tres carpetas correspondientes a GLM,
+radar y WRF. Las rutas deben ser absolutas y existir antes del arranque:
 
 ```sh
-sudo mkdir -p /srv/mapasmn/input/goes19-abi
 sudo mkdir -p /srv/mapasmn/input/goes19-glm
 sudo mkdir -p /srv/mapasmn/input/radar-sinarame
 sudo mkdir -p /srv/mapasmn/input/wrf-arg4k
-sudo mkdir -p /srv/mapasmn/input/ecmwf-ifs
-sudo mkdir -p /srv/mapasmn/input/gfs
 ```
 
-Configurar luego el replicador institucional para escribir en ellos. Comprobar
-antes del arranque que el usuario que alimenta los datos puede escribir y que
-Docker puede leerlos.
+Antes del arranque se debe comprobar cada fuente, incluidas las que usan S3 o un proveedor externo.
+En el caso de una carpeta, el proceso que alimenta los datos debe poder escribir y Docker debe poder
+leer. En el caso de S3, conviene probar la lista del bucket con las mismas credenciales que utilizará
+el contenedor.
 
-Los feeds pueden conectarse antes o después de levantar el stack. Si llegan
-después, las capas correspondientes aparecerán cuando termine el primer ciclo de
-procesamiento.
+Los feeds pueden conectarse después de levantar el stack, pero sus capas permanecerán vacías hasta
+que finalice el primer ciclo de procesamiento. Un arranque sano no demuestra que todas las fuentes
+estén conectadas; esa comprobación se realiza en los registros del productor y en las métricas.
 
 ## 4. Levantar
 

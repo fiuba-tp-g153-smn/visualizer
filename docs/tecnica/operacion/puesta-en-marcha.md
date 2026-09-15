@@ -62,9 +62,11 @@ make beta1
 ```
 
 Las direcciones de datos, avisos y métricas del `.env` tienen que ser alcanzables desde el navegador.
-En una VM remota no pueden quedar en `localhost`. El mismo archivo debe definir las seis variables
-`*_INPUT_DIR` con rutas absolutas del host. Radar, GLM y WRF ingresan por esas carpetas; GOES-19 ABI,
-ECMWF IFS y GFS utilizan sus fuentes públicas con la configuración de Beta-1.
+En una VM remota no pueden quedar en `localhost`. También se debe revisar el modo de entrada de cada
+fuente en `settings-beta-1.json`. La configuración inicial utiliza carpetas para radar, GLM y WRF,
+S3 público para GOES-19 ABI y proveedores públicos para ECMWF IFS y GFS. Cada instalación puede
+reemplazar estas decisiones por buckets o carpetas propios. Sólo las fuentes en modo `local`
+requieren una variable `*_INPUT_DIR` y un mount en el Compose.
 
 La explicación completa, incluidos el espíritu del perfil, los directorios de los feeds y la
 verificación, está en [14.1 Beta-1](beta-1.md).

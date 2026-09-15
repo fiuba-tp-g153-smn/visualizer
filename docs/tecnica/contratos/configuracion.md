@@ -54,6 +54,12 @@ Catorce variables son obligatorias: sin ellas el proceso aborta al arrancar.
 | `GFS_SUBSET_ENDPOINT` | Sí si GFS está activo | Endpoint de recorte GRIB de NOAA |
 | `{GOES19_ABI,GOES19_GLM,RADAR_SINARAME,WRF_ARG4K,ECMWF_IFS,GFS}_S3_ACCESS_KEY` / `_SECRET_KEY` | No | Credenciales de los buckets de entrada. Sin definir, acceso anónimo; a medias, el arranque falla. |
 
+Las variables `<PREFIX>_INPUT_DIR` pertenecen a Docker Compose y se necesitan sólo para las fuentes
+configuradas como `local`. El Compose debe montar cada una sobre `/app/data/<nombre-de-fuente>` en
+modo de sólo lectura. No se define una carpeta para una fuente que lee S3 o un proveedor externo.
+Cuando cambia el modo de una fuente, el bloque `input`, las credenciales y los mounts se revisan como
+una misma modificación.
+
 Las siguientes no las lee el proceso: las consumen el script de arranque del almacén o la
 plantilla. Todas menos las de Prometheus son obligatorias para que el almacén arranque.
 
@@ -75,7 +81,8 @@ plantilla. Todas menos las de Prometheus son obligatorias para que el almacén a
 | `scheduler.discovery_cron` | Cadencia del descubrimiento, `*/5 * * * *` |
 | `metrics.enabled`, `metrics.max_rows` | Registro de métricas y tope de filas |
 | `sources.<fuente>.products.<id>` | Qué productos se generan |
-| `sources.<fuente>.input.mode` | `local` o `s3` |
+| `sources.<fuente>.input.mode` | `local` o `s3` para las seis fuentes; ECMWF IFS y GFS admiten además sus proveedores externos |
+| `sources.<fuente>.input.s3_bucket`, `s3_endpoint`, `s3_prefix`, `s3_region`, `s3_secure`, `s3_addressing_style` | Ubicación y forma de acceso cuando el modo es `s3` |
 | `sources.<fuente>.zoom_levels`, `retention_days` | Rango de zoom y días de retención por prefijo |
 | `sources.{radar-sinarame,wrf-arg4k}.light_queue` | Qué productos van a las colas livianas |
 | `sources.goes19-abi.max_hours_back`, `sources.gfs.max_steps_per_tick` | Cuánto mira hacia atrás; cuántos pasos por pasada |
