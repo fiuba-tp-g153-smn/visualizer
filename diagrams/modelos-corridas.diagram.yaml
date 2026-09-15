@@ -1,10 +1,10 @@
 # Capítulo 4.3. Pregunta: ¿qué es una corrida, qué es un paso, y qué elige cada control?
-title: Modelos — corrida, pasos y capas
+title: "Modelos: corrida, pasos y capas"
 subtitle: Una corrida es un pronóstico completo; la animación recorre sus pasos hacia adelante
 size: [880, 440]
 
 groups:
-  - {kind: band, at: [24, 72], size: [832, 120], label: UNA CORRIDA · SE ELIGE EN «CORRIDAS»}
+  - {kind: band, at: [24, 72], size: [832, 120], label: UNA CORRIDA · SE ELIGE EN CORRIDAS}
 
 nodes:
   init:   {at: [40, 112], size: [168, 52], label: Hora de inicio, sub: p. ej. 12 UTC}

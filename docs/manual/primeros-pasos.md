@@ -4,59 +4,57 @@ title: 2. Primeros pasos
 
 # 2. Primeros pasos
 
-Al abrir la aplicación ves un mapa a pantalla completa y, a la izquierda, una columna de íconos.
-**El mapa es el área de trabajo.** **La columna es desde donde se controla todo.**
+La aplicación abre con un mapa que ocupa toda la ventana y una barra de iconos
+sobre el margen izquierdo. El mapa concentra el trabajo geográfico. La barra da
+acceso a las capas, las herramientas, los avisos y la configuración.
 
 ![La ventana: barra lateral, panel y mapa](../imgs/diagrams/ventana-anatomia.svg){ .diagram loading=lazy }
 
 ![La ventana al abrir la aplicación por primera vez](../imgs/manual/02-ventana.png){ .doc-figure loading=lazy }
 
-En la captura: la barra lateral (1), los botones de zoom (2) y la atribución del fondo (3).
+En la captura, el número 1 identifica la barra lateral, el 2 los controles de
+zoom y el 3 la atribución del mapa base.
 
-## La barra de la izquierda
+## La barra lateral
 
-**Cada ícono abre un panel.** **Sólo hay un panel abierto por vez.** **Se cierra con la cruz del panel, o
-con otro clic sobre su ícono.**
+Cada icono abre un panel. La aplicación mantiene un solo panel abierto y lo
+cierra cuando el usuario presiona la cruz, vuelve a seleccionar el mismo icono
+o elige otro panel.
 
-| Ícono | Panel | Para qué sirve |
+| Icono | Panel | Uso |
 |---|---|---|
-| Capas | **Capas del mapa** | Elegir qué se ve: satélite, radar, modelos, estaciones y referencia. |
-| Triángulo | **Avisos a corto plazo** | Dibujar el área afectada y emitir un aviso. |
-| Herramientas | **Herramientas del mapa** | Indicadores, escalas de color y consulta puntual. |
-| Mapa | **Explorador** | Buscar un lugar y elegir el mapa de fondo. |
-| Ajustes | **Configuración** | Unidades, zona horaria y la clave de las estaciones. |
+| Capas | Capas del mapa | Seleccionar satélite, radar, modelos, estaciones y cartografía de referencia. |
+| Triángulo | Avisos a corto plazo | Dibujar el área afectada y generar un aviso. |
+| Herramientas | Herramientas del mapa | Configurar indicadores, escalas y consulta puntual. |
+| Mapa | Explorador | Buscar un lugar y elegir el mapa base. |
+| Ajustes | Configuración | Definir unidades, zona horaria y acceso a estaciones. |
 
-Más abajo, separados por una línea, hay dos accesos. **Rendimiento y estado** abre el
-[panel de estado](panel-de-estado.md). **Documentación** abre estas páginas.
-
-Al pie de la columna están los botones de zoom. **El número entre el más y el menos es el nivel
-actual.**
+Debajo de estos paneles se encuentran los accesos a [Rendimiento y
+estado](panel-de-estado.md) y a la documentación. Al pie aparecen los controles
+de zoom. El número entre los botones indica el nivel actual.
 
 ![El panel Capas del mapa, abierto desde la barra lateral](../imgs/manual/02-panel-capas.png){ .doc-figure loading=lazy }
 
-Todo panel tiene el mismo esqueleto: **el título (1), sus pestañas (2) y la cruz que lo cierra (3).**
+Todos los paneles comparten la misma organización. La captura marca el título
+con el número 1, las pestañas con el 2 y el botón de cierre con el 3.
 
-## Moverse por el mapa
+## Movimiento y búsqueda
 
-- **Acercar y alejar**: la rueda del mouse, o los botones de zoom.
-- **Desplazarse**: arrastrar con el botón izquierdo.
-- **Ir a un lugar**: el panel Explorador, pestaña **Buscar**.
+La rueda del mouse o los botones de zoom acercan y alejan la vista. Para mover
+el mapa se arrastra con el botón izquierdo. La aplicación inicia centrada en la
+Argentina, con nivel de zoom 4, y no conserva la posición entre sesiones.
 
-**La aplicación abre siempre en la misma vista**, centrada en Argentina con nivel 4 de zoom. **La
-posición del mapa no se recuerda entre sesiones.**
+La pestaña Buscar del Explorador permite ir a una localidad, un departamento o
+una provincia. La búsqueda comienza a partir de tres caracteres y utiliza el
+servicio del IGN. Desde el engranaje se puede seleccionar OpenStreetMap y elegir
+si un área se representa como polígono o como marcador. Un clic sobre el
+resultado centra el mapa. El botón derecho elimina la marca.
 
-### Buscar un lugar
+## El mapa base
 
-**Escribí al menos tres letras de una localidad, un departamento o una provincia.** **Los resultados
-vienen del IGN.** El engranaje del buscador permite cambiar la fuente a OpenStreetMap, y elegir si
-un área se muestra como polígono o como marcador. **Un clic en un resultado lleva el mapa hasta
-ahí.** **La marca se quita con el botón derecho sobre ella.**
-
-## El mapa de fondo
-
-El fondo es la cartografía sobre la que se dibuja todo. **No es una capa**: no aparece en el panel
-de capas y no cambia lo que pongas encima. Se elige en **Explorador ▸ Mapa base**, una grilla de
-tarjetas con vista previa. **Un clic cambia el fondo, y la elección se recuerda.**
+El mapa base aporta el contexto cartográfico sobre el cual se dibujan las capas
+meteorológicas. No forma parte del árbol de capas. Se selecciona en Explorador,
+dentro de la pestaña Mapa base, y la elección queda guardada en el navegador.
 
 ![La grilla de mapas base del Explorador](../imgs/manual/02-mapa-base.png){ .doc-figure loading=lazy }
 
@@ -67,89 +65,87 @@ tarjetas con vista previa. **Un clic cambia el fondo, y la elección se recuerda
   Tu navegador no soporta este video.
 </video>
 
-| Fondo | Proveedor | Detalle máximo |
+| Mapa | Proveedor | Último nivel disponible |
 |---|---|---|
-| Argenmap | IGN | Todo el rango de zoom |
+| Argenmap | IGN | Todo el rango |
 | Argenmap gris | IGN | Todo el rango |
 | Argenmap oscuro | IGN | Todo el rango |
 | Argenmap topográfico | IGN | Todo el rango |
-| Imágenes satelitales Esri | Esri | Hasta el nivel 17 |
-| Mapa topográfico Esri | Esri | Hasta el nivel 8 |
+| Imágenes satelitales Esri | Esri | 17 |
+| Mapa topográfico Esri | Esri | 8 |
 | Imágenes satelitales Google | Google | Todo el rango |
-| Mapa Esri Fondo Oceánico | Esri | Hasta el nivel 16 |
+| Mapa Esri Fondo Oceánico | Esri | 16 |
 
-**Por defecto se usa Argenmap.** Pasado el detalle máximo de un fondo, la aplicación agranda la
-última imagen disponible en vez de traer más. **El mapa llega hasta el nivel 18**, así que tres
-fondos se ven borrosos en los últimos niveles.
+Argenmap es la opción inicial. La aplicación admite zoom hasta el nivel 18. Si
+el proveedor termina antes, agranda su última imagen y el resultado pierde
+nitidez.
 
-**Las imágenes del fondo se piden primero al proveedor.** **Si una no llega, se usa la copia que
-guarda el sistema.** Si el fondo queda en blanco, probá con otra tarjeta. **Es la forma más rápida de
-saber si el problema es de un proveedor.**
+El navegador solicita primero cada imagen al proveedor del mapa. Cuando esa
+consulta falla, el sistema intenta recuperar la copia almacenada. Si un mapa
+base queda vacío, cambiar de tarjeta permite distinguir una falla del proveedor
+de un problema general de la aplicación.
 
-## Los indicadores del mapa
+## Indicadores sobre el mapa
 
-Sobre el mapa hay seis ayudas visuales. **Cada una se prende y se apaga desde Herramientas del
-mapa ▸ General.**
+La pestaña General de Herramientas del mapa controla seis ayudas visuales.
 
 ![Herramientas del mapa ▸ General, con los seis indicadores](../imgs/manual/02-indicadores.png){ .doc-figure loading=lazy }
 
-En la captura están prendidas la escala (1), las coordenadas (2) y la atribución (3). **La casilla
-Controles de zoom (4) es la que oculta los botones de zoom.**
+En la captura están activas la escala, las coordenadas y la atribución. La
+casilla marcada con el número 4 controla los botones de zoom.
 
-| Indicador | De fábrica |
+| Indicador | Estado inicial |
 |---|---|
-| Controles de zoom | Prendido |
-| Escala | Apagado |
-| Coordenadas | Apagado |
-| Líneas de cursor | Apagado |
-| Trópicos y meridianos | Apagado |
-| Atribución | Prendido |
+| Controles de zoom | Activo |
+| Escala | Inactivo |
+| Coordenadas | Inactivo |
+| Líneas de cursor | Inactivo |
+| Trópicos y meridianos | Inactivo |
+| Atribución | Activo |
 
-**La escala, las coordenadas y la atribución también se cierran con su propia cruz.** Las líneas de
-cursor y los trópicos y meridianos no tienen cruz: se apagan sólo desde la casilla.
+La escala, las coordenadas y la atribución también tienen un botón de cierre.
+Las líneas de cursor y los trópicos sólo se desactivan desde la casilla del
+panel.
 
 ## Configuración
 
-El panel tiene tres pestañas: **Unidades**, **SMN** y **Atajos**.
+El panel Configuración contiene las pestañas Unidades, SMN y Atajos.
 
 ![Configuración ▸ Unidades, con sus cuatro ajustes](../imgs/manual/02-configuracion.png){ .doc-figure loading=lazy }
 
-**Los números de la lista son los de la captura.**
+Los números de la captura corresponden a estas opciones:
 
-1. **Temperatura**: Celsius o Kelvin. De fábrica, Celsius.
-2. **Velocidad del viento**: kilómetros por hora o nudos. De fábrica, nudos.
-3. **Zona horaria**: HOA o UTC. De fábrica, HOA.
-4. **Precisión decimal**: de 0 a 3. De fábrica, 2. Un valor fuera de rango vuelve al anterior.
+1. Temperatura en grados Celsius o Kelvin. El valor inicial es Celsius.
+2. Velocidad del viento en kilómetros por hora o nudos. El valor inicial es nudos.
+3. Zona horaria HOA o UTC. El valor inicial es HOA.
+4. Precisión decimal entre 0 y 3. El valor inicial es 2.
 
-!!! warning "HOA no es la hora de tu computadora"
-    **HOA es la hora oficial argentina, fija en UTC−3**, sin horario de verano. **La aplicación no usa
-    la zona horaria del navegador.** **Toda hora que veas lleva el sufijo HOA o UTC** según esta
-    elección.
+!!! warning "Hora oficial argentina"
+    HOA corresponde a UTC-3 durante todo el año. No depende de la zona horaria
+    de la computadora. Cada hora de la interfaz muestra el sufijo HOA o UTC
+    según la opción seleccionada.
 
-**La pestaña SMN guarda la clave de acceso a las estaciones.** Su botón abre un diálogo que valida
-la clave contra el servicio antes de guardarla. **Con una clave cargada aparecen dos botones**: cambiarla
-o borrarla. **Sin clave, las capas de estaciones no se pueden encender.** El detalle está en el
-[capítulo 4.4](productos/estaciones.md).
+La pestaña SMN administra la clave requerida por las capas de estaciones. El
+diálogo valida la clave antes de guardarla. Una vez registrada, el usuario puede
+cambiarla o eliminarla. Sin una clave válida, las capas de estaciones no se
+pueden activar. El [capítulo 4.4](productos/estaciones.md) describe este acceso.
 
-**La pestaña Atajos todavía no tiene contenido.** Muestra el cartel «A desarrollar».
+La pestaña Atajos todavía no contiene opciones y muestra el texto "A
+desarrollar".
 
-## Lo que la aplicación recuerda
+## Datos guardados en el navegador
 
-**La aplicación guarda tu estado en el navegador** y lo recupera al volver a entrar:
+La aplicación conserva las capas activas, su orden y opacidad, las elevaciones y
+corridas seleccionadas, el mapa base, los indicadores, las unidades y la zona
+horaria. También guarda la clave de estaciones, los polígonos dibujados, las
+preferencias de búsqueda y consulta, y los avisos que el usuario decidió
+ocultar.
 
-- Las capas activas, con su opacidad, su orden, sus elevaciones y sus corridas.
-- El mapa de fondo.
-- Los indicadores que dejaste prendidos.
-- Las unidades, la zona horaria y la clave de acceso.
-- Los polígonos dibujados y el nivel de detalle.
-- La configuración de la consulta puntual, de las escalas y del buscador.
-- Qué avisos emitidos dejaste ocultos.
+La posición del mapa no forma parte de este estado. Cada apertura comienza en la
+vista inicial. Si el mapa presenta información inesperada, conviene revisar la
+pestaña Activas del panel Capas del mapa, ya que puede haber recuperado una capa
+de la sesión anterior.
 
-**No guarda la posición del mapa.** **Cada apertura arranca en la vista inicial.**
-
-!!! note "Si el mapa arranca raro"
-    **Suele ser una capa que quedó activa la vez anterior.** **Abrí Capas del mapa ▸ Activas** y mirá
-    qué hay prendido.
-
-**Esa memoria es de esa computadora y ese navegador.** **Desde otra máquina encontrás la configuración
-de fábrica**: sólo la capa Provincia encendida, sobre Argenmap.
+El estado pertenece a la combinación de computadora y navegador. Otra máquina o
+un perfil distinto inicia con la configuración de fábrica, que utiliza Argenmap
+y mantiene activa solamente la capa Provincia.

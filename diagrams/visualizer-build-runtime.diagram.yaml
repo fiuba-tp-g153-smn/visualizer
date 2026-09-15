@@ -1,5 +1,5 @@
 # Capítulo 11.4. Pregunta: ¿dónde quedan las direcciones de los backends y quién las usa?
-title: visualizer — se hornea al compilar, corre en el navegador
+title: "visualizer: configuración de compilación y ejecución"
 subtitle: nginx sólo sirve archivos; el navegador llama a tres backends por su cuenta
 size: [880, 660]
 

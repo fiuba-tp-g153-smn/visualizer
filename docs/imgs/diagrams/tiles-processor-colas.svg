@@ -1,6 +1,6 @@
 <svg viewBox="0 0 880 560" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
 <rect width="880" height="560" fill="#ffffff"/>
-<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">tiles-processor — tres colas, dos tipos de worker</text>
+<text x="24" y="34" font-size="16" font-weight="600" fill="#111827">tiles-processor: tres colas y dos tipos de worker</text>
 <text x="24" y="52" font-size="11" fill="#6b7280">El ruteo depende del producto porque los trabajos no pesan lo mismo</text>
 <rect x="232" y="72" width="224" height="328" rx="10" fill="#f9fafb" stroke="#e5e7eb"/>
 <text x="248" y="94" font-size="10" font-weight="600" letter-spacing="0.08em" fill="#6b7280">RABBITMQ</text>
@@ -8,42 +8,42 @@
 <text x="92.0" y="238.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">producer</text>
 <text x="92.0" y="254.5" font-size="11" fill="#6b7280" text-anchor="middle">enruta por producto</text>
 <circle cx="28" cy="220" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(20.0 212.0) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
+<g transform="translate(20 212) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
 <rect x="252" y="104" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
 <text x="344.0" y="126.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">tiles_work_queue</text>
 <text x="344.0" y="142.5" font-size="11" fill="#6b7280" text-anchor="middle">ABI · GLM · ECMWF · GFS</text>
 <circle cx="256" cy="108" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(248.0 100.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
+<g transform="translate(248 100) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
 <rect x="252" y="200" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
 <text x="344.0" y="222.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">tiles_radar_light_queue</text>
 <text x="344.0" y="238.5" font-size="11" fill="#6b7280" text-anchor="middle">radar</text>
 <circle cx="256" cy="204" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(248.0 196.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
+<g transform="translate(248 196) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
 <rect x="252" y="296" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
 <text x="344.0" y="318.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">tiles_wrf_light_queue</text>
 <text x="344.0" y="334.5" font-size="11" fill="#6b7280" text-anchor="middle">WRF</text>
 <circle cx="256" cy="300" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(248.0 292.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
+<g transform="translate(248 292) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
 <rect x="520" y="128" width="168" height="52" rx="8" fill="#eef2ff" stroke="#4338ca" stroke-width="2"/>
 <text x="604.0" y="150.5" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">worker1 · worker2</text>
 <text x="604.0" y="166.5" font-size="11" fill="#6b7280" text-anchor="middle">WORKER_TYPE=normal</text>
 <circle cx="524" cy="132" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(516.0 124.0) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
+<g transform="translate(516 124) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
 <rect x="520" y="272" width="168" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
 <text x="604.0" y="294.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">worker-light1..3</text>
 <text x="604.0" y="310.5" font-size="11" fill="#6b7280" text-anchor="middle">WORKER_TYPE=light</text>
 <circle cx="524" cy="276" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(516.0 268.0) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
+<g transform="translate(516 268) scale(0.1250)"><path fill="#3776AB"  d="M49.33 62h29.159C86.606 62 93 55.132 93 46.981V19.183c0-7.912-6.632-13.856-14.555-15.176-5.014-.835-10.195-1.215-15.187-1.191-4.99.023-9.612.448-13.805 1.191C37.098 6.188 35 10.758 35 19.183V30h29v4H23.776c-8.484 0-15.914 5.108-18.237 14.811-2.681 11.12-2.8 17.919 0 29.53C7.614 86.983 12.569 93 21.054 93H31V79.952C31 70.315 39.428 62 49.33 62zm-1.838-39.11c-3.026 0-5.478-2.479-5.478-5.545 0-3.079 2.451-5.581 5.478-5.581 3.015 0 5.479 2.502 5.479 5.581-.001 3.066-2.465 5.545-5.479 5.545zm74.789 25.921C120.183 40.363 116.178 34 107.682 34H97v12.981C97 57.031 88.206 65 78.489 65H49.33C41.342 65 35 72.326 35 80.326v27.8c0 7.91 6.745 12.564 14.462 14.834 9.242 2.717 17.994 3.208 29.051 0C85.862 120.831 93 116.549 93 108.126V97H64v-4h43.682c8.484 0 11.647-5.776 14.599-14.66 3.047-9.145 2.916-17.799 0-29.529zm-41.955 55.606c3.027 0 5.479 2.479 5.479 5.547 0 3.076-2.451 5.579-5.479 5.579-3.015 0-5.478-2.502-5.478-5.579 0-3.068 2.463-5.547 5.478-5.547z"/></g>
 <rect x="736" y="200" width="120" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
 <text x="796.0" y="222.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">tiles-data</text>
 <text x="796.0" y="238.5" font-size="11" fill="#6b7280" text-anchor="middle">SeaweedFS</text>
 <circle cx="740" cy="204" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(732.0 196.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></g>
+<g transform="translate(732 196) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></g>
 <rect x="252" y="440" width="184" height="52" rx="8" fill="#ffffff" stroke="#1f2937" stroke-width="1.5"/>
 <text x="344.0" y="462.5" font-size="13" font-weight="600" fill="#111827" text-anchor="middle">tiles_dead_letter_queue</text>
 <text x="344.0" y="478.5" font-size="11" fill="#6b7280" text-anchor="middle">nadie la consume</text>
 <circle cx="256" cy="444" r="13" fill="#ffffff" stroke="#d1d5db"/>
-<g transform="translate(248.0 436.0) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
+<g transform="translate(248 436) scale(0.6667)" fill="none" stroke="#374151" stroke-width="1.8" stroke-linecap="round"><ellipse cx="19" cy="12" rx="3" ry="6"/><path d="M19 6H5C3.34 6 2 8.69 2 12s1.34 6 3 6h14"/></g>
 <line x1="164.0" y1="210.0" x2="263.8" y2="165.7" stroke="#1f2937" stroke-width="1.5"/>
 <polygon points="272.0,162.0 265.2,168.9 262.3,162.4" fill="#1f2937"/>
 <text x="168.0" y="176.0" font-size="11" fill="#374151" text-anchor="start">pesados</text>
@@ -72,10 +72,5 @@
 <line x1="344.0" y1="400.0" x2="344.0" y2="431.0" stroke="#1f2937" stroke-width="1.5"/>
 <polygon points="344.0,440.0 340.4,431.0 347.6,431.0" fill="#1f2937"/>
 <text x="356.0" y="424.0" font-size="11" fill="#374151" text-anchor="start">4 intentos agotados</text>
-<rect x="24.0" y="503" width="22" height="14" rx="3" fill="#eef2ff" stroke="#4338ca" stroke-width="1.2"/>
-<text x="54.0" y="514" font-size="11" fill="#374151">los que absorben los trabajos caros</text>
-<line x1="281.5" y1="510" x2="297.5" y2="510" stroke="#1f2937" stroke-width="1.5" stroke-dasharray="4 3"/>
-<polygon points="303.5,510 296.5,506.8 296.5,513.2" fill="#1f2937"/>
-<text x="311.5" y="514" font-size="11" fill="#374151">sólo cuando no hay trabajo pesado</text>
 <text x="24" y="540" font-size="11" fill="#6b7280">· las tres colas declaran tiles_dlx como intercambio de descarte · los reintentos son republicaciones propias, no redeliveries</text>
 </svg>

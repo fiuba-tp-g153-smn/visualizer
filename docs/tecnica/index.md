@@ -4,17 +4,17 @@ title: Documentación técnica
 
 # Documentación técnica
 
-MapaSMN es un sistema de visualización y aviso por condiciones meteorológicas extremas. **Toma datos
-crudos de satélite, radar y modelos numéricos, los convierte en teselas de mapa y los sirve por HTTP.**
-Sobre ese mapa, un pronosticador dibuja un polígono y emite un aviso a corto plazo.
+MapaSMN recibe datos meteorológicos de distinta procedencia, los transforma en capas aptas para la
+web y los presenta sobre un mapa interactivo. Sobre esa información, el pronosticador delimita el
+área afectada y prepara un Aviso a muy Corto Plazo.
 
-Esta mitad está escrita para **quien tiene que instalar, conectar, dimensionar y proteger el
-sistema**. No describe código. Describe unidades desplegables, puertos, volúmenes, contratos y
-fallas. Quien lo use como herramienta tiene su propio [manual](../manual/index.md).
+Esta parte de la documentación está dirigida a quienes instalan, conectan y operan el sistema.
+Describe los componentes que se despliegan, sus contratos, los datos persistentes y las fallas que
+pueden afectar la operación. El uso de la aplicación se encuentra en el [manual](../manual/index.md).
 
 !!! danger "Si se va a exponer a una red, empezar por el capítulo 19"
-    **Ningún servicio autentica al llamante**, salvo las rutas de estaciones y una ruta de escritura
-    de métricas. Las plantillas de despliegue **publican en todas las interfaces** varios puertos
+    Ningún servicio autentica al llamante, salvo las rutas de estaciones y una ruta de escritura
+    de métricas. Las plantillas de despliegue publican en todas las interfaces varios puertos
     que no deberían salir del host. El sistema se puede desplegar, pero no tal cual.
     Los cambios están en [Endurecimiento](seguridad/endurecimiento.md).
 
@@ -24,10 +24,10 @@ fallas. Quien lo use como herramienta tiene su propio [manual](../manual/index.m
 
 | Perfil | Cuándo usarlo | Punto de entrada |
 |---|---|---|
-| **Beta-1, una VM de 8 GB** | Una instalación completa, liviana y conectada a fuentes reales | [14.1 Beta-1](operacion/beta-1.md) |
+| Beta-1, una VM de 8 GB | Una instalación completa, liviana y conectada a fuentes reales | [14.1 Beta-1](operacion/beta-1.md) |
 | Cuatro despliegues independientes | Operación con infraestructura y ciclos de entrega separados | [17. Despliegue](operacion/despliegue.md) |
 
-**Beta-1 es la forma más corta de levantar el sistema completo.** El
+Beta-1 es la forma más corta de levantar el sistema completo. El
 meta-repositorio `mapasmn` fija las cuatro revisiones, genera la configuración
 desde un solo `.env` y las inicia con un solo proyecto Compose. El perfil
 independiente conserva la autonomía de cada componente y permite operarlos por
@@ -35,8 +35,8 @@ separado.
 
 ## Los cuatro servicios
 
-Son **cuatro repositorios independientes**, con su propia imagen y capacidad de
-desplegarse por separado. **No comparten base de datos ni código.** También
+Son cuatro repositorios independientes, con su propia imagen y capacidad de
+desplegarse por separado. No comparten base de datos ni código. También
 pueden quedar fijados y orquestados juntos desde `mapasmn`, como hace Beta-1. Se
 comunican por un almacén de objetos compatible con S3 y por HTTP.
 
@@ -47,28 +47,28 @@ comunican por un almacén de objetos compatible con S3 y por HTTP.
 | `alerts-service` | Interseca el polígono con el territorio y genera el aviso con sus dos imágenes. | `alerts-mysql`, `alerts-service-container` | `6007`, `3306` |
 | `visualizer` | La aplicación web y este sitio, servidos por nginx. | `visualizer-container` | `6010` |
 
-**Los puertos son los valores de ejemplo** de cada `.env.example`. **Todos se publican en todas las
-interfaces** tal como están escritas las plantillas; el capítulo 19.1 dice cuáles deben cerrarse.
+Los puertos son los valores de ejemplo de cada `.env.example`. Todos se publican en todas las
+interfaces tal como están escritas las plantillas; el capítulo 19.1 dice cuáles deben cerrarse.
 
 ## Qué habla con qué
 
-**El diagrama de arriba muestra las fronteras.** Lo que importa para operar es **qué mecanismo cruza
-cada una**:
+Cada frontera la cruza un mecanismo distinto:
 
 | Origen | Destino | Mecanismo |
 |---|---|---|
 | `tiles-processor` | `data-service` | El bucket `tiles-data`. Uno escribe, el otro lee. No hay HTTP entre ellos. |
-| Navegador | `data-service`, `alerts-service`, `metrics-api` | HTTP directo. **El visualizador no hace de proxy.** |
+| Navegador | `data-service`, `alerts-service`, `metrics-api` | HTTP directo. El visualizador no hace de proxy. |
 | `alerts-service` | Base MySQL del SMN | Una fila en la tabla `taviso_temporal`. |
 | `data-service` | API del SMN, IGN, Esri, Google | HTTP saliente, para estaciones y respaldo de mapas base. |
 | `alerts-service` | IGN | WFS saliente, para los límites administrativos. |
 
-**El broker de mensajes es interno** a `tiles-processor`. **Redis es interno** a `data-service`.
+El broker de mensajes es interno a `tiles-processor`. Redis es interno a `data-service`.
 Ninguno de los dos cruza una frontera entre servicios.
 
 ## Cómo está organizada esta mitad
 
-**Los capítulos van de lo general a lo concreto.** **Se pueden leer en orden o entrar por el problema.**
+Los capítulos siguen el recorrido desde la arquitectura general hasta la operación. La tabla permite
+entrar directamente por una necesidad concreta.
 
 | Si hay que… | Ir a |
 |---|---|
@@ -87,10 +87,10 @@ Ninguno de los dos cruza una frontera entre servicios.
 
 ## Convenciones
 
-- **Nombres de contenedores, puertos, variables, colas y buckets** aparecen tal como están en el
+- Nombres de contenedores, puertos, variables, colas y buckets aparecen tal como están en el
   código, en `monoespaciado`. Un nombre que no aparece así es una descripción, no un identificador.
-- **Los comandos son los que teclea quien opera.** No hay fragmentos de código de aplicación.
-- **Nunca se muestra un valor secreto.** La fuente de cada variable es el `.env.example` de su
+- Los comandos son los que teclea quien opera. No hay fragmentos de código de aplicación.
+- Nunca se muestra un valor secreto. La fuente de cada variable es el `.env.example` de su
   repositorio.
-- Lo que no pudo verificarse leyendo el código lleva un recuadro **Sin verificar** con la pregunta
+- Lo que no pudo verificarse leyendo el código lleva un recuadro Sin verificar con la pregunta
   abierta.

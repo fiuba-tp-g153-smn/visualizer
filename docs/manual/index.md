@@ -4,37 +4,45 @@ title: Manual de usuario
 
 # Manual de usuario
 
-Este manual está escrito para el pronosticador de turno. **No explica meteorología.** **Explica el programa**: qué hace cada control, dónde está, y qué no va a hacer.
+Este manual describe el uso cotidiano de MapaSMN. Está dirigido al
+pronosticador que necesita reconocer los controles, seleccionar productos,
+comparar períodos y preparar un aviso. Los fundamentos meteorológicos se
+incluyen sólo cuando hacen falta para interpretar lo que muestra la interfaz.
 
 ![Lo que hacés con MapaSMN](../imgs/diagrams/manual-recorrido.svg){ .diagram loading=lazy }
 
-**Los capítulos siguen el recorrido del diagrama.** **Primero elegís qué ver, después lo animás y lo
-medís, y al final emitís el aviso.** **El panel de estado queda para cuando algo no llega.**
+Los capítulos siguen una sesión de trabajo habitual. Primero presentan la
+ventana y el manejo de las capas. Luego explican la animación, la consulta de
+valores y la generación de avisos. El panel de estado queda como referencia
+para comprobar si los datos están llegando.
 
-## Los capítulos
-
-| Capítulo | Qué resuelve |
+| Capítulo | Contenido |
 |---|---|
-| [2. Primeros pasos](primeros-pasos.md) | La ventana, el mapa de fondo, los indicadores y la configuración. |
-| [3. Trabajar con capas](capas.md) | Encender, ordenar y ajustar capas. Las capas de referencia del IGN. |
-| [4. Qué muestra cada producto](productos/index.md) | Qué capa es qué producto, con sus unidades, escalas y horas. |
-| [5. Ver la evolución y consultar un punto](animacion.md) | Animar una capa o varias juntas, y leer el valor en un punto. |
-| [6. Emitir un aviso a corto plazo](avisos.md) | Dibujar el área, verificar departamentos y generar el aviso. |
-| [7. El panel de estado](panel-de-estado.md) | Saber si lo que ves está actualizado. |
-| [8. Glosario](glosario.md) | Los términos de la interfaz, en una línea cada uno. |
+| [2. Primeros pasos](primeros-pasos.md) | Ventana principal, mapas base, indicadores y preferencias. |
+| [3. Trabajar con capas](capas.md) | Activación, orden, opacidad y capas de referencia. |
+| [4. Qué muestra cada producto](productos/index.md) | Productos, unidades, escalas y tiempos. |
+| [5. Ver la evolución y consultar un punto](animacion.md) | Animación individual o sincronizada y consulta puntual. |
+| [6. Emitir un aviso a corto plazo](avisos.md) | Dibujo del área, revisión de departamentos y generación. |
+| [7. El panel de estado](panel-de-estado.md) | Estado de los datos y de los componentes. |
+| [8. Glosario](glosario.md) | Términos empleados por la aplicación. |
 
 ![La ventana de MapaSMN, tal como se ve al abrirla](../imgs/manual/02-ventana.png){ .doc-figure loading=lazy }
 
-**La barra lateral (1), los botones de zoom (2) y la atribución (3) se explican en el capítulo 2.**
+La captura identifica la barra lateral con el número 1, los controles de zoom
+con el 2 y la atribución cartográfica con el 3. El capítulo siguiente explica
+cada sector.
 
-## Cómo leerlo
+## Cómo se preparó el manual
 
-**Cada capítulo empieza con una captura de la ventana entera**, marcada con números, para ubicar
-dónde vive la función. **Después vienen las capturas de cada panel y los clips de las secuencias.**
-**Los clips arrancan solos al llegar a ellos**, sin controles, y se repiten en bucle.
+Cada capítulo comienza con una captura general para ubicar los controles y
+continúa con imágenes de cada panel. Los videos muestran las secuencias que
+resultan difíciles de explicar con una imagen fija. Se reproducen cuando llegan
+al área visible de la página.
 
-**Las capturas se generan de forma automática** a partir de un estado fijo de la aplicación. **Si la
-interfaz cambia, se vuelven a generar.** Tu pantalla puede diferir en el fondo del mapa y en los datos del momento. **No en los controles.**
+Las capturas se generan a partir de un estado conocido de la aplicación. Los
+datos meteorológicos y el mapa de fondo pueden diferir de una sesión real, pero
+la ubicación de los controles debe coincidir.
 
-!!! note "Si es tu primera vez"
-    **Leé el capítulo 2 y el 3 en orden.** **El resto se consulta cuando hace falta.**
+!!! note "Primera lectura"
+    Para una primera aproximación conviene leer los capítulos 2 y 3 en orden.
+    Los demás funcionan como material de consulta.

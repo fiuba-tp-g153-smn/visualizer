@@ -2,20 +2,9 @@
 
 <img src="https://uptime.mapasmn.com/api/badge/8/status?style=flat-square" /> <img src="https://uptime.mapasmn.com/api/badge/8/uptime?style=flat-square" /> <img src="https://uptime.mapasmn.com/api/badge/8/ping?style=flat-square" />
 
-Visualizer is an Angular 21 web application for interactive map visualization, supporting GOES-19 satellite imagery, weather radar, and IGN WMS layers rendered via Leaflet.
+Visualizer is the MapaSMN web UI: an Angular 21 application that renders GOES-19 satellite imagery, weather radar and IGN WMS layers on a Leaflet map.
 
 **Stack:** Angular 21 · Leaflet · Angular Material · TypeScript (strict) · Vitest · Docker
-
-## Table of Contents
-
-1. [Prerequisites](#prerequisites)
-2. [Getting Started](#getting-started)
-3. [Services](#services)
-4. [Commands](#commands)
-5. [Environment Variables](#environment-variables)
-6. [Documentation](#documentation)
-7. [Architecture](#architecture)
-   - [General data flow between all the services](#general-data-flow-between-all-the-services)
 
 ## Prerequisites
 
@@ -69,8 +58,17 @@ npm test           # Run unit tests (Vitest)
 | `SMN_API_PROMPT_FOR_TOKEN` | Prompt for token when enabling SMN stations layer | `true`            |
 | `APP_HOST_PORT`           | Host port for the app in production          | `6010`                  |
 | `DOCS_URL`                | Where the app loads docs from (iframe)       | `/docs-site`            |
+| `METRICS_SERVICE_BASE_URL` | tiles-processor metrics API, read by the status dashboard | `http://localhost:6020` |
+| `IGN_PLACE_SEARCH_URL`    | IGN gazetteer for place search               | `https://api.ign.gob.ar/buscador/search` |
+| `NOMINATIM_SEARCH_URL`    | Nominatim/OSM gazetteer for place search     | `https://nominatim.openstreetmap.org/search` |
 
-> In production (`make prod`), env vars are baked into the build at compile time via webpack `DefinePlugin`. In development, they are passed at runtime via Docker environment.
+> These reach the app through webpack `DefinePlugin` at compile time, not at runtime.
+> `make prod` bakes them into the image build; in development the dev server reads them
+> from the container environment when it compiles, so changing one means restarting the
+> container. `APP_HOST_PORT` is also read by `docker-compose.yml` to publish the port.
+> The defaults above are the `.env.example` values; with the variable unset,
+> `custom-webpack.config.js` falls back to a different value for `DATA_SERVICE_BASE_URL`,
+> `ALERTS_SERVICE_BASE_URL` and `APP_HOST_PORT`.
 
 ## Documentation
 

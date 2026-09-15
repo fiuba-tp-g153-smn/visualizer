@@ -1,4 +1,4 @@
-# Capítulo 5. Pregunta: ¿qué recorre la animación, y qué significa «ahora» en cada tipo de capa?
+# Capítulo 5. Pregunta: ¿qué recorre la animación y qué significa "ahora" en cada tipo de capa?
 title: La línea de tiempo
 subtitle: Observación anima hacia atrás; pronóstico anima hacia adelante
 size: [880, 440]
@@ -10,7 +10,7 @@ groups:
 nodes:
   o1:   {at: [40, 112], size: [168, 52], label: Imagen −N, sub: la más vieja de la ventana}
   o2:   {at: [304, 112], size: [168, 52], label: Imágenes intermedias, sub: "N = 6, 12 o 24"}
-  o3:   {at: [672, 112], size: [168, 52], label: Última imagen, sub: «ahora» · botón de reciente, accent: true}
+  o3:   {at: [672, 112], size: [168, 52], label: Última imagen, sub: ahora · botón de reciente, accent: true}
   f1:   {at: [40, 264], size: [168, 52], label: Inicio de corrida, sub: el primer paso, accent: true}
   f2:   {at: [304, 264], size: [168, 52], label: Pasos siguientes, sub: N = 8 a 72}
   f3:   {at: [672, 264], size: [168, 52], label: Paso +N, sub: el último de la ventana}

@@ -81,7 +81,7 @@ Discriminated union type system:
 
 Env vars injected at build time via custom webpack `DefinePlugin` (`custom-webpack.config.js`). `$ENV` global typed in `src/environments/environment*.ts`. URL builders in `src/app/config/backend.config.ts`.
 
-Key vars (see `.env.example`):
+Vars (see `.env.example`):
 
 - `DATA_SERVICE_BASE_URL` — tile/config API (default: `https://data.mapasmn.com`)
 - `ALERTS_SERVICE_BASE_URL` — alerts backend (default: `http://localhost:8080`)
@@ -102,13 +102,13 @@ Key vars (see `.env.example`):
 ### Angular Components
 
 - **Standalone only** — no NgModules
-- **`ChangeDetectionStrategy.OnPush`** everywhere
+- `ChangeDetectionStrategy.OnPush` everywhere
 - **Signal inputs** (`input()`) over `@Input()`; `viewChild()`/`viewChildren()` over decorators
 - **Smart vs Presentational**: smart components own state/services; presentational use inputs/outputs only
 - **Small, single-responsibility** components; no complex logic in templates
-- **`trackBy`** for `ngFor`; `takeUntilDestroyed()` / `DestroyRef` for subscription cleanup
+- `trackBy` for `ngFor`; `takeUntilDestroyed()` / `DestroyRef` for subscription cleanup
 - **Angular Material first** for consistency and accessibility
-- **Lazy loading**: `loadComponent()` for routes
+- Lazy-load routes with `loadComponent()`
 
 ### Signals & State
 
@@ -122,9 +122,9 @@ Key vars (see `.env.example`):
 
 ### Styling (SCSS)
 
-- **Flexbox + `gap` + `padding`** over margin for spacing
+- Flexbox with `gap` and `padding` over margin for spacing
 - **CSS variables** for colors — no hardcoded hex/rgb
-- **Never `!important`** — fix specificity instead
+- **Never** `!important` — fix specificity instead
 - **Scoped component styles** (`:host`) unless truly global
 - **BEM or utility classes** for custom class naming
 - Responsive via CSS Grid/Flexbox + media queries

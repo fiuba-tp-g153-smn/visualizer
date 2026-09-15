@@ -1,5 +1,5 @@
 # Capítulo 11.1. Pregunta: ¿por qué colas van las unidades de trabajo y quién las toma?
-title: tiles-processor — tres colas, dos tipos de worker
+title: "tiles-processor: tres colas y dos tipos de worker"
 subtitle: El ruteo depende del producto porque los trabajos no pesan lo mismo
 size: [880, 560]
 

@@ -1,5 +1,5 @@
 # Capítulo 11.2. Pregunta: ¿qué hace cada uno de los dos contenedores de data-service?
-title: data-service — una imagen, dos roles
+title: "data-service: una imagen, dos roles"
 subtitle: El sincronizador llena Redis; la API lo lee y responde al navegador
 size: [880, 400]
 

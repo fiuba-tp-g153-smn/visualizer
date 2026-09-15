@@ -1,5 +1,5 @@
 # Capítulo 4.2. Pregunta: ¿cómo se llega de un radar a una imagen en el mapa?
-title: Radar SINARAME — radar, variable, elevación, instante
+title: "Radar SINARAME: radar, variable, elevación e instante"
 subtitle: Cada capa es una variable de un radar; la elevación y el instante se eligen en la capa
 size: [880, 420]
 
@@ -20,4 +20,4 @@ edges:
 legend:
   - {swatch: accent, label: lo que aparece como capa}
 
-footnote: "· DBZH 450 km tiene una sola elevación · una capa gris con «Sin datos» significa que ese radar no publicó nada recientemente"
+footnote: "· DBZH 450 km tiene una sola elevación · una capa gris con Sin datos indica que el radar no publicó recientemente"

@@ -4,18 +4,14 @@ title: 14.1 Beta-1, el sistema completo y liviano
 
 # 14.1 Beta-1, el sistema completo y liviano
 
-Beta-1 es el perfil para **operar los cuatro componentes de Mapas SMN en una
-sola VM de 8 GB de RAM**, sin convertir el sistema en una demostración.
-**Procesa datos meteorológicos reales** y conserva el almacén, las colas, las
-API, el mapa y la emisión de avisos. **Lo que reduce es el trabajo simultáneo y
-el catálogo activo del procesador.**
+Beta-1 fue preparado para operar los cuatro componentes de MapaSMN en una máquina virtual con 8 GB
+de memoria. Mantiene el procesamiento, el almacenamiento, las API, el mapa y la generación de avisos.
+La reducción se concentra en la cantidad de workers y en los productos habilitados.
 
-!!! info "El espíritu de Beta-1"
-    **Un sistema chico, completo y conectado a la operación real.** Es una
-    configuración explícita y versionada: todos despliegan la misma topología,
-    los mismos productos y las mismas revisiones. **No es el stack de
-    desarrollo y no usa datos ficticios**, y no toca los archivos generales de
-    producción.
+El propósito del perfil es disponer de una instalación completa, reproducible y conectada a las
+fuentes reales del SMN. Sus archivos fijan la topología, la selección de productos y las revisiones
+de los cuatro componentes. Por este motivo no debe confundirse con el entorno de desarrollo ni con
+una ejecución alimentada por el simulador.
 
 ## Qué conserva y qué reduce
 
@@ -28,7 +24,7 @@ el catálogo activo del procesador.**
 | Las API de datos, avisos y métricas | Los productos más costosos, incluida la banda 2 |
 | El visualizador y esta documentación | La presión concurrente sobre CPU y RAM |
 
-El perfil levanta **12 contenedores**:
+El perfil levanta 12 contenedores:
 
 | Componente | Contenedores |
 |---|---:|
@@ -45,41 +41,41 @@ submódulo `tiles-processor`:
 - `docker-compose-beta-1.override.yaml` monta su configuración;
 - `settings-beta-1.json` fija fuentes, radares y productos.
 
-**Esos archivos se versionan juntos.** Una revisión de `mapasmn` identifica el
-orquestador **y las revisiones exactas de los cuatro submódulos**.
+Esos archivos se versionan juntos. Una revisión de `mapasmn` identifica el
+orquestador y las revisiones exactas de los cuatro submódulos.
 
 ## Las fuentes son reales
 
-Beta-1 toma GOES-19, ECMWF y GFS directamente de sus fuentes públicas. **Las
-fuentes internas del organismo entran por el sistema de archivos**:
+Beta-1 toma GOES-19, ECMWF y GFS directamente de sus fuentes públicas. Las
+fuentes internas del organismo entran por el sistema de archivos:
 
-| Fuente | Directorio observado en la VM | Productos activos |
+| Fuente | Variable que define la carpeta del host | Productos activos |
 |---|---|---|
-| GLM | `tiles-processor/data/goes19-glm/` | FED |
-| Radar SINARAME | `tiles-processor/data/radar-sinarame/` | Seis productos de RMA1, RMA2 y RMA8 |
-| WRF-ARG4K | `tiles-processor/data/wrf-arg4k/` | Colmax y Ráfagas |
+| GLM | `GOES19_GLM_INPUT_DIR` | FED |
+| Radar SINARAME | `RADAR_SINARAME_INPUT_DIR` | Seis productos de RMA1, RMA2 y RMA8 |
+| WRF-ARG4K | `WRF_ARG4K_INPUT_DIR` | Colmax y Ráfagas |
 
-Esos tres directorios se montan como `/app/data/{goes19-glm,radar-sinarame,wrf-arg4k}` en el
-productor y los workers. **La integración prevista es que los sistemas que ya
-reciben los datos vivos los repliquen allí.** **El productor examina los
-directorios cada cinco minutos** y encola lo nuevo: **no hace falta reiniciarlo
-ante cada ingreso.**
+Esas carpetas se montan como `/app/data/{goes19-glm,radar-sinarame,wrf-arg4k}` en el
+productor y los workers. La integración prevista es que los sistemas que ya
+reciben los datos vivos los repliquen allí. El productor examina los
+directorios cada cinco minutos y encola lo nuevo: no hace falta reiniciarlo
+ante cada ingreso.
 
-**El feed debe conservar los nombres, marcas temporales y estructura esperados
-por el procesador.** Para no exponer archivos incompletos, escribir cada archivo
+El feed debe conservar los nombres, marcas temporales y estructura esperados
+por el procesador. Para no exponer archivos incompletos, escribir cada archivo
 con un nombre temporal dentro del mismo sistema de archivos y renombrarlo al
-terminar la copia. **El renombre es atómico; una copia directa al nombre final
-no lo es.**
+terminar la copia. El renombre es atómico; una copia directa al nombre final
+no lo es.
 
 El contrato general de cada fuente está en
-[Tiles Processor](../servicios/tiles-processor.md#con-quién-habla). **Los
+[Tiles Processor](../servicios/tiles-processor.md#con-quién-habla). Los
 registros del productor son la primera evidencia de que un archivo fue
-descubierto**; la profundidad de las colas y los trabajos terminados aparecen
+descubierto; la profundidad de las colas y los trabajos terminados aparecen
 luego en la API de métricas.
 
 !!! note "El simulador es una alternativa de laboratorio"
     `data-simulator` reproduce capturas históricas cuando no existen feeds
-    vivos. **No forma parte del despliegue Beta-1 previsto.** Si el organismo
+    vivos. No forma parte del despliegue Beta-1 previsto. Si el organismo
     entrega datos reales, conectarlos directamente evita introducir otra pieza
     y conserva sus tiempos y contenido originales.
 
@@ -113,8 +109,8 @@ Si el repositorio ya existía:
 git submodule update --init --recursive
 ```
 
-**Ese comando respeta las revisiones fijadas.** **No usar `make update` en una
-VM operativa**: ese target mueve los submódulos a la punta de sus ramas y sirve
+Ese comando respeta las revisiones fijadas. No usar `make update` en una
+VM operativa: ese target mueve los submódulos a la punta de sus ramas y sirve
 para preparar una nueva versión, no para reproducir una existente.
 
 ## 2. Configurar una sola vez
@@ -123,8 +119,8 @@ para preparar una nueva versión, no para reproducir una existente.
 make setup
 ```
 
-El comando crea el `.env` de la raíz y deriva los cuatro `.env` internos. **Sólo
-se edita el de la raíz.** Como mínimo:
+El comando crea el `.env` de la raíz y deriva los cuatro `.env` internos. Sólo
+se edita el de la raíz. Como mínimo:
 
 ```dotenv
 APP_ENV=production
@@ -138,10 +134,17 @@ DATA_SERVICE_BASE_URL=https://data.example.org
 ALERTS_SERVICE_BASE_URL=https://alerts.example.org
 METRICS_SERVICE_BASE_URL=https://metrics.example.org
 DOCS_URL=/docs-site
+
+GOES19_ABI_INPUT_DIR=/srv/mapasmn/input/goes19-abi
+GOES19_GLM_INPUT_DIR=/srv/mapasmn/input/goes19-glm
+RADAR_SINARAME_INPUT_DIR=/srv/mapasmn/input/radar-sinarame
+WRF_ARG4K_INPUT_DIR=/srv/mapasmn/input/wrf-arg4k
+ECMWF_IFS_INPUT_DIR=/srv/mapasmn/input/ecmwf-ifs
+GFS_INPUT_DIR=/srv/mapasmn/input/gfs
 ```
 
-**Las bases URL se incorporan al visualizador durante la construcción.** **Deben
-ser alcanzables desde el navegador**, no solamente desde la VM. Si una persona
+Las bases URL se incorporan al visualizador durante la construcción. Deben
+ser alcanzables desde el navegador, no solamente desde la VM. Si una persona
 abre el mapa desde otra computadora, `localhost` apunta a esa computadora y
 rompe las consultas.
 
@@ -152,31 +155,35 @@ make setup
 ```
 
 `MANAGE_DB_SCHEMAS=true` permite preparar el MySQL local incluido en Beta-1.
-**Contra una base institucional, esa variable habilita DDL sobre un esquema
-ajeno**: revisarla antes del primer arranque.
+Contra una base institucional, esa variable habilita DDL sobre un esquema
+ajeno: revisarla antes del primer arranque.
 
 ## 3. Conectar los feeds
 
-Crear los directorios si el mecanismo de réplica todavía no lo hizo:
+Docker Compose exige las seis rutas aunque una fuente utilice S3 o un proveedor externo. Deben ser
+absolutas y existir antes del arranque. Con los valores del ejemplo se crean de esta manera:
 
 ```sh
-mkdir -p tiles-processor/data/goes19-glm
-mkdir -p tiles-processor/data/radar-sinarame
-mkdir -p tiles-processor/data/wrf-arg4k
+sudo mkdir -p /srv/mapasmn/input/goes19-abi
+sudo mkdir -p /srv/mapasmn/input/goes19-glm
+sudo mkdir -p /srv/mapasmn/input/radar-sinarame
+sudo mkdir -p /srv/mapasmn/input/wrf-arg4k
+sudo mkdir -p /srv/mapasmn/input/ecmwf-ifs
+sudo mkdir -p /srv/mapasmn/input/gfs
 ```
 
 Configurar luego el replicador institucional para escribir en ellos. Comprobar
 antes del arranque que el usuario que alimenta los datos puede escribir y que
 Docker puede leerlos.
 
-**Los feeds pueden conectarse antes o después de levantar el stack.** Si llegan
+Los feeds pueden conectarse antes o después de levantar el stack. Si llegan
 después, las capas correspondientes aparecerán cuando termine el primer ciclo de
 procesamiento.
 
 ## 4. Levantar
 
 ```sh
-make beta-1
+make beta1
 ```
 
 El comando:
@@ -186,8 +193,8 @@ El comando:
 3. construye las cuatro imágenes de aplicación;
 4. levanta el proyecto definido por `compose.beta-1.yaml`.
 
-La primera construcción tarda varios minutos. `alerts-service` suma **hasta ocho
-minutos en su primer arranque**, mientras prepara las capas administrativas.
+La primera construcción tarda varios minutos. `alerts-service` suma hasta ocho
+minutos en su primer arranque, mientras prepara las capas administrativas.
 
 ## 5. Verificar
 
@@ -210,8 +217,8 @@ Después:
 5. esperar que crezca la cantidad de trabajos completados;
 6. comprobar una capa de cada fuente conectada.
 
-La documentación compilada está en `http://<vm>:6010/docs-site/`: **no existe un
-contenedor ni un puerto separado para ella**.
+La documentación compilada está en `http://<vm>:6010/docs-site/`: no existe un
+contenedor ni un puerto separado para ella.
 
 | Síntoma | Comprobación |
 |---|---|
@@ -224,39 +231,63 @@ contenedor ni un puerto separado para ella**.
 ## Operar y actualizar
 
 ```sh
-make beta-1-down
+make beta1-down
 docker compose -f compose.beta-1.yaml ps
 docker compose -f compose.beta-1.yaml logs -f producer worker1 worker-light1
 ```
 
-`beta-1-down` elimina contenedores y redes del proyecto, **y conserva los
-volúmenes**. Para desplegar una nueva revisión fijada por `mapasmn`:
+`beta1-down` elimina contenedores y redes del proyecto, y conserva los
+volúmenes. Para desplegar una nueva revisión fijada por `mapasmn`:
 
 ```sh
 git pull --ff-only
 git submodule update --init --recursive
-make beta-1
+make beta1
 ```
 
 Antes de actualizar, registrar el commit actual de `mapasmn`. Volver a ese
-commit y repetir `git submodule update --init --recursive` **restaura las cuatro
-revisiones anteriores**.
+commit y repetir `git submodule update --init --recursive` restaura las cuatro
+revisiones anteriores.
+
+## Actualizar una instalación anterior
+
+El cambio de nombres de septiembre de 2026 modificó en conjunto las rutas de S3, las rutas HTTP, las
+claves de `settings.json`, las credenciales de entrada y los nombres internos de las carpetas. La
+actualización requiere desplegar revisiones compatibles de `tiles-processor`, `data-service` y
+`visualizer`. Si se actualiza un solo componente, el procesador escribe en lugares que el servicio de
+datos no lee o el navegador solicita rutas que todavía no existen.
+
+Los objetos almacenados con los nombres anteriores no se migran. SeaweedFS conserva el vencimiento
+asignado cuando se escribió cada objeto y los elimina según la retención original. Durante el corte,
+el historial de animación queda vacío y se completa nuevamente a medida que llegan productos. Las 24
+capturas de GOES-19 requieren cerca de cuatro horas.
+
+Las carpetas físicas del host pueden conservar sus nombres anteriores. La nueva variable puede
+apuntar, por ejemplo, a una carpeta llamada `radar_h5`. Dentro del contenedor siempre se monta como
+`/app/data/radar-sinarame`. También se deben cambiar los pares de credenciales antiguos por
+`GOES19_ABI_S3_*`, `GOES19_GLM_S3_*`, `RADAR_SINARAME_S3_*`, `WRF_ARG4K_S3_*` y
+`ECMWF_IFS_S3_*`.
+
+En Coolify no se deben utilizar variables como origen o destino de un volumen. Su analizador puede
+rechazarlas o convertirlas en volúmenes administrados vacíos. El Compose de producción del
+procesador usa rutas absolutas literales por este motivo. Beta-1 corre con Docker Compose directo y
+mantiene las variables para que cada instalación elija sus carpetas.
 
 ## El límite de los 8 GB
 
-La selección Beta-1 fue medida por el equipo por debajo de 8 GB. **Es un perfil
-de carga, no una cuota impuesta por Docker:** los contenedores todavía no tienen
+La selección Beta-1 fue medida por el equipo por debajo de 8 GB. Es un perfil
+de carga, no una cuota impuesta por Docker: los contenedores todavía no tienen
 límites de memoria. Habilitar otros productos, agregar workers o recibir un
 archivo patológico cambia ese resultado.
 
-Mientras se valida una instalación nueva, **observar el consumo del host, los
-reinicios y los trabajos que estaban activos**. Las consideraciones completas
+Mientras se valida una instalación nueva, observar el consumo del host, los
+reinicios y los trabajos que estaban activos. Las consideraciones completas
 están en [Capacidad y dimensionamiento](capacidad.md).
 
 ## Antes de exponerlo
 
-Beta-1 simplifica el despliegue, **no agrega autenticación ni un perímetro de
-seguridad**. Las plantillas publican puertos de base, broker y almacén en todas
+Beta-1 simplifica el despliegue, no agrega autenticación ni un perímetro de
+seguridad. Las plantillas publican puertos de base, broker y almacén en todas
 las interfaces. En una VM conectada a Internet:
 
 1. cambiar la contraseña de ejemplo;
@@ -265,4 +296,4 @@ las interfaces. En una VM conectada a Internet:
 4. limitar especialmente la API de avisos;
 5. aplicar la lista de [Endurecimiento](../seguridad/endurecimiento.md).
 
-**Levantar Beta-1 y autorizar su exposición son dos tareas distintas.**
+Levantar Beta-1 y autorizar su exposición son dos tareas distintas.

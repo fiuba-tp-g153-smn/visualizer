@@ -4,21 +4,21 @@ title: 12.3 Almacenamiento y colas
 
 # 12.3 Almacenamiento y colas
 
-Los servicios no comparten base de datos. **Se comunican por un almacén de objetos compatible con S3
-y, dentro de `tiles-processor`, por colas de RabbitMQ.** **Es la única página donde se describe el
-trazado de claves.**
+El intercambio entre `tiles-processor` y `data-service` se realiza mediante un almacén compatible con
+S3. RabbitMQ queda dentro del procesador y coordina al productor con los workers. Este capítulo
+registra los buckets, los prefijos y las colas que forman parte de esos contratos.
 
 ![Un almacén, cinco buckets: quién escribe y quién lee cada uno](../../imgs/diagrams/almacenamiento-buckets.svg){ .diagram loading=lazy }
 
 ## El almacén de objetos
 
-Lo que corre es **SeaweedFS**, con su puerta S3 en el puerto `8333` del contenedor, publicado como
-`9000` en el host. **El código habla la API de S3**, **así que el almacén es reemplazable por otro
-compatible**.
+Lo que corre es SeaweedFS, con su puerta S3 en el puerto `8333` del contenedor, publicado como
+`9000` en el host. El código habla la API de S3, así que el almacén es reemplazable por otro
+compatible.
 
-El script de arranque del almacén **crea tres buckets y las identidades por servicio**: `tiles-data`,
-`intersection-data` y `basemap-tiles`. `data-service` crea `api-keys` al arrancar. **Nadie crea
-`weather-stations-data`**: el script lo declara como responsabilidad de `data-service`, pero ese
+El script de arranque del almacén crea tres buckets y las identidades por servicio: `tiles-data`,
+`intersection-data` y `basemap-tiles`. `data-service` crea `api-keys` al arrancar. Nadie crea
+`weather-stations-data`: el script lo declara como responsabilidad de `data-service`, pero ese
 servicio sólo comprueba el de claves.
 
 ### Los buckets
@@ -32,8 +32,8 @@ servicio sólo comprueba el de claves.
 | `intersection-data` | `alerts-service` | `alerts-service` | Capas del IGN simplificadas |
 
 !!! warning "La identidad de lectura tiene permisos de administración"
-    La identidad con la que `data-service` accede está documentada como de sólo lectura, pero **lleva
-    la acción global `Admin`** además de sus permisos por bucket. Ver [19.2 Datos y secretos](../seguridad/datos-y-secretos.md).
+    La identidad con la que `data-service` accede está documentada como de sólo lectura, pero lleva
+    la acción global `Admin` además de sus permisos por bucket. Ver [19.2 Datos y secretos](../seguridad/datos-y-secretos.md).
 
 ### Trazado de claves de `tiles-data`
 
@@ -62,7 +62,7 @@ servicio sólo comprueba el de claves.
 
 !!! warning "Los prefijos están duplicados a mano en los dos lados"
     `tiles-processor` los declara en su configuración de ciclo de vida y `data-service` los repite
-    como literales. **No hay paquete compartido.** Cambiar uno sin el otro no rompe nada visible:
+    como literales. No hay paquete compartido. Cambiar uno sin el otro no rompe nada visible:
     el productor sigue escribiendo y el lector deja de encontrar lo nuevo.
 
 ### Otros buckets
@@ -74,17 +74,17 @@ servicio sólo comprueba el de claves.
 | `api-keys` | `keys/{sha256 del secreto}.json` |
 | `intersection-data` | `pais_simple_L{nivel}_T{tolerancia}_{AAAAMMDD}.geojson`, `departamentos_simple_T0p005_{AAAAMMDD}.geojson` |
 
-**Las claves de `intersection-data` son planas.** **La tolerancia se escribe con `p` en lugar del punto.**
+Las claves de `intersection-data` son planas. La tolerancia se escribe con `p` en lugar del punto.
 
 ### Retención
 
 La expiración son reglas de ciclo de vida de S3, una por prefijo, que cada worker aplica al arrancar.
-La tabla de días está en [11.1 Tiles Processor](../servicios/tiles-processor.md). **No hay regla
-comodín**: **un prefijo sin regla no expira nunca**.
+La tabla de días está en [11.1 Tiles Processor](../servicios/tiles-processor.md). No hay regla
+comodín: un prefijo sin regla no expira nunca.
 
 ## Las colas
 
-RabbitMQ es interno a `tiles-processor`. **Ningún otro servicio lo usa.**
+RabbitMQ es interno a `tiles-processor`. Ningún otro servicio lo usa.
 
 | Cola | Contenido |
 |---|---|
@@ -93,10 +93,10 @@ RabbitMQ es interno a `tiles-processor`. **Ningún otro servicio lo usa.**
 | `tiles_wrf_light_queue` | Todos los productos de WRF |
 | `tiles_dead_letter_queue` | Unidades que agotaron sus reintentos |
 
-**Las tres colas de trabajo son durables.** Se declaran con el intercambio de descarte `tiles_dlx`, un
-`direct` durable cuya clave de ruteo es el nombre de la cola de descarte. **No declaran prioridad ni
-vencimiento**: la «prioridad» de la cola pesada es el orden en que un worker las consulta. **Los
-mensajes son persistentes.**
+Las tres colas de trabajo son durables. Se declaran con el intercambio de descarte `tiles_dlx`, un
+`direct` durable cuya clave de ruteo es el nombre de la cola de descarte. No declaran prioridad ni
+vencimiento: la "prioridad" de la cola pesada es el orden en que un worker las consulta. Los
+mensajes son persistentes.
 
 ### El mensaje
 
@@ -114,12 +114,12 @@ mensajes son persistentes.**
 | `retry_count`, `max_retries` | Intento actual, desde 0; tope, 3 |
 
 !!! note "Nadie consume la cola de descarte"
-    **No hay ningún consumidor de `tiles_dead_letter_queue`.** **Es un depósito para inspección manual
-    desde el panel del broker, no una cola de reproceso.**
+    No hay ningún consumidor de `tiles_dead_letter_queue`. Es un depósito para inspección manual
+    desde el panel del broker, no una cola de reproceso.
 
 ## Bases locales
 
-**Ninguna se comparte entre servicios.** **Todas viven en el volumen del contenedor que las usa.**
+Ninguna se comparte entre servicios. Todas viven en el volumen del contenedor que las usa.
 
 | Base | Servicio | Tablas | Esquema |
 |---|---|---|---|
@@ -129,11 +129,11 @@ mensajes son persistentes.**
 | `basemap_scraper_state.sqlite` | `data-service` | El cursor del recorrido de mapas base | Propio |
 | `jobs.sqlite` | `alerts-service` | `alert_jobs` | Alembic |
 | `metrics.sqlite` | `alerts-service` | `processor_samples`, `alert_jobs` | Alembic |
-| `history.db` | `alerts-service` | `job_runs` | **Ninguno**: la crea el adaptador |
-| La de `MYSQL_DATABASE` | `alerts-service` | `taviso_temporal`, `taviso`, `departamentos`, `provincia` | Alembic, **sólo con `MANAGE_DB_SCHEMAS`** |
+| `history.db` | `alerts-service` | `job_runs` | Ninguno: la crea el adaptador |
+| La de `MYSQL_DATABASE` | `alerts-service` | `taviso_temporal`, `taviso`, `departamentos`, `provincia` | Alembic, sólo con `MANAGE_DB_SCHEMAS` |
 
 !!! warning "SQLite exige disco local"
-    **Las bases usan WAL, que no funciona sobre NFS ni SMB.** Y **los procesos que las comparten tienen
-    que estar en el mismo host**: el bloqueo entre migraciones concurrentes es un `flock` sobre el
-    sistema de archivos. **Es una de las razones por las que producer y workers no se separan.** Ver
+    Las bases usan WAL, que no funciona sobre NFS ni SMB. Y los procesos que las comparten tienen
+    que estar en el mismo host: el bloqueo entre migraciones concurrentes es un `flock` sobre el
+    sistema de archivos. Es una de las razones por las que producer y workers no se separan. Ver
     [15. Distribuir el sistema](../operacion/distribucion.md).

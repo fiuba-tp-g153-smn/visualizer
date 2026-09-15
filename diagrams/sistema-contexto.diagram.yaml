@@ -2,7 +2,7 @@
 # frontera. Altitud alta a propósito; el detalle de cada servicio vive en su
 # propio capítulo. Pregunta que responde: ¿qué partes tiene MapaSMN y qué
 # entra y sale de cada una?
-title: MapaSMN — contexto del sistema
+title: "MapaSMN: contexto del sistema"
 subtitle: Qué servicios lo componen y qué cruza cada frontera
 size: [880, 640]
 
@@ -11,8 +11,8 @@ groups:
   - {kind: boundary, at: [280, 64], size: [576, 400], label: MAPASMN · UN HOST, label_anchor: end}
 
 nodes:
-  noaa:     {at: [40, 112], size: [168, 52], label: NOAA GOES-19, sub: S3 público · ABI y GLM, external: true, badge: cloud}
-  radar:    {at: [40, 212], size: [168, 52], label: Radar y modelos, sub: SINARAME · WRF · ECMWF · GFS, external: true, badge: folder}
+  noaa:     {at: [40, 112], size: [168, 52], label: Fuentes públicas, sub: GOES-19 ABI · ECMWF · GFS, external: true, badge: cloud}
+  radar:    {at: [40, 212], size: [168, 52], label: Fuentes del SMN, sub: GLM · SINARAME · WRF-ARG4K, external: true, badge: folder}
   ign:      {at: [40, 312], size: [168, 52], label: IGN, sub: WMS · WFS · mapas base, external: true, badge: globe}
   smn:      {at: [40, 452], size: [168, 52], label: SMN, sub: API de estaciones · taviso, external: true, badge: database}
 
@@ -24,7 +24,7 @@ nodes:
   user:     {kind: actor, at: [688, 500], label: Pronosticador}
 
 edges:
-  - {from: noaa, to: tp, label: descarga ABI y GLM, label_at: [260, 100]}
+  - {from: noaa, to: tp, label: descarga pública, label_at: [260, 100]}
   - {from: radar, to: tp, label: archivos crudos, label_at: [232, 268], label_anchor: start}
   - {from: tp, to: bucket, label: teselas · COG · GeoJSON, label_at: [400, 206], label_anchor: start}
   - {from: bucket, to: ds, label: sincroniza, label_at: [512, 256]}

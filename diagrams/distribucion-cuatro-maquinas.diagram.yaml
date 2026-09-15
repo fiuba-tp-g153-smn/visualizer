@@ -1,5 +1,5 @@
 # Capítulo 15. Pregunta: ¿hasta dónde se puede repartir sin cambiar código?
-title: Cuatro máquinas — hasta dónde llega la separación
+title: "Cuatro máquinas: hasta dónde llega la separación"
 subtitle: Cada caja punteada es un host; cada flecha, un puerto que cruza el cable
 size: [880, 560]
 
