@@ -118,7 +118,7 @@ const PANEL_TIPS = {
     'Qué está llenando Redis.\n' +
     '• SCAN + MEMORY USAGE por prefijo de clave, ~15 min\n' +
     '• Lo llenan tiles (~60 s) y estaciones (~5 min)\n' +
-    '• Mapa base (no_cache): escribe S3, ≈ 0 en Redis',
+    '• Mapa base (backup_only): escribe S3, ≈ 0 en Redis',
   memoryHistory:
     'Crecimiento de memoria por dominio (área apilada).\n' +
     '• Tabla redis_memory_samples\n' +

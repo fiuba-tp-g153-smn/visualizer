@@ -186,7 +186,7 @@ Ese panel es la verificación de extremo a extremo más rápida. Cómo leerlo es
 |---|---|
 | El servicio de datos reinicia en ciclo | No alcanza el almacén. Lo alcanza saliendo al host, así que una regla de firewall lo rompe aunque los dos stacks estén en la misma máquina. |
 | El servicio de datos no levanta y la red no existe | La red externa se crea a mano antes del primer arranque. |
-| El servicio de datos arranca y no sincroniza nada | `settings.json` ausente, o `SYNC_MODE` con un valor distinto de `full`. |
+| Las primeras lecturas de una capa son lentas | Con `SYNC_PREFETCH=false` no hay precarga en segundo plano. La primera lectura busca en Redis, luego en el bucket, y recalienta la caché. |
 | El servicio de avisos parece colgado varios minutos | Está simplificando las capas del IGN. Esperable en el primer arranque. |
 | El mapa carga vacío | El navegador no alcanza al servicio de datos. El visualizador no hace de proxy. |
 | Cambié una variable del visualizador y no pasa nada | Hay que reconstruir la imagen. |

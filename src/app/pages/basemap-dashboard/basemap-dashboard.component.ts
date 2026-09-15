@@ -28,7 +28,7 @@ const BASEMAP_TIP =
   '• respaldado · respaldando (cursor z·índice) · con errores\n' +
   '• respaldado % y fallidos = del último barrido (ok / intentos)\n' +
   '• "con errores" = pausado: la tasa de error superó el umbral\n' +
-  '• Barrido completo cada ~7 días (no_cache → S3)';
+  '• Barrido completo cada ~7 días (backup_only → S3)';
 
 /**
  * Panel del scraper de respaldo de mapa base (pestaña "Mapas base" del shell

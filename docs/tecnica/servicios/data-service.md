@@ -91,11 +91,12 @@ El healthcheck del contenedor consulta esa misma ruta cada 10 s, con 15 s de gra
 
 ## Estrategias de caché
 
-La estrategia se elige una vez al arrancar, con `SYNC_MODE` o `settings.json`.
+La estrategia se elige una vez al arrancar, con `SYNC_PREFETCH` o `settings.json`.
 
-- `full`, el modo desplegado. Seis bucles recorren el bucket y precargan Redis: `satellite`,
-  `radar`, `ecmwf_tp`, `ecmwf_mslp`, `wrf` y `gfs`.
-- `on_demand`. Sin bucles. Cada lectura resuelve Redis, luego el bucket, y recalienta.
+- `true`. Seis bucles recorren el bucket y precargan Redis: `satellite`, `radar`, `ecmwf_tp`,
+  `ecmwf_mslp`, `wrf` y `gfs`.
+- `false`. Los bucles no se ejecutan. Cada lectura resuelve Redis, luego el bucket, y recalienta la
+  caché. Se sirven los mismos productos; cambia quién paga el viaje a S3.
 
 | Dominio | Qué retiene en Redis |
 |---|---|
@@ -104,9 +105,13 @@ La estrategia se elige una vez al arrancar, con `SYNC_MODE` o `settings.json`.
 | `wrf` | Las 3 inicializaciones más recientes |
 | `gfs` | Los 2 ciclos más recientes |
 
+La cantidad de ciclos de GFS se configura con `gfs.cycles_to_keep` en `settings.json`, del mismo
+modo que las corridas de ECMWF y las inicializaciones de WRF.
+
 !!! note "Los mapas base no pasan por Redis"
-    El modo desplegado para mapas base es `no_cache`. El recorrido de respaldo sigue corriendo y
-    escribe `basemap-tiles`, pero el lector va del proveedor al bucket sin tocar Redis.
+    El archivo versionado usa `backup_only`. El recorrido de respaldo escribe `basemap-tiles`,
+    mientras que el lector consulta el proveedor y luego el bucket sin utilizar Redis. La
+    configuración activa en el VPS puede estar sobrescrita y debe verificarse en el despliegue.
 
 ## Superficie HTTP
 

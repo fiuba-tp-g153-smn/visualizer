@@ -97,12 +97,12 @@ deciden si el servicio arranca y funciona:
 | `S3_TILES_DATA_ENDPOINT`, `S3_TILES_DATA_ACCESS_KEY`, `S3_TILES_DATA_SECRET_KEY`, `S3_TILES_DATA_BUCKET_NAME` | Sí | Sin ellas no hay sincronización ni claves de estaciones. El ejemplo trae `host.docker.internal:9000`. |
 | `REDIS_URL` | Sí | La caché. Sin ella, todo sale por el bucket. |
 | `WEATHER_STATIONS_ADMIN_PASSWORD` | Sí con la autenticación de estaciones encendida | Cabecera `X-Admin-Password` |
-| `SMN_API_USERNAME` / `_PASSWORD` | Sí con `WEATHER_STATIONS_SYNC_MODE=full` | Credenciales de la API del SMN |
+| `SMN_API_USERNAME` / `_PASSWORD` | Sí con `WEATHER_STATIONS_SYNC_ENABLED=true` | Credenciales de la API del SMN |
 | `WEB_CONCURRENCY` | Sí, como argumento de construcción | Procesos de uvicorn. Sin él, el comando queda con `--workers=` vacío. |
 | `APP_ROLE` | No (`all`) | `web`, `worker` o `all`. Otro valor aborta. |
 | `APP_ENV` | No | Sólo `production` acota la espera del almacén a 120 s. |
 | `LOG_LEVEL` | No (`INFO`) | Nivel de registro |
-| `SYNC_MODE` | No (`full` en `settings.json`) | Cualquier valor distinto de `full` apaga la sincronización sin avisar. |
+| `SYNC_PREFETCH` | No (`true` en `settings.json`) | En `true`, seis bucles precargan Redis. En `false`, cada lectura busca en Redis, luego en el bucket y recalienta la caché. Los mismos productos siguen disponibles. |
 | `S3_TILES_DATA_SECURE` | No (`false`) | HTTPS hacia el almacén |
 | `S3_BASEMAP_BUCKET_NAME`, `S3_WEATHER_STATIONS_BUCKET_NAME`, `S3_API_KEYS_BUCKET_NAME` | No | Nombres de los tres buckets propios |
 | `SMN_API_BASE_URL` | No | El valor por defecto es el entorno de prueba del SMN. |
@@ -110,8 +110,8 @@ deciden si el servicio arranca y funciona:
 | `SMN_API_LOG_REQUESTS` | No (`false`) | Diagnóstico ruidoso; las credenciales van redactadas |
 | `BASEMAP_<PROVEEDOR>_URL` | Sí por proveedor XYZ habilitado | Ocho plantillas: `ARGENMAP`, `ARGENMAPGRIS`, `ARGENMAPOSCURO`, `ARGENMAPTOPOGRAFICO`, `SATELLITE`, `TOPOGRAPHIC`, `GOOGLESATELLITE`, `OCEANBASE`. Sin definir, el proveedor se salta. |
 | `WEATHER_STATIONS_API_KEY_AUTH_ENABLED` | No (`true`) | En `false`, las cinco rutas de estaciones quedan abiertas. |
-| `WEATHER_STATIONS_SYNC_MODE` | No (`full`) | `full` o `disabled` |
-| `BASEMAP_SYNC_MODE` | No (`no_cache` en `settings.json`) | `full`, `on_demand`, `no_cache` o `relay_only` |
+| `WEATHER_STATIONS_SYNC_ENABLED` | No (`true`) | `true` o `false` |
+| `BASEMAP_BACKUP_MODE` | No (`backup_only` en `settings.json`) | `backup_and_prefetch`, `backup_and_cache_on_read`, `backup_only` o `relay_only` |
 
 !!! warning "Las plantillas de los mapas del IGN son TMS, y no lo dicen"
     Los cuatro fondos del IGN usan el esquema TMS, con el eje Y invertido. La plantilla no lo
@@ -130,8 +130,9 @@ Los grupos de ajuste fino, todos con valor por defecto y ninguno en `.env.exampl
 | `GDAL_*`, `CPL_*`, `VSI_*` | 5 | Cachés de lectura remota |
 
 Cada clave de `settings.json` admite la variable con el mismo nombre en mayúsculas y guiones
-bajos. El archivo versionado fija `sync.mode`, los vencimientos por dominio, `wrf.inits_to_keep: 3`,
-`basemap.sync_mode: no_cache` y la lista de catorce proveedores de mapas base.
+bajos. El archivo versionado fija `sync.prefetch: true`, los vencimientos por dominio,
+`wrf.inits_to_keep: 3`, el bloque `gfs` con sus vencimientos y `cycles_to_keep: 2`,
+`basemap.backup_mode: backup_only` y la lista de catorce proveedores de mapas base.
 
 !!! note "Concurrencia del sincronizador"
     `WORKER_CONCURRENCY` en la plantilla de `data-service` sólo fija los procesos de uvicorn del
