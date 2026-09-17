@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import type { ApexYAxis } from 'ng-apexcharts';
 
-import { buildSeriesCharts, buildTabChart, buildTempDewChart } from './weather-station-chart.util';
+import {
+  buildSeriesCharts,
+  buildTabChart,
+  buildTempDewChart,
+  withGapBreaks,
+} from './weather-station-chart.util';
 import { WeatherStationVariable } from '../../models/layers/models';
 import { WIND_SPEED_UNITS } from '../../constants';
 import { UnitsSettingsService } from '../settings/units-settings.service';
@@ -193,9 +198,24 @@ const RICH_SERIES: StationSeries = {
   province: 'P',
   hours: 48,
   points: [
-    fullPoint('2026-05-30T12:00:00Z', { humidity: 52, visibility: 6, pressure: 1011, windSpeed: 10 }),
-    fullPoint('2026-05-30T15:00:00Z', { humidity: 93, visibility: 10, pressure: 1018, windSpeed: 20 }),
-    fullPoint('2026-05-30T18:00:00Z', { humidity: 65, visibility: 8, pressure: 1014, windSpeed: 30 }),
+    fullPoint('2026-05-30T12:00:00Z', {
+      humidity: 52,
+      visibility: 6,
+      pressure: 1011,
+      windSpeed: 10,
+    }),
+    fullPoint('2026-05-30T15:00:00Z', {
+      humidity: 93,
+      visibility: 10,
+      pressure: 1018,
+      windSpeed: 20,
+    }),
+    fullPoint('2026-05-30T18:00:00Z', {
+      humidity: 65,
+      visibility: 8,
+      pressure: 1014,
+      windSpeed: 30,
+    }),
   ],
   latest: fullPoint('2026-05-30T18:00:00Z', {
     humidity: 65,
@@ -249,5 +269,50 @@ describe('buildSeriesCharts — round reference labels', () => {
     const charts = buildSeriesCharts(RICH_SERIES, u, { group: 'g', utc: true, height: 200 });
     const wind = charts.find((c) => c.variable.id === 'windSpeed')!;
     expect(yLabels(wind.yaxis).every((l) => !l.includes('.'))).toBe(true);
+  });
+});
+
+describe('withGapBreaks', () => {
+  beforeEach(() => TestBed.configureTestingModule({}));
+
+  it('inserts an empty sample where the station stopped reporting', () => {
+    const points = [
+      point('2026-05-30T12:00:00Z', 18, 9),
+      point('2026-05-30T13:00:00Z', 19, 9),
+      point('2026-05-30T16:00:00Z', 21, 10),
+      point('2026-05-30T17:00:00Z', 20, 10),
+    ];
+    const withGaps = withGapBreaks(points);
+
+    expect(withGaps).toHaveLength(5);
+    expect(withGaps[2].t).toBe(Date.parse('2026-05-30T14:30:00Z'));
+    expect(withGaps[2].temperature).toBeNull();
+  });
+
+  it('leaves an evenly sampled series untouched (jitter included)', () => {
+    const points = [
+      point('2026-05-30T12:00:00Z', 18, 9),
+      point('2026-05-30T13:02:00Z', 19, 9),
+      point('2026-05-30T13:58:00Z', 20, 9),
+    ];
+
+    expect(withGapBreaks(points)).toHaveLength(3);
+  });
+
+  it('breaks the chart line over the gap instead of drawing across it', () => {
+    const gapped: StationSeries = {
+      ...SERIES,
+      points: [
+        point('2026-05-30T12:00:00Z', 18, 9),
+        point('2026-05-30T13:00:00Z', 19, 9),
+        point('2026-05-30T14:00:00Z', 20, 9),
+        point('2026-05-30T17:00:00Z', 21, 10),
+        point('2026-05-30T18:00:00Z', 21, 10),
+      ],
+    };
+    const vm = buildTempDewChart(gapped, units(), { utc: true, height: 200 });
+    const temperatura = vm.series[0].data as ReadonlyArray<{ y: number | null }>;
+
+    expect(temperatura.map((d) => d.y)).toEqual([18, 19, 20, null, 21, 21]);
   });
 });

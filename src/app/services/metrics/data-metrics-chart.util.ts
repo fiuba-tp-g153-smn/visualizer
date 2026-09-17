@@ -75,6 +75,10 @@ function renderThroughputTooltip(context: CustomTooltipContext): string {
 
   const label = labels?.[dataPointIndex];
   const title = label == null ? '' : `<div class="apx-tip__title">${label}</div>`;
+  // Intervalo del hueco: todas las series en null — no es un total de 0.
+  if (series.every((line) => line?.[dataPointIndex] == null)) {
+    return `<div class="apx-tip">${title}<div class="apx-tip__row"><span class="apx-tip__name">Sin datos</span></div></div>`;
+  }
   const totalRow =
     `<div class="apx-tip__row apx-tip__total">` +
     `<span class="apx-tip__name">Total</span>` +
@@ -170,9 +174,13 @@ export function buildMemoryAreaChart(
   const data = pivot(rows, 'memory_bytes');
   const colorFor = buildTypeColorMap(data.types);
   return {
+    // Tramo sin muestras (el servicio estuvo caído): null, que parte el área en
+    // vez de interpolar una curva de memoria que nunca se midió.
     series: data.types.map((type) => ({
       name: type,
-      data: data.buckets.map((bucket) => data.at(bucket, type) ?? 0),
+      data: data.buckets.map((bucket) =>
+        data.hasData(bucket) ? (data.at(bucket, type) ?? 0) : null,
+      ),
     })),
     chart: baseChart('area', true, 300),
     colors: data.types.map(colorFor),
@@ -225,9 +233,13 @@ export function buildSyncThroughputChart(
   const data = pivot(rows, 'downloaded');
   const colorFor = buildTypeColorMap(data.types);
   return {
+    // Intervalo sin ciclos de sync: null, así no se dibuja columna y el hueco se
+    // distingue de un intervalo que sí corrió y bajó 0 tiles.
     series: data.types.map((type) => ({
       name: type,
-      data: data.buckets.map((bucket) => data.at(bucket, type) ?? 0),
+      data: data.buckets.map((bucket) =>
+        data.hasData(bucket) ? (data.at(bucket, type) ?? 0) : null,
+      ),
     })),
     chart: baseChart('bar', true, 260),
     colors: data.types.map(colorFor),
@@ -285,9 +297,12 @@ export function buildSyncErrorsChart(
   }));
   const data = pivot(rows, 'errors');
   const colorFor = buildTypeColorMap(data.types);
+  // Intervalo sin ciclos: null (corta la línea). Con ciclos pero sin fallos: 0.
   const series = data.types.map((type) => ({
     name: type,
-    data: data.buckets.map((bucket) => data.at(bucket, type) ?? 0),
+    data: data.buckets.map((bucket) =>
+      data.hasData(bucket) ? (data.at(bucket, type) ?? 0) : null,
+    ),
   }));
   const colors = data.types.map(colorFor);
   return {

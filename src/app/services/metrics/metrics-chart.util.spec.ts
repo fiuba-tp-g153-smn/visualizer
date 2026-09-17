@@ -6,6 +6,7 @@ import {
   buildStageAreaChart,
   buildStagePieChart,
   buildThroughputBarChart,
+  buildTotalThroughputChart,
   buildTypeColorMap,
   pivot,
   typeColor,
@@ -71,6 +72,97 @@ describe('buildLineChart', () => {
     expect(opts.chart.stacked).toBe(false);
     expect(opts.xaxis.categories).toHaveLength(2);
     expect(opts.series).toHaveLength(2);
+  });
+});
+
+describe('huecos sin datos', () => {
+  // 06:00 y 06:10 con datos, 06:20 y 06:30 caídos, 06:40 de vuelta.
+  const OUTAGE: ThroughputBucket[] = [
+    { bucket: '2026-09-17T06:0', job_type: 'a', count: 12 },
+    { bucket: '2026-09-17T06:1', job_type: 'a', count: 10 },
+    { bucket: '2026-09-17T06:1', job_type: 'b', count: 4 },
+    { bucket: '2026-09-17T06:4', job_type: 'a', count: 9 },
+  ];
+
+  it('pivot reinserta los intervalos faltantes y los marca sin datos', () => {
+    const p = pivot(OUTAGE, 'count');
+
+    expect(p.buckets).toEqual([
+      '2026-09-17T06:0',
+      '2026-09-17T06:1',
+      '2026-09-17T06:2',
+      '2026-09-17T06:3',
+      '2026-09-17T06:4',
+    ]);
+    expect(p.hasData('2026-09-17T06:1')).toBe(true);
+    expect(p.hasData('2026-09-17T06:2')).toBe(false);
+  });
+
+  it('buildTotalThroughputChart corta la línea total sobre el hueco', () => {
+    const opts = buildTotalThroughputChart(OUTAGE);
+    const [total] = opts.series as ReadonlyArray<{ data: Array<number | null> }>;
+
+    expect(total.data).toEqual([12, 14, null, null, 9]);
+    expect(opts.xaxis.categories).toHaveLength(5);
+  });
+
+  it('buildLineChart corta cada tipo sobre el hueco, pero cuenta 0 donde sí hubo datos', () => {
+    const opts = buildLineChart(OUTAGE, 'count', 'count');
+    const series = opts.series as ReadonlyArray<{ name: string; data: Array<number | null> }>;
+
+    expect(series.find((s) => s.name === 'a')?.data).toEqual([12, 10, null, null, 9]);
+    // 'b' sólo aparece en 06:10: en 06:00 y 06:40 hubo trabajos (0 de ese tipo),
+    // en 06:20 y 06:30 no hubo nada (hueco).
+    expect(series.find((s) => s.name === 'b')?.data).toEqual([0, 4, null, null, 0]);
+  });
+
+  it('buildThroughputBarChart deja el hueco sin columna en vez de dibujar un 0', () => {
+    const opts = buildThroughputBarChart(OUTAGE);
+    const series = opts.series as ReadonlyArray<{ name: string; data: Array<number | null> }>;
+
+    expect(series.find((s) => s.name === 'a')?.data).toEqual([12, 10, null, null, 9]);
+  });
+
+  it('el tooltip del hueco dice "Sin datos" en vez de un total de 0', () => {
+    const opts = buildLineChart(OUTAGE, 'count', 'count');
+    const series = (opts.series as ReadonlyArray<{ data: Array<number | null> }>).map(
+      (s) => s.data,
+    );
+    const render = opts.tooltip.custom as (context: unknown) => string;
+    const context = (dataPointIndex: number) => ({
+      series,
+      dataPointIndex,
+      w: { globals: { seriesNames: ['a', 'b'], colors: ['#111', '#222'], labels: [] } },
+    });
+
+    expect(render(context(2))).toContain('Sin datos');
+    expect(render(context(2))).not.toContain('Total');
+    expect(render(context(1))).toContain('Total');
+  });
+
+  it('buildStageAreaChart corta el área apilada sobre el hueco', () => {
+    const rows: TimingSeriesPoint[] = [
+      {
+        bucket: '2026-09-17T06',
+        job_type: 'a',
+        count: 1,
+        avg_total_s: 10,
+        p95_total_s: 12,
+        stages: { georef: 3, tiling: 4 },
+      },
+      {
+        bucket: '2026-09-17T09',
+        job_type: 'a',
+        count: 1,
+        avg_total_s: 11,
+        p95_total_s: 13,
+        stages: { georef: 2, tiling: 5 },
+      },
+    ];
+    const opts = buildStageAreaChart(rows, 'a');
+    const series = opts.series as ReadonlyArray<{ name: string; data: Array<number | null> }>;
+
+    expect(series[0].data).toEqual([3, null, null, 2]);
   });
 });
 

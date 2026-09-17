@@ -52,8 +52,58 @@ export interface TempDewChartOptions {
 const TEMP_COLOR = '#ff6b59';
 const DEW_COLOR = '#003d5c';
 
+/** Un salto de más de 1.75x la cadencia mediana de la serie es un hueco real. */
+const GAP_FACTOR = 1.75;
+
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
+}
+
+/** Muestra vacía: ocupa su lugar en el eje sin aportar ningún valor. */
+function emptyPointAt(t: number): StationSeriesPoint {
+  return {
+    t,
+    observedAt: new Date(t).toISOString(),
+    temperature: null,
+    feelsLike: null,
+    humidity: null,
+    pressure: null,
+    visibility: null,
+    dewPoint: null,
+    condition: null,
+    windSpeed: null,
+    windDeg: null,
+    windDirection: null,
+  };
+}
+
+/**
+ * Cuando la estación deja de reportar, el backend no manda esos puntos y la
+ * línea cruza el período entero como si no hubiera pasado nada. Insertamos una
+ * muestra vacía en cada salto que supera `GAP_FACTOR` veces la cadencia mediana
+ * de la serie: ApexCharts corta la línea en los null, así que el hueco se ve.
+ * Se hace sobre la lista de puntos —no sobre cada serie— para que los índices
+ * del tooltip y de los marcadores de viento sigan alineados con los puntos.
+ */
+export function withGapBreaks(
+  points: readonly StationSeriesPoint[],
+): readonly StationSeriesPoint[] {
+  if (points.length < 3) {
+    return points;
+  }
+  const diffs = points.slice(1).map((point, i) => point.t - points[i].t);
+  const median = [...diffs].sort((a, b) => a - b)[Math.floor(diffs.length / 2)];
+  if (!(median > 0)) {
+    return points;
+  }
+  const out: StationSeriesPoint[] = [points[0]];
+  points.slice(1).forEach((point, i) => {
+    if (diffs[i] > median * GAP_FACTOR) {
+      out.push(emptyPointAt(points[i].t + diffs[i] / 2));
+    }
+    out.push(point);
+  });
+  return out;
 }
 
 /** One line of the popover Graph-tab chart. */
@@ -82,10 +132,11 @@ function buildOverlayChart(
 ): TempDewChartVm {
   const unit = getDisplayUnit(lines[0].sourceUnit, unitsSettings);
   const decimals = lines[0].decimals;
+  const points = withGapBreaks(series.points);
 
   const apexSeries = lines.map((line) => ({
     name: line.name,
-    data: series.points.map((p) => {
+    data: points.map((p) => {
       const raw = line.accessor(p);
       return {
         x: p.t,
@@ -323,8 +374,9 @@ function buildVariableChart(
   xLabels: XAxisLabels,
 ): SeriesChartVm {
   const unit = getDisplayUnit(variable.sourceUnit, unitsSettings);
+  const points = withGapBreaks(series.points);
   const toData = (accessor: (point: StationSeriesPoint) => number | null) =>
-    series.points.map((point) => {
+    points.map((point) => {
       const raw = accessor(point);
       return {
         x: point.t,
@@ -356,7 +408,7 @@ function buildVariableChart(
   // The wind chart uses triangle markers rotated to each reading's bearing.
   const isWind = variable.id === 'windSpeed';
   const windDegrees = isWind
-    ? series.points.filter((p) => p.windSpeed !== null).map((p) => p.windDeg)
+    ? points.filter((p) => p.windSpeed !== null).map((p) => p.windDeg)
     : [];
   const rotate = (chart: unknown): void =>
     rotateWindMarkers(chart as { el?: Element }, windDegrees);
@@ -424,7 +476,7 @@ function buildVariableChart(
           if (!isWind) {
             return text;
           }
-          const direction = series.points[opts?.dataPointIndex ?? -1]?.windDirection;
+          const direction = points[opts?.dataPointIndex ?? -1]?.windDirection;
           return direction ? `${text} · ${direction}` : text;
         },
       },

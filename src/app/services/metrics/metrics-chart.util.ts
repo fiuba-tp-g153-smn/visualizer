@@ -19,6 +19,7 @@ import type {
   ThroughputBucket,
   TimingSeriesPoint,
 } from '../../models/metrics/metrics.models';
+import { denseBucketAxis } from './bucket-axis.util';
 import { fmtBucket, secs } from './metrics-format.util';
 import { stageLabel } from './metrics-labels.constants';
 
@@ -156,16 +157,19 @@ export function buildTypeColorMap(types: readonly string[]): (type: string) => s
 // ── Pivot ──────────────────────────────────────────────────────────────────
 
 export interface PivotResult {
+  /** Incluye los slots sintéticos que abren los huecos (ver `hasData`). */
   readonly buckets: string[];
   readonly types: string[];
   at(bucket: string, type: string): number | null;
+  /** `false` en un slot sin datos de ningún tipo: ahí la serie va `null`. */
+  hasData(bucket: string): boolean;
 }
 
 export function pivot(
   rows: ReadonlyArray<{ bucket: string; job_type: string }>,
   valueKey: string,
 ): PivotResult {
-  const buckets = [...new Set(rows.map((row) => row.bucket))].sort();
+  const axis = denseBucketAxis(rows.map((row) => row.bucket));
   const types = [...new Set(rows.map((row) => row.job_type))].sort();
   const cell = new Map<string, number | null>();
   for (const row of rows) {
@@ -173,9 +177,10 @@ export function pivot(
     cell.set(row.bucket + '|' + row.job_type, typeof value === 'number' ? value : null);
   }
   return {
-    buckets,
+    buckets: [...axis.buckets],
     types,
     at: (bucket, type) => cell.get(bucket + '|' + type) ?? null,
+    hasData: axis.has,
   };
 }
 
@@ -185,6 +190,9 @@ type ValueFormatter = (value: number | null) => string;
 
 const secsFormatter: ValueFormatter = (value) => (value == null ? '' : secs(value));
 const countFormatter: ValueFormatter = (value) => (value == null ? '' : String(Math.round(value)));
+/** En el tooltip un null es un intervalo sin datos, no un cero. */
+const tooltipCountFormatter: ValueFormatter = (value) =>
+  value == null ? 'sin datos' : String(Math.round(value));
 
 // ── Shared option fragments ──────────────────────────────────────────────────
 
@@ -277,6 +285,11 @@ function renderCountTooltip(context: CustomTooltipContext): string {
 
   const label = labels?.[dataPointIndex];
   const title = label == null ? '' : `<div class="apx-tip__title">${label}</div>`;
+  // Intervalo del hueco: todas las series en null. Sin esto el pie diría
+  // "Total 0", que es justo lo que el corte de la línea busca desmentir.
+  if (series.every((line) => line?.[dataPointIndex] == null)) {
+    return `<div class="apx-tip">${title}<div class="apx-tip__row"><span class="apx-tip__name">Sin datos</span></div></div>`;
+  }
   const totalRow =
     `<div class="apx-tip__row apx-tip__total">` +
     `<span class="apx-tip__name">Total</span>` +
@@ -344,13 +357,17 @@ export function buildLineChart(
 ): MetricsChartOptions {
   const data = pivot(rows, valueKey);
   const formatter = unit === 'secs' ? secsFormatter : countFormatter;
-  // Conteos: un bucket sin filas significa 0 trabajos, así que rellenamos el hueco
-  // con 0 para que la línea quede continua y conecte los picos. Tiempos: un hueco
-  // es "sin trabajos exitosos"; rellenar con 0 fingiría procesamiento instantáneo,
-  // así que se deja null (corta la línea) y el punto aislado se marca con un círculo.
+  // Intervalo sin datos de ningún tipo (el pipeline estuvo caído): null, que
+  // corta la línea. Dentro de un intervalo que sí tuvo datos, un tipo ausente
+  // son 0 trabajos en conteos —la línea sigue y conecta los picos—; en tiempos
+  // se deja null (0 fingiría procesamiento instantáneo) y el punto que quede
+  // aislado se marca con un círculo.
   const series = data.types.map((type) => ({
     name: type,
     data: data.buckets.map((bucket) => {
+      if (!data.hasData(bucket)) {
+        return null;
+      }
       const value = data.at(bucket, type);
       return value == null && unit === 'count' ? 0 : value;
     }),
@@ -362,10 +379,9 @@ export function buildLineChart(
     colors,
     xaxis: categoryXAxis(data.buckets.map((bucket) => fmtBucket(bucket, utc))),
     yaxis: valueYAxis(formatter),
-    // Tiempos: dejamos huecos (null) en vez de 0 ficticios, así que usamos
-    // `monotoneCubic` —la única curva de ApexCharts que omite los null y conecta
-    // los puntos a través del hueco—. Conteos: ya quedan continuos con relleno 0,
-    // así que se mantiene la línea recta.
+    // Tiempos: `monotoneCubic` suaviza la curva entre muestras espaciadas (los
+    // null siguen partiendo el trazo). Conteos: línea recta, que es como se lee
+    // un caudal de trabajos.
     stroke: { curve: unit === 'secs' ? 'monotoneCubic' : 'straight', width: 2 },
     fill: { type: 'solid', opacity: 1 },
     dataLabels: { enabled: false },
@@ -385,9 +401,14 @@ export function buildThroughputBarChart(
 ): MetricsChartOptions {
   const data = pivot(rows, 'count');
   return {
+    // Sin datos en el intervalo: null en vez de 0 — no se dibuja columna y el
+    // hueco queda visible, en lugar de una barra vacía indistinguible de "0
+    // trabajos procesados".
     series: data.types.map((type) => ({
       name: type,
-      data: data.buckets.map((bucket) => data.at(bucket, type) ?? 0),
+      data: data.buckets.map((bucket) =>
+        data.hasData(bucket) ? (data.at(bucket, type) ?? 0) : null,
+      ),
     })),
     chart: baseChart('bar', true, height),
     colors: data.types.map(colorFor),
@@ -418,9 +439,11 @@ export function buildTotalThroughputChart(
   for (const row of rows) {
     totals.set(row.bucket, (totals.get(row.bucket) ?? 0) + row.count);
   }
-  const buckets = [...totals.keys()].sort();
+  const axis = denseBucketAxis([...totals.keys()]);
+  const buckets = [...axis.buckets];
   const color = TYPE_PALETTE[0]; // un solo color para la línea agregada
-  const series = [{ name: 'Total', data: buckets.map((bucket) => totals.get(bucket) ?? 0) }];
+  // Los slots sintéticos no están en `totals`: quedan null y cortan la línea.
+  const series = [{ name: 'Total', data: buckets.map((bucket) => totals.get(bucket) ?? null) }];
   return {
     series,
     chart: baseChart('line', false, height),
@@ -432,7 +455,7 @@ export function buildTotalThroughputChart(
     dataLabels: { enabled: false },
     legend: { ...baseLegend(), show: false }, // serie única: leyenda redundante
     grid: baseGrid(),
-    tooltip: baseTooltip(countFormatter), // muestra "Total: N" del bucket
+    tooltip: baseTooltip(tooltipCountFormatter), // "Total: N" del bucket, "sin datos" en el hueco
     plotOptions: {},
     markers: isolatedPointMarkers(series, [color]),
   };
@@ -445,16 +468,21 @@ export function buildStageAreaChart(
   utc = true,
 ): MetricsChartOptions {
   const rows = series.filter((row) => row.job_type === jobType);
-  const buckets = [...new Set(rows.map((row) => row.bucket))].sort();
+  const axis = denseBucketAxis(rows.map((row) => row.bucket));
+  const buckets = [...axis.buckets];
   const stageNames = [...new Set(rows.flatMap((row) => Object.keys(row.stages ?? {})))];
   const byBucket = new Map<string, StageTimings>();
   for (const row of rows) {
     byBucket.set(row.bucket, row.stages ?? {});
   }
   return {
+    // Intervalo sin trabajos: null, que parte el área apilada. Dentro de uno con
+    // datos, una etapa ausente son 0 s.
     series: stageNames.map((stage) => ({
       name: stageLabel(stage),
-      data: buckets.map((bucket) => byBucket.get(bucket)?.[stage] ?? 0),
+      data: buckets.map((bucket) =>
+        axis.has(bucket) ? (byBucket.get(bucket)?.[stage] ?? 0) : null,
+      ),
     })),
     chart: baseChart('area', true, height),
     colors: stageNames.map(stageColor),

@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
 import type { DataSyncHistoryPoint } from '../../models/metrics/data-metrics.models';
-import { buildSyncTp10Chart } from './data-metrics-chart.util';
+import {
+  buildSyncErrorsChart,
+  buildSyncThroughputChart,
+  buildSyncTp10Chart,
+} from './data-metrics-chart.util';
 
 function point(over: Partial<DataSyncHistoryPoint>): DataSyncHistoryPoint {
   return {
@@ -40,5 +44,35 @@ describe('buildSyncTp10Chart', () => {
     const names = (opts.series as ReadonlyArray<{ name: string }>).map((s) => s.name).sort();
 
     expect(names).toEqual(['radar', 'satellite']);
+  });
+});
+
+describe('huecos sin datos', () => {
+  // 10:00 y 10:10 con ciclos, 10:20 y 10:30 sin nada, 10:40 de vuelta.
+  const OUTAGE = [
+    point({ bucket: '2026-06-17T10:0', downloaded: 5, errors: 0 }),
+    point({ bucket: '2026-06-17T10:1', downloaded: 7, errors: 2 }),
+    point({ bucket: '2026-06-17T10:4', downloaded: 6, errors: 0 }),
+  ];
+
+  it('buildSyncTp10Chart corta la línea sobre el intervalo sin ciclos', () => {
+    const opts = buildSyncTp10Chart(OUTAGE, 'total', true);
+    const series = opts.series as ReadonlyArray<{ data: Array<number | null> }>;
+
+    expect(series[0].data).toEqual([5, 7, null, null, 6]);
+  });
+
+  it('buildSyncThroughputChart deja el hueco sin columna', () => {
+    const opts = buildSyncThroughputChart(OUTAGE, true);
+    const series = opts.series as ReadonlyArray<{ data: Array<number | null> }>;
+
+    expect(series[0].data).toEqual([5, 7, null, null, 6]);
+  });
+
+  it('buildSyncErrorsChart distingue "sin ciclos" (hueco) de "sin errores" (0)', () => {
+    const opts = buildSyncErrorsChart(OUTAGE, true);
+    const series = opts.series as ReadonlyArray<{ data: Array<number | null> }>;
+
+    expect(series[0].data).toEqual([0, 2, null, null, 0]);
   });
 });
