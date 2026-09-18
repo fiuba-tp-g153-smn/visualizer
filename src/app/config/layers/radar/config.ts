@@ -188,6 +188,14 @@ const RADAR_LONG_RANGE_BOXES: Readonly<Record<string, BoundingBox>> = {
     [-37.38, -68.52],
     [-29.32, -58.88],
   ],
+  rma18: [
+    [-40.25, -71.93],
+    [-32.2, -61.95],
+  ],
+  rma20: [
+    [-28.77, -68.68],
+    [-20.72, -59.82],
+  ],
 };
 
 /**
@@ -427,6 +435,19 @@ const RADARES_SMN = [
     boundingBox: [
       [-38.38, -69.69],
       [-34.04, -64.18],
+    ] as const,
+  },
+  {
+    id: 'rma20',
+    number: 20,
+    ubi: 'Las Lajitas',
+    minNativeZoom: MIN_ZOOM,
+    maxNativeZoom: MAX_ZOOM,
+    // Derivada de la posición que declara el propio archivo ODIM
+    // (lat -24.74611, lon -64.25111) con el alcance de 240 km del subvolumen 01.
+    boundingBox: [
+      [-26.91, -66.64],
+      [-22.58, -61.87],
     ] as const,
   },
 ];
