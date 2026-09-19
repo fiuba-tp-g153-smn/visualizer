@@ -205,8 +205,13 @@ export function buildGfsBarbTileUrl(
 
 /**
  * URL para consultar el valor puntual de una capa de radar en una coordenada.
+ *
+ * `network` es el primer segmento del `layer.id` (`radar-sinarame` /
+ * `radar-inta`), que es exactamente el prefijo con el que el data-service monta
+ * cada flota.
  */
 export function buildRadarPointQueryUrl(
+  network: string,
   radarId: string,
   variableId: string,
   elevationId: string,
@@ -214,7 +219,7 @@ export function buildRadarPointQueryUrl(
   lat: number,
   lon: number,
 ): string {
-  return `${DATA_SERVICE_BASE_URL}/products/radar-sinarame/${radarId}/${variableId}/${elevationId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
+  return `${DATA_SERVICE_BASE_URL}/products/${network}/${radarId}/${variableId}/${elevationId}/${tilesetId}/point?lat=${lat}&lon=${lon}`;
 }
 
 /**

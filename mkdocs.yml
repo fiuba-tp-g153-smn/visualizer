@@ -33,7 +33,7 @@ nav:
       - "4. Qué muestra cada producto":
           - manual/productos/index.md
           - "4.1 Satélite GOES-19": manual/productos/satelite.md
-          - "4.2 Radar SINARAME": manual/productos/radar.md
+          - "4.2 Radar": manual/productos/radar.md
           - "4.3 Modelos numéricos": manual/productos/modelos.md
           - "4.4 Estaciones de superficie": manual/productos/estaciones.md
       - "5. Ver la evolución y consultar un punto": manual/animacion.md

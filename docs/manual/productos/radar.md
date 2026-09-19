@@ -1,11 +1,11 @@
 ---
-title: 4.2 Radar SINARAME
+title: 4.2 Radar
 ---
 
-# 4.2 Radar SINARAME
+# 4.2 Radar
 
-El grupo Radar contiene un subgrupo por cada uno de los 18 equipos de la red SINARAME. Cada radar
-publica seis variables, lo que da un catálogo de 108 capas. La capa identifica la variable y permite
+El grupo Radar reúne dos redes: los 19 equipos de **SINARAME**, con seis variables cada uno, y los
+tres del **INTA**, con cuatro. Son 126 capas en total. La capa identifica la variable y permite
 elegir la elevación y el instante que se representarán.
 
 ![Radar, variable, elevación, instante](../../imgs/diagrams/radar-capas.svg){ .diagram loading=lazy }
@@ -24,26 +24,41 @@ Cada subgrupo se llama por su número y su ubicación.
 | RMA 4 | Resistencia | RMA 10 | Bahía Blanca | RMA 16 | Villa Reynolds |
 | RMA 5 | Bernardo de Irigoyen | RMA 11 | Termas de Río Hondo | RMA 17 | Alejandro Roca |
 | RMA 6 | Mar del Plata | RMA 12 | Las Grutas | RMA 18 | Santa Isabel |
+| | | | | RMA 20 | Las Lajitas |
 
-## Las seis variables
+### Los radares del INTA
 
-Aparecen en este orden dentro de cada radar.
+Aparecen a continuación de los RMA, nombrados por su ubicación.
 
-| Capa | Variable | Unidad | Rango de la escala |
-|---|---|---|---|
-| DBZH | Reflectividad horizontal | dBZ | -18 a 76.5 |
-| DBZH 450 km | Reflectividad, barrido de largo alcance | dBZ | -18 a 76.5 |
-| KDP | Fase diferencial específica | °/km | -1 a 6 |
-| VRAD | Velocidad radial | m/s | -40 a 40 |
-| RHOHV | Coeficiente de correlación | ρhv | 0.225 a 1.048 |
-| ZDR | Reflectividad diferencial | dB | -3 a 7 |
+| Radar | Ubicación |
+|---|---|
+| INTA Paraná | Paraná, Entre Ríos |
+| INTA Anguil | Anguil, La Pampa |
+| INTA Pergamino | Pergamino, Buenos Aires |
+
+Miden lo mismo que los RMA y se usan igual. Publican cuatro variables — DBZH, ZDR, RHOHV y KDP —
+y no tienen DBZH 450 km ni VRAD. No todas están disponibles en los tres equipos: Pergamino hoy
+sólo publica DBZH.
+
+## Las variables
+
+Aparecen en este orden dentro de cada radar. Los del INTA publican las cuatro marcadas.
+
+| Capa | Variable | Unidad | Rango de la escala | INTA |
+|---|---|---|---|---|
+| DBZH | Reflectividad horizontal | dBZ | -18 a 76.5 | sí |
+| DBZH 450 km | Reflectividad, barrido de largo alcance | dBZ | -18 a 76.5 | — |
+| KDP | Fase diferencial específica | °/km | -1 a 6 | sí |
+| VRAD | Velocidad radial | m/s | -40 a 40 | — |
+| RHOHV | Coeficiente de correlación | ρhv | 0.225 a 1.048 | sí |
+| ZDR | Reflectividad diferencial | dB | -3 a 7 | sí |
 
 DBZH 450 km cubre unos 450 km en lugar de 240, con menos resolución. Es la única con una sola
 elevación.
 
 ## Las elevaciones
 
-Cada capa tiene tres elevaciones: 0.5°, 0.9° y 1.3°. Aparecen como casillas en la fila de la
+Cada capa tiene tres elevaciones: 0.5°, 0.9° y 1.3°, en las dos redes. Aparecen como casillas en la fila de la
 capa. Sólo la de 0.5° viene marcada. Podés marcar varias a la vez, y cada elevación tiene su
 propia opacidad. DBZH 450 km tiene únicamente la de 0.5°.
 

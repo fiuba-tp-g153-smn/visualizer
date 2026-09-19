@@ -883,6 +883,8 @@ export class PointQueryViewerService {
     elevationId?: string,
   ): Observable<PointQueryDisplayData> {
     const parts = layer.id.split('/');
+    // layer.id = `<red>/<radar>/<producto>`; la red decide a que flota se pregunta.
+    const network = parts[0];
     const radarId = parts[1];
     const variableId = parts[2];
     const resolvedElevationId = elevationId ?? this.resolveRadarElevation(layer, controls);
@@ -892,6 +894,7 @@ export class PointQueryViewerService {
     }
 
     const url = buildRadarPointQueryUrl(
+      network,
       radarId,
       variableId,
       resolvedElevationId,
