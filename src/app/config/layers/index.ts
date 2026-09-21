@@ -18,6 +18,8 @@ export {
   IGN_WMS_BASE_CONFIG,
   IGN_WMS_WORKSPACE_URLS,
   IGN_WMS_BACKED_UP_LAYER_IDS,
+  IGN_WMS_RELAY_TIMEOUT_MS,
+  IGN_WMS_BACKUP_MAX_NATIVE_ZOOM,
 } from './ign-wms/config';
 
 // Radar configuration
