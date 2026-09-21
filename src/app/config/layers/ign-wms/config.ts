@@ -27,12 +27,37 @@ export const IGN_WMS_WORKSPACE_URLS: Record<string, string> = {
 };
 
 /**
- * IGN WMS layer IDs whose tiles are also pre-scraped and cached by the
- * data-service basemap pipeline. For these IDs the renderer serves XYZ
- * tiles from `/basemap/{layerId}/{z}/{x}/{y}.png` (which itself relays
- * to upstream WMS and falls back to Redis/S3 caches). Layers not in this
- * set continue to hit `wms.ign.gob.ar` directly through Leaflet's WMS
- * facade.
+ * How long a backed-up IGN tile may spend on `wms.ign.gob.ar` before the
+ * renderer gives up on it and serves the data-service S3 backup instead.
+ *
+ * An `<img>` has no load timeout of its own, and a host that blackholes TCP
+ * (connect never completes, no RST) leaves the request hanging for the
+ * browser's own connect timeout. This bounds that wait explicitly.
+ */
+export const IGN_WMS_RELAY_TIMEOUT_MS = 5_000;
+
+/**
+ * Deepest zoom the data-service basemap backup covers, mirroring
+ * `data-service::basemap_cache_max_zoom`. Leaflet loads tiles from this level
+ * and upscales beyond it, so a backed-up overlay keeps rendering (pixelated)
+ * when zoomed past the backup rather than going blank during an IGN outage.
+ */
+export const IGN_WMS_BACKUP_MAX_NATIVE_ZOOM = 11;
+
+/**
+ * IGN WMS layer IDs whose tiles are also pre-scraped and backed up by the
+ * data-service basemap pipeline.
+ *
+ * For these IDs `wms.ign.gob.ar` stays the primary source — upstream is
+ * authoritative — but each tile carries a `IGN_WMS_RELAY_TIMEOUT_MS`
+ * deadline. If the tile has not loaded by then the renderer repoints it at
+ * `/basemap/{layerId}/{z}/{x}/{y}.png`, which serves the S3 backup. Without
+ * that deadline a dead WMS host costs the browser's own connect timeout
+ * (~30 s, and only 6 sockets per host), which is what made these layers look
+ * permanently broken during an outage rather than merely slow.
+ *
+ * Layers not in this set have no backup and keep hitting `wms.ign.gob.ar`
+ * directly through Leaflet's WMS facade, with no deadline.
  *
  * Keep in sync with `data-service::basemap.providers` (settings.json).
  */

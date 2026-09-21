@@ -42,7 +42,9 @@ import { WEATHER_STATION_PANE } from '../../config/layers/weather-stations/confi
 import { WEATHER_STATION_RENDER_CONFIG } from '../../config/layers/weather-stations/render.config';
 import {
   IGN_WMS_BACKED_UP_LAYER_IDS,
+  IGN_WMS_BACKUP_MAX_NATIVE_ZOOM,
   IGN_WMS_BASE_CONFIG,
+  IGN_WMS_RELAY_TIMEOUT_MS,
   IGN_WMS_WORKSPACE_URLS,
 } from '../../config/layers';
 import { adapterForLayer, hasRasterPyramid } from '../../config/layers/forecast-model';
@@ -1584,6 +1586,16 @@ export class LayerRenderService {
    * URL built from `e.coords` (XYZ, pre-WMS-BBOX, the same convention the
    * data-service endpoint expects). `dataset.fallbackUsed` guards against loops.
    */
+  /**
+   * Build a backed-up IGN overlay: `wms.ign.gob.ar` stays authoritative, but a
+   * tile that has not loaded within `IGN_WMS_RELAY_TIMEOUT_MS` is repointed at
+   * the data-service basemap endpoint, which serves the S3 backup.
+   *
+   * The deadline exists because an `<img>` has no timeout of its own. When the
+   * WMS host blackholes TCP, `tileerror` only fires after the browser's connect
+   * timeout, so an error-only fallback leaves the layer blank for ~30 s and the
+   * forecaster reads that as "the layer is down".
+   */
   private createIgnCachedTileLayer(layer: WmsLayer, controls: WmsLayerControls): L.TileLayer {
     const url = layer.wmsWorkspace
       ? IGN_WMS_WORKSPACE_URLS[layer.wmsWorkspace] || IGN_WMS_BASE_CONFIG.defaultUrl
@@ -1596,22 +1608,62 @@ export class LayerRenderService {
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
       opacity: controls.opacity,
+      // The backup only covers up to this zoom; upscale beyond it rather than
+      // requesting tiles that would come back as empty miss placeholders.
+      maxNativeZoom: IGN_WMS_BACKUP_MAX_NATIVE_ZOOM,
     });
 
-    const fallbackUrlTemplate = buildBasemapTileUrl(layer.id);
-    wmsLayer.on('tileerror', (e: L.TileErrorEvent) => {
-      const tile = e.tile as HTMLImageElement;
-      if (tile.dataset['fallbackUsed']) return;
-      tile.dataset['fallbackUsed'] = '1';
-      const { x, y, z } = e.coords;
-      tile.src = fallbackUrlTemplate
-        .replace('{z}', String(z))
-        .replace('{x}', String(x))
-        .replace('{y}', String(y));
-    });
-
+    this.attachBackupFallback(wmsLayer, layer.id);
     this.attachErrorHandlers(wmsLayer, layer.id);
     return wmsLayer;
+  }
+
+  /**
+   * Arm a per-tile deadline that swaps a stalled IGN tile over to the
+   * data-service backup, and clear it on every terminal outcome.
+   *
+   * Assigning `src` cancels the pending upstream request, so a swapped tile
+   * never later fires `tileerror` — which also stops a WMS outage from tripping
+   * the "layer unavailable" toast while the backup is serving fine.
+   */
+  private attachBackupFallback(tileLayer: L.TileLayer, layerId: string): void {
+    const fallbackUrlTemplate = buildBasemapTileUrl(layerId);
+    const timers = new WeakMap<HTMLImageElement, ReturnType<typeof setTimeout>>();
+
+    const clear = (tile: HTMLImageElement): void => {
+      const timer = timers.get(tile);
+      if (timer === undefined) return;
+      clearTimeout(timer);
+      timers.delete(tile);
+    };
+
+    const swapToBackup = (tile: HTMLImageElement, coords: L.Coords): void => {
+      clear(tile);
+      if (tile.dataset['fallbackUsed']) return;
+      tile.dataset['fallbackUsed'] = '1';
+      tile.src = fallbackUrlTemplate
+        .replace('{z}', String(coords.z))
+        .replace('{x}', String(coords.x))
+        .replace('{y}', String(coords.y));
+    };
+
+    tileLayer.on('tileloadstart', (e: L.TileEvent) => {
+      const tile = e.tile as HTMLImageElement;
+      timers.set(
+        tile,
+        setTimeout(() => swapToBackup(tile, e.coords), IGN_WMS_RELAY_TIMEOUT_MS),
+      );
+    });
+
+    // Terminal outcomes. `tileunload`/`tileabort` matter during playback: a
+    // timer that outlives its tile would otherwise write `src` on a detached
+    // node Leaflet has already torn down.
+    tileLayer.on('tileload', (e: L.TileEvent) => clear(e.tile as HTMLImageElement));
+    tileLayer.on('tileunload', (e: L.TileEvent) => clear(e.tile as HTMLImageElement));
+    tileLayer.on('tileabort', (e: L.TileEvent) => clear(e.tile as HTMLImageElement));
+    tileLayer.on('tileerror', (e: L.TileErrorEvent) =>
+      swapToBackup(e.tile as HTMLImageElement, e.coords),
+    );
   }
 
   // ============================================================================
