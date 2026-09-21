@@ -24,3 +24,16 @@ describe('Radar layer labels', () => {
     }
   });
 });
+
+describe('Radar tile scheme', () => {
+  it('is XYZ, which the tile prefetcher assumes when building warm URLs', () => {
+    // TilePrefetchService.buildUrls emits Y un-flipped, matching what Leaflet
+    // requests for a `tms: false` layer. It used to flip Y for radar only, so
+    // every warmed URL was a mirrored tile the map never asked for — the
+    // prefetch warmed 404-shaped miss placeholders and radar played back cold.
+    // Flipping this flag without revisiting the prefetcher re-breaks that.
+    for (const l of radarLayers()) {
+      expect(l.tms ?? false).toBe(false);
+    }
+  });
+});

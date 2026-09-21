@@ -154,7 +154,6 @@ export class TilePrefetchService {
               `${layer.id}/${elevationId}/${entry.id}`,
               clampedZoom,
               tileRange,
-              true,
             );
             if (urls.length > MAX_TILES_PER_LAYER) continue;
             this.enqueue(urls);
@@ -202,29 +201,26 @@ export class TilePrefetchService {
 
   /**
    * Builds the full list of tile URLs for a given tileset path, zoom level, and tile range.
+   *
+   * Y is emitted in XYZ convention, matching what Leaflet requests: every layer
+   * in the app is `tms: false`, so a prefetch that flipped Y would warm tiles
+   * the map never asks for.
+   *
    * @param pathToTileset - Tileset path passed to buildTileUrl (e.g. "goes19/abi/ch-2/202501010000")
    * @param zoom - Zoom level to use in the URL
    * @param tileRange - Inclusive tile coordinate range to iterate
-   * @param tms - When true, flips the Y axis for TMS tile scheme (used by radar layers)
    * @returns Array of fully-resolved tile URLs
    */
-  private buildUrls(
-    pathToTileset: string,
-    zoom: number,
-    tileRange: TileRange,
-    tms = false,
-  ): string[] {
+  private buildUrls(pathToTileset: string, zoom: number, tileRange: TileRange): string[] {
     const template = buildTileUrl(pathToTileset);
     const urls: string[] = [];
-    const maxY = Math.pow(2, zoom) - 1;
 
     for (let x = tileRange.xMin; x <= tileRange.xMax; x++) {
       for (let y = tileRange.yMin; y <= tileRange.yMax; y++) {
-        const tileY = tms ? maxY - y : y;
         const url = template
           .replace('{z}', String(zoom))
           .replace('{x}', String(x))
-          .replace('{y}', String(tileY));
+          .replace('{y}', String(y));
         urls.push(url);
       }
     }
