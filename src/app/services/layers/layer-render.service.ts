@@ -1323,17 +1323,23 @@ export class LayerRenderService {
     const minTimeIndex = computeWindowStart(totalFrames, imageCount, isForecast);
     const windowSize = Math.min(imageCount, totalFrames - minTimeIndex);
 
-    if (windowSize > 1) {
-      for (let offset = 1; offset <= MAP_CONFIG.prerenderNextFrames; offset++) {
-        const posInWindow = currentTimeIndex - minTimeIndex;
-        const adjPosInWindow = (((posInWindow + offset) % windowSize) + windowSize) % windowSize;
-        const adjIndex = minTimeIndex + adjPosInWindow;
+    // Never look ahead far enough to wrap back onto the current frame: the
+    // offsets are taken modulo `windowSize`, so an offset of `windowSize`
+    // re-creates the frame being displayed and `result.set` would replace it
+    // with a copy styled at opacity 0 — blanking the very frame the user is
+    // looking at. Bites whenever the playback window is no longer than the
+    // look-ahead (e.g. a 2-frame product).
+    const lookAhead = Math.min(MAP_CONFIG.prerenderNextFrames, windowSize - 1);
 
-        const created = createLayer(adjIndex);
-        if (!created) continue;
-        this.applyLayerStyles(created.layer, 0, absoluteZIndex);
-        result.set(created.key, created.layer);
-      }
+    for (let offset = 1; offset <= lookAhead; offset++) {
+      const posInWindow = currentTimeIndex - minTimeIndex;
+      const adjPosInWindow = (((posInWindow + offset) % windowSize) + windowSize) % windowSize;
+      const adjIndex = minTimeIndex + adjPosInWindow;
+
+      const created = createLayer(adjIndex);
+      if (!created) continue;
+      this.applyLayerStyles(created.layer, 0, absoluteZIndex);
+      result.set(created.key, created.layer);
     }
   }
 

@@ -32,8 +32,16 @@ export const MAP_CONFIG = {
   defaultBaseMapId: 'argenmap',
 
   // Number of next frames to pre-render in the DOM with opacity=0
-  // para animaciones suaves sin flashes durante playback
-  prerenderNextFrames: 2,
+  // para animaciones suaves sin flashes durante playback.
+  //
+  // This also sets how long a frame survives after being displayed. Frames
+  // outside the window are torn off the map, and Leaflet's _removeTile points
+  // each <img> at an empty data URI — which cancels any request still in
+  // flight, so that tile never reaches the browser cache and is genuinely
+  // re-downloaded on the next loop. A wider window gives tiles more ticks to
+  // finish before teardown, at the cost of (1 + N) frames of tiles held in the
+  // DOM per layer.
+  prerenderNextFrames: 4,
 
   // Default tool visibility
   defaultShowCoordinates: false,
