@@ -46,12 +46,15 @@ El router de satélite se queda con la ruta comodín `/products/{product_id}`. E
 
 | Método | Ruta | Parámetros | Errores |
 |---|---|---|---|
-| `GET` | `/products/radar` | No corresponde | No corresponde |
-| `GET` | `/products/radar-sinarame/{radar_id}` | No corresponde | No corresponde |
-| `GET` | `/products/radar-sinarame/{radar_id}/{variable_id}` | No corresponde | No corresponde |
-| `GET` | `/products/radar-sinarame/{radar_id}/{variable_id}/{elevation_id}` | No corresponde | No corresponde |
-| `GET` | `/products/radar-sinarame/{r}/{v}/{e}/{tileset_id}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`; una tesela ausente devuelve `200` transparente |
-| `GET` | `/products/radar-sinarame/{r}/{v}/{e}/{tileset_id}/point` | `lat`, `lon` | `404` |
+| `GET` | `/products/radar-{red}` | No corresponde | No corresponde |
+| `GET` | `/products/radar-{red}/{radar_id}` | No corresponde | No corresponde |
+| `GET` | `/products/radar-{red}/{radar_id}/{variable_id}` | No corresponde | No corresponde |
+| `GET` | `/products/radar-{red}/{radar_id}/{variable_id}/{elevation_id}` | No corresponde | No corresponde |
+| `GET` | `/products/radar-{red}/{r}/{v}/{e}/{tileset_id}/{z}/{x}/{y}.webp` | `If-None-Match` | `304`; una tesela ausente devuelve `200` transparente |
+| `GET` | `/products/radar-{red}/{r}/{v}/{e}/{tileset_id}/point` | `lat`, `lon` | `404` |
+
+`{red}` es `sinarame` o `inta`. Las dos flotas exponen el mismo contrato sobre el mismo
+layout; cambia el subárbol de S3 que sirven y el espacio de claves que usan en Redis.
 
 ### ECMWF
 

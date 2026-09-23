@@ -10,8 +10,22 @@ import { LAYER_DEFINITIONS } from '../../config/layers';
 import { adapterForLayer } from '../../config/layers/forecast-model';
 import { environment } from '../../../environments/environment';
 
-const RADAR_ID_PATTERN = /radar\/([A-Z0-9]+)\//;
+// layer.id = `<red>/<radar>/<producto>`, con la red en el primer segmento
+// (`radar-sinarame`, `radar-inta`). El patron anterior exigia el literal
+// `radar/` y dejo de matchear cuando la red paso a llevar sufijo, por lo que
+// todos los radares caian a la etiqueta generica.
+const RADAR_ID_PATTERN = /^radar-[a-z]+\/([A-Z0-9]+)\//;
 const RADAR_RMA_PATTERN = /^RMA(\d+)$/;
+
+/**
+ * Nombre visible de los radares que no siguen la numeracion RMA (los del INTA,
+ * cuyo id es un codigo de tres letras). Sin entrada se muestra el id crudo.
+ */
+const RADAR_DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  PAR: 'INTA Paraná',
+  ANG: 'INTA Anguil',
+  PER: 'INTA Pergamino',
+};
 
 /**
  * Service responsible for managing layer definitions and metadata.
@@ -110,11 +124,14 @@ export class LayersService {
               break;
 
             case LayerCategory.RADAR: {
-              // Extract radar ID from layer.id (e.g., "radar/RMA1/DBZH" → "RMA 1")
+              // "radar-sinarame/RMA1/dbzh" → "RMA 1"
+              // "radar-inta/PAR/dbzh"      → "INTA Paraná"
               const radarIdMatch = layer.id.match(RADAR_ID_PATTERN);
               const radarId = radarIdMatch ? radarIdMatch[1] : 'RMA';
               const rmaMatch = radarId.match(RADAR_RMA_PATTERN);
-              parts.push(rmaMatch ? `RMA ${rmaMatch[1]}` : radarId);
+              parts.push(
+                rmaMatch ? `RMA ${rmaMatch[1]}` : (RADAR_DISPLAY_NAMES[radarId] ?? radarId),
+              );
 
               parts.push(layer.name);
 

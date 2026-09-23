@@ -48,7 +48,9 @@ const RADAR_DEFAULTS = {
   isForecast: false,
 };
 
-const satelitePrefix = 'radar-sinarame';
+/** Prefijo de ruta de cada red; es el segmento que sirve el data-service. */
+const SINARAME_PREFIX = 'radar-sinarame';
+const INTA_PREFIX = 'radar-inta';
 enum RadarProduct {
   DBZH = 'dbzh',
   DBZH_450KM = 'dbzh-450km',
@@ -452,23 +454,117 @@ const RADARES_SMN = [
   },
 ];
 
-export const RADAR_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => ({
-  id: radar.id,
-  name: `RMA ${radar.number} - ${radar.ubi}`,
-  description: `Capas del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
-  expanded: false,
-  layers: products.map((product) => {
+/**
+ * Radares del INTA (Rainbow5). Se publican bajo `tiles/radar/inta/...`, con los
+ * mismos productos y elevaciones que los SINARAME: la geometría de 240 km es
+ * equivalente y las tres primeras elevaciones (0.5°, 0.9°, 1.3°) coinciden.
+ *
+ * Coordenadas y alcance leídos de la cabecera XML de los propios `.vol`; la
+ * caja es centro ± 240 km con la corrección por coseno de la latitud, la misma
+ * fórmula que aplica el backend en `_compute_cartesian_mapping`.
+ */
+const RADARES_INTA = [
+  {
+    id: 'par',
+    name: 'INTA Paraná',
+    ubi: 'Paraná',
+    minNativeZoom: MIN_ZOOM,
+    maxNativeZoom: MAX_ZOOM,
+    // lat -31.848438, lon -60.537289
+    boundingBox: [
+      [-34.02, -63.09],
+      [-29.68, -57.99],
+    ] as const,
+  },
+  {
+    id: 'ang',
+    name: 'INTA Anguil',
+    ubi: 'Anguil',
+    minNativeZoom: MIN_ZOOM,
+    maxNativeZoom: MAX_ZOOM,
+    // lat -36.539684, lon -63.990067
+    boundingBox: [
+      [-38.71, -66.69],
+      [-34.37, -61.29],
+    ] as const,
+  },
+  {
+    id: 'per',
+    name: 'INTA Pergamino',
+    ubi: 'Pergamino',
+    minNativeZoom: MIN_ZOOM,
+    maxNativeZoom: MAX_ZOOM,
+    // lat -33.946098, lon -60.562500
+    boundingBox: [
+      [-36.11, -63.17],
+      [-31.78, -57.95],
+    ] as const,
+  },
+];
+
+/**
+ * Productos del feed INTA: los cuatro momentos con equivalente directo en
+ * SINARAME. No incluye `vrad` (el Nyquist de estos radares es ±6,65 m/s contra
+ * los ±40 que abarca la paleta, se vería monocroma) ni `dbzh-450km` (no hay
+ * barrido de largo alcance en este feed).
+ */
+const INTA_PRODUCTS: readonly RadarProduct[] = [
+  RadarProduct.DBZH,
+  RadarProduct.ZDR,
+  RadarProduct.RHOHV,
+  RadarProduct.KDP,
+];
+
+interface RadarSite {
+  readonly id: string;
+  readonly minNativeZoom: number;
+  readonly maxNativeZoom: number;
+  readonly boundingBox: BoundingBox;
+}
+
+function buildRadarLayers(
+  prefix: string,
+  site: RadarSite,
+  siteLabel: string,
+  siteProducts: readonly RadarProduct[],
+): RadarTileLayer[] {
+  return siteProducts.map((product) => {
     const label = RADAR_PRODUCT_LABELS[product];
     return {
       ...RADAR_DEFAULTS,
-      id: `${satelitePrefix}/${radar.id.toUpperCase()}/${product}`,
+      id: `${prefix}/${site.id.toUpperCase()}/${product}`,
       name: label,
       scale: RADAR_SCALES[product],
-      description: `Producto ${label} del radar meteorológico RMA ${radar.number} de ${radar.ubi}`,
-      minNativeZoom: radar.minNativeZoom,
-      maxNativeZoom: radar.maxNativeZoom,
-      availableElevations: RADAR_PRODUCT_ELEVATIONS[product] ?? RADAR_DEFAULTS.availableElevations,
-      boundingBox: boundingBoxFor(product, radar.id, radar.boundingBox),
+      description: `Producto ${label} del radar meteorológico ${siteLabel}`,
+      minNativeZoom: site.minNativeZoom,
+      maxNativeZoom: site.maxNativeZoom,
+      availableElevations:
+        RADAR_PRODUCT_ELEVATIONS[product] ?? RADAR_DEFAULTS.availableElevations,
+      boundingBox: boundingBoxFor(product, site.id, site.boundingBox),
     };
-  }) as RadarTileLayer[],
+  }) as RadarTileLayer[];
+}
+
+const SINARAME_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => {
+  const siteLabel = `RMA ${radar.number} de ${radar.ubi}`;
+  return {
+    id: radar.id,
+    name: `RMA ${radar.number} - ${radar.ubi}`,
+    description: `Capas del radar meteorológico ${siteLabel}`,
+    expanded: false,
+    layers: buildRadarLayers(SINARAME_PREFIX, radar, siteLabel, products),
+  };
+});
+
+const INTA_SUBGROUPS: LayerSubgroup[] = RADARES_INTA.map((radar) => ({
+  id: radar.id,
+  name: radar.name,
+  description: `Capas del radar meteorológico ${radar.name} del INTA`,
+  expanded: false,
+  layers: buildRadarLayers(INTA_PREFIX, radar, `${radar.name} del INTA`, INTA_PRODUCTS),
 }));
+
+export const RADAR_SUBGROUPS: LayerSubgroup[] = [
+  ...SINARAME_SUBGROUPS,
+  ...INTA_SUBGROUPS,
+];
