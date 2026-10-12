@@ -3,7 +3,7 @@
  * resultado), compartidas por las tablas de resumen y de trabajos recientes.
  */
 import type { JobOutcome, OutcomeCounts, StageTimings } from '../../models/metrics/metrics.models';
-import { stageColor } from '../../services/metrics/metrics-chart.util';
+import { orderedStageEntries, stageColor } from '../../services/metrics/metrics-chart.util';
 import { secs } from '../../services/metrics/metrics-format.util';
 import { outcomeLabel, stageLabel } from '../../services/metrics/metrics-labels.constants';
 import { barCell, pillsCell, type Cell } from './sortable-table/sortable-table.models';
@@ -17,7 +17,7 @@ export function stageTotal(stages: StageTimings): number {
 
 /** Barra apilada del desglose por etapa, con leyenda en español. */
 export function stageBarCell(stages: StageTimings): Cell {
-  const entries = Object.entries(stages ?? {});
+  const entries = orderedStageEntries(stages);
   const total = entries.reduce((sum, [, value]) => sum + value, 0);
   if (total <= 0) {
     return barCell([], '');
@@ -32,7 +32,7 @@ export function stageBarCell(stages: StageTimings): Cell {
 
 /** Leyenda textual del desglose por etapa (usada también en "detalle"). */
 export function stageLegend(stages: StageTimings): string {
-  return Object.entries(stages ?? {})
+  return orderedStageEntries(stages)
     .map(([name, value]) => `${stageLabel(name)} ${secs(value)}`)
     .join(' · ');
 }

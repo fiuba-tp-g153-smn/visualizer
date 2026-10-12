@@ -90,6 +90,9 @@ const TYPE_PALETTE: readonly string[] = [
 ];
 
 const STAGE_COLORS: Readonly<Record<string, string>> = {
+  startup: '#455a64',
+  setup: '#90a4ae',
+  teardown: '#263238',
   read: '#8e8e8e',
   load: '#8e8e8e',
   aggregate: '#9b5bbd',
@@ -128,6 +131,24 @@ export function typeColor(jobType: string): string {
 
 export function stageColor(stage: string): string {
   return STAGE_COLORS[stage] ?? '#8e8e8e';
+}
+
+// Las etapas llegan en el orden en que el backend las vio por primera vez. Si la
+// ventana mezcla trabajos anteriores a las etapas de arranque, estas quedarían
+// detrás de la subida; se fijan al principio (arranque, inicialización) y al
+// final (cierre) para que el desglose siga el orden real de ejecución.
+const STAGE_RANK: Readonly<Record<string, number>> = { startup: -2, setup: -1, teardown: 1 };
+
+/** Nombres de etapa en orden de ejecución; el resto conserva su orden de llegada. */
+export function orderStageNames(names: readonly string[]): string[] {
+  const rank = (name: string): number => STAGE_RANK[name] ?? 0;
+  return [...names].sort((a, b) => rank(a) - rank(b));
+}
+
+/** Entradas del desglose por etapa en orden de ejecución (ver `orderStageNames`). */
+export function orderedStageEntries(stages: StageTimings): [string, number][] {
+  const values = stages ?? {};
+  return orderStageNames(Object.keys(values)).map((name) => [name, values[name]]);
 }
 
 function shade(hex: string, amount: number): string {
@@ -275,10 +296,10 @@ function renderCountTooltip(context: CustomTooltipContext): string {
     if (count > 0) {
       rows.push(
         `<div class="apx-tip__row">` +
-          `<span class="apx-tip__dot" style="background:${colors[i]}"></span>` +
-          `<span class="apx-tip__name">${seriesNames[i]}</span>` +
-          `<span class="apx-tip__val">${Math.round(count)}</span>` +
-          `</div>`,
+        `<span class="apx-tip__dot" style="background:${colors[i]}"></span>` +
+        `<span class="apx-tip__name">${seriesNames[i]}</span>` +
+        `<span class="apx-tip__val">${Math.round(count)}</span>` +
+        `</div>`,
       );
     }
   }
@@ -470,7 +491,9 @@ export function buildStageAreaChart(
   const rows = series.filter((row) => row.job_type === jobType);
   const axis = denseBucketAxis(rows.map((row) => row.bucket));
   const buckets = [...axis.buckets];
-  const stageNames = [...new Set(rows.flatMap((row) => Object.keys(row.stages ?? {})))];
+  const stageNames = orderStageNames([
+    ...new Set(rows.flatMap((row) => Object.keys(row.stages ?? {}))),
+  ]);
   const byBucket = new Map<string, StageTimings>();
   for (const row of rows) {
     byBucket.set(row.bucket, row.stages ?? {});
@@ -509,7 +532,7 @@ export function buildStagePieChart(
   const labels: string[] = [];
   const series: number[] = [];
   const colors: string[] = [];
-  for (const [name, value] of Object.entries(stages ?? {})) {
+  for (const [name, value] of orderedStageEntries(stages)) {
     labels.push(stageLabel(name));
     series.push(value);
     colors.push(stageColor(name));

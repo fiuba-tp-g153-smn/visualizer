@@ -20,6 +20,9 @@ export const OUTCOME_COLORS: Readonly<Record<string, string>> = {
 const FALLBACK_OUTCOME_COLOR = '#8e8e8e';
 
 export const STAGE_LABELS: Readonly<Record<string, string>> = {
+  startup: 'Arranque',
+  setup: 'Inicialización',
+  teardown: 'Cierre',
   read: 'Lectura',
   load: 'Carga',
   aggregate: 'Agregación',

@@ -8,7 +8,9 @@ import {
   buildThroughputBarChart,
   buildTotalThroughputChart,
   buildTypeColorMap,
+  orderStageNames,
   pivot,
+  stageColor,
   typeColor,
 } from './metrics-chart.util';
 
@@ -221,5 +223,61 @@ describe('buildStageAreaChart', () => {
     expect(opts.chart.type).toBe('area');
     expect(opts.chart.stacked).toBe(true);
     expect(opts.series.map((s) => s.name)).toEqual(['Georref.', 'Teselado']);
+  });
+});
+
+describe('etapas de arranque del subproceso', () => {
+  it('orderStageNames pone arranque e inicialización primero y cierre al final', () => {
+    expect(orderStageNames(['read', 'teardown', 'tiling', 'setup', 'upload', 'startup'])).toEqual([
+      'startup',
+      'setup',
+      'read',
+      'tiling',
+      'upload',
+      'teardown',
+    ]);
+  });
+
+  it('orderStageNames conserva el orden de llegada de las demás etapas', () => {
+    expect(orderStageNames(['upload', 'georef', 'tiling'])).toEqual(['upload', 'georef', 'tiling']);
+  });
+
+  it('buildStagePieChart las etiqueta en español, en orden de ejecución y con color propio', () => {
+    const opts = buildStagePieChart(
+      { teardown: 0.4, tiling: 4, startup: 2.1, setup: 0.3 },
+      null,
+      false,
+    );
+    expect(opts.labels).toEqual(['Arranque', 'Inicialización', 'Teselado', 'Cierre']);
+    expect(opts.series).toEqual([2.1, 0.3, 4, 0.4]);
+    const colors = ['startup', 'setup', 'teardown'].map(stageColor);
+    expect(new Set(colors).size).toBe(3);
+    expect(colors).not.toContain(stageColor('read'));
+    expect(colors).not.toContain(stageColor('desconocida'));
+  });
+
+  it('buildStageAreaChart ordena por ejecución aunque los intervalos viejos no tengan arranque', () => {
+    const point = (bucket: string, stages: Record<string, number>): TimingSeriesPoint => ({
+      bucket,
+      job_type: 'a',
+      count: 1,
+      avg_total_s: 10,
+      p95_total_s: 12,
+      stages,
+    });
+    const opts = buildStageAreaChart(
+      [
+        point('b1', { read: 3, upload: 2 }),
+        point('b2', { startup: 2, setup: 0.3, read: 3, upload: 2, teardown: 0.4 }),
+      ],
+      'a',
+    );
+    expect(opts.series.map((s) => s.name)).toEqual([
+      'Arranque',
+      'Inicialización',
+      'Lectura',
+      'Subida',
+      'Cierre',
+    ]);
   });
 });
