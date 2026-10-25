@@ -37,8 +37,7 @@ Los archivos que congelan el perfil viven en el repositorio `mapasmn` y en su
 submódulo `tiles-processor`:
 
 - `compose.beta-1.yaml` une los cuatro componentes;
-- `docker-compose-beta-1.yaml` fija la topología liviana del procesador;
-- `docker-compose-beta-1.override.yaml` monta su configuración;
+- `docker-compose-beta-1.yaml` fija la topología liviana del procesador y monta su configuración;
 - `settings-beta-1.json` fija fuentes, radares y productos.
 
 Esos archivos se versionan juntos. Una revisión de `mapasmn` identifica el
