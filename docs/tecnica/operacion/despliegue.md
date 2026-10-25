@@ -107,7 +107,7 @@ Las imágenes fijan Poetry 2.3.2; dos workflows no. La versión de CI puede desp
 | SeaweedFS | `chrislusf/seaweedfs:4.45` |
 | Redis | `redis:8.10-trixie` |
 | MySQL | `mysql:8.4` |
-| Documentación | `squidfunk/mkdocs-material:9.7.7` |
+| Documentación | `squidfunk/mkdocs-material:9.8.0` |
 | Base de `tiles-processor` | `ghcr.io/osgeo/gdal:ubuntu-small-3.12.3-amd64` |
 | Base de `data-service` y `alerts-service` | `python:3.13-slim-trixie` |
 | Build y runtime del visualizador | `node:24-alpine`, `nginx:mainline-alpine-slim` |

@@ -6,7 +6,7 @@ DEV_CONTAINER_NAME = visualizer-dev-container
 
 # Docs toolchain. Pinned: the site is built by this image and by the `docs`
 # stage of the app Dockerfile, and both must produce the same output.
-DOCS_IMAGE = squidfunk/mkdocs-material:9.7.7
+DOCS_IMAGE = squidfunk/mkdocs-material:9.8.0
 # --user keeps the bind-mounted output owned by the caller instead of root.
 # NO_MKDOCS_2_WARNING silences Material's informational MkDocs 2.0 advisory;
 # the pinned image is on mkdocs 1.6, so it does not apply to us.

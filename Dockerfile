@@ -6,7 +6,7 @@
 # Renders docs/ into a static site with MkDocs Material. Keep this image tag in
 # sync with DOCS_IMAGE in the Makefile so a local `make docs` and the image
 # build produce the same output. --strict fails the build on a broken link.
-FROM squidfunk/mkdocs-material:9.7.7 AS docs
+FROM squidfunk/mkdocs-material:9.8.0 AS docs
 
 COPY mkdocs.yml /docs/mkdocs.yml
 COPY docs /docs/docs

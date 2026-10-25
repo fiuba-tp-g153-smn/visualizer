@@ -4,7 +4,7 @@ services:
   # `public/**/*` asset glob serves it at /docs-site/. Use `make docs-serve`
   # for a live-reloading docs preview while writing.
   docs-build:
-    image: squidfunk/mkdocs-material:9.7.7
+    image: squidfunk/mkdocs-material:9.8.0
     # Keeps the output owned by the caller; make up exports these.
     user: "${DOCS_UID:-1000}:${DOCS_GID:-1000}"
     environment:
