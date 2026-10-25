@@ -6,6 +6,7 @@
 npm start          # Dev server (ng serve)
 npm run build      # Production build
 npm test           # Unit tests (Vitest)
+make test          # Unit tests once, inside the Docker dev image
 make up            # Docker dev with hot-reload
 make down          # Stop dev containers
 make prod          # Docker production build+run

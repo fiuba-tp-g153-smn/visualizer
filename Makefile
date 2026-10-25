@@ -13,7 +13,7 @@ DOCS_IMAGE = squidfunk/mkdocs-material:9.8.0
 DOCS_RUN = docker run --rm --user "$$(id -u):$$(id -g)" \
 	-e NO_MKDOCS_2_WARNING=1 -v "$$PWD":/docs $(DOCS_IMAGE)
 
-.PHONY: build stop clean up down dev prod docs docs-serve docs-check docs-media diagrams
+.PHONY: build stop clean up down dev prod test docs docs-serve docs-check docs-media diagrams
 
 # Build the documentation into public/docs-site (gitignored). Angular copies
 # public/ verbatim, so this is all that is needed for `npm start` to serve
@@ -77,3 +77,11 @@ down:
 
 prod:
 	docker compose up --build
+
+# Run the Vitest suite once inside the dev image, like the backends' `make test`.
+# - Reuses Dockerfile.dev, which installs deps with `npm ci` and copies the source,
+#   so only the source layer rebuilds between runs
+# - --watch=false makes `ng test` exit after one run instead of waiting for changes
+test:
+	docker build . -f Dockerfile.dev -t visualizer-test && \
+		docker run --rm -e NPM_CONFIG_UPDATE_NOTIFIER=false visualizer-test npx ng test --watch=false
