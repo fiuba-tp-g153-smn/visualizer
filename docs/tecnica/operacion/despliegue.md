@@ -61,11 +61,12 @@ La intención aparente y el efecto real no coinciden.
     preparaba el entorno de Python quedó sin uso.
 
 !!! warning "Trivy no bloquea ningún despliegue en ningún repositorio"
-    En los tres repositorios de la generación anterior, el escaneo de imagen no figura en las
+    En `data-service`, `alerts-service` y `visualizer`, el escaneo de imagen no figura en las
     dependencias del trabajo de despliegue: corre en paralelo. Un hallazgo crítico pone el
     workflow en rojo después de que la aplicación ya se desplegó. En `tiles-processor` el escaneo
     vive en un workflow aparte que `deploy.yml` no invoca. Además, todas las excepciones de Trivy
-    de `alerts-service` vencieron el 1 de septiembre de 2026, y dos de `data-service` en julio.
+    de `alerts-service` vencieron el 1 de septiembre de 2026; las de `data-service`, en julio
+    y octubre. Revisar los archivos `.trivyignore.yaml` antes de una entrega.
 
 ### La secuencia de despliegue
 
@@ -87,34 +88,37 @@ Los cuatro secretos, por nombre: `COOLIFY_DEPLOY_HOOK`, `COOLIFY_DEPLOY_TOKEN`, 
 y `COOLIFY_READ_TOKEN`. Ningún workflow contiene un host, un puerto ni una URL de salud del
 sistema: la salud la informa la API de Coolify.
 
-## Dos generaciones de configuración
+## Herramientas de CI
 
-| Aspecto | `tiles-processor` | Los otros tres |
-|---|---|---|
-| Workflows | CI, despliegue y seguridad, en tres archivos | Pruebas y despliegue, en dos |
-| gitleaks | 8.30.1, fijado por versión y suma SHA-256 | Última publicación, sin verificar |
-| Trivy | 0.72.0, fijado por versión y suma | 0.70.0, sin verificar |
-| Poetry en CI | Fijado a 2.3.2 | `pip install poetry`, sin versión; el visualizador usa Node |
-| Acción de checkout | v7, salvo el propio `deploy.yml`, que usa v4 | v4 |
+| Aspecto | `tiles-processor` | `data-service` y `alerts-service` | `visualizer` |
+|---|---|---|---|
+| Workflows | CI, despliegue y seguridad separados | Pruebas y despliegue | Pruebas y despliegue |
+| gitleaks | 8.30.1 con SHA-256 | 8.30.1 con SHA-256 | 8.30.1 con SHA-256 |
+| Trivy | 0.72.0 con SHA-256 | 0.70.0 con SHA-256 | 0.70.0 con SHA-256 |
+| Runtime de pruebas | Python 3.12.3, Poetry 2.3.2 | Python 3.13, Poetry 2.3.2 | Node 24, `npm ci` |
+| Checkout | v7 en CI/seguridad; v4 en `deploy.yml` | v7 | v7 |
 
-Las imágenes fijan Poetry 2.3.2; dos workflows no. La versión de CI puede desplazarse sola.
+La descarga de herramientas verifica la suma antes de ejecutar el binario. Cambiar su versión
+requiere actualizar también el checksum. Esa verificación de integridad no cambia qué trabajos
+condicionan el despliegue: las dependencias y excepciones se describen arriba.
 
 ## Las imágenes
 
 | Componente | Imagen |
 |---|---|
-| RabbitMQ | `rabbitmq:4.2.9-management` |
-| SeaweedFS | `chrislusf/seaweedfs:4.45` |
+| RabbitMQ | `rabbitmq:4.3.7-management` |
+| SeaweedFS | `chrislusf/seaweedfs:4.48` |
 | Redis | `redis:8.10-trixie` |
-| MySQL | `mysql:8.4` |
+| MySQL | `mysql:8.4.13` |
 | Documentación | `squidfunk/mkdocs-material:9.8.0` |
-| Base de `tiles-processor` | `ghcr.io/osgeo/gdal:ubuntu-small-3.12.3-amd64` |
+| Base de `tiles-processor` | `ghcr.io/osgeo/gdal:ubuntu-small-3.12.4-amd64` |
 | Base de `data-service` y `alerts-service` | `python:3.13-slim-trixie` |
 | Build y runtime del visualizador | `node:24-alpine`, `nginx:mainline-alpine-slim` |
 
-Las dos del visualizador son las únicas etiquetas que se mueven solas. Ninguna imagen está fijada
-por resumen criptográfico. `tiles-processor` tiene además dos dependencias fuera del archivo de
-bloqueo: una se instala siempre en su última versión y otra se toma de la punta de un repositorio.
+Ninguna imagen está fijada por digest. Las etiquetas de Node, nginx y Python admiten actualizaciones
+sin cambiar el Dockerfile. Para repetir una entrega, registrar y conservar las imágenes aprobadas.
+El procesador instala desde Poetry, pero su build puede regenerar el lockfile si falla la validación;
+validarlo antes de construir la entrega.
 
 | Repositorio | Etapas de construcción |
 |---|---|
@@ -131,12 +135,13 @@ bloqueo: una se instala siempre en su última versión y otra se toma de la punt
 
 ## Migraciones al arrancar
 
-`alerts-service` corre `alembic upgrade head` en su punto de entrada, y aborta si falla. Sin
-`MANAGE_DB_SCHEMAS`, es una operación vacía. `tiles-processor` y `data-service` aplican las suyas en
-proceso al arrancar, serializadas con un bloqueo de archivo.
+`alerts-service` corre `alembic upgrade head` para MySQL en su punto de entrada y aborta si falla.
+Con `MANAGE_DB_SCHEMAS=false` o sin definir, omite esas migraciones; sus bases SQLite de jobs y
+métricas se migran por separado durante el arranque. `tiles-processor` y `data-service` aplican sus
+migraciones SQLite en proceso, serializadas con un bloqueo de archivo.
 
-!!! danger "`MANAGE_DB_SCHEMAS` debe quedar sin definir en producción"
-    El esquema pertenece al DBA del SMN. Definirla apuntando a la base del organismo ejecuta DDL
+!!! danger "No habilitar migraciones sobre el esquema institucional"
+    Establecer `MANAGE_DB_SCHEMAS=false` y usar cuentas sin DDL. Habilitarla ejecuta migraciones
     sobre un sistema ajeno, incluida una revisión que trunca tablas. Ver
     [19.3 Endurecimiento](../seguridad/endurecimiento.md).
 

@@ -29,6 +29,16 @@ Base: `DATA_SERVICE_BASE_URL`, puerto `6006` en el ejemplo. Todo es anónimo sal
 | `GET` | `/` | `{"status":"ok","service":"data-service"}` |
 | `GET` | `/health` | `{"status":"running"}`. No comprueba Redis ni el almacén. |
 
+### Disponibilidad de productos
+
+`GET /products/availability` devuelve `available` —rutas de productos con datos— y `domains`
+—dominios que aportaron al menos una ruta—. Admite `If-None-Match` y responde `304` si no cambió.
+Consulta las mismas estrategias Redis/S3 que los listados individuales y comparte un snapshot
+memoizado entre clientes. Para los productos cubiertos, ausencia de `available` significa que el
+listado no ofrece datos; no requiere una petición adicional por producto. `domains` es diagnóstico,
+no un catálogo de dominios configurados ni una prueba de salud del origen. Si falla la llamada
+agregada, el cliente puede recurrir a los listados individuales.
+
 ### Satélite
 
 El router de satélite se queda con la ruta comodín `/products/{product_id}`. El único producto es

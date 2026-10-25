@@ -42,8 +42,10 @@ host. Es el único mecanismo del sistema que asume una sola máquina, y tiene tr
 3. El filtrado tiene que ser por dirección de origen, no por cierre del puerto: permitir al host y
    bloquear el resto.
 
-`alerts-service` usa el mismo camino para su respaldo, sólo si `S3_ENDPOINT` está definido. La
-alternativa es una red de compose común, con el servicio de datos apuntando a `seaweedfs:8333`.
+El respaldo de `alerts-service` requiere un `S3_ENDPOINT` alcanzable desde su red; está desactivado
+si el endpoint queda vacío. Usar `host.docker.internal` en Linux requiere agregar el alias
+`host-gateway` a su contenedor. Una alternativa al puerto del host es conectar el almacén y sus
+consumidores a una red Docker común y apuntar a `seaweedfs:8333`.
 Es un cambio de configuración. Lo que costaría repartir los stacks en más de una máquina está en
 [15. Distribuir el sistema](distribucion.md).
 
@@ -51,9 +53,13 @@ Es un cambio de configuración. Lo que costaría repartir los stacks en más de 
 
 Tres de las fuentes del procesador, radar, WRF y descargas eléctricas, están configuradas como
 locales: el productor mira directorios dentro de su raíz de datos. El procesador no ofrece una
-API de ingreso para esos archivos. En Beta-1, los feeds vivos del organismo deben escribir en los
-bind mounts `tiles-processor/data/{radar-sinarame,wrf-arg4k,goes19-glm}`. En un laboratorio sin esos feeds,
-`data-simulator` puede montar la misma raíz y depositar capturas históricas con marcas actuales.
+API de ingreso para esos archivos. La configuración completa agrega INTA como fuente local. En Beta-1, los feeds vivos del organismo deben escribir en los
+directorios del host elegidos por `RADAR_SINARAME_INPUT_DIR`, `WRF_ARG4K_INPUT_DIR` y
+`GOES19_GLM_INPUT_DIR`. Compose los presenta dentro del contenedor como
+`/app/data/{radar-sinarame,wrf-arg4k,goes19-glm}` mediante binds de sólo lectura. Escribir en la
+carpeta base `tiles-processor/data` no alimenta esos binds anidados. INTA tiene un cuarto mount
+obligatorio, aunque está deshabilitado en el preset Beta-1. En laboratorio, el simulador debe
+escribir en los mismos directorios de entrada del host.
 
 Para el firewall, esto significa ningún puerto extra. Para la topología, significa que el
 proceso que escribe el feed, o el replicador, necesita acceso al almacenamiento de entrada del
@@ -94,9 +100,14 @@ mantienen sus propias esperas y comprobaciones. Ver [14. Puesta en marcha](puest
 | `s3_data` + `seaweedfs_filerldb2` | Todas las teselas y el índice del almacén | Reprocesando, pero los crudos ya expiraron. Respaldar los dos juntos. |
 | `mysql_data` | Los avisos y las capas de referencia | No |
 | `alerts_service_data`, `alerts_output` | Historial, trabajos, métricas y los GIF | No |
-| `tiles_data` | Crudos pendientes y las métricas del procesador | Los crudos vuelven a llegar; las métricas, no |
+| `tiles_data` | Scratch, progreso y métricas; los feeds locales pueden estar en binds anidados | El scratch se regenera; conservar progreso y métricas |
 | `dataservice_data` | Métricas y el cursor del respaldo de mapas base | No las métricas |
 | `redis_data` | La caché | Sí, sola, desde el bucket |
+
+La tabla corresponde al Compose completo. Beta-1 usa binds `tiles-processor/data` y
+`tiles-processor/data_s3`, con el índice en `data_s3/data/filerldb2`, y el volumen
+`rabbitmq_dev_data`. Pasar al perfil completo exige migrar ese estado; cambiar el nombre del
+proyecto Compose también cambia los nombres efectivos de los volúmenes.
 
 ## Despliegue mínimo y completo
 

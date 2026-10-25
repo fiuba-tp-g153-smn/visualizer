@@ -21,8 +21,12 @@ todos los componentes y se detalla a continuación.
 |---|---|---|---|
 | `tiles-processor` | Dentro de la imagen | Cada clave admite una variable de entorno; la variable gana | No arranca |
 | `data-service` | Dentro de la imagen, en `/settings.json` | Cada clave admite la variable con el mismo nombre en mayúsculas; la variable gana | No arranca: once claves no tienen valor por defecto en el código |
-| `alerts-service` | Dentro de la imagen, en `/config/settings.json` | El archivo gana para sus claves; quince de ellas no tienen variable | No arranca |
+| `alerts-service` | Dentro de la imagen, en `/config/settings.json` | El archivo gana para sus claves; varias no tienen variable de entorno | No arranca |
 | `visualizer` | No tiene | Ocho argumentos de construcción, fijados al compilar | No corresponde |
+
+En producción estos archivos están copiados en las imágenes: editarlos requiere reconstrucción.
+Beta-1 monta `settings-beta-1.json` del procesador; datos y avisos montan sus settings en desarrollo.
+En esos casos un reinicio puede aplicar el archivo. Las variables sólo llegan al contenedor si su Compose las pasa.
 
 Un valor vacío no siempre es "sin definir". En `data-service`, una variable numérica vacía se
 ignora; una de texto vacía se toma como valor. En `alerts-service`, una variable ausente vale cadena
@@ -52,11 +56,12 @@ Catorce variables son obligatorias: sin ellas el proceso aborta al arrancar.
 | `ECMWF_OPENDATA_SOURCES` | No (`ecmwf,azure,aws`) | Espejos en orden de preferencia |
 | `ECMWF_TP_SMOOTHING_RESOLUTION_DEG`, `GFS_TILE_SMOOTHING_RESOLUTION_DEG` | No (0.01) | Remuestreo; `0` lo desactiva |
 | `GFS_SUBSET_ENDPOINT` | Sí si GFS está activo | Endpoint de recorte GRIB de NOAA |
-| `{GOES19_ABI,GOES19_GLM,RADAR_SINARAME,WRF_ARG4K,ECMWF_IFS,GFS}_S3_ACCESS_KEY` / `_SECRET_KEY` | No | Credenciales de los buckets de entrada. Sin definir, acceso anónimo; a medias, el arranque falla. |
+| `{GOES19_ABI,GOES19_GLM,RADAR_SINARAME,RADAR_INTA,WRF_ARG4K,ECMWF_IFS,GFS}_S3_ACCESS_KEY` / `_SECRET_KEY` | No | Credenciales de los buckets de entrada. Sin definir, acceso anónimo; a medias, el arranque falla. |
 
 Las variables `<PREFIX>_INPUT_DIR` pertenecen a Docker Compose y se necesitan sólo para las fuentes
 configuradas como `local`. El Compose debe montar cada una sobre `/app/data/<nombre-de-fuente>` en
-modo de sólo lectura. No se define una carpeta para una fuente que lee S3 o un proveedor externo.
+modo de sólo lectura. Una fuente S3 o externa no necesita bind. El Compose Beta-1 actual también
+exige `RADAR_INTA_INPUT_DIR` aunque esa fuente no está habilitada; definir una carpeta existente.
 Cuando cambia el modo de una fuente, el bloque `input`, las credenciales y los mounts se revisan como
 una misma modificación.
 
@@ -81,7 +86,7 @@ plantilla. Todas menos las de Prometheus son obligatorias para que el almacén a
 | `scheduler.discovery_cron` | Cadencia del descubrimiento, `*/5 * * * *` |
 | `metrics.enabled`, `metrics.max_rows` | Registro de métricas y tope de filas |
 | `sources.<fuente>.products.<id>` | Qué productos se generan |
-| `sources.<fuente>.input.mode` | `local` o `s3` para las seis fuentes; ECMWF IFS y GFS admiten además sus proveedores externos |
+| `sources.<fuente>.input.mode` | `local` o `s3` para las siete fuentes; ECMWF IFS y GFS admiten además sus proveedores externos |
 | `sources.<fuente>.input.s3_bucket`, `s3_endpoint`, `s3_prefix`, `s3_region`, `s3_secure`, `s3_addressing_style` | Ubicación y forma de acceso cuando el modo es `s3` |
 | `sources.<fuente>.zoom_levels`, `retention_days` | Rango de zoom y días de retención por prefijo |
 | `sources.{radar-sinarame,wrf-arg4k}.light_queue` | Qué productos van a las colas livianas |
@@ -89,13 +94,14 @@ plantilla. Todas menos las de Prometheus son obligatorias para que el almacén a
 
 ## data-service
 
-El proceso lee 122 nombres de variable. Casi todos son ajustes finos con valor por defecto. Los que
+El proceso lee variables de infraestructura y ajustes finos, muchos con valor por defecto. Los que
 deciden si el servicio arranca y funciona:
 
 | Variable | ¿Requerida? | Para qué |
 |---|---|---|
 | `S3_TILES_DATA_ENDPOINT`, `S3_TILES_DATA_ACCESS_KEY`, `S3_TILES_DATA_SECRET_KEY`, `S3_TILES_DATA_BUCKET_NAME` | Sí | Sin ellas no hay sincronización ni claves de estaciones. El ejemplo trae `host.docker.internal:9000`. |
-| `REDIS_URL` | Sí | La caché. Sin ella, todo sale por el bucket. |
+| `REDIS_URL` | Sí | Endpoint Redis sin credenciales embebidas. |
+| `REDIS_PASSWORD` | Sí | Debe coincidir con `redis-server --requirepass`; se pasa por separado al cliente y se oculta en el log de conexión. |
 | `WEATHER_STATIONS_ADMIN_PASSWORD` | Sí con la autenticación de estaciones encendida | Cabecera `X-Admin-Password` |
 | `SMN_API_USERNAME` / `_PASSWORD` | Sí con `WEATHER_STATIONS_SYNC_ENABLED=true` | Credenciales de la API del SMN |
 | `WEB_CONCURRENCY` | Sí, como argumento de construcción | Procesos de uvicorn. Sin él, el comando queda con `--workers=` vacío. |
@@ -165,12 +171,13 @@ después, en la primera operación que la necesita.
 
 ### `settings.json`
 
-Las claves se agrupan por área y el servicio las aplana al cargarlas. Quince no tienen variable de
-entorno; se cambian editando el archivo y reconstruyendo la imagen.
+Las claves se agrupan por área y el servicio las aplana al cargarlas. Las que no tienen variable
+de entorno se cambian editando el archivo y reconstruyendo la imagen de producción.
 
 | Clave | Controla |
 |---|---|
 | `layer.update_cron`, `layer.cache_ttl_minutes` | Cron del refresco, `0 3 * * 0`; expiración de la caché de geometrías |
+| `layer.sync_retry.initial_seconds`, `max_seconds` | Espera inicial y máxima de recuperación de capas, 30 y 600 s |
 | `alerts.detail_level` | Nivel de la caché de arranque, `7` |
 | `alerts.job.workers`, `queue_maxsize`, `timeout_seconds`, `shutdown_seconds` | 2, 16, 150 s y 160 s |
 | `alerts.supervisor.interval_seconds` | Cadencia del supervisor, 30 s |

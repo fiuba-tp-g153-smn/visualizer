@@ -21,7 +21,7 @@ API, un planificador y un conjunto acotado de workers.
 
 | Contenedor | Imagen | Papel |
 |---|---|---|
-| `alerts-mysql` | `mysql:8.4` | La base local de avisos. En desarrollo hace también de base del SMN. |
+| `alerts-mysql` | `mysql:8.4.13` | La base local de avisos. En desarrollo hace también de base del SMN. |
 | `alerts-service-container` | Propia | API, planificador semanal, pool de generación y muestreador de métricas, todo en un proceso. |
 
 El contenedor de MySQL arranca con un script propio que crea un usuario de sólo lectura con
@@ -43,12 +43,13 @@ límites de conexiones. Está pensado para consultas externas y para leer la tab
 
 Las dos conexiones a MySQL apuntan por defecto al mismo contenedor local. En un despliegue real,
 la segunda apunta a la base del SMN. Nada en el código distingue una cosa de la otra: lo decide
-`MYSQL_HOST`. Ver [19.2 Datos y secretos](../seguridad/datos-y-secretos.md).
+`MYSQL_TAVISO_HOST` para la conexión de lectura y `MYSQL_HOST` para escritura. Ver [19.2 Datos y secretos](../seguridad/datos-y-secretos.md).
 
 !!! note "El bucket no tiene nombre en el repositorio"
     `S3_BUCKET_NAME` viene vacío en el archivo de ejemplo. El nombre `intersection-data` es el que
-    crea el script de arranque del almacén y el que usa el repositorio de orquestación. Con la
-    variable vacía, el respaldo en S3 queda desactivado y el servicio sigue funcionando.
+    crea el script de arranque del almacén. Configurar ese nombre si se habilita el respaldo con
+    esa instancia S3. Con la variable vacía, el respaldo queda desactivado y el servicio sigue
+    funcionando; esta copia de capas no respalda MySQL ni los GIF.
 
 ## Qué guarda
 
@@ -59,7 +60,8 @@ la segunda apunta a la base del SMN. Nada en el código distingue una cosa de la
 | `alerts_output` | Los GIF generados, servidos como estáticos bajo `/alerts/` | Sí. Nunca se borran y no hay tope. |
 
 Las tipografías, los logos y el recuadro de referencia van dentro de la imagen. No se montan
-desde el host.
+desde el host. `settings.json` también se copia a la imagen, en `/config/settings.json`:
+modificarlo requiere rebuild en producción; en desarrollo se monta desde el host.
 
 ## Cuando algo falla
 
@@ -67,7 +69,7 @@ desde el host.
 |---|---|
 | MySQL de avisos | El arranque espera a que esté sano. En marcha, las rutas que lo tocan responden `500`; la intersección sigue. |
 | IGN | Degradado, no fatal. El arranque registra el error y sigue con las capas que tenga en disco. |
-| Almacén de objetos | La restauración se salta con un aviso. Las subidas fallan y se registran. |
+| Almacén de objetos | Arranca degradado con capas locales; reintenta sincronizar en segundo plano con espera de 30 s que se duplica hasta 600 s. |
 | Base de referencia del SMN | Se abre al primer uso. Ver el recuadro de abajo. |
 
 !!! warning "Sin verificar: la base de referencia caída"
@@ -83,11 +85,16 @@ gracia:
 1. El punto de entrada corre `alembic upgrade head`. Sin `MANAGE_DB_SCHEMAS`, es una operación
    vacía. Si falla, el contenedor no arranca.
 2. Limpia temporales huérfanos.
-3. Reconcilia las capas en disco con el bucket. Lo que no coincide con el nombre canónico se
-   borra.
+3. Reconcilia las capas en disco con el bucket. Si faltan capas y falla S3/IGN, registra el
+   fallo y continúa con el estado local disponible.
 4. Descarga del IGN y simplifica los niveles que falten, en un subproceso.
 5. Construye los índices de departamentos y provincias y dos cachés de dibujo.
-6. Migra sus bases SQLite y recién entonces atiende HTTP.
+6. Migra sus bases SQLite y atiende HTTP. Si la preparación quedó incompleta, un reintentador
+   de fondo recupera capas y reconstruye cachés hasta completar la sincronización.
+
+El estado HTTP puede estar disponible antes que todas las capas. Comprobar intersección y generación
+de un aviso de ensayo; `/health` no comprueba esas funciones. El cron semanal se mantiene separado
+del reintento de recuperación.
 
 ## Salud
 
@@ -96,7 +103,9 @@ cada 30 s, con 3 reintentos y 8 minutos de gracia para el primer arranque.
 
 !!! warning "El tiempo de gracia al apagar es más corto que el drenado"
     La plantilla da un minuto para apagar. El servicio intenta drenar su cola durante 160 s.
-    Un apagado con trabajos en curso puede cortar una generación a medias.
+    Un apagado con trabajos en curso puede cortar una generación a medias. Cerrar el ingreso y
+    drenar antes de actualizar; aumentar la gracia no protege frente a caídas. La cola vive en
+    memoria y SQLite conserva el historial terminal, no solicitudes pendientes recuperables.
 
 ## Cómo se agranda
 
@@ -145,9 +154,10 @@ las entradas sin texto antes de mostrarlas.
 
 ## Tareas programadas
 
-Una sola tarea del planificador: el refresco de capas, con el cron `0 3 * * 0`, los domingos a las
+Una tarea de cron del planificador: el refresco de capas, con el cron `0 3 * * 0`, los domingos a las
 03:00 UTC. Aparte corren dos bucles: el muestreador de métricas cada 60 s y el supervisor de
-workers cada 30 s.
+workers cada 30 s. Ante capas degradadas, un reintentador temporal usa
+`layer.sync_retry.initial_seconds` y `max_seconds` (30 y 600 s).
 
 ## Bases de datos
 
@@ -163,6 +173,10 @@ workers cada 30 s.
     `MYSQL_HOST`. Una revisión trunca `departamentos` y `provincia` con las comprobaciones de
     clave foránea apagadas, y otra renombra `taviso` a `taviso_temporal`. El archivo de ejemplo
     la trae activada. Ver [19.3 Endurecimiento](../seguridad/endurecimiento.md).
+
+Los usuarios de la MySQL local se crean con `CREATE USER IF NOT EXISTS`. Cambiar las claves del
+`.env` no cambia las de cuentas existentes; coordinar su rotación con `ALTER USER` y los consumidores,
+sin borrar el volumen.
 
 ## Comandos
 

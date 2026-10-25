@@ -33,7 +33,7 @@ API de métricas obliga a reconstruir el visualizador.
 |---|---|---|
 | `data-service` → almacén | `host.docker.internal:9000`, en claro | Una dirección enrutable en `S3_TILES_DATA_ENDPOINT`. Publicar o tunelizar `9000`. Hoy va sin TLS (`S3_TILES_DATA_SECURE=false`); en otra máquina, poner TLS delante o un túnel. |
 | `alerts-service` → almacén | `S3_ENDPOINT`, vacío por defecto | Lo mismo, si se quiere el respaldo. Es opcional. |
-| `data-service` → Redis | `redis://redis:6379/0` por nombre de servicio | La plantilla `docker-compose.redis.yaml` ya está escrita para esto: publica `6379` y sólo cambia `REDIS_URL`. El costo es un viaje de red por tesela, sin contraseña ni TLS. Ponerle contraseña antes. |
+| `data-service` → Redis | `redis://redis:6379/0` por nombre de servicio | La plantilla `docker-compose.redis.yaml` ya está escrita para esto: publica `6379`. Configurar `REDIS_URL` y la misma `REDIS_PASSWORD` en servidor y consumidores. Agrega un viaje de red por tesela; no ofrece TLS, por lo que requiere red protegida o túnel. |
 | Broker ↔ workers | `rabbitmq` por nombre, dentro del stack | Mantener el broker con los workers. Separarlo cuesta editar la plantilla y aceptar un viaje de red por mensaje. |
 | `alerts-service` → base de referencia | Por defecto, el mismo contenedor | Una ruta y credenciales al MySQL del organismo en `MYSQL_TAVISO_*`. |
 | Navegador → tres backends | `localhost` en el ejemplo | Nombres resolubles por los usuarios y una recompilación del visualizador. |
@@ -52,7 +52,7 @@ API de métricas obliga a reconstruir el visualizador.
 
 !!! warning "Sin verificar: cuál de las tres plantillas está desplegada"
     `data-service` versiona una plantilla todo en uno y dos repartidas. El repositorio no dice cuál
-    usa el despliegue actual, y la diferencia importa: la repartida publica Redis sin contraseña.
+    usa el despliegue actual. La repartida exige contraseña, pero publica Redis en todas las interfaces.
     Es una pregunta para quien administra el servidor.
 
 ## Topologías por escala
@@ -95,7 +95,7 @@ D atiende avisos y web: `alerts-service` con su MySQL, y `visualizer`.
 | Cruza el cable | De | A | Notas |
 |---|---|---|---|
 | `9000` | A y C | B | A sube; C lee. A exige editar `seaweedfs:8333` en la plantilla. |
-| `6379` | C, si la API y el sincronizador se separan | Redis | Sin contraseña en la plantilla actual. |
+| `6379` | C, si la API y el sincronizador se separan | Redis | Contraseña obligatoria; restringir acceso y proteger el transporte. |
 | `9000`, opcional | D | B | Sólo con `S3_ENDPOINT` definido. |
 | `6020` | Navegador | A | |
 | `6006` | Navegador | C | |
@@ -143,7 +143,7 @@ servidor virtual siempre encendido en lugar de máquinas efímeras. Los números
 |---|---|
 | Todo en una máquina | Probado. Es el despliegue actual. |
 | API y sincronizador del servicio de datos en máquinas distintas | Preparado, no probado. Las plantillas existen. |
-| Redis en otra máquina | Preparado, no probado. Plantilla propia, sin contraseña. |
+| Redis en otra máquina | Preparado, no probado. Plantilla propia con contraseña obligatoria y sin TLS. |
 | Procesamiento y lectura en dos máquinas | Posible con un cambio de configuración, no probado. |
 | Almacén de objetos en máquina propia | Posible editando las plantillas del procesador, no probado. |
 | Productor y workers en máquinas distintas | Imposible sin cambiar el sistema. |

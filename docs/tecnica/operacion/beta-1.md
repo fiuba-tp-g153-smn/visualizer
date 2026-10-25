@@ -60,8 +60,9 @@ GFS admiten además sus proveedores públicos. El operador debe revisar los seis
 | GFS | `external-provider-nomads` | S3 propio o carpeta local |
 
 El modo `local` requiere una ruta absoluta en `<PREFIX>_INPUT_DIR` y un bind mount de sólo lectura
-en `docker-compose-beta-1.yaml`. El Compose versionado contiene únicamente los tres mounts que
-corresponden a su configuración inicial. Al cambiar otra fuente a `local`, se debe agregar su mount.
+en `docker-compose-beta-1.yaml`. El Compose versionado exige cuatro mounts: GLM, SINARAME, INTA y WRF. El perfil
+habilita tres fuentes locales; INTA no está habilitado, pero su carpeta también debe definirse y
+existir. Puede estar vacía. Al cambiar otra fuente a `local`, se debe agregar su mount.
 Al cambiar una fuente local a S3, se debe eliminar el mount que deja de utilizarse.
 
 El modo `s3` define el bucket y sus opciones dentro del bloque `input`. Puede utilizar un nombre de
@@ -73,7 +74,9 @@ anónimo; configurar sólo uno hace fallar el arranque.
 Los procesos que escriben una carpeta local deben conservar los nombres y marcas temporales que
 espera el procesador. Conviene copiar cada archivo con un nombre temporal y renombrarlo cuando esté
 completo. El productor examina las fuentes cada cinco minutos, por lo que no necesita reiniciarse
-ante un nuevo ingreso.
+ante un nuevo ingreso. Con los ajustes incluidos, se omiten capturas radar de más de 150 minutos,
+ventanas GLM de más de 270 minutos y corridas WRF de más de 24 horas. Extraer un archivo histórico
+no actualiza su fecha meteorológica; para laboratorio usar una reproducción temporal coherente.
 
 El contrato general de cada fuente está en
 [Tiles Processor](../servicios/tiles-processor.md#con-quién-habla). Los
@@ -145,6 +148,7 @@ DOCS_URL=/docs-site
 
 GOES19_GLM_INPUT_DIR=/srv/mapasmn/input/goes19-glm
 RADAR_SINARAME_INPUT_DIR=/srv/mapasmn/input/radar-sinarame
+RADAR_INTA_INPUT_DIR=/srv/mapasmn/input/radar-inta
 WRF_ARG4K_INPUT_DIR=/srv/mapasmn/input/wrf-arg4k
 ```
 
@@ -160,17 +164,18 @@ make setup
 ```
 
 `MANAGE_DB_SCHEMAS=true` permite preparar el MySQL local incluido en Beta-1.
-Contra una base institucional, esa variable habilita DDL sobre un esquema
-ajeno: revisarla antes del primer arranque.
+Contra una base institucional, establecer `MANAGE_DB_SCHEMAS=false` y usar cuentas sin DDL
+antes del primer arranque. Esta opción no desactiva las migraciones SQLite internas.
 
 ## 3. Conectar los feeds
 
-Con la configuración inicial, Docker Compose requiere las tres carpetas correspondientes a GLM,
-radar y WRF. Las rutas deben ser absolutas y existir antes del arranque:
+Docker Compose requiere cuatro carpetas: GLM, SINARAME, INTA y WRF. La carpeta de INTA
+puede estar vacía mientras sus productos sigan deshabilitados. Las rutas deben ser absolutas y existir antes del arranque:
 
 ```sh
 sudo mkdir -p /srv/mapasmn/input/goes19-glm
 sudo mkdir -p /srv/mapasmn/input/radar-sinarame
+sudo mkdir -p /srv/mapasmn/input/radar-inta
 sudo mkdir -p /srv/mapasmn/input/wrf-arg4k
 ```
 
@@ -240,17 +245,22 @@ docker compose -f compose.beta-1.yaml logs -f producer worker1 worker-light1
 ```
 
 `beta1-down` elimina contenedores y redes del proyecto, y conserva los
-volúmenes. Para desplegar una nueva revisión fijada por `mapasmn`:
+volúmenes. Antes de actualizar, detener el ingreso de avisos y el productor, drenar las colas y
+los trabajos activos, y detener juntos los workers. El arranque de cada worker limpia el scratch
+compartido; reiniciarlo mientras otro procesa puede borrar archivos en uso. Para desplegar una nueva
+revisión fijada por `mapasmn`:
 
 ```sh
 git pull --ff-only
 git submodule update --init --recursive
+make setup
 make beta1
 ```
 
 Antes de actualizar, registrar el commit actual de `mapasmn`. Volver a ese
 commit y repetir `git submodule update --init --recursive` restaura las cuatro
-revisiones anteriores.
+revisiones anteriores. No revierte migraciones ni cambios de datos: comprobar compatibilidad
+y disponer de respaldo antes de actualizar.
 
 ## Actualizar una instalación anterior
 
@@ -285,7 +295,8 @@ archivo patológico cambia ese resultado.
 
 Mientras se valida una instalación nueva, observar el consumo del host, los
 reinicios y los trabajos que estaban activos. Las consideraciones completas
-están en [Capacidad y dimensionamiento](capacidad.md).
+están en [Capacidad y dimensionamiento](capacidad.md). El broker y SeaweedFS del Compose Beta-1 no
+tienen política `restart`: configurar su recuperación antes de depender de un reinicio del host.
 
 ## Antes de exponerlo
 

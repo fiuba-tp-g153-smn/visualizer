@@ -6,8 +6,7 @@ title: 19. Seguridad
 
 Esta sección describe los datos, puertos y operaciones que deben considerarse antes de incorporar
 MapaSMN a una red. El análisis parte del comportamiento actual del código y de las plantillas, sin
-suponer controles externos que no se encuentran versionados. La revisión se actualizó en septiembre
-de 2026.
+suponer controles externos que no se encuentran versionados.
 
 !!! warning "Resumen para quien no va a leer el resto"
     El sistema no tiene ningún concepto de identidad, sesión ni autorización. Salvo las rutas de
@@ -56,7 +55,7 @@ importante del despliegue.
 | Atacante | Qué puede hacer hoy |
 |---|---|
 | Anónimo en internet, con los servicios publicados | Insertar una fila de aviso en la base del SMN. Leer todas las métricas. Llenar el disco generando imágenes. Provocar escrituras sin tope en el bucket de mapas base. Leer el catálogo de rutas en la documentación interactiva. |
-| Anónimo en la red interna, con sólo el borde publicado | Lo mismo, más leer, escribir y borrar el almacén de objetos entero por el filer sin autenticación, y la caché. |
+| Anónimo en la red interna, con sólo el borde publicado | Lo mismo, más leer, escribir y borrar el almacén de objetos por el filer sin autenticación. Redis exige contraseña; el puerto repartido sigue siendo una superficie interna a restringir. |
 | Un sitio web cualquiera que la víctima visite | Los tres servicios responden con origen `*`. Sin sesión que robar, hoy no gana nada; el día que se agregue autenticación por sesión, sí. |
 | Quien consiga publicar contenido en este sitio | Corre en el mismo origen que la aplicación, sin aislamiento: puede leer el almacenamiento del navegador, incluida la clave de estaciones. |
 | Un contenedor comprometido | Todos corren como `root`, ninguno tiene límites de recursos, y todos los procesos del procesador comparten las credenciales del broker. |

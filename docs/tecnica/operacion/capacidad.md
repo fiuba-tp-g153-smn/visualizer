@@ -45,7 +45,8 @@ producción completa y apagada en Beta-1.
 ### Qué pasa si aparecen muchos datos de golpe
 
 No hay estampida. El descubrimiento corre cada cinco minutos, y cada fuente mira hacia atrás una
-ventana acotada: cinco horas para el satélite, doce pasos por pasada para GFS. Un origen con miles de
+ventana acotada: cinco horas para ABI, 150 minutos para radar, 270 minutos para GLM,
+24 horas para corridas WRF y doce pasos por pasada para GFS. Un origen con miles de
 objetos nuevos produce retraso, no un pico de memoria. Lo que no llega a tiempo expira.
 
 El riesgo real es un archivo patológico: uno solo, mal formado o enorme, puede inflar la memoria

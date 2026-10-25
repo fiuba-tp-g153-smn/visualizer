@@ -15,7 +15,7 @@ este motivo concentra el tráfico de lectura del sistema.
 
 | Contenedor | Imagen | Papel |
 |---|---|---|
-| `data-service-redis-dev` | `redis:8.10-trixie` | La caché. `--maxmemory 5gb`, expulsión `volatile-ttl`, sin contraseña. |
+| `data-service-redis-dev` | `redis:8.10-trixie` | La caché. `--maxmemory 5gb`, expulsión `volatile-ttl`, contraseña obligatoria. |
 | `data-service-api` | Propia, `APP_ROLE=web` | Atiende HTTP. Lee Redis; ante una falta, lee el bucket. |
 | `data-service-sync` | Propia, `APP_ROLE=worker` | Seis bucles de sincronización, el respaldo de mapas base, el de estaciones y el muestreo de Redis. |
 
@@ -34,10 +34,18 @@ Hay tres plantillas de despliegue:
 |---|---|---|
 | `docker-compose.yaml` | Redis, API y sincronizador | Todo en un host. Redis no publica puerto. |
 | `docker-compose.data.yaml` | API y sincronizador | La aplicación sola, sobre la red externa `data_service_network`. |
-| `docker-compose.redis.yaml` | Redis | La caché sola, `--maxmemory 7gb`, publicada en `6379` sin contraseña. |
+| `docker-compose.redis.yaml` | Redis | La caché sola, `--maxmemory 7gb`, publicada en `6379` con contraseña obligatoria y sin TLS. |
 
 Las dos últimas son proyectos de compose separados. Ninguna crea la red externa: hay que crearla a
 mano una vez. Ver [15. Distribuir el sistema](../operacion/distribucion.md).
+
+Redis y los dos roles de aplicación deben usar la misma `REDIS_PASSWORD`. El arranque la exige;
+el healthcheck del servidor usa `REDISCLI_AUTH` y comprueba la respuesta `PONG`. Los logs de conexión
+ocultan las credenciales.
+
+`settings.json` se copia a `/settings.json` en la imagen de producción. Editarlo en el host requiere
+reconstruir la imagen; la plantilla de desarrollo sí lo monta. Una variable de entorno sólo surte
+efecto si llega al contenedor mediante su Compose.
 
 ## Puertos y conexiones
 
@@ -49,7 +57,7 @@ mano una vez. Ver [15. Distribuir el sistema](../operacion/distribucion.md).
 | Destino | Protocolo | Cómo lo alcanza |
 |---|---|---|
 | SeaweedFS, API S3 | S3 | `S3_TILES_DATA_ENDPOINT`, hoy `host.docker.internal:9000`: sale al host y vuelve a entrar |
-| Redis | RESP | `REDIS_URL`, hoy `redis://redis:6379/0` por nombre de servicio |
+| Redis | RESP | `REDIS_URL`, hoy `redis://redis:6379/0`, más `REDIS_PASSWORD` por separado |
 | API del SMN | HTTPS | Observaciones de estaciones, con usuario y contraseña |
 | Registro de estaciones del SMN | HTTP plano | El padrón de estaciones |
 | IGN, Esri, Google | HTTPS | Respaldo de mapas base |

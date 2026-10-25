@@ -18,8 +18,8 @@ roles con seis: omite un worker normal y dos livianos. Todos viven en la misma r
 
 | Contenedor | Imagen | Papel |
 |---|---|---|
-| `tiles-processor-rabbitmq` | `rabbitmq:4.2.9-management` | El broker. Tres colas de trabajo, una de descarte. |
-| `tiles-processor-seaweedfs` | `chrislusf/seaweedfs:4.45` | El almacén de objetos. Crea los buckets al arrancar. |
+| `tiles-processor-rabbitmq` | `rabbitmq:4.3.7-management` | El broker. Tres colas de trabajo, una de descarte. |
+| `tiles-processor-seaweedfs` | `chrislusf/seaweedfs:4.48` | El almacén de objetos. Crea los buckets al arrancar. |
 | `tiles-processor-producer` | Propia | Descubre imágenes nuevas cada cinco minutos y las encola. |
 | `tiles-processor-worker1`, `worker2` | Propia | `WORKER_TYPE=normal`. Atienden la cola pesada primero. |
 | `tiles-processor-worker-light1..3` | Propia | `WORKER_TYPE=light`. Sólo las colas de radar y WRF. |
@@ -60,12 +60,13 @@ el healthcheck del contenedor.
 |---|---|---|
 | Bucket público `noaa-goes19` de NOAA | S3 anónimo | Imágenes ABI de GOES-19 |
 | Espejos de ECMWF y NOMADS de NOAA | HTTPS | GRIB de modelos globales |
-| `/app/data/radar-sinarame`, `/app/data/wrf-arg4k`, `/app/data/goes19-glm` | Sistema de archivos | Radar, WRF y GLM en `mode: "local"` |
+| `/app/data/radar-sinarame`, `/app/data/radar-inta`, `/app/data/wrf-arg4k`, `/app/data/goes19-glm` | Sistema de archivos | Radar, WRF y GLM en `mode: "local"` |
 | `rabbitmq:5672` | AMQP | Colas, por nombre de servicio |
 | `seaweedfs:8333` | S3 | Subida de productos, por nombre de servicio |
 
-Las tres fuentes locales no llegan por una API del procesador. En una instalación operativa, los
-procesos del organismo que reciben los feeds vivos escriben en esos directorios. `data-simulator`
+Las fuentes locales no llegan por una API del procesador. Los procesos que reciben los feeds
+escriben en los directorios del host montados sobre esas rutas del contenedor. Producción completa
+habilita cuatro fuentes locales; Beta-1 habilita tres y conserva un mount INTA sin productos activos. `data-simulator`
 puede hacerlo con capturas históricas sólo cuando se arma un laboratorio sin feeds. Es un
 acoplamiento de disco, no de puerto. Ver [13. Topología de red](../operacion/topologia.md).
 
@@ -101,6 +102,12 @@ que producer y workers tienen que estar en la misma máquina.
 4. El productor hace una pasada inmediata y luego una cada cinco minutos.
 5. `metrics-api` sólo espera al broker.
 
+!!! warning "Coordinar el arranque de los workers"
+    Cada worker borra las subcarpetas de scratch al arrancar, aunque puedan pertenecer a otro
+    trabajo. Para mantenimiento, detener producer, drenar colas y trabajos activos, y detener
+    juntos los workers. Inicializarlos todos antes de habilitar producer. Un reinicio aislado
+    o automático durante actividad también puede afectar archivos en uso.
+
 ## Salud
 
 | Contenedor | Comprobación | Gracia |
@@ -122,7 +129,8 @@ leer el archivo del perfil desplegado, no dar por sentado el catálogo.
 |---|---|---|---|
 | GOES-19 ABI | Canales 13, 9 y 2 | Teselas + COG | `tiles/goes19/abi/`, `cog/goes19/abi/` |
 | GOES-19 GLM | Densidad de destellos, energía óptica, área mínima | Teselas + COG | `tiles/goes19/glm/`, `cog/goes19/glm/` |
-| Radar SINARAME | Diez variables por radar, tres elevaciones | Teselas + COG | `tiles/radar/sinarame/`, `cog/radar/sinarame/` |
+| Radar SINARAME | Diez variables posibles por radar, tres elevaciones | Teselas + COG | `tiles/radar/sinarame/`, `cog/radar/sinarame/` |
+| Radar INTA | DBZH, ZDR, RHOHV y KDP | Teselas + COG | `tiles/radar/inta/`, `cog/radar/inta/` |
 | WRF-ARG4K | Diez productos | Teselas, COG, contornos y barbas | `tiles/wrf-arg4k/`, `cog/wrf-arg4k/`, `geojson/wrf-arg4k/` |
 | ECMWF | Precipitación total; presión a nivel del mar | Teselas + COG; sólo isobaras GeoJSON | `tiles/ecmwf-ifs/`, `geojson/ecmwf-ifs/` |
 | GFS | Presión a nivel del mar; 500 y 250 hPa | COG + GeoJSON; teselas en altura | `tiles/gfs/`, `geojson/gfs/` |
@@ -155,7 +163,7 @@ Cada worker aplica al arrancar una regla de ciclo de vida de S3 por prefijo, tom
 
 | Prefijos | Días |
 |---|---|
-| `tiles/goes19/abi`, `cog/goes19/abi`, `tiles/goes19/glm`, `cog/goes19/glm`, `tiles/radar/sinarame`, `cog/radar/sinarame` | 1 |
+| `tiles/goes19/abi`, `cog/goes19/abi`, `tiles/goes19/glm`, `cog/goes19/glm`, `tiles/radar/sinarame`, `cog/radar/sinarame`, `tiles/radar/inta`, `cog/radar/inta` | 1 |
 | `tiles/wrf-arg4k`, `cog/wrf-arg4k`, `geojson/wrf-arg4k`, `tiles/ecmwf-ifs`, `cog/ecmwf-ifs`, `geojson/ecmwf-ifs` | 2 |
 | `grib/ecmwf-ifs`, `tiles/gfs`, `cog/gfs`, `geojson/gfs`, `grib/gfs` | 1 |
 
@@ -204,16 +212,11 @@ uno de cada tipo en su propia plantilla. Cada worker procesa dos unidades a la v
 | `make clean` | Borra los volúmenes del proyecto |
 | `./scripts/generate-compose.sh [--dev] [--light N] <workers>` | Regenera las plantillas |
 
-## Discrepancias verificadas
+## Migraciones y métricas
 
-Tres cosas del repositorio confunden y ya están resueltas:
-
-- La guía de migraciones describe un contenedor `migrate` de un solo uso. Ese contenedor no
-  existe; cada modo migra en proceso al arrancar. La guía es la que quedó vieja.
-- El script de arranque del almacén menciona una variable `TILE_LIFECYCLE_RETENTION_DAYS`. No
-  existe; la retención sale de `settings.json`. Es un nombre viejo en un comentario.
-- Existe una comprobación de salud por archivo de latido. Nada la invoca y nada escribe el
-  archivo: es código muerto. Las comprobaciones reales son las HTTP de arriba.
+Las bases locales se migran al arrancar cada proceso, mediante Alembic y un bloqueo de archivo
+en el volumen compartido. El modo `python3 src/main.py migrate` permite aplicar las migraciones
+explícitamente; no hay un servicio Compose de migración separado.
 
 La poda de la base de métricas corre con un cron fijo, `0 * * * *`, escrito en el código. No es
 configurable; sólo lo es el tope de filas, `metrics.max_rows`.

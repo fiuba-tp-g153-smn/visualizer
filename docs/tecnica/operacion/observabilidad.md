@@ -70,7 +70,7 @@ Todas viven en el volumen del contenedor. Nada las exporta a un sistema de monit
 | `metrics-api` | `GET /health` en `6020` | Que el proceso responda |
 | `data-service-api` y `-sync` | `GET /health` en `8080` | Sólo que el proceso responda. No comprueba Redis ni el almacén |
 | `alerts-service` | `GET /health`, con 8 minutos de gracia | Sólo que el proceso responda |
-| `visualizer` | Conexión TCP al puerto 80 | Que nginx escuche |
+| `visualizer` | Petición HTTP a `/` en el puerto 80 desde Compose | Que nginx entregue una respuesta |
 
 ## El panel de estado
 
@@ -98,14 +98,15 @@ configuración ni arranque del agente: cambia el formato del registro, no sale n
 Los cuatro repositorios tienen suite de pruebas. No todos la hacen valer, y la diferencia no se
 ve mirando la compuerta.
 
-| Repositorio | Archivos | Pruebas | Cómo se corre | Bloquea el despliegue |
-|---|---|---|---|---|
-| `tiles-processor` | 62 | 710 | `make test`, dentro de Docker; `make test-host` en el host | No |
-| `data-service` | 51 | 725 | `make test`, dentro de Docker | Sí |
-| `alerts-service` | 32 | 206 | `make test`, dentro de Docker | Sí |
-| `visualizer` | 48 | 457 | `npm test` | No |
+| Repositorio | Cómo se corre | Las pruebas bloquean el despliegue |
+|---|---|---|
+| `tiles-processor` | `make test` en Docker; `make test-host` en host | No: el job está desactivado |
+| `data-service` | `make test` en Docker | Sí |
+| `alerts-service` | `make test` en Docker | Sí |
+| `visualizer` | `npm test` con Node 24; `make test` en la imagen dev | No: `continue-on-error` |
 
-Los conteos son archivos versionados y definiciones de prueba, contados el 8 de septiembre de 2026.
+Obtener los conteos y resultados de la ejecución de cada entrega; no inferirlos de un inventario
+estático ni de un workflow verde que permite omitir o fallar pruebas.
 
 !!! warning "En `tiles-processor` las pruebas no corren en CI, y en `visualizer` no bloquean"
     Los trabajos de lint, tipos y pruebas del procesador llevan `if: false`; la compuerta los cuenta

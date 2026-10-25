@@ -35,13 +35,15 @@ Qué hacer, en orden de preferencia:
 ### 2. Cerrar los puertos de infraestructura
 
 Hoy: el almacén publica su filer y su coordinador sin autenticación, el broker publica su
-panel, MySQL publica `3306`, y la plantilla repartida publica Redis sin contraseña.
+panel, MySQL publica `3306`, y la plantilla repartida publica Redis en todas las interfaces.
+Redis ya exige contraseña en todas sus variantes.
 
 Qué hacer:
 
 - Quitar los mapeos que no hacen falta: `3306`, `15672`, `8888`, `9333`, `23646`.
 - Los que sí tienen que salir, publicarlos con dirección de escucha explícita.
-- Ponerle contraseña a Redis y a la vez corregir el registro de la cadena de conexión.
+- Mantener la misma `REDIS_PASSWORD` en Redis y sus consumidores; restringir el puerto repartido
+  y proteger el transporte. La conexión ya se registra sin credenciales.
 - Filtrar en el firewall del proveedor o en `DOCKER-USER`, no en el del host: las reglas de Docker
   se evalúan antes.
 
@@ -65,13 +67,13 @@ Hoy: los tres servicios publican `/docs` y `/openapi.json`, y uno nombra la vari
 su contraseña de administración. Qué hacer: desactivarla cuando el entorno es de producción.
 *Una línea por servicio.*
 
-### 5. Agregar cabeceras de seguridad
+### 5. Completar las cabeceras de seguridad
 
-Hoy: nginx sólo emite cabeceras de caché. Qué hacer: política de contenido, control de
-enmarcado, bloqueo de adivinación de tipo, política de referente, política de permisos y transporte
-estricto; desactivar la firma de versión. La política de contenido tiene que contemplar los destinos
-externos del navegador listados en [19.2 Datos y secretos](datos-y-secretos.md).
-*Configuración del servidor web.*
+Hoy: nginx oculta su versión y emite SAMEORIGIN, nosniff y Referrer-Policy, incluidas las
+ubicaciones con cabeceras de caché y las respuestas de error. Completar CSP y Permissions-Policy
+según los destinos externos listados en [19.2 Datos y secretos](datos-y-secretos.md), y HSTS en el
+borde que termina TLS. Conservar el iframe de documentación del mismo origen.
+*Configuración del servidor web y del proxy HTTPS.*
 
 ### 6. Poner límites de recursos a los contenedores
 
@@ -118,9 +120,10 @@ trabajos, poner el escaneo en las dependencias del despliegue y renovar las exce
 
 ### 13. Fijar las imágenes base
 
-Las imágenes están fijadas por etiqueta, no por resumen. Dos se mueven solas. Hay además dos
-dependencias del procesador fuera del archivo de bloqueo: una siempre en su última versión y otra
-tomada de la punta de un repositorio.
+Las imágenes están fijadas por etiqueta, no por digest. Etiquetas como `node:24-alpine`,
+`nginx:mainline-alpine-slim` y `python:3.13-slim-trixie` admiten actualizaciones sin cambiar el
+Dockerfile. Registrar y conservar las imágenes aprobadas. En el procesador, el build puede regenerar
+el lockfile si falla su validación; exigir un lock válido antes de construir una entrega.
 
 ### 14. Cerrar los detalles menores
 
@@ -141,9 +144,9 @@ tomada de la punta de un repositorio.
 - [ ] Redis tiene contraseña, y la cadena de conexión ya no se registra completa
 - [ ] El filtrado está en el firewall del proveedor o en `DOCKER-USER`
 - [ ] El usuario de base de datos del SMN no tiene permisos de esquema
-- [ ] `MANAGE_DB_SCHEMAS` está sin definir en producción
+- [ ] `MANAGE_DB_SCHEMAS=false` para esquemas institucionales y el usuario no tiene DDL
 - [ ] La documentación interactiva de las tres APIs está desactivada
-- [ ] nginx emite las cabeceras de seguridad
+- [ ] Se verificaron las cabeceras nginx y las políticas CSP, Permissions-Policy y HSTS del borde
 - [ ] Todos los contenedores tienen límite de memoria y de CPU
 - [ ] Las identidades del almacén están acotadas por bucket y por operación
 - [ ] Hay respaldo de `s3_data` y `seaweedfs_filerldb2`, tomados juntos

@@ -25,15 +25,15 @@ en todas las interfaces del host. La columna "debería ser" es la recomendación
 | `9333` | Coordinador del almacén | Ninguna | Interno |
 | `23646` | Panel de administración del almacén | Credenciales raíz del almacén | Interno |
 | `5672`, `15672` | Broker y su panel | Usuario y contraseña | Interno |
-| `6379` | Redis, sólo en la plantilla repartida | Ninguna | Interno |
+| `6379` | Redis, sólo en la plantilla repartida | `REDIS_PASSWORD` obligatoria | Interno |
 | `3306` | MySQL de avisos | Usuario y contraseña | Interno |
 
 !!! danger "Los que hay que cerrar antes de exponer el host"
     - `8888`. Da acceso al árbol de archivos completo sin firmar nada. Anula el control por
       bucket del `9000`: quien llegue lee, escribe y borra cualquier objeto.
     - `9333`. El propio script de arranque lo llama "puerto no autenticado".
-    - `6379`, en la variante repartida. El archivo lleva escrito el aviso de ponerle contraseña,
-      y no está aplicado.
+    - `6379`, en la variante repartida. Exige contraseña, pero sigue publicado en todas las
+      interfaces y no cifra el transporte.
     - `3306`. Los servicios llegan por el nombre interno; publicarlo no aporta nada.
 
 Un puerto `6011` que aparecía en versiones anteriores de esta documentación no existe: este sitio
@@ -108,10 +108,13 @@ el origen tiene que restringirse antes.
 
 ## Cabeceras de seguridad
 
-El servidor web del visualizador no emite ninguna cabecera de seguridad, sólo de caché. Faltan
-política de contenido, control de enmarcado, bloqueo de adivinación de tipo, política de referente,
-política de permisos y transporte estricto. Tampoco está desactivada la firma de versión. Es de las
-cosas más baratas de arreglar.
+nginx oculta la versión (`server_tokens off`) y agrega `X-Frame-Options: SAMEORIGIN`,
+`X-Content-Type-Options: nosniff` y `Referrer-Policy: strict-origin-when-cross-origin`, también en
+respuestas de error. `add_header_inherit merge` conserva esas cabeceras en las ubicaciones que
+agregan su propio Cache-Control; la imagen elegida debe admitir esa directiva.
+
+La configuración no define CSP, Permissions-Policy ni HSTS. Ajustar las dos primeras a los destinos
+que usa el navegador y aplicar HSTS en el borde HTTPS. Conservar SAMEORIGIN para el iframe de docs.
 
 ## El sitio de documentación dentro de la aplicación
 

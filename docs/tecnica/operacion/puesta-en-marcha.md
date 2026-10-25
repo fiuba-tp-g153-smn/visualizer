@@ -13,7 +13,7 @@ coordinar el orden de arranque.
 
 !!! danger "Levantarlo y exponerlo son dos decisiones distintas"
     Las plantillas publican en todas las interfaces varios puertos que no deberían salir del host, y
-    ningún servicio autentica al llamante. Antes de abrir un puerto a una red, leer
+    la API de avisos no autentica al llamante. Antes de abrir un puerto a una red, leer
     [19.3 Endurecimiento](../seguridad/endurecimiento.md).
 
 ## Qué hay que decidir antes
@@ -66,7 +66,8 @@ En una VM remota no pueden quedar en `localhost`. También se debe revisar el mo
 fuente en `settings-beta-1.json`. La configuración inicial utiliza carpetas para radar, GLM y WRF,
 S3 público para GOES-19 ABI y proveedores públicos para ECMWF IFS y GFS. Cada instalación puede
 reemplazar estas decisiones por buckets o carpetas propios. Sólo las fuentes en modo `local`
-requieren una variable `*_INPUT_DIR` y un mount en el Compose.
+requieren una variable `*_INPUT_DIR` y un mount en el Compose. El archivo Beta-1 actual exige
+además `RADAR_INTA_INPUT_DIR`, aunque esa fuente no está habilitada; su carpeta puede estar vacía.
 
 La explicación completa, incluidos el espíritu del perfil, los directorios de los feeds y la
 verificación, está en [14.1 Beta-1](beta-1.md).
@@ -84,6 +85,10 @@ Compose sólo conoce las dependencias dentro de cada uno.
    minutos.
 4. `visualizer`. No depende de nadie para arrancar. Sin los otros carga igual, vacío.
 5. `data-simulator`, si no hay feeds. Necesita la ruta del volumen `tiles_data` en el host.
+
+Antes de reponer o actualizar workers, detener producer y drenar colas y trabajos activos.
+Inicializar todos los workers antes de habilitar producer. Cada arranque limpia el scratch
+compartido; la dependencia Compose respecto del broker y S3 no evita esa carrera.
 
 ## Levantar cada stack por separado
 
@@ -125,9 +130,10 @@ make redis
 make data
 ```
 
-!!! warning "La variante repartida publica la caché sin contraseña"
-    Publica `6379` en todas las interfaces y no aplica `--requirepass`. El propio archivo lo
-    advierte. Ponerle contraseña y filtrar el puerto antes de levantarla.
+!!! warning "La variante repartida publica la caché en todas las interfaces"
+    Redis exige `REDIS_PASSWORD`, tanto en el servidor como en API y sincronizador. La plantilla
+    repartida publica `6379` sin TLS: restringirlo a sus consumidores y usar una red protegida o
+    un túnel. El registro de arranque oculta las credenciales de conexión.
 
 ### alerts-service
 
@@ -139,8 +145,9 @@ Levanta la base y la aplicación, en `6007`.
 
 !!! warning "El primer arranque tarda varios minutos"
     Antes de responder, descarga las capas del IGN, las simplifica en todos los niveles y construye
-    tres cachés. Su comprobación de salud declara ocho minutos de gracia. Un contenedor que
-    parece colgado en el primer arranque está simplificando geometrías.
+    tres cachés. Su comprobación de salud declara ocho minutos de gracia. Si falla la preparación,
+    puede atender HTTP con capas incompletas y reintentarlas en segundo plano. Además de `/health`,
+    comprobar una intersección y la generación de un aviso de ensayo.
 
 ### visualizer
 
@@ -174,7 +181,8 @@ En orden, y sin usar la aplicación:
 2. `GET /api/summary` en `6020` devuelve trabajos, y su cantidad crece con el tiempo. En cero
    después de un ciclo completo, el productor no descubre datos.
 3. `GET /sync/status` en `6006` muestra ciclos completados por dominio.
-4. `GET /health` en `6007` responde, pasada la ventana de simplificación.
+4. `GET /health` en `6007` responde; una intersección y un aviso de ensayo confirman que las capas
+   y la generación están disponibles.
 5. El visualizador carga y las cuatro pestañas de su panel de estado traen datos.
 
 Ese panel es la verificación de extremo a extremo más rápida. Cómo leerlo está en el

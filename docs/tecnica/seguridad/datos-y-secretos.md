@@ -83,8 +83,8 @@ eliminaciones están sólo en el camino de bajada, que el arranque no ejecuta.
 
 ## Registro de eventos
 
-- La cadena de conexión de Redis se registra completa al arrancar, en dos contenedores. Hoy no
-  lleva contraseña porque Redis no tiene. El día que se le ponga, quedará en el registro.
+- Redis recibe la contraseña mediante `REDIS_PASSWORD`, separada de `REDIS_URL`. El registro de
+  arranque oculta las credenciales de la conexión.
 - El script de arranque del almacén pasa credenciales como argumentos de línea de comandos, y lo
   mismo hace el envío opcional a Prometheus con usuario y contraseña en la URL.
 - El servicio de avisos registra el polígono completo del usuario, y el texto de la excepción de

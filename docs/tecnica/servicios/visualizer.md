@@ -13,8 +13,8 @@ de la interfaz y las llamadas a las tres API se ejecutan en el navegador.
 ## Unidades desplegables
 
 Un contenedor, `visualizer-container`, sobre `nginx:mainline-alpine-slim`. No tiene volúmenes ni
-dependencias: la imagen es autocontenida. La comprobación de salud es una conexión TCP al puerto
-80, cada 10 s.
+dependencias: la imagen es autocontenida. Compose comprueba una respuesta HTTP en `/` del puerto 80 cada 10 s; el Dockerfile
+también define una comprobación TCP, reemplazada por la de Compose.
 
 La imagen se construye en tres etapas:
 

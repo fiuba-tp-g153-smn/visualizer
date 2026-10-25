@@ -20,7 +20,7 @@ nodes:
 edges:
   - {from: tp, to: seaweed, label: "S3 · sube productos", label_at: [392, 144]}
   - {from: dssync, to: seaweed, label: "S3 · lee lo nuevo", label_at: [420, 262], label_anchor: end}
-  - {from: dsapi, to: dssync, label: "redis :6379 · sin contraseña", label_at: [224, 336]}
+  - {from: dsapi, to: dssync, label: "redis :6379 · con contraseña", label_at: [224, 336]}
   - {from: al, to: seaweed, dashed: true, label: "S3, opcional", label_at: [612, 262], label_anchor: start}
 
 legend:
