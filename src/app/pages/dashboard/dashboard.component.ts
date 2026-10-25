@@ -191,10 +191,20 @@ export class DashboardComponent {
   );
   /** Cambia en cada carga fresca (cambio de rango); el componente preserva la vista en appends. */
   readonly timelineReloadKey = signal(0);
+  /** Carga fresca de la línea de tiempo en curso (estado propio del panel). */
+  readonly timelineLoading = signal<boolean>(false);
+  /** Error de la última carga de la línea de tiempo; no afecta al resto del panel. */
+  readonly timelineError = signal<string | null>(null);
+  /** Muestra el gráfico salvo en la primera carga o si falló sin datos previos. */
+  readonly timelineShowChart = computed<boolean>(
+    () => this.timelineJobs().length > 0 || (!this.timelineLoading() && !this.timelineError()),
+  );
   // Estado del modo perezoso 'all'.
   private timelineOldestMs: number | null = null;
   private timelineReachedStart = false;
   private timelineLoadingOlder = false;
+  // Secuencia de cargas: descarta respuestas de una carga ya reemplazada.
+  private timelineSeq = 0;
 
   readonly updatedAt = signal<string>('—');
   readonly errorMsg = signal<string | null>(null);
@@ -355,6 +365,7 @@ export class DashboardComponent {
       return;
     }
     this.timelineLoadingOlder = true;
+    const seq = this.timelineSeq;
     try {
       const oldest = this.timelineOldestMs;
       const older = await firstValueFrom(
@@ -365,6 +376,9 @@ export class DashboardComponent {
           before: new Date(oldest).toISOString(),
         }),
       );
+      if (seq !== this.timelineSeq) {
+        return; // una carga fresca (cambio de rango) reemplazó los datos
+      }
       if (!older.length) {
         this.timelineReachedStart = true;
         return;
@@ -425,7 +439,10 @@ export class DashboardComponent {
 
   // `includeTimeline` solo se activa en la carga inicial, el refresco manual y al
   // cambiar el rango: el auto-refresco NO recarga la línea de tiempo para no
-  // resetear el zoom/pan que el usuario haya hecho.
+  // resetear el zoom/pan que el usuario haya hecho. La línea de tiempo se pide
+  // aparte, al terminar el resto: es la respuesta más pesada (miles de filas) y
+  // dentro del Promise.all retenía todo el panel y competía por ancho de banda y
+  // CPU del API con los paneles livianos. Su panel muestra su propia carga/error.
   private async refresh(includeTimeline = false, foreground = false): Promise<void> {
     if (this.loading()) {
       return; // evita refrescos solapados disparados por el intervalo
@@ -434,19 +451,17 @@ export class DashboardComponent {
     if (foreground) {
       this.reloading.set(true);
     }
+    if (includeTimeline) {
+      this.timelineLoading.set(true); // el panel muestra "cargando" desde ya
+    }
     try {
-      this.summary.set(await firstValueFrom(this.metrics.getSummary(this.windowHours())));
-      const tasks = [
+      await Promise.all([
+        this.loadSummaries(),
         this.loadJobs(true),
         this.loadCharts(),
         this.loadLive(),
         this.loadTp10(),
-        this.loadSummaryTable(),
-      ];
-      if (includeTimeline) {
-        tasks.push(this.loadTimeline());
-      }
-      await Promise.all(tasks);
+      ]);
       this.updatedAt.set(new Date().toLocaleTimeString());
       this.errorMsg.set(null);
       this.hasLoaded.set(true);
@@ -457,6 +472,26 @@ export class DashboardComponent {
       this.loading.set(false);
       this.reloading.set(false);
     }
+    if (includeTimeline) {
+      void this.loadTimeline();
+    }
+  }
+
+  // Resumen global + tabla "por tipo de trabajo". Si ambas usan la misma
+  // ventana, una sola consulta alimenta a las dos (es el endpoint más costoso).
+  private async loadSummaries(): Promise<void> {
+    const hours = this.windowHours();
+    if (this.summaryTableEffectiveHours() !== hours) {
+      await Promise.all([this.loadSummary(hours), this.loadSummaryTable()]);
+      return;
+    }
+    const summary = await firstValueFrom(this.metrics.getSummary(hours));
+    this.summary.set(summary);
+    this.summaryTable.set(summary);
+  }
+
+  private async loadSummary(hours: number): Promise<void> {
+    this.summary.set(await firstValueFrom(this.metrics.getSummary(hours)));
   }
 
   private async loadCharts(): Promise<void> {
@@ -504,25 +539,49 @@ export class DashboardComponent {
   }
 
   // Carga "fresca" de la línea de tiempo (cambio de rango / inicial / refresco
-  // manual). Bumpea `timelineReloadKey` para que el componente reencuadre.
+  // manual). Bumpea `timelineReloadKey` para que el componente reencuadre. Nunca
+  // lanza: un fallo queda en `timelineError` y conserva los datos previos. Si
+  // otra carga la reemplazó mientras tanto (cambio de rango), se descarta.
   private async loadTimeline(): Promise<void> {
-    const range = this.timelineRange();
+    const seq = ++this.timelineSeq;
     this.timelineReachedStart = false;
     this.timelineLoadingOlder = false;
-    if (range === 'all') {
-      const sinceMs = Date.now() - SEVEN_DAYS_MS;
-      const jobs = await firstValueFrom(
-        this.metrics.getJobs({ limit: 0, offset: 0, since: new Date(sinceMs).toISOString() }),
-      );
+    this.timelineLoading.set(true);
+    try {
+      const { jobs, oldestMs } = await this.fetchTimeline(this.timelineRange());
+      if (seq !== this.timelineSeq) {
+        return;
+      }
       this.timelineJobs.set(jobs);
-      this.timelineOldestMs = this.oldestFinishedMs(jobs, sinceMs);
-    } else {
-      this.timelineOldestMs = null;
-      this.timelineJobs.set(
-        await firstValueFrom(this.metrics.getJobs({ limit: 0, offset: 0, hours: range })),
-      );
+      this.timelineOldestMs = oldestMs;
+      this.timelineError.set(null);
+      this.timelineReloadKey.update((key) => key + 1);
+    } catch (error) {
+      if (seq === this.timelineSeq) {
+        this.timelineError.set(this.describeError(error));
+      }
+    } finally {
+      if (seq === this.timelineSeq) {
+        this.timelineLoading.set(false);
+      }
     }
-    this.timelineReloadKey.update((key) => key + 1);
+  }
+
+  // Rangos fijos traen toda la ventana; 'all' arranca en la última semana.
+  private async fetchTimeline(
+    range: TimelineRange,
+  ): Promise<{ jobs: readonly RecentJob[]; oldestMs: number | null }> {
+    if (range !== 'all') {
+      const jobs = await firstValueFrom(
+        this.metrics.getJobs({ limit: 0, offset: 0, hours: range }),
+      );
+      return { jobs, oldestMs: null };
+    }
+    const sinceMs = Date.now() - SEVEN_DAYS_MS;
+    const jobs = await firstValueFrom(
+      this.metrics.getJobs({ limit: 0, offset: 0, since: new Date(sinceMs).toISOString() }),
+    );
+    return { jobs, oldestMs: this.oldestFinishedMs(jobs, sinceMs) };
   }
 
   /** El finished_at más viejo (ms) de un conjunto; `fallback` si está vacío. */

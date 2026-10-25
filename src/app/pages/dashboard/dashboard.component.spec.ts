@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { DashboardComponent } from './dashboard.component';
-import { MetricsService } from '../../services/metrics/metrics.service';
+import { MetricsService, type JobsQuery } from '../../services/metrics/metrics.service';
+import type { RecentJob } from '../../models/metrics/metrics.models';
 import { TimezoneSettingsService } from '../../services/settings/timezone-settings.service';
 
 /** Evento sintético de un <select> (el handler lee `event.target.value`). */
@@ -206,5 +207,118 @@ describe('DashboardComponent — rango personalizado del panel de throughput', (
     // Re-elegir "personalizado" reusa el último valor (5), no el default.
     component.onTpWindowChange(selectEvent('custom'));
     expect(getThroughput).toHaveBeenLastCalledWith('10min', 5);
+  });
+});
+
+describe('DashboardComponent — orden de carga', () => {
+  let fixture: ComponentFixture<DashboardComponent>;
+  let component: DashboardComponent;
+  let getSummary: ReturnType<typeof vi.fn>;
+  let timeline$: Subject<RecentJob[]>;
+
+  /** Deja correr las promesas pendientes (firstValueFrom + awaits encadenados). */
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+  const job = (id: number): RecentJob => ({ id, finished_at: '2026-10-25T12:00:00Z' }) as RecentJob;
+
+  beforeEach(() => {
+    getSummary = vi.fn(() => of([]));
+    timeline$ = new Subject<RecentJob[]>();
+    // La línea de tiempo (limit: 0) queda pendiente hasta que el test emita.
+    const getJobs = vi.fn((query: JobsQuery) => (query.limit === 0 ? timeline$ : of([])));
+    const metricsMock = {
+      getSummary,
+      getJobs,
+      getThroughput: vi.fn(() => of([])),
+      getTimeSeries: vi.fn(() => of([])),
+      getLive: vi.fn(() => of({})),
+    } as unknown as MetricsService;
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: MetricsService, useValue: metricsMock },
+        { provide: MatDialog, useValue: { open: vi.fn() } },
+        { provide: TimezoneSettingsService, useValue: { mode: () => 'local' } },
+      ],
+    });
+    // Estos tests esperan a que terminen las cargas; sin plantilla no se montan
+    // los gráficos (ApexCharts necesita ResizeObserver, ausente en jsdom).
+    TestBed.overrideComponent(DashboardComponent, { set: { template: '' } });
+
+    fixture = TestBed.createComponent(DashboardComponent);
+    component = fixture.componentInstance;
+  });
+
+  afterEach(() => fixture.destroy());
+
+  it('muestra los paneles sin esperar a la línea de tiempo, que queda cargando', async () => {
+    await settle();
+
+    expect(component.hasLoaded()).toBe(true);
+    expect(component.loading()).toBe(false);
+    expect(component.timelineLoading()).toBe(true);
+    expect(component.timelineShowChart()).toBe(false);
+
+    timeline$.next([job(1)]);
+    timeline$.complete();
+    await settle();
+
+    expect(component.timelineLoading()).toBe(false);
+    expect(component.timelineJobs()).toHaveLength(1);
+    expect(component.timelineShowChart()).toBe(true);
+  });
+
+  it('con la misma ventana, una sola consulta de resumen alimenta ambos paneles', async () => {
+    await settle();
+
+    expect(getSummary).toHaveBeenCalledTimes(1);
+    expect(getSummary).toHaveBeenCalledWith(24);
+    expect(component.summaryTable()).toBe(component.summary());
+  });
+
+  it('con ventanas distintas consulta el resumen una vez por ventana', async () => {
+    await settle();
+    component.onSummaryTableWindowChange(selectEvent('168'));
+    await settle();
+    getSummary.mockClear();
+
+    component.refreshNow();
+    await settle();
+
+    expect(getSummary).toHaveBeenCalledTimes(2);
+    expect(getSummary).toHaveBeenCalledWith(24);
+    expect(getSummary).toHaveBeenCalledWith(168);
+  });
+
+  it('un fallo de la línea de tiempo queda en su panel, sin el banner general', async () => {
+    await settle();
+
+    timeline$.error(new Error('boom'));
+    await settle();
+
+    expect(component.timelineError()).toBe('boom');
+    expect(component.timelineLoading()).toBe(false);
+    expect(component.errorMsg()).toBeNull();
+    expect(component.timelineShowChart()).toBe(false);
+  });
+
+  it('descarta la respuesta de una carga reemplazada por un cambio de rango', async () => {
+    await settle();
+    const first = timeline$;
+    timeline$ = new Subject<RecentJob[]>();
+
+    component.onTimelineWindowChange(selectEvent('6'));
+    first.next([job(1), job(2)]);
+    first.complete();
+    await settle();
+
+    expect(component.timelineJobs()).toHaveLength(0);
+    expect(component.timelineLoading()).toBe(true);
+
+    timeline$.next([job(3)]);
+    timeline$.complete();
+    await settle();
+
+    expect(component.timelineJobs().map((j) => j.id)).toEqual([3]);
+    expect(component.timelineLoading()).toBe(false);
   });
 });

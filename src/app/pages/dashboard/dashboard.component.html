@@ -184,13 +184,30 @@
               <option value="all">todo</option>
             </select>
           </label>
-          <app-job-timeline-echarts
-            [jobs]="timelineJobs()"
-            [maxSpanMs]="timelineMaxSpanMs()"
-            [reloadKey]="timelineReloadKey()"
-            (jobClick)="onTimelineJobClick($event)"
-            (loadOlder)="onTimelineLoadOlder()"
-          />
+          @if (timelineError(); as err) {
+            <div class="dash__note dash__note--error" role="alert">
+              No se pudo cargar la línea de tiempo: {{ err }}
+            </div>
+          }
+          @if (timelineShowChart()) {
+            <div
+              [class.dash__content--busy]="timelineLoading()"
+              [attr.aria-busy]="timelineLoading()"
+            >
+              <app-job-timeline-echarts
+                [jobs]="timelineJobs()"
+                [maxSpanMs]="timelineMaxSpanMs()"
+                [reloadKey]="timelineReloadKey()"
+                (jobClick)="onTimelineJobClick($event)"
+                (loadOlder)="onTimelineLoadOlder()"
+              />
+            </div>
+          } @else if (timelineLoading()) {
+            <div class="dash__loading dash__loading--panel" role="status">
+              <mat-spinner diameter="32" />
+              <span>Cargando línea de tiempo…</span>
+            </div>
+          }
         </app-metric-panel>
 
         <app-metric-panel

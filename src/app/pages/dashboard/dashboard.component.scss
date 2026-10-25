@@ -211,6 +211,10 @@
   color: var(--mat-sys-on-surface-variant, #5f6368);
 }
 
+.dash__note--error {
+  color: var(--metric-error, #e8702a);
+}
+
 // Banner de error visible (sustituye al texto gris diminuto del encabezado).
 .dash__error {
   display: flex;
@@ -267,4 +271,9 @@
   padding: 80px 20px;
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant, #5f6368);
+}
+
+// Misma carga, acotada a un panel (la línea de tiempo llega después del resto).
+.dash__loading--panel {
+  padding: 48px 20px;
 }
