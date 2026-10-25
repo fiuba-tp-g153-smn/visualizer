@@ -124,8 +124,9 @@ function setup(overrides: Partial<Mocks> = {}): {
   const mocks: Mocks = {
     configs: overrides.configs ?? new Map(),
     probe: overrides.probe ?? ((_layer: Layer): Observable<boolean> => of(true)),
-    // Default: the backend knows nothing, so every layer falls back to its
-    // individual probe — which keeps the pre-bundling tests meaningful.
+    // Default: a snapshot listing nothing, which is a complete answer — every
+    // swept layer resolves empty without an individual probe. Tests of the
+    // probe path pass `bundleFails`, the only route a sweep takes to `probeOne`.
     availability:
       overrides.availability ??
       ((): Observable<ProductAvailabilitySnapshot> => of({ available: [], domains: [] })),
@@ -181,6 +182,11 @@ function setup(overrides: Partial<Mocks> = {}): {
   return { service: TestBed.inject(LayerAvailabilityService), mocks };
 }
 
+/** A bundled snapshot request that fails (non-network), forcing individual probes. */
+function bundleFails(): Observable<ProductAvailabilitySnapshot> {
+  return throwError(() => new Error('bundle unavailable'));
+}
+
 // --------------------------------------------------------------------- specs
 
 describe('LayerAvailabilityService — state() truth table', () => {
@@ -192,19 +198,16 @@ describe('LayerAvailabilityService — state() truth table', () => {
     expect(service.isUnavailable(layer)).toBe(false);
   });
 
-  it('reports empty when the live config has zero tilesets (GOES)', () => {
-    const layer = goesLayer();
-    const configs = new Map<string, LayerConfig>([[layer.id, goesConfig(layer.id, 0)]]);
-    const { service } = setup({ configs });
-    expect(service.state(layer)).toBe('empty');
-    expect(service.isUnavailable(layer)).toBe(true);
-  });
-
-  it('ECMWF availability keys off availableForecasts, NOT availableTilesets', () => {
+  it('ECMWF availability keys off availableForecasts, NOT availableTilesets', async () => {
     const layer = ecmwfLayer();
-    // Zero forecasts but a non-empty selection-derived tileset list: still empty.
+    // Zero forecasts but a non-empty selection-derived tileset list: the config
+    // has no data, so it neither answers for itself nor skips the sweep.
     const configs = new Map<string, LayerConfig>([[layer.id, ecmwfConfig(layer.id, 0, 5)]]);
-    const { service } = setup({ configs });
+    const { service } = setup({ allLayers: [layer], configs });
+
+    service.primeAll();
+    await flushMicrotasks();
+
     expect(service.state(layer)).toBe('empty');
   });
 
@@ -293,7 +296,11 @@ describe('LayerAvailabilityService — primeAll probing', () => {
     const withData = goesLayer('goes/abi/c02');
     const withoutData = goesLayer('goes/abi/c09');
     const probe = vi.fn((layer: Layer) => of(layer.id === withData.id));
-    const { service } = setup({ allLayers: [withData, withoutData], probe });
+    const { service } = setup({
+      allLayers: [withData, withoutData],
+      probe,
+      availability: bundleFails,
+    });
 
     service.primeAll();
     await flushMicrotasks();
@@ -306,7 +313,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
   it('leaves a layer unknown (never empty) when its probe errors', async () => {
     const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new Error('network')));
-    const { service } = setup({ allLayers: [layer], probe });
+    const { service } = setup({ allLayers: [layer], probe, availability: bundleFails });
 
     service.primeAll();
     await flushMicrotasks();
@@ -318,7 +325,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
     const active = goesLayer('goes/abi/c13');
     const configs = new Map<string, LayerConfig>([[active.id, goesConfig(active.id, 4)]]);
     const probe = vi.fn(() => of(true));
-    const { service } = setup({ allLayers: [active], configs, probe });
+    const { service } = setup({ allLayers: [active], configs, probe, availability: bundleFails });
 
     service.primeAll();
     await flushMicrotasks();
@@ -330,7 +337,7 @@ describe('LayerAvailabilityService — primeAll probing', () => {
   it('skips WMS layers when probing', async () => {
     const wms = wmsLayer();
     const probe = vi.fn(() => of(true));
-    const { service } = setup({ allLayers: [wms], probe });
+    const { service } = setup({ allLayers: [wms], probe, availability: bundleFails });
 
     service.primeAll();
     await flushMicrotasks();
@@ -358,7 +365,12 @@ describe('LayerAvailabilityService — data-service health gating', () => {
     const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 0 })));
     const reportFailure = vi.fn();
-    const { service } = setup({ allLayers: [layer], probe, reportFailure });
+    const { service } = setup({
+      allLayers: [layer],
+      probe,
+      reportFailure,
+      availability: bundleFails,
+    });
 
     service.primeAll();
     await flushMicrotasks();
@@ -371,7 +383,12 @@ describe('LayerAvailabilityService — data-service health gating', () => {
     const layer = goesLayer('goes/abi/c02');
     const probe = vi.fn(() => throwError(() => new HttpErrorResponse({ status: 404 })));
     const reportFailure = vi.fn();
-    const { service } = setup({ allLayers: [layer], probe, reportFailure });
+    const { service } = setup({
+      allLayers: [layer],
+      probe,
+      reportFailure,
+      availability: bundleFails,
+    });
 
     service.primeAll();
     await flushMicrotasks();
