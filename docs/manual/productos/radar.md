@@ -36,9 +36,9 @@ Aparecen a continuación de los RMA, nombrados por su ubicación.
 | INTA Anguil | Anguil, La Pampa |
 | INTA Pergamino | Pergamino, Buenos Aires |
 
-Miden lo mismo que los RMA y se usan igual. Publican cuatro variables — DBZH, ZDR, RHOHV y KDP —
-y no tienen DBZH 450 km ni VRAD. No todas están disponibles en los tres equipos: Pergamino hoy
-sólo publica DBZH.
+Miden lo mismo que los RMA y se usan igual. Publican cuatro variables — ZH, ZDR, RHOHV y KDP —
+y no tienen ZH 450 km ni VRAD. No todas están disponibles en los tres equipos: Pergamino hoy
+sólo publica ZH.
 
 ## Las variables
 
@@ -46,21 +46,21 @@ Aparecen en este orden dentro de cada radar. Los del INTA publican las cuatro ma
 
 | Capa | Variable | Unidad | Rango de la escala | INTA |
 |---|---|---|---|---|
-| DBZH | Reflectividad horizontal | dBZ | -18 a 76.5 | sí |
-| DBZH 450 km | Reflectividad, barrido de largo alcance | dBZ | -18 a 76.5 | — |
+| ZH | Reflectividad horizontal | dBZ | -18 a 76.5 | sí |
+| ZH 450 km | Reflectividad, barrido de largo alcance | dBZ | -18 a 76.5 | — |
 | KDP | Fase diferencial específica | °/km | -1 a 6 | sí |
 | VRAD | Velocidad radial | m/s | -40 a 40 | — |
 | RHOHV | Coeficiente de correlación | ρhv | 0.225 a 1.048 | sí |
 | ZDR | Reflectividad diferencial | dB | -3 a 7 | sí |
 
-DBZH 450 km cubre unos 450 km en lugar de 240, con menos resolución. Es la única con una sola
+ZH 450 km cubre unos 450 km en lugar de 240, con menos resolución. Es la única con una sola
 elevación.
 
 ## Las elevaciones
 
 Cada capa tiene tres elevaciones: 0.5°, 0.9° y 1.3°, en las dos redes. Aparecen como casillas en la fila de la
 capa. Sólo la de 0.5° viene marcada. Podés marcar varias a la vez, y cada elevación tiene su
-propia opacidad. DBZH 450 km tiene únicamente la de 0.5°.
+propia opacidad. ZH 450 km tiene únicamente la de 0.5°.
 
 ## Tiempo y animación
 

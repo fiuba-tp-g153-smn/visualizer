@@ -97,8 +97,8 @@ Canal 2, 9 y 13
 FED, TOE, MFA
 :   Las tres capas de GLM, con escala logarítmica.
 
-DBZH, KDP, VRAD, RHOHV, ZDR
-:   Las variables de cada radar. DBZH 450 km es el barrido de largo alcance.
+ZH, KDP, VRAD, RHOHV, ZDR
+:   Las variables de cada radar. ZH 450 km es el barrido de largo alcance.
 
 Elevación
 :   Cada ángulo de barrido de un radar: 0.5°, 0.9° y 1.3°, como casillas en la capa.

@@ -258,7 +258,7 @@ export const SHOTS: Shot[] = [
       { do: 'click', target: '[data-testid="layers-group-radar"] mat-expansion-panel-header', pauseMs: 900 },
       { do: 'click', target: '[data-testid="layers-subgroup-rma1"] mat-expansion-panel-header', pauseMs: 900 },
     ],
-    waitFor: '[data-testid="layers-row-radar/RMA1/dbzh"]', clip: PANEL,
+    waitFor: '[data-testid="layers-row-radar-sinarame/RMA1/dbzh"]', clip: PANEL,
   },
   {
     id: '04-2-radar-mapa', kind: 'shot', output: 'docs/imgs/manual/04-2-radar-mapa.png', viewport: SHOT, route: '/',

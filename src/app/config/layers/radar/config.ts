@@ -76,7 +76,7 @@ const RADAR_SCALES: Record<RadarProduct, LayerScale> = {
 
 /**
  * Nombre visible del producto cuando su id no se lee bien como etiqueta.
- * Sin entrada, se muestra el id tal cual (DBZH, VRAD, …).
+ * Sin entrada, se muestra el id tal cual (VRAD, KDP, …).
  */
 /**
  * Etiqueta visible de cada momento. El Record es total a propósito: los ids son
@@ -84,8 +84,8 @@ const RADAR_SCALES: Record<RadarProduct, LayerScale> = {
  * crudo y se mostraba en minúscula en el panel de capas.
  */
 const RADAR_PRODUCT_LABELS: Record<RadarProduct, string> = {
-  [RadarProduct.DBZH]: 'DBZH',
-  [RadarProduct.DBZH_450KM]: 'DBZH 450 km',
+  [RadarProduct.DBZH]: 'ZH',
+  [RadarProduct.DBZH_450KM]: 'ZH 450 km',
   [RadarProduct.KDP]: 'KDP',
   [RadarProduct.VRAD]: 'VRAD',
   [RadarProduct.RHOHV]: 'RHOHV',
