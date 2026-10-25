@@ -25,7 +25,8 @@ descarga y proceso, y un desglose por etapa.
 | Ruta en `6020` | Qué devuelve |
 |---|---|
 | `GET /api/summary` | Agregado por tipo: conteos por resultado, tasa de error, promedios y percentil 95 |
-| `GET /api/jobs` | Las filas crudas, con filtros |
+| `GET /api/jobs`, `GET /api/jobs/{job_id}` | Las filas crudas, con filtros, o una sola por id |
+| `GET /api/timeline` | Los trabajos de una ventana en formato columnar compacto, para la línea de tiempo |
 | `GET /api/throughput`, `GET /api/timeseries` | Conteos y duraciones por bucket de tiempo |
 | `GET /api/live` | Profundidad de las colas y unidades en curso |
 | `GET /api/export`, `POST /api/import` | Volcado e ingesta; la importación es la única ruta autenticada |

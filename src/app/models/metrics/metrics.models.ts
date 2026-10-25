@@ -64,6 +64,33 @@ export interface RecentJob {
   readonly stage_timings: StageTimings;
 }
 
+/**
+ * Trabajos finalizados en forma columnar (`GET /api/timeline`, formato v1): sólo
+ * los campos que dibuja la línea de tiempo, como arreglos paralelos ordenados por
+ * inicio. Los textos repetidos van una vez y cada fila los referencia por índice;
+ * `id` y `start` van como diferencias con la fila anterior. Se decodifica a
+ * `RecentJob` con `decodeTimeline`.
+ */
+export interface TimelinePayload {
+  readonly v: number;
+  /** Inicio más temprano (epoch ms); null si no hay trabajos. */
+  readonly t0: number | null;
+  readonly types: readonly string[];
+  /** Etiqueta de producto de cada entrada de `types` (la de su último trabajo). */
+  readonly labels: readonly (string | null)[];
+  readonly outcomes: readonly JobOutcome[];
+  readonly workers: readonly (string | null)[];
+  /** Primer id absoluto; el resto, diferencia con el anterior. */
+  readonly id: readonly number[];
+  readonly type: readonly number[];
+  readonly outcome: readonly number[];
+  readonly worker: readonly number[];
+  /** Inicio en ms: el primero relativo a `t0`; el resto, desde el inicio anterior. */
+  readonly start: readonly number[];
+  /** Duración (fin − inicio) en ms. */
+  readonly dur: readonly number[];
+}
+
 /** Conteo de trabajos por intervalo y tipo (`GET /api/throughput`). */
 export interface ThroughputBucket {
   readonly bucket: string;

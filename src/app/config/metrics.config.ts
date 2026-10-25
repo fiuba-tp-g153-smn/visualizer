@@ -17,6 +17,16 @@ export function buildJobsUrl(): string {
   return `${METRICS_SERVICE_BASE_URL}/api/jobs`;
 }
 
+/** Un trabajo finalizado completo, por id (detalle desde la línea de tiempo). */
+export function buildJobUrl(id: number): string {
+  return `${METRICS_SERVICE_BASE_URL}/api/jobs/${id}`;
+}
+
+/** Trabajos de una ventana en forma columnar compacta (línea de tiempo). */
+export function buildTimelineUrl(): string {
+  return `${METRICS_SERVICE_BASE_URL}/api/timeline`;
+}
+
 /** Conteo de trabajos por intervalo de tiempo y tipo. */
 export function buildThroughputUrl(): string {
   return `${METRICS_SERVICE_BASE_URL}/api/throughput`;

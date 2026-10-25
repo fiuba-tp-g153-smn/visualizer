@@ -213,6 +213,8 @@ Base: `METRICS_SERVICE_BASE_URL`, puerto `6020`. Ver [18. Observabilidad](../ope
 | `GET` | `/health` | No corresponde | No corresponde |
 | `GET` | `/api/summary` | `hours` | No corresponde |
 | `GET` | `/api/jobs` | `limit` (50, 0-1000), `offset`, `type`, `outcome`, `hours`, `since`, `before` | No corresponde |
+| `GET` | `/api/jobs/{job_id}` | No corresponde | No corresponde |
+| `GET` | `/api/timeline` | `hours` o `since` (obligatorio uno), `before` | No corresponde |
 | `GET` | `/api/throughput` | `bucket` (`hour`, `day`, `10min`), `hours` | No corresponde |
 | `GET` | `/api/timeseries` | `bucket`, `hours` | No corresponde |
 | `GET` | `/api/live` | No corresponde | No corresponde |
@@ -224,7 +226,11 @@ Base: `METRICS_SERVICE_BASE_URL`, puerto `6020`. Ver [18. Observabilidad](../ope
     forma de autorizar, así que la ruta se declara indisponible.
 
 `/api/jobs?limit=0` significa "sin límite" sólo con una ventana temporal; sin ella se recorta a 1000
-filas. `/api/live` devuelve las profundidades de cola en `null` cuando el broker no responde.
+filas. `/api/timeline` devuelve todos los trabajos de la ventana pero sólo con los campos que dibuja
+la línea de tiempo, en arreglos paralelos: los textos repetidos van una vez y los ids e inicios como
+diferencias, unas 30 veces menos que las mismas filas por `/api/jobs`. Sin ventana responde `422`.
+`/api/jobs/{job_id}` trae el registro completo que el detalle pide al hacer clic en una barra.
+`/api/live` devuelve las profundidades de cola en `null` cuando el broker no responde.
 
 ## Documentación interactiva
 

@@ -180,9 +180,9 @@ export class DashboardComponent {
   readonly throughput = signal<readonly ThroughputBucket[]>([]);
   private readonly tp10 = signal<readonly ThroughputBucket[]>([]);
 
-  // Línea de tiempo de unidades. Rangos fijos (6h…7d) cargan todo el rango de una
-  // (`limit: 0`); 'all' es perezoso: arranca en la última semana y carga semanas
-  // anteriores al desplazarte, con la vista acotada a 7 días.
+  // Línea de tiempo de unidades (`/api/timeline`, formato compacto). Rangos fijos
+  // (6h…7d) cargan todo el rango de una; 'all' es perezoso: arranca en la última
+  // semana y carga semanas anteriores al desplazarte, con la vista acotada a 7 días.
   readonly timelineRange = signal<TimelineRange>(24);
   readonly timelineJobs = signal<readonly RecentJob[]>([]);
   /** Tope de la ventana visible en modo 'all' (7 días); null en rangos fijos. */
@@ -349,9 +349,19 @@ export class DashboardComponent {
     void this.loadTimeline();
   }
 
-  /** Click en una barra de la línea de tiempo: abre el detalle de ese trabajo. */
-  onTimelineJobClick(job: RecentJob): void {
-    this.dialog.open(JobDetailDialogComponent, { data: job, width: '560px', autoFocus: false });
+  /**
+   * Click en una barra de la línea de tiempo: abre el detalle de ese trabajo. La
+   * línea de tiempo trae sólo los campos que dibuja, así que el registro completo
+   * se pide por id; si falla, se abre igual con lo que hay.
+   */
+  async onTimelineJobClick(job: RecentJob): Promise<void> {
+    let full = job;
+    try {
+      full = await firstValueFrom(this.metrics.getJob(job.id));
+    } catch {
+      // Detalle parcial antes que un clic sin respuesta.
+    }
+    this.dialog.open(JobDetailDialogComponent, { data: full, width: '560px', autoFocus: false });
   }
 
   /** Modo 'all': el componente pide datos más viejos al desplazarse al borde. */
@@ -369,9 +379,7 @@ export class DashboardComponent {
     try {
       const oldest = this.timelineOldestMs;
       const older = await firstValueFrom(
-        this.metrics.getJobs({
-          limit: 0,
-          offset: 0,
+        this.metrics.getTimeline({
           since: new Date(oldest - SEVEN_DAYS_MS).toISOString(),
           before: new Date(oldest).toISOString(),
         }),
@@ -572,14 +580,12 @@ export class DashboardComponent {
     range: TimelineRange,
   ): Promise<{ jobs: readonly RecentJob[]; oldestMs: number | null }> {
     if (range !== 'all') {
-      const jobs = await firstValueFrom(
-        this.metrics.getJobs({ limit: 0, offset: 0, hours: range }),
-      );
+      const jobs = await firstValueFrom(this.metrics.getTimeline({ hours: range }));
       return { jobs, oldestMs: null };
     }
     const sinceMs = Date.now() - SEVEN_DAYS_MS;
     const jobs = await firstValueFrom(
-      this.metrics.getJobs({ limit: 0, offset: 0, since: new Date(sinceMs).toISOString() }),
+      this.metrics.getTimeline({ since: new Date(sinceMs).toISOString() }),
     );
     return { jobs, oldestMs: this.oldestFinishedMs(jobs, sinceMs) };
   }

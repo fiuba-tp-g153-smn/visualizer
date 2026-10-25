@@ -38,11 +38,64 @@ describe('MetricsService', () => {
   });
 
   it('getJobs includes type and outcome when provided', () => {
-    service.getJobs({ limit: 50, offset: 50, type: 'radar_sinarame_dbzh', outcome: 'dlq' }).subscribe();
+    service
+      .getJobs({ limit: 50, offset: 50, type: 'radar_sinarame_dbzh', outcome: 'dlq' })
+      .subscribe();
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/jobs'));
     expect(req.request.params.get('type')).toBe('radar_sinarame_dbzh');
     expect(req.request.params.get('outcome')).toBe('dlq');
     req.flush([]);
+  });
+
+  it('getTimeline sends the window and decodes the columnar payload', () => {
+    let ids: number[] = [];
+    service
+      .getTimeline({ since: '2026-06-01T00:00:00Z', before: '2026-06-08T00:00:00Z' })
+      .subscribe((jobs) => (ids = jobs.map((j) => j.id)));
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/timeline'));
+    expect(req.request.params.get('since')).toBe('2026-06-01T00:00:00Z');
+    expect(req.request.params.get('before')).toBe('2026-06-08T00:00:00Z');
+    expect(req.request.params.has('hours')).toBe(false);
+    req.flush({
+      v: 1,
+      t0: 0,
+      types: ['t'],
+      labels: ['T'],
+      outcomes: ['success'],
+      workers: [null],
+      id: [5, 1],
+      type: [0, 0],
+      outcome: [0, 0],
+      worker: [0, 0],
+      start: [0, 10],
+      dur: [1, 1],
+    });
+    expect(ids).toEqual([5, 6]);
+  });
+
+  it('getTimeline passes hours for fixed ranges', () => {
+    service.getTimeline({ hours: 24 }).subscribe();
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/timeline'));
+    expect(req.request.params.get('hours')).toBe('24');
+    req.flush({
+      v: 1,
+      t0: null,
+      types: [],
+      labels: [],
+      outcomes: [],
+      workers: [],
+      id: [],
+      type: [],
+      outcome: [],
+      worker: [],
+      start: [],
+      dur: [],
+    });
+  });
+
+  it('getJob calls /api/jobs/{id}', () => {
+    service.getJob(42).subscribe();
+    httpMock.expectOne((r) => r.url.endsWith('/api/jobs/42')).flush({});
   });
 
   it('getThroughput passes bucket and hours', () => {

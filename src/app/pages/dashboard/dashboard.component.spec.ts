@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatDialog } from '@angular/material/dialog';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { DashboardComponent } from './dashboard.component';
-import { MetricsService, type JobsQuery } from '../../services/metrics/metrics.service';
+import { MetricsService } from '../../services/metrics/metrics.service';
 import type { RecentJob } from '../../models/metrics/metrics.models';
 import { TimezoneSettingsService } from '../../services/settings/timezone-settings.service';
 
@@ -214,6 +214,8 @@ describe('DashboardComponent — orden de carga', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let component: DashboardComponent;
   let getSummary: ReturnType<typeof vi.fn>;
+  let getJob: ReturnType<typeof vi.fn>;
+  let openDialog: ReturnType<typeof vi.fn>;
   let timeline$: Subject<RecentJob[]>;
 
   /** Deja correr las promesas pendientes (firstValueFrom + awaits encadenados). */
@@ -223,11 +225,14 @@ describe('DashboardComponent — orden de carga', () => {
   beforeEach(() => {
     getSummary = vi.fn(() => of([]));
     timeline$ = new Subject<RecentJob[]>();
-    // La línea de tiempo (limit: 0) queda pendiente hasta que el test emita.
-    const getJobs = vi.fn((query: JobsQuery) => (query.limit === 0 ? timeline$ : of([])));
+    getJob = vi.fn((id: number) => of({ ...job(id), image_id: 'full' }));
+    openDialog = vi.fn();
+    // La línea de tiempo queda pendiente hasta que el test emita.
     const metricsMock = {
       getSummary,
-      getJobs,
+      getJobs: vi.fn(() => of([])),
+      getTimeline: vi.fn(() => timeline$),
+      getJob,
       getThroughput: vi.fn(() => of([])),
       getTimeSeries: vi.fn(() => of([])),
       getLive: vi.fn(() => of({})),
@@ -236,7 +241,7 @@ describe('DashboardComponent — orden de carga', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: MetricsService, useValue: metricsMock },
-        { provide: MatDialog, useValue: { open: vi.fn() } },
+        { provide: MatDialog, useValue: { open: openDialog } },
         { provide: TimezoneSettingsService, useValue: { mode: () => 'local' } },
       ],
     });
@@ -320,5 +325,22 @@ describe('DashboardComponent — orden de carga', () => {
 
     expect(component.timelineJobs().map((j) => j.id)).toEqual([3]);
     expect(component.timelineLoading()).toBe(false);
+  });
+
+  it('el clic en una barra pide el trabajo completo y abre el detalle con él', async () => {
+    await component.onTimelineJobClick(job(7));
+
+    expect(getJob).toHaveBeenCalledWith(7);
+    const data = openDialog.mock.calls[0][1].data as RecentJob;
+    expect(data.image_id).toBe('full');
+  });
+
+  it('si falla el pedido del detalle, abre el diálogo con el registro parcial', async () => {
+    getJob.mockReturnValue(throwError(() => new Error('down')));
+    const slim = job(7);
+
+    await component.onTimelineJobClick(slim);
+
+    expect(openDialog.mock.calls[0][1].data).toBe(slim);
   });
 });
