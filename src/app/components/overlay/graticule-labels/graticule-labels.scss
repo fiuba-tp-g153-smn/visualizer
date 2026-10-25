@@ -1,0 +1,41 @@
+$edge-inset: 4px;
+
+:host {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.graticule-label {
+  position: absolute;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  color: var(--mat-sys-on-surface-variant);
+  text-shadow:
+    0 0 2px var(--mat-sys-surface),
+    0 0 2px var(--mat-sys-surface),
+    0 0 4px var(--mat-sys-surface);
+
+  &--meridian {
+    top: $edge-inset;
+    transform: translateX(-50%);
+  }
+
+  &--parallel {
+    right: $edge-inset;
+    transform: translateY(-50%);
+  }
+
+  &--minor {
+    opacity: 0.75;
+  }
+
+  &--notable {
+    color: var(--mat-sys-tertiary);
+    font-weight: 600;
+  }
+}

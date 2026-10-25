@@ -21,6 +21,14 @@ import type { Geometry } from 'geojson';
 import { MAP_CONFIG } from '../../config';
 import { STORAGE_KEYS } from '../../constants';
 import { LocalStorageService } from '../storage/local-storage.service';
+import {
+  GraticuleLine,
+  GraticuleScreenLabel,
+  GraticuleTier,
+  buildGraticuleLines,
+  meridianCopies,
+  visibleGraticuleLabels,
+} from '../../utils/graticule.utils';
 
 interface MapToolsState {
   showCoordinates: boolean;
@@ -37,30 +45,6 @@ interface ScaleInfo {
   width: number;
 }
 
-/** Important geographic lines for the graticule */
-const GRATICULE_LATITUDES = [
-  { lat: 66.5, label: 'Círculo Polar Ártico' },
-  { lat: 23.5, label: 'Trópico de Cáncer' },
-  { lat: 0, label: 'Ecuador' },
-  { lat: -23.5, label: 'Trópico de Capricornio' },
-  { lat: -66.5, label: 'Círculo Polar Antártico' },
-];
-
-const GRATICULE_LONGITUDES = [
-  { lng: -180, label: '180° W' },
-  { lng: -150, label: '150° W' },
-  { lng: -120, label: '120° W' },
-  { lng: -90, label: '90° W' },
-  { lng: -60, label: '60° W' },
-  { lng: -30, label: '30° W' },
-  { lng: 0, label: 'Meridiano de Greenwich' },
-  { lng: 30, label: '30° E' },
-  { lng: 60, label: '60° E' },
-  { lng: 90, label: '90° E' },
-  { lng: 120, label: '120° E' },
-  { lng: 150, label: '150° E' },
-];
-
 // Use theme-aligned colors (primary: #0090d0, secondary: #fcbf49, tertiary: #242c4f)
 const CROSSHAIR_STYLE: PolylineOptions = {
   color: '#0090d0', // primary
@@ -70,20 +54,34 @@ const CROSSHAIR_STYLE: PolylineOptions = {
   interactive: false,
 };
 
-const GRATICULE_STYLE: PolylineOptions = {
-  color: '#73777c', // neutral-50
-  weight: 1,
-  opacity: 0.4,
-  dashArray: '2, 4',
-  interactive: false,
+const GRATICULE_STYLES: Readonly<Record<GraticuleTier, PolylineOptions>> = {
+  minor: {
+    color: '#73777c', // neutral-50
+    weight: 1.25,
+    opacity: 0.8,
+    dashArray: '2, 4',
+    interactive: false,
+  },
+  major: {
+    color: '#73777c', // neutral-50
+    weight: 1.5,
+    opacity: 0.55,
+    interactive: false,
+  },
+  notable: {
+    color: '#555c82', // tertiary-40
+    weight: 2,
+    opacity: 0.8,
+    dashArray: '8, 4',
+    interactive: false,
+  },
 };
 
-const GRATICULE_SPECIAL_STYLE: PolylineOptions = {
-  color: '#555c82', // tertiary-40
-  weight: 1,
-  opacity: 0.5,
-  interactive: false,
-};
+const GRATICULE_MINOR_MIN_ZOOM = 4;
+
+const [[, GRATICULE_WEST], [, GRATICULE_EAST]] = MAP_CONFIG.maxBounds;
+
+const GRATICULE_LABEL_CORNER_PX = 48;
 
 const QUERY_MARKER_ICON = divIcon({
   className: 'query-marker',
@@ -144,16 +142,16 @@ enum SearchResultKind {
 
 type SearchResult =
   | {
-      readonly kind: SearchResultKind.MARKER;
-      readonly lat: number;
-      readonly lon: number;
-      readonly animate: boolean;
-    }
+    readonly kind: SearchResultKind.MARKER;
+    readonly lat: number;
+    readonly lon: number;
+    readonly animate: boolean;
+  }
   | {
-      readonly kind: SearchResultKind.POLYGON;
-      readonly geometry: Geometry;
-      readonly animate: boolean;
-    };
+    readonly kind: SearchResultKind.POLYGON;
+    readonly geometry: Geometry;
+    readonly animate: boolean;
+  };
 
 @Injectable({
   providedIn: 'root',
@@ -187,8 +185,16 @@ export class MapInfoService {
   // Crosshair lines that follow the cursor
   readonly showCursorLines = signal<boolean>(false);
 
-  // Graticule (major parallels and meridians)
+  // Graticule (parallels and meridians every 5°, plus notable lines)
   readonly showGraticule = signal<boolean>(false);
+  private readonly graticuleLines = buildGraticuleLines();
+  private readonly viewRevision = signal(0);
+  readonly graticuleLabels = computed<ReadonlyArray<GraticuleScreenLabel>>(() => {
+    this.viewRevision();
+    const map = this.map;
+    if (!map || !this.showGraticule() || this.isZooming()) return [];
+    return this.projectGraticuleLabels(map, this.currentZoom() >= GRATICULE_MINOR_MIN_ZOOM);
+  });
 
   // Query marker position (set by PointQueryViewerService)
   readonly queryMarkerPosition = signal<{ lat: number; lon: number } | null>(null);
@@ -202,6 +208,8 @@ export class MapInfoService {
   private latitudeLine: Polyline | null = null;
   private longitudeLine: Polyline | null = null;
   private graticuleGroup: LayerGroup | null = null;
+  /** 5° lines, kept apart so they can be hidden at low zoom without rebuilding the rest. */
+  private graticuleMinorGroup: LayerGroup | null = null;
   private queryMarker: Marker | null = null;
   private searchMarker: Marker | null = null;
   private searchPolygon: GeoJsonLayer | null = null;
@@ -212,6 +220,7 @@ export class MapInfoService {
   private zoomStartHandler: (() => void) | null = null;
   private zoomEndHandler: (() => void) | null = null;
   private moveHandler: (() => void) | null = null;
+  private resizeHandler: (() => void) | null = null;
 
   constructor() {
     this.loadPersistedState();
@@ -227,10 +236,11 @@ export class MapInfoService {
       this.updateCrosshair(lat, lng, show);
     });
 
-    // Effect: update graticule when visibility changes
+    // Effect: update graticule when visibility or zoom changes
     effect(() => {
       const show = this.showGraticule();
-      this.updateGraticule(show);
+      const zoom = this.currentZoom();
+      this.updateGraticule(show, zoom);
     });
 
     // Effect: update query marker position
@@ -274,6 +284,7 @@ export class MapInfoService {
     this.map = map;
     this.currentZoom.set(Math.round(map.getZoom()));
     this.mapCenterLat.set(map.getCenter().lat);
+    this.viewRevision.update((v) => v + 1);
 
     // Setup event listeners for reactive data
     this.setupEventListeners();
@@ -291,7 +302,7 @@ export class MapInfoService {
   private applyPersistedOverlays(): void {
     // Graticule needs to be initialized if it was persisted as visible
     if (this.showGraticule()) {
-      this.updateGraticule(true);
+      this.updateGraticule(true, this.currentZoom());
     }
     // Cursor lines will auto-apply when mouse moves over the map
   }
@@ -323,6 +334,7 @@ export class MapInfoService {
       if (this.map) {
         this.currentZoom.set(Math.round(this.map.getZoom()));
         this.mapCenterLat.set(this.map.getCenter().lat);
+        this.viewRevision.update((v) => v + 1);
         this.updateQueryMarkerScreenPosition(this.queryMarkerPosition());
       }
     };
@@ -330,8 +342,13 @@ export class MapInfoService {
     this.moveHandler = () => {
       if (this.map) {
         this.mapCenterLat.set(this.map.getCenter().lat);
+        this.viewRevision.update((v) => v + 1);
         this.updateQueryMarkerScreenPosition(this.queryMarkerPosition());
       }
+    };
+
+    this.resizeHandler = () => {
+      this.viewRevision.update((v) => v + 1);
     };
 
     this.map.on('mousemove', this.mouseMoveHandler);
@@ -339,6 +356,7 @@ export class MapInfoService {
     this.map.on('zoomstart', this.zoomStartHandler);
     this.map.on('zoomend', this.zoomEndHandler);
     this.map.on('move', this.moveHandler);
+    this.map.on('resize', this.resizeHandler);
   }
 
   private removeEventListeners(): void {
@@ -363,6 +381,10 @@ export class MapInfoService {
     if (this.moveHandler) {
       this.map.off('move', this.moveHandler);
       this.moveHandler = null;
+    }
+    if (this.resizeHandler) {
+      this.map.off('resize', this.resizeHandler);
+      this.resizeHandler = null;
     }
 
     this.isZooming.set(false);
@@ -517,6 +539,7 @@ export class MapInfoService {
     this.removeQueryMarker();
     this.removeSearchResult();
     this.map = null;
+    this.viewRevision.update((v) => v + 1);
   }
 
   // ── Overlay Management ─────────────────────────────────────────────────────
@@ -584,59 +607,101 @@ export class MapInfoService {
     }
   }
 
-  private updateGraticule(show: boolean): void {
+  private updateGraticule(show: boolean, zoom: number): void {
     if (!this.map) return;
 
-    if (show) {
-      if (!this.graticuleGroup) {
-        this.graticuleGroup = layerGroup().addTo(this.map);
-        this.createGraticuleLines();
-      }
-    } else {
+    if (!show) {
       this.removeGraticule();
+      return;
+    }
+
+    if (!this.graticuleGroup || !this.graticuleMinorGroup) {
+      this.createGraticuleLines();
+    }
+    if (!this.graticuleGroup || !this.graticuleMinorGroup) return;
+
+    this.graticuleGroup.addTo(this.map);
+    if (zoom >= GRATICULE_MINOR_MIN_ZOOM) {
+      this.graticuleMinorGroup.addTo(this.map);
+    } else {
+      this.graticuleMinorGroup.remove();
     }
   }
 
   private createGraticuleLines(): void {
-    if (!this.graticuleGroup) return;
+    this.graticuleGroup = layerGroup();
+    this.graticuleMinorGroup = layerGroup();
 
-    // Add latitude lines (parallels)
-    for (const { lat, label } of GRATICULE_LATITUDES) {
-      const isSpecial = lat === 0; // Ecuador
-      const style = isSpecial ? GRATICULE_SPECIAL_STYLE : GRATICULE_STYLE;
-      const line = polyline(
-        [
-          [lat, -180],
-          [lat, 180],
-        ],
-        style,
-      );
-      line.bindTooltip(label, { permanent: false, direction: 'top' });
-      this.graticuleGroup.addLayer(line);
-    }
-
-    // Add longitude lines (meridians)
-    for (const { lng, label } of GRATICULE_LONGITUDES) {
-      const isSpecial = lng === 0; // Greenwich
-      const style = isSpecial ? GRATICULE_SPECIAL_STYLE : GRATICULE_STYLE;
-      const line = polyline(
-        [
-          [-90, lng],
-          [90, lng],
-        ],
-        style,
-      );
-      line.bindTooltip(label, { permanent: false, direction: 'right' });
-      this.graticuleGroup.addLayer(line);
+    for (const line of buildGraticuleLines()) {
+      const target = line.tier === 'minor' ? this.graticuleMinorGroup : this.graticuleGroup;
+      target.addLayer(this.createGraticulePolyline(line));
     }
   }
 
+  private createGraticulePolyline({ axis, value, tier }: GraticuleLine): Polyline {
+    const coords: LatLngExpression[][] =
+      axis === 'parallel'
+        ? [
+          [
+            [value, GRATICULE_WEST],
+            [value, GRATICULE_EAST],
+          ],
+        ]
+        : meridianCopies(value, GRATICULE_WEST, GRATICULE_EAST).map((lng) => [
+          [-90, lng],
+          [90, lng],
+        ]);
+    return polyline(coords, GRATICULE_STYLES[tier]);
+  }
+
+  private projectGraticuleLabels(
+    map: LeafletMap,
+    includeMinor: boolean,
+  ): ReadonlyArray<GraticuleScreenLabel> {
+    const bounds = map.getBounds();
+    const center = map.getCenter();
+    const width = map.getSize().x;
+    const { parallels, meridians } = visibleGraticuleLabels(
+      this.graticuleLines,
+      {
+        west: bounds.getWest(),
+        east: bounds.getEast(),
+        south: bounds.getSouth(),
+        north: bounds.getNorth(),
+      },
+      includeMinor,
+    );
+
+    const meridianLabels = meridians
+      .map(({ line, lng }): GraticuleScreenLabel => ({
+        id: `meridian:${lng}`,
+        axis: 'meridian',
+        tier: line.tier,
+        text: line.label,
+        offset: map.latLngToContainerPoint([center.lat, lng]).x,
+      }))
+      .filter((label) => label.offset <= width - GRATICULE_LABEL_CORNER_PX);
+
+    const parallelLabels = parallels
+      .map((line): GraticuleScreenLabel => ({
+        id: `parallel:${line.value}`,
+        axis: 'parallel',
+        tier: line.tier,
+        text: line.label,
+        offset: map.latLngToContainerPoint([line.value, center.lng]).y,
+      }))
+      .filter((label) => label.offset >= GRATICULE_LABEL_CORNER_PX);
+
+    return [...meridianLabels, ...parallelLabels];
+  }
+
   private removeGraticule(): void {
-    if (this.graticuleGroup) {
-      this.graticuleGroup.clearLayers();
-      this.graticuleGroup.remove();
-      this.graticuleGroup = null;
+    for (const group of [this.graticuleGroup, this.graticuleMinorGroup]) {
+      group?.clearLayers();
+      group?.remove();
     }
+    this.graticuleGroup = null;
+    this.graticuleMinorGroup = null;
   }
 
   private updateQueryMarker(position: { lat: number; lon: number } | null): void {

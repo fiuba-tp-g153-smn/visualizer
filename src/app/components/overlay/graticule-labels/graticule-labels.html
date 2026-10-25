@@ -1,0 +1,17 @@
+@for (label of labels(); track label.id) {
+  @if (label.axis === 'meridian') {
+    <span
+      class="graticule-label graticule-label--meridian"
+      [class]="'graticule-label--' + label.tier"
+      [style.left.px]="label.offset"
+      >{{ label.text }}</span
+    >
+  } @else {
+    <span
+      class="graticule-label graticule-label--parallel"
+      [class]="'graticule-label--' + label.tier"
+      [style.top.px]="label.offset"
+      >{{ label.text }}</span
+    >
+  }
+}

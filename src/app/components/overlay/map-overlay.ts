@@ -25,6 +25,7 @@ import { MapZoomControlsComponent } from './zoom-controls/zoom-controls';
 import { MapAttributionComponent } from './map-attribution/map-attribution';
 import { MapScaleComponent } from './map-scale/map-scale';
 import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
+import { GraticuleLabelsComponent } from './graticule-labels/graticule-labels';
 
 @Component({
   selector: 'app-map-overlay',
@@ -42,6 +43,7 @@ import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
     MapAttributionComponent,
     MapScaleComponent,
     MapCoordinatesComponent,
+    GraticuleLabelsComponent,
   ],
   templateUrl: './map-overlay.html',
   styleUrl: './map-overlay.scss',
@@ -70,6 +72,7 @@ export class MapOverlayComponent {
   readonly isScaleToolsEnabled = this.scaleToolsService.shouldShowScales;
   readonly queryMarkerScreenPosition = this.mapInfoService.queryMarkerScreenPosition;
   readonly isMapZooming = this.mapInfoService.isZooming;
+  readonly graticuleLabels = this.mapInfoService.graticuleLabels;
 
   readonly isFixedViewerVisible = computed(
     () => this.isViewerEnabled() && this.viewerPanelMode() === POINT_QUERY_PANEL_MODES.FIXED,
