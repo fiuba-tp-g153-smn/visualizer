@@ -556,13 +556,15 @@ const SINARAME_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => {
   };
 });
 
-const INTA_SUBGROUPS: LayerSubgroup[] = RADARES_INTA.map((radar) => ({
-  id: radar.id,
-  name: radar.name,
-  description: `Capas del radar meteorológico ${radar.name} del INTA`,
-  expanded: false,
-  layers: buildRadarLayers(INTA_PREFIX, radar, `${radar.name} del INTA`, INTA_PRODUCTS),
-}));
+const INTA_SUBGROUPS: LayerSubgroup[] = [...RADARES_INTA]
+  .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+  .map((radar) => ({
+    id: radar.id,
+    name: radar.name,
+    description: `Capas del radar meteorológico ${radar.name} del INTA`,
+    expanded: false,
+    layers: buildRadarLayers(INTA_PREFIX, radar, `${radar.name} del INTA`, INTA_PRODUCTS),
+  }));
 
 export const RADAR_SUBGROUPS: LayerSubgroup[] = [
   ...SINARAME_SUBGROUPS,
