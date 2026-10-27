@@ -105,8 +105,15 @@ const SINGLE_ELEVATION: readonly RadarElevation[] = [
   },
 ];
 
-const RADAR_PRODUCT_ELEVATIONS: Partial<Record<RadarProduct, readonly RadarElevation[]>> = {
+type RadarProductElevations = Partial<Record<RadarProduct, readonly RadarElevation[]>>;
+
+const RADAR_PRODUCT_ELEVATIONS: RadarProductElevations = {
   [RadarProduct.DBZH_450KM]: SINGLE_ELEVATION,
+};
+
+/** El PPI `.azi` de largo alcance de los INTA es un único sweep de 0.3°. */
+const INTA_PRODUCT_ELEVATIONS: RadarProductElevations = {
+  [RadarProduct.DBZH_450KM]: [{ ...SINGLE_ELEVATION[0], name: '0.3°' }],
 };
 
 /**
@@ -117,9 +124,13 @@ const RADAR_PRODUCT_ELEVATIONS: Partial<Record<RadarProduct, readonly RadarEleva
  * corrigiendo la longitud por el coseno de la latitud), y redondeados hacia
  * afuera: son un superconjunto exacto de los tiles que publica el procesador.
  *
- * Los 17 radares medidos usan el mismo barrido: un sweep de ~0.5°, 1235–1237
- * gates de 360 m, alcance 446.3–446.7 km. RMA18 todavía no tiene dato y cae al
- * escalado aproximado de abajo.
+ * Los radares SINARAME usan el mismo barrido: un sweep de ~0.5°, 1235–1237
+ * gates de 360 m, alcance 446.3–446.7 km.
+ *
+ * Los INTA publican el largo alcance como un PPI `.azi` cuyo alcance fija cada
+ * sitio, medido del `<stoprange>` y la geometría de los propios archivos: Anguil
+ * 478.5 km y Pergamino 399.5 km (gates de 1 km). Un radar sin caja medida (hoy
+ * Paraná, que no tiene `.azi` de muestra) cae al escalado aproximado de abajo.
  */
 const RADAR_LONG_RANGE_BOXES: Readonly<Record<string, BoundingBox>> = {
   rma1: [
@@ -197,6 +208,14 @@ const RADAR_LONG_RANGE_BOXES: Readonly<Record<string, BoundingBox>> = {
   rma20: [
     [-28.77, -68.68],
     [-20.72, -59.82],
+  ],
+  ang: [
+    [-40.86, -69.36],
+    [-32.22, -58.62],
+  ],
+  per: [
+    [-37.55, -64.91],
+    [-30.34, -56.22],
   ],
 };
 
@@ -504,12 +523,13 @@ const RADARES_INTA = [
 
 /**
  * Productos del feed INTA: los cuatro momentos con equivalente directo en
- * SINARAME. No incluye `vrad` (el Nyquist de estos radares es ±6,65 m/s contra
- * los ±40 que abarca la paleta, se vería monocroma) ni `dbzh-450km` (no hay
- * barrido de largo alcance en este feed).
+ * SINARAME, más `dbzh-450km`, que sale del PPI `.azi` de largo alcance. No
+ * incluye `vrad`: el Nyquist de estos radares es ±6,65 m/s contra los ±40 que
+ * abarca la paleta, se vería monocroma.
  */
 const INTA_PRODUCTS: readonly RadarProduct[] = [
   RadarProduct.DBZH,
+  RadarProduct.DBZH_450KM,
   RadarProduct.ZDR,
   RadarProduct.RHOHV,
   RadarProduct.KDP,
@@ -527,6 +547,7 @@ function buildRadarLayers(
   site: RadarSite,
   siteLabel: string,
   siteProducts: readonly RadarProduct[],
+  productElevations: RadarProductElevations = RADAR_PRODUCT_ELEVATIONS,
 ): RadarTileLayer[] {
   return siteProducts.map((product) => {
     const label = RADAR_PRODUCT_LABELS[product];
@@ -538,8 +559,7 @@ function buildRadarLayers(
       description: `Producto ${label} del radar meteorológico ${siteLabel}`,
       minNativeZoom: site.minNativeZoom,
       maxNativeZoom: site.maxNativeZoom,
-      availableElevations:
-        RADAR_PRODUCT_ELEVATIONS[product] ?? RADAR_DEFAULTS.availableElevations,
+      availableElevations: productElevations[product] ?? RADAR_DEFAULTS.availableElevations,
       boundingBox: boundingBoxFor(product, site.id, site.boundingBox),
     };
   }) as RadarTileLayer[];
@@ -563,10 +583,13 @@ const INTA_SUBGROUPS: LayerSubgroup[] = [...RADARES_INTA]
     name: radar.name,
     description: `Capas del radar meteorológico ${radar.name} del INTA`,
     expanded: false,
-    layers: buildRadarLayers(INTA_PREFIX, radar, `${radar.name} del INTA`, INTA_PRODUCTS),
+    layers: buildRadarLayers(
+      INTA_PREFIX,
+      radar,
+      `${radar.name} del INTA`,
+      INTA_PRODUCTS,
+      INTA_PRODUCT_ELEVATIONS,
+    ),
   }));
 
-export const RADAR_SUBGROUPS: LayerSubgroup[] = [
-  ...SINARAME_SUBGROUPS,
-  ...INTA_SUBGROUPS,
-];
+export const RADAR_SUBGROUPS: LayerSubgroup[] = [...SINARAME_SUBGROUPS, ...INTA_SUBGROUPS];

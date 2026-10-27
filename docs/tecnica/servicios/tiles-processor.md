@@ -130,7 +130,7 @@ leer el archivo del perfil desplegado, no dar por sentado el catálogo.
 | GOES-19 ABI | Canales 13, 9 y 2 | Teselas + COG | `tiles/goes19/abi/`, `cog/goes19/abi/` |
 | GOES-19 GLM | Densidad de destellos, energía óptica, área mínima | Teselas + COG | `tiles/goes19/glm/`, `cog/goes19/glm/` |
 | Radar SINARAME | Diez variables posibles por radar, tres elevaciones | Teselas + COG | `tiles/radar/sinarame/`, `cog/radar/sinarame/` |
-| Radar INTA | DBZH, ZDR, RHOHV y KDP | Teselas + COG | `tiles/radar/inta/`, `cog/radar/inta/` |
+| Radar INTA | DBZH, DBZH 450 km, ZDR, RHOHV y KDP | Teselas + COG | `tiles/radar/inta/`, `cog/radar/inta/` |
 | WRF-ARG4K | Diez productos | Teselas, COG, contornos y barbas | `tiles/wrf-arg4k/`, `cog/wrf-arg4k/`, `geojson/wrf-arg4k/` |
 | ECMWF | Precipitación total; presión a nivel del mar | Teselas + COG; sólo isobaras GeoJSON | `tiles/ecmwf-ifs/`, `geojson/ecmwf-ifs/` |
 | GFS | Presión a nivel del mar; 500 y 250 hPa | COG + GeoJSON; teselas en altura | `tiles/gfs/`, `geojson/gfs/` |
@@ -146,6 +146,11 @@ Las variables de radar y su subvolumen de origen:
 !!! note "Las elevaciones son índices, no ángulos"
     Los tres barridos publicados son los índices `0`, `1` y `2` del archivo. El ángulo real sólo
     queda en el registro. `dbzh-450km` tiene un solo barrido, así que sólo publica `elev0`.
+
+En el INTA, `dbzh-450km` no sale de un subvolumen sino del PPI de largo alcance que cada radar
+envía como `…dBZ.azi`: un barrido de 0.3° cuyo alcance fija cada sitio (por ejemplo, 480 km en
+Anguil y 400 km en Pergamino). El "450" del nombre es nominal. Un `.vol` se publica sólo si su
+alcance es exactamente 240 km, y un `.azi` sólo si supera los 240 km.
 
 ## Memoria
 
