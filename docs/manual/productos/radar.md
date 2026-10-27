@@ -5,7 +5,7 @@ title: 4.2 Radar
 # 4.2 Radar
 
 El grupo Radar reúne dos redes: los 19 equipos de **SINARAME**, con seis variables cada uno, y los
-tres del **INTA**, con cuatro. Son 126 capas en total. La capa identifica la variable y permite
+tres del **INTA**, con cinco. Son 129 capas en total. La capa identifica la variable y permite
 elegir la elevación y el instante que se representarán.
 
 ![Radar, variable, elevación, instante](../../imgs/diagrams/radar-capas.svg){ .diagram loading=lazy }
@@ -36,31 +36,32 @@ Aparecen a continuación de los RMA, nombrados por su ubicación.
 | INTA Anguil | Anguil, La Pampa |
 | INTA Pergamino | Pergamino, Buenos Aires |
 
-Miden lo mismo que los RMA y se usan igual. Publican cuatro variables — ZH, ZDR, RHOHV y KDP —
-y no tienen ZH 450 km ni VRAD. No todas están disponibles en los tres equipos: Pergamino hoy
-sólo publica ZH.
+Miden lo mismo que los RMA y se usan igual. Publican cinco capas — ZH, ZH 450 km, ZDR, RHOHV y
+KDP — y no tienen VRAD. No todas están disponibles en los tres equipos: Pergamino hoy sólo
+publica ZH y ZH 450 km.
 
 ## Las variables
 
-Aparecen en este orden dentro de cada radar. Los del INTA publican las cuatro marcadas.
+Aparecen en este orden dentro de cada radar. Los del INTA publican las cinco marcadas.
 
 | Capa | Variable | Unidad | Rango de la escala | INTA |
 |---|---|---|---|---|
 | ZH | Reflectividad horizontal | dBZ | -18 a 76.5 | sí |
-| ZH 450 km | Reflectividad, barrido de largo alcance | dBZ | -18 a 76.5 | — |
+| ZH 450 km | Reflectividad, barrido de largo alcance | dBZ | -18 a 76.5 | sí |
 | KDP | Fase diferencial específica | °/km | -1 a 6 | sí |
 | VRAD | Velocidad radial | m/s | -40 a 40 | — |
 | RHOHV | Coeficiente de correlación | ρhv | 0.225 a 1.048 | sí |
 | ZDR | Reflectividad diferencial | dB | -3 a 7 | sí |
 
 ZH 450 km cubre unos 450 km en lugar de 240, con menos resolución. Es la única con una sola
-elevación.
+elevación. En los radares del INTA el alcance lo fija cada equipo: por ejemplo, Anguil llega a
+unos 480 km y Pergamino a unos 400.
 
 ## Las elevaciones
 
 Cada capa tiene tres elevaciones: 0.5°, 0.9° y 1.3°, en las dos redes. Aparecen como casillas en la fila de la
 capa. Sólo la de 0.5° viene marcada. Podés marcar varias a la vez, y cada elevación tiene su
-propia opacidad. ZH 450 km tiene únicamente la de 0.5°.
+propia opacidad. ZH 450 km tiene únicamente una: 0.5° en los RMA y 0.3° en los del INTA.
 
 ## Tiempo y animación
 
