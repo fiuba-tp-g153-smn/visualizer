@@ -61,16 +61,20 @@ Discriminated union type system:
 
 ### Services
 
-| Service               | Role                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------- |
-| `LayersService`       | Stateless layer definitions and metadata                                                  |
-| `LayerControlService` | Stateful visibility/opacity/playback; persists to `localStorage` (`smn-active-layers-v3`) |
-| `LayerConfigService`  | Fetches dynamic tile configs; reactive caching                                            |
-| `LayerRenderService`  | Creates Leaflet layers; pools for reuse on opacity-only changes                           |
-| `LayerRefreshService` | Auto-refresh polling for time-based layers                                                |
-| `MapLayersService`    | Leaflet layer lifecycle on the map                                                        |
-| `BaseMapService`      | Base map selection/persistence (`localStorage`: `mapasmn_selected_base_map`)              |
-| `AlertsService`       | HTTP calls to alerts backend for polygon intersection                                     |
+| Service                   | Role                                                                                      |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| `LayersService`           | Stateless layer definitions and metadata                                                  |
+| `LayerControlService`     | Stateful visibility/opacity/playback; persists to `localStorage` (`smn-active-layers-v3`) |
+| `LayerConfigService`      | Fetches dynamic tile configs; reactive caching                                            |
+| `LayerRenderService`      | Creates Leaflet layers; pools for reuse on opacity-only changes                           |
+| `LayerRefreshService`     | Auto-refresh polling for time-based layers                                                |
+| `MapLayersService`        | Leaflet layer lifecycle on the map                                                        |
+| `BaseMapService`          | Base map selection/persistence (`localStorage`: `mapasmn_selected_base_map`)              |
+| `AlertsService`           | HTTP calls to alerts backend for polygon intersection                                     |
+| `MapInfoService`          | Map aids: zoom, scale, cursor coordinates/lines, graticule parts; persisted               |
+| `PointQueryViewerService` | Point values per source; follows frames, LRU cache per source/tileset/point               |
+| `DistanceToolService`     | Distance measurement: `idle → measuring → done ⇄ editing`                                 |
+| `MapContextMenuService`   | Right-click menu sections; general ones in `MapContextMenuSectionsService`                |
 
 ### Reactivity
 
