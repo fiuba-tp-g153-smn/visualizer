@@ -2,11 +2,12 @@ import { Component, input, output } from '@angular/core';
 import { PolygonContextMenuComponent } from '../polygon-context-menu-ui/polygon-context-menu';
 import { PolygonContextMenuAction } from '../../../models';
 import { PolygonContextMenuState } from '../../../services/polygons/map-polygons.service';
+import { ContextMenuPositionDirective } from '../../shared/context-menu-position/context-menu-position.directive';
 
 @Component({
   selector: 'app-map-polygon-context-menu',
   standalone: true,
-  imports: [PolygonContextMenuComponent],
+  imports: [PolygonContextMenuComponent, ContextMenuPositionDirective],
   templateUrl: './polygon-context-menu.html',
   styleUrl: './polygon-context-menu.scss',
 })

@@ -2,8 +2,7 @@
   <div class="context-menu-backdrop" (click)="onBackdropClick(); $event.stopPropagation()">
     <div
       class="context-menu-positioner"
-      [style.left.px]="menuState.x"
-      [style.top.px]="menuState.y"
+      [appContextMenuPosition]="menuState"
       (click)="onMenuClick($event)"
     >
       <div class="emitted-alert-context-menu">
@@ -56,6 +55,7 @@
           </mat-list-item>
 
           @if (menuState.kind === 'pending') {
+            <mat-divider />
             <mat-list-item (click)="emit('viewGifArea')">
               <mat-icon matListItemIcon>zoom_in</mat-icon>
               <span matListItemTitle>Ver imagen del área</span>

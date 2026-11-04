@@ -2,8 +2,7 @@
   <div class="context-menu-backdrop" (click)="onBackdropClick(); $event.stopPropagation()">
     <div
       class="context-menu-positioner"
-      [style.left.px]="menuState.x"
-      [style.top.px]="menuState.y"
+      [appContextMenuPosition]="menuState"
       (click)="onMenuClick($event)"
     >
       <mat-nav-list class="search-result-context-menu">

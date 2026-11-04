@@ -70,11 +70,16 @@
   }
 }
 
-mat-divider {
+// Header/actions divider only; dividers between actions get their space from the gap.
+.emitted-alert-context-menu > mat-divider {
   margin: 4px 4px;
 }
 
+// Actions and their section divider are spaced by the gap, not by margins.
 .menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   padding: 4px 0 0;
 }
 

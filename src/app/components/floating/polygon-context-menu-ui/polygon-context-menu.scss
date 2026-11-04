@@ -3,6 +3,10 @@
 .polygon-context-menu {
   @include overlaySurface.floating-surface();
 
+  // Items and section dividers are spaced by the gap, not by their own margins.
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   overflow: hidden;
   border-radius: 32px;
   padding: 8px;
