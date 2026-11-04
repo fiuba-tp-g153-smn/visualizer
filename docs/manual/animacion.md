@@ -44,25 +44,82 @@ Período fuerza esa consulta. Si la capa no tiene nada que mostrar, el lugar del
 
 ## Animar varias capas juntas
 
-Si reproducís dos capas por separado, cada una avanza a su ritmo. La pestaña Sincronización
-alinea varias capas al mismo instante. Elegís las capas bajo Capas activas, y la aplicación busca
-para cada cuadro una imagen de cada capa dentro de cinco minutos de diferencia.
+Si reproducís dos capas por separado, cada una avanza a su ritmo. La pestaña Sincronización las
+anima juntas, mostrando en cada cuadro el mismo instante en todas.
 
-![La pestaña Sincronización, con dos capas alineadas](../imgs/manual/05-sincronizacion.png){ .doc-figure loading=lazy }
+No hace falta elegir las capas. La pestaña las reparte en grupos de capas con horarios parecidos, y
+cada grupo tiene su propia barra, cantidad de imágenes, velocidad y botón de reproducción, así que
+podés animar los dos a la vez:
 
-Cuando una capa está sincronizada:
+- **Radares y satélites**: las capas de radar y GOES-19. Una imagen acompaña al instante si está a
+  menos de cinco minutos.
+- **Modelos numéricos**: WRF, GFS y ECMWF. Una imagen acompaña al instante si está a menos de
+  media hora.
 
-- Su sección Período muestra la marca "Sincronizado".
-- Sus controles propios quedan deshabilitados: manda la sincronización.
-- Su botón de reproducción pasa a ofrecer "Desconectar de sincronización".
+Las estaciones meteorológicas no participan: se animan desde su propia capa.
 
-Si una capa tiene menos imágenes que las demás, la ventana se achica a esa cantidad. El panel lo
-avisa con "Mostrando N de M", y la capa lleva una marca con su cantidad real.
+![La pestaña Sincronización, con dos capas en el grupo de radares y satélites](../imgs/manual/05-sincronizacion.png){ .doc-figure loading=lazy }
 
-!!! warning "Si no se pueden alinear, no se reproduce"
-    Sin instantes en común, el panel bloquea la reproducción y muestra "Las capas seleccionadas
-    no tienen períodos en común". Si el mejor alineamiento supera los cinco minutos, el mensaje es
-    "No se pudo alinear temporalmente las capas seleccionadas".
+Toda capa que encendés entra sola en su grupo y aparece marcada. Cuando el grupo ya tiene otra capa
+compatible, el grupo queda listo para reproducirlas; si no, la pestaña indica qué encender. Con una
+sola capa, la capa conserva sus controles propios. Si desmarcás una capa, sale del grupo hasta que
+la apagues y la vuelvas a encender, o la vuelvas a marcar.
+
+Los instantes los marca la capa del grupo con imágenes más espaciadas: cada una de sus últimas
+imágenes es un cuadro, y cada otra capa suma su imagen más cercana. Si a alguna capa le falta la
+imagen de un instante, o la tiene demasiado corrida, en ese cuadro sigue mostrando la que tenía. Una
+capa que coincide en menos de dos instantes queda afuera, con la nota "sin horarios en común".
+
+### Ver y editar la línea de tiempo
+
+El botón de línea de tiempo del encabezado de cada grupo abre un gráfico con un carril por capa.
+Cada punto es una imagen, y cada línea es un cuadro de la animación que une las imágenes que se
+ven juntas; los puntos resaltados son los que entran en algún cuadro. Arriba de cada línea está el
+número del cuadro, y el que se está mostrando queda resaltado mientras la animación corre. Un tramo
+punteado cruza una capa que ese cuadro no incluye.
+
+![La línea de tiempo de un grupo, con una línea por cuadro](../imgs/manual/05-sincronizacion-linea.png){ .doc-figure loading=lazy }
+
+Por defecto la aplicación arma la combinación más pareja, y desde ahí podés armar los cuadros a
+mano. Cada cuadro tiene una imagen de cada capa como mucho y una como mínimo; la capa que un cuadro
+no incluye sigue mostrando la imagen que tenía. La hora de un cuadro es el promedio de las horas de
+sus imágenes, y es la que ordena los cuadros y la que muestra el reproductor.
+
+Cada carril tiene a su izquierda la casilla de su capa: destildarla la saca del grupo y tildarla la
+vuelve a sumar, igual que en la pestaña. Las capas que quedan afuera (por no tener horarios en común
+o porque las destildaste) siguen en su carril, en gris y con el motivo; sus puntos se ven pero no se
+pueden unir.
+
+- **Armar un cuadro**: un clic en un punto suelto empieza un cuadro, y cada clic en un punto de
+  otra capa lo suma, en el orden que quieras y salteando las capas que quieras. Un punto de una capa
+  que ya está en el cuadro reemplaza su imagen; un clic en un punto del cuadro lo quita. Con una
+  imagen de cada capa el cuadro se termina solo; si no, **Listo** (o Enter) lo termina, aunque tenga
+  una sola imagen, y **Cancelar** (o Esc) lo descarta y deja los cuadros como estaban. Un doble clic
+  en un punto, o un clic en el fondo del gráfico, también lo termina.
+- **Sin cruces**: ninguna capa puede volver atrás de un cuadro al siguiente, así que las líneas no
+  se cruzan. Si un cuadro cruzaría a otro, su línea se pinta en rojo, la barra indica en qué capa
+  y no se puede terminar hasta corregirlo.
+- **Editar un cuadro**: un clic en su línea, o en uno de sus puntos, lo vuelve a abrir para sumar o
+  quitar imágenes. **Listo** guarda los cambios y **Cancelar** los deshace.
+- **Borrar un cuadro**: mientras lo editás, **Borrar conexión** o la tecla Supr. **Borrar todas**
+  vacía la línea de tiempo para empezar de cero.
+- **Restablecer** vuelve a la combinación automática.
+
+La cantidad de imágenes se elige en la pestaña o abajo a la izquierda de la línea de tiempo; elegir
+otra vuelve a la combinación automática.
+
+Mientras un grupo se reproduce, cada una de sus capas:
+
+- Muestra en su sección Período la marca "Sincronizado".
+- Tiene sus controles propios deshabilitados: manda la sincronización.
+- Ofrece en su botón de reproducción "Desconectar de sincronización".
+
+En pausa, cada capa recupera sus controles. El número junto a la pestaña Sincronización cuenta las
+capas de los grupos que se están reproduciendo. Cada grupo se puede plegar; su encabezado sigue
+mostrando si se reproduce, el instante actual y cuántas capas tiene.
+
+Si desconectás una capa desde su propio botón de reproducción, o le cambiás la cantidad de imágenes,
+sale del grupo y conserva la cantidad de imágenes que tenía sincronizada.
 
 ## Consultar un valor puntual
 

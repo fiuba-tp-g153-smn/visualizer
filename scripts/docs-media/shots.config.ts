@@ -328,11 +328,21 @@ export const SHOTS: Shot[] = [
     seed: seed({ 'active-layers': [wms(PROVINCIA, 1), goes(CH13, 1, 12), goes(GLM_FED, 2, 12, 0.9)] }),
     steps: [
       ...openPanel('layers'),
-      { do: 'click', target: '[data-testid="layers-tab-sync"]', pauseMs: 900 },
-      { do: 'click', target: `[data-testid="layers-sync-pick-${CH13}"] mat-checkbox`, pauseMs: 700 },
-      { do: 'click', target: `[data-testid="layers-sync-pick-${GLM_FED}"] mat-checkbox`, pauseMs: 1500 },
+      // Both GOES layers join the observations group on their own; nothing to pick.
+      { do: 'click', target: '[data-testid="layers-tab-sync"]', pauseMs: 1500 },
     ],
     waitFor: '[data-testid="layers-tab-sync"]', clip: PANEL,
+  },
+  {
+    id: '05-sincronizacion-linea', kind: 'shot', output: 'docs/imgs/manual/05-sincronizacion-linea.png', viewport: SHOT, route: '/',
+    seed: seed({ 'active-layers': [wms(PROVINCIA, 1), goes(CH13, 1, 12), goes(GLM_FED, 2, 12, 0.9)] }),
+    steps: [
+      ...openPanel('layers'),
+      // Both GOES layers join the observations group on their own; nothing to pick.
+      { do: 'click', target: '[data-testid="layers-tab-sync"]', pauseMs: 1500 },
+      { do: 'click', target: '[data-testid="layers-sync-timeline"]', pauseMs: 2000 },
+    ],
+    waitFor: '[data-testid="layers-tab-sync"]',
   },
   {
     id: '05-consulta', kind: 'shot', output: 'docs/imgs/manual/05-consulta.png', viewport: SHOT, route: '/',
