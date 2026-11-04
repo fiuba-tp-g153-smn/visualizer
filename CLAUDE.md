@@ -74,6 +74,7 @@ Discriminated union type system:
 | `MapInfoService`          | Map aids: zoom, scale, cursor coordinates/lines, graticule parts; persisted               |
 | `PointQueryViewerService` | Point values per source; follows frames, LRU cache per source/tileset/point               |
 | `DistanceToolService`     | Distance measurement: `idle → measuring → done ⇄ editing`                                 |
+| `SyncPlaybackService`     | One timeline per sync group (`SYNC_GROUPS`); layers auto-enroll, opt-out per layer        |
 | `MapContextMenuService`   | Right-click menu sections; general ones in `MapContextMenuSectionsService`                |
 
 ### Reactivity

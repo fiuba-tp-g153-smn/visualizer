@@ -36,11 +36,7 @@
 
       <mat-tab>
         <ng-template mat-tab-label>
-          <div
-            class="tab-label-container"
-            data-testid="layers-tab-sync"
-            [class.sync-playing]="syncIsPlaying()"
-          >
+          <div class="tab-label-container" data-testid="layers-tab-sync">
             <mat-icon class="tab-icon">sync</mat-icon>
             <span class="tab-label">Sincronización</span>
             <span class="active-count" [class.visible]="syncSelectedCount() > 0">
