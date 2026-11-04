@@ -7,6 +7,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatDialog } from '@angular/material/dialog';
+import type { SyncTimelineDialogData } from '../../../../../floating/sync-timeline-dialog/sync-timeline-dialog';
 import { SyncPlaybackService } from '../../../../../../services/layers/sync-playback.service';
 import { LayersService } from '../../../../../../services/layers/layers.service';
 import { syncGroupDefinition } from '../../../../../../config/layers/sync-groups.config';
@@ -34,6 +36,7 @@ import { Layer, PLAYBACK_SPEED_LIMITS, SyncGroupId } from '../../../../../../mod
 export class SyncGroupComponent {
   private readonly syncService = inject(SyncPlaybackService);
   private readonly layersService = inject(LayersService);
+  private readonly dialog = inject(MatDialog);
 
   readonly groupId = input.required<SyncGroupId>();
 
@@ -47,6 +50,12 @@ export class SyncGroupComponent {
   readonly frameCount = computed(() => this.syncService.frameCount(this.groupId()));
   readonly frameTotal = computed(() => this.syncService.frameTotal(this.groupId()));
   readonly canPlay = computed(() => this.syncService.canPlay(this.groupId()));
+  /** The timeline opens once some layer has images, even before the group can sync. */
+  readonly hasImages = computed(
+    () =>
+      this.syncService.groupTimelines(this.groupId()).length > 0 ||
+      this.syncService.groupOtherTimelines(this.groupId()).length > 0,
+  );
   readonly hint = computed(() => this.syncService.groupHint(this.groupId()));
 
   readonly expanded = signal(true);
@@ -72,6 +81,18 @@ export class SyncGroupComponent {
 
   onLayerToggle(layerId: string, included: boolean): void {
     this.syncService.setLayerIncluded(layerId, included);
+  }
+
+  /**
+   * Opens the timeline dialog; stops the click from also folding the panel. Loaded on demand
+   * so ECharts stays out of the initial bundle.
+   */
+  async openTimeline(event: Event): Promise<void> {
+    event.stopPropagation();
+    const { SyncTimelineDialogComponent } =
+      await import('../../../../../floating/sync-timeline-dialog/sync-timeline-dialog');
+    const data: SyncTimelineDialogData = { groupId: this.groupId() };
+    this.dialog.open(SyncTimelineDialogComponent, { data, width: '1080px', maxWidth: '95vw' });
   }
 
   togglePlayback(): void {

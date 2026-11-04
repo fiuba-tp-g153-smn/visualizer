@@ -1,0 +1,107 @@
+// Spaced by gaps; the dialog's own padding comes from Material.
+.timeline-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  // Fixed, so switching between the hint and the edit actions never shifts the chart.
+  height: 40px;
+
+  .status,
+  .summary {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .status {
+    min-width: 0;
+
+    &.error {
+      color: var(--mat-sys-error);
+    }
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary {
+    flex-shrink: 0;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}
+
+.image-count {
+  width: 128px;
+  --mat-form-field-container-height: 40px;
+  --mat-form-field-container-vertical-padding: 8px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.chart-area {
+  position: relative;
+}
+
+.chart {
+  width: 100%;
+}
+
+// Over the chart's free left side, one name per lane, each centered on its lane.
+.lane-names {
+  position: absolute;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+
+  .lane {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .lane-name,
+  .lane-note {
+    display: block;
+    overflow: hidden;
+    max-width: 144px;
+  }
+
+  // Two lines, so names that only differ at the end (Canal 2, Canal 13) stay apart.
+  .lane-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.2;
+    font-size: 0.8125rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .lane-note {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.6875rem;
+    font-style: italic;
+    color: var(--mat-sys-outline);
+  }
+
+  .left-out .lane-name {
+    color: var(--mat-sys-outline);
+  }
+}

@@ -1,0 +1,111 @@
+<h2 mat-dialog-title>Línea de tiempo · {{ definition.label }}</h2>
+
+<mat-dialog-content class="timeline-dialog">
+  <div class="toolbar" data-testid="sync-timeline-toolbar">
+    @if (draft(); as draft) {
+      <span class="status" [class.error]="crossing()">{{ status() }}</span>
+      <div class="actions">
+        @if (draft.index !== null) {
+          <button
+            mat-button
+            (click)="deleteFrame()"
+            matTooltip="Supr"
+            data-testid="sync-timeline-unlink"
+          >
+            <mat-icon>delete</mat-icon>
+            Borrar conexión
+          </button>
+        }
+        <button mat-button (click)="cancel()" data-testid="sync-timeline-cancel">Cancelar</button>
+        <button
+          #actionButton
+          mat-stroked-button
+          (click)="done()"
+          [disabled]="crossing() !== null"
+          data-testid="sync-timeline-done"
+        >
+          Listo
+        </button>
+      </div>
+    } @else {
+      <span class="status">{{ hint() }}</span>
+      <span class="summary" data-testid="sync-timeline-summary">{{ frameCount() }} cuadros</span>
+    }
+  </div>
+
+  <div class="chart-area">
+    <div
+      #chart
+      class="chart"
+      [style.height.px]="chartHeight()"
+      data-testid="sync-timeline-chart"
+    ></div>
+    <div
+      class="lane-names"
+      [style.top.px]="grid.top"
+      [style.bottom.px]="grid.bottom"
+      [style.width.px]="grid.left"
+    >
+      @for (lane of laneRows(); track lane.id) {
+        <mat-checkbox
+          class="lane"
+          [class.left-out]="lane.note !== undefined"
+          [checked]="lane.included"
+          (change)="setIncluded(lane.id, $event.checked)"
+          [matTooltip]="
+            lane.name +
+            (lane.included ? ' · desmarcá para desincronizar' : ' · marcá para sincronizar')
+          "
+          matTooltipPosition="left"
+          [attr.data-testid]="'sync-timeline-lane-' + lane.id"
+        >
+          <span class="lane-name">{{ lane.name }}</span>
+          @if (lane.note) {
+            <span class="lane-note">{{ lane.note }}</span>
+          }
+        </mat-checkbox>
+      }
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <mat-form-field
+    appearance="outline"
+    subscriptSizing="dynamic"
+    class="image-count"
+    [matTooltip]="isCustomized() ? 'Cambiarla vuelve a la combinación automática' : ''"
+  >
+    <mat-label>Imágenes</mat-label>
+    <mat-select
+      [value]="imageCount()"
+      (selectionChange)="setImageCount($event.value)"
+      aria-label="Cantidad de imágenes"
+      data-testid="sync-timeline-images"
+    >
+      @for (n of imageCountOptions; track n) {
+        <mat-option [value]="n">{{ n }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <span class="spacer"></span>
+  <button
+    mat-button
+    (click)="clearFrames()"
+    [disabled]="frameCount() === 0"
+    data-testid="sync-timeline-clear"
+  >
+    <mat-icon>delete_sweep</mat-icon>
+    Borrar todas
+  </button>
+  <button
+    mat-button
+    (click)="reset()"
+    [disabled]="!isCustomized()"
+    data-testid="sync-timeline-reset"
+  >
+    <mat-icon>restart_alt</mat-icon>
+    Restablecer
+  </button>
+  <button mat-flat-button color="primary" mat-dialog-close cdkFocusInitial>Cerrar</button>
+</mat-dialog-actions>

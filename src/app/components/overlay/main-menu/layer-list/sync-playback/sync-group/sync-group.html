@@ -16,6 +16,17 @@
         <span class="playing-dot" role="img" aria-label="Reproduciéndose"></span>
       }
       <span class="group-status" [class.is-idle]="!canPlay()">{{ headerStatus() }}</span>
+      <button
+        mat-icon-button
+        class="timeline-btn"
+        (click)="openTimeline($event)"
+        [disabled]="!hasImages()"
+        matTooltip="Línea de tiempo"
+        aria-label="Ver y editar la línea de tiempo del grupo"
+        data-testid="layers-sync-timeline"
+      >
+        <mat-icon>timeline</mat-icon>
+      </button>
       @if (enrolledCount() > 0) {
         <span class="group-count" [matTooltip]="enrolledCount() + ' capas sincronizadas'">{{
           enrolledCount()
