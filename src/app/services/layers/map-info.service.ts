@@ -31,6 +31,20 @@ import {
   visibleGraticuleLabels,
 } from '../../utils/graticule.utils';
 
+/** Graticule pieces that can be shown or hidden on their own: each line tier, and the labels. */
+export type GraticulePart = GraticuleTier | 'labels';
+
+export type GraticuleParts = Readonly<Record<GraticulePart, boolean>>;
+
+const DEFAULT_GRATICULE_PARTS: GraticuleParts = {
+  major: true,
+  minor: true,
+  notable: true,
+  labels: true,
+};
+
+const GRATICULE_TIERS: ReadonlyArray<GraticuleTier> = ['major', 'minor', 'notable'];
+
 interface MapToolsState {
   showCoordinates: boolean;
   showAttribution: boolean;
@@ -38,6 +52,7 @@ interface MapToolsState {
   showZoom: boolean;
   showCursorLines: boolean;
   showGraticule: boolean;
+  graticuleParts?: Partial<GraticuleParts>;
 }
 
 /** Scale bar configuration */
@@ -191,13 +206,19 @@ export class MapInfoService {
 
   // Graticule (parallels and meridians every 5°, plus notable lines)
   readonly showGraticule = signal<boolean>(false);
+  readonly graticuleParts = signal<GraticuleParts>(DEFAULT_GRATICULE_PARTS);
   private readonly graticuleLines = buildGraticuleLines();
   private readonly viewRevision = signal(0);
   readonly graticuleLabels = computed<ReadonlyArray<GraticuleScreenLabel>>(() => {
     this.viewRevision();
     const map = this.map;
-    if (!map || !this.showGraticule() || this.isZooming()) return [];
-    return this.projectGraticuleLabels(map, this.currentZoom() >= GRATICULE_MINOR_MIN_ZOOM);
+    const parts = this.graticuleParts();
+    if (!map || !this.showGraticule() || !parts.labels || this.isZooming()) return [];
+    const zoom = this.currentZoom();
+    // Only label the lines that are drawn.
+    return this.projectGraticuleLabels(map, zoom >= GRATICULE_MINOR_MIN_ZOOM).filter((label) =>
+      this.isGraticuleTierVisible(label.tier, parts, zoom),
+    );
   });
 
   // Query marker position (set by PointQueryViewerService)
@@ -211,9 +232,7 @@ export class MapInfoService {
   // Overlay layers (managed internally)
   private latitudeLine: Polyline | null = null;
   private longitudeLine: Polyline | null = null;
-  private graticuleGroup: LayerGroup | null = null;
-  /** 5° lines, kept apart so they can be hidden at low zoom without rebuilding the rest. */
-  private graticuleMinorGroup: LayerGroup | null = null;
+  private graticuleGroups: Map<GraticuleTier, LayerGroup> | null = null;
   private queryMarker: Marker | null = null;
   private searchMarker: Marker | null = null;
   private searchPolygon: GeoJsonLayer | null = null;
@@ -246,7 +265,8 @@ export class MapInfoService {
     effect(() => {
       const show = this.showGraticule();
       const zoom = this.currentZoom();
-      this.updateGraticule(show, zoom);
+      const parts = this.graticuleParts();
+      this.updateGraticule(show, zoom, parts);
     });
 
     // Effect: update query marker position
@@ -272,6 +292,7 @@ export class MapInfoService {
     this.showZoom.set(state.showZoom ?? MAP_CONFIG.defaultShowZoom);
     this.showCursorLines.set(state.showCursorLines ?? false);
     this.showGraticule.set(state.showGraticule ?? false);
+    this.graticuleParts.set({ ...DEFAULT_GRATICULE_PARTS, ...state.graticuleParts });
   }
 
   private persistState(): void {
@@ -282,6 +303,7 @@ export class MapInfoService {
       showZoom: this.showZoom(),
       showCursorLines: this.showCursorLines(),
       showGraticule: this.showGraticule(),
+      graticuleParts: this.graticuleParts(),
     };
     this.storage.setJson(STORAGE_KEYS.MAP_TOOLS, state);
   }
@@ -308,7 +330,7 @@ export class MapInfoService {
   private applyPersistedOverlays(): void {
     // Graticule needs to be initialized if it was persisted as visible
     if (this.showGraticule()) {
-      this.updateGraticule(true, this.currentZoom());
+      this.updateGraticule(true, this.currentZoom(), this.graticuleParts());
     }
     // Cursor lines will auto-apply when mouse moves over the map
   }
@@ -498,6 +520,11 @@ export class MapInfoService {
     this.persistState();
   }
 
+  setGraticulePart(part: GraticulePart, visible: boolean): void {
+    this.graticuleParts.update((parts) => ({ ...parts, [part]: visible }));
+    this.persistState();
+  }
+
   zoomIn(): void {
     this.zoomBy(1);
   }
@@ -634,7 +661,7 @@ export class MapInfoService {
     }
   }
 
-  private updateGraticule(show: boolean, zoom: number): void {
+  private updateGraticule(show: boolean, zoom: number, parts: GraticuleParts): void {
     if (!this.map) return;
 
     if (!show) {
@@ -642,27 +669,27 @@ export class MapInfoService {
       return;
     }
 
-    if (!this.graticuleGroup || !this.graticuleMinorGroup) {
-      this.createGraticuleLines();
-    }
-    if (!this.graticuleGroup || !this.graticuleMinorGroup) return;
-
-    this.graticuleGroup.addTo(this.map);
-    if (zoom >= GRATICULE_MINOR_MIN_ZOOM) {
-      this.graticuleMinorGroup.addTo(this.map);
-    } else {
-      this.graticuleMinorGroup.remove();
+    this.graticuleGroups ??= this.createGraticuleLines();
+    for (const [tier, group] of this.graticuleGroups) {
+      if (this.isGraticuleTierVisible(tier, parts, zoom)) {
+        group.addTo(this.map);
+      } else {
+        group.remove();
+      }
     }
   }
 
-  private createGraticuleLines(): void {
-    this.graticuleGroup = layerGroup();
-    this.graticuleMinorGroup = layerGroup();
+  /** Minor lines (every 5°) only appear from GRATICULE_MINOR_MIN_ZOOM, where they fit. */
+  private isGraticuleTierVisible(tier: GraticuleTier, parts: GraticuleParts, zoom: number): boolean {
+    return parts[tier] && (tier !== 'minor' || zoom >= GRATICULE_MINOR_MIN_ZOOM);
+  }
 
-    for (const line of buildGraticuleLines()) {
-      const target = line.tier === 'minor' ? this.graticuleMinorGroup : this.graticuleGroup;
-      target.addLayer(this.createGraticulePolyline(line));
+  private createGraticuleLines(): Map<GraticuleTier, LayerGroup> {
+    const groups = new Map(GRATICULE_TIERS.map((tier) => [tier, layerGroup()]));
+    for (const line of this.graticuleLines) {
+      groups.get(line.tier)?.addLayer(this.createGraticulePolyline(line));
     }
+    return groups;
   }
 
   private createGraticulePolyline({ axis, value, tier }: GraticuleLine): Polyline {
@@ -723,12 +750,11 @@ export class MapInfoService {
   }
 
   private removeGraticule(): void {
-    for (const group of [this.graticuleGroup, this.graticuleMinorGroup]) {
-      group?.clearLayers();
-      group?.remove();
+    for (const group of this.graticuleGroups?.values() ?? []) {
+      group.clearLayers();
+      group.remove();
     }
-    this.graticuleGroup = null;
-    this.graticuleMinorGroup = null;
+    this.graticuleGroups = null;
   }
 
   private updateQueryMarker(position: { lat: number; lon: number } | null): void {
