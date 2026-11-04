@@ -101,3 +101,9 @@
   (close)="closeSearchResultContextMenu()"
   (clear)="clearSearchResult()"
 />
+
+<app-map-context-menu
+  [state]="mapContextMenuState()"
+  (close)="closeMapContextMenu()"
+  (select)="runMapContextMenuItem($event)"
+/>

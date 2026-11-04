@@ -107,6 +107,27 @@ La escala, las coordenadas y la atribución también tienen un botón de cierre.
 Las líneas de cursor y los trópicos sólo se desactivan desde la casilla del
 panel.
 
+## Menú del clic derecho
+
+El clic derecho sobre una zona libre del mapa abre un menú con acciones,
+agrupadas por tema. Sobre un polígono, un aviso o una estación, el clic derecho
+sigue abriendo el menú propio de cada uno.
+
+- **Dibujar polígono** activa el dibujo de un polígono, igual que el botón
+  Dibujar del panel Avisos a corto plazo. Desde el polígono se genera después
+  el aviso.
+- **Reproducir todas las capas** y **Pausar todas las capas** inician o frenan
+  la animación de las capas activas a la vez. Las capas sincronizadas avanzan
+  juntas; las demás, cada una a su ritmo.
+- **Desactivar todas las capas** apaga las capas activas, después de pedir
+  confirmación.
+- **Copiar coordenadas** copia la latitud y la longitud del punto, en grados
+  decimales, listas para pegar en otra herramienta.
+
+Cada opción aparece solo cuando tiene sentido: por ejemplo, Pausar todas las
+capas solo si alguna capa se está reproduciendo. Las estaciones meteorológicas
+se animan desde su propia capa.
+
 ## Configuración
 
 El panel Configuración contiene las pestañas Unidades, SMN y Atajos.
