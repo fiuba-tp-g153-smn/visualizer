@@ -113,6 +113,7 @@ El clic derecho sobre una zona libre del mapa abre un menú con acciones,
 agrupadas por tema. Sobre un polígono, un aviso o una estación, el clic derecho
 sigue abriendo el menú propio de cada uno.
 
+- **Medir distancia** activa la medición de distancias.
 - **Dibujar polígono** activa el dibujo de un polígono, igual que el botón
   Dibujar del panel Avisos a corto plazo. Desde el polígono se genera después
   el aviso.
@@ -127,6 +128,29 @@ sigue abriendo el menú propio de cada uno.
 Cada opción aparece solo cuando tiene sentido: por ejemplo, Pausar todas las
 capas solo si alguna capa se está reproduciendo. Las estaciones meteorológicas
 se animan desde su propia capa.
+
+### Medir distancias
+
+1. Hacé clic derecho en el mapa y elegí Medir distancia. El cursor pasa a ser
+   una cruz.
+2. Hacé clic en el punto de partida y en cada punto siguiente. El mapa dibuja el
+   recorrido y muestra el total junto al último punto.
+3. Para terminar, hacé clic derecho y elegí Terminar medición, o apretá Esc.
+
+Mientras medís, el menú ofrece solo acciones de la medición: terminar, deshacer
+el último punto o eliminarla. Si todavía no marcaste ningún punto, ofrece
+Cancelar medición. Los clics no hacen consultas puntuales y el doble clic no
+acerca el mapa.
+
+Al terminar, el recorrido queda en el mapa y los clics vuelven a hacer consultas
+puntuales. El clic derecho ofrece entonces Editar medición, Nueva medición y
+Eliminar medición. La edición funciona como la de los polígonos: arrastrá un
+vértice para moverlo, arrastrá el punto intermedio de un tramo para agregar uno
+y hacé clic en un vértice para quitarlo. El total se actualiza mientras editás.
+Guardar conserva los cambios y Cancelar vuelve al recorrido anterior.
+
+La distancia es geodésica: sigue la curvatura de la Tierra, no la línea recta de
+la proyección.
 
 ## Configuración
 

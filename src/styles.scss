@@ -70,6 +70,15 @@ body {
   }
 }
 
+.distance-measuring.leaflet-container {
+  cursor: crosshair;
+}
+
+.distance-total-tooltip {
+  font-weight: 600;
+  font-family: monospace;
+}
+
 .search-result-marker {
   background: transparent;
 

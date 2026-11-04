@@ -15,6 +15,7 @@ import { LayerControlService } from '../../services/layers/layer-control.service
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
 import { PointQueryViewerService } from '../../services/tools/point-query-viewer.service';
+import { DistanceToolService } from '../../services/tools/distance-tool.service';
 import { MapContextMenuService } from '../../services/map-context-menu/map-context-menu.service';
 import { MapContextMenuSectionsService } from '../../services/map-context-menu/map-context-menu-sections.service';
 import { MapInfoService } from '../../services/layers/map-info.service';
@@ -48,6 +49,7 @@ export class MapContainer implements OnInit, OnDestroy {
   private polygonService = inject(PolygonService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private pointQueryViewerService = inject(PointQueryViewerService);
+  private distanceToolService = inject(DistanceToolService);
   private mapContextMenuService = inject(MapContextMenuService);
   private mapInfoService = inject(MapInfoService);
 
@@ -131,6 +133,7 @@ export class MapContainer implements OnInit, OnDestroy {
     this.layersService.destroy();
     this.polygonsService.destroy();
     this.mapInfoService.destroy();
+    this.distanceToolService.destroy();
     this.mapContextMenuService.close();
 
     // Clear event blocking interval
@@ -164,6 +167,7 @@ export class MapContainer implements OnInit, OnDestroy {
     this.polygonsService.initialize(this.map);
     this.activeAlertsMapService.initialize(this.map);
     this.mapInfoService.initialize(this.map);
+    this.distanceToolService.initialize(this.map);
 
     this.preventUIEventPropagation();
 
@@ -181,6 +185,7 @@ export class MapContainer implements OnInit, OnDestroy {
 
     this.map.on('click', (event: LeafletMouseEvent) => {
       this.polygonsService.closeContextMenu();
+      if (this.distanceToolService.handleMapClick(event.latlng.lat, event.latlng.lng)) return;
       const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
       this.pointQueryViewerService.handleMapClick(event.latlng.lat, event.latlng.lng, button);
     });

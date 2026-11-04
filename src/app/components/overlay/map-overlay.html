@@ -84,6 +84,10 @@
   <app-polygon-edit-dock (action)="handleEditAction($event)" />
 }
 
+@if (isEditingDistance()) {
+  <app-polygon-edit-dock (action)="handleDistanceEditAction($event)" />
+}
+
 <app-map-polygon-context-menu
   [state]="contextMenuState()"
   (close)="closeContextMenu()"

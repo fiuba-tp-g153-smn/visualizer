@@ -21,6 +21,7 @@ import { SearchResultContextMenuComponent } from '../floating/search-result-cont
 import { MapContextMenuComponent } from '../floating/map-context-menu/map-context-menu';
 import { MapContextMenuService } from '../../services/map-context-menu/map-context-menu.service';
 import { MapContextMenuItem } from '../../services/map-context-menu/map-context-menu.models';
+import { DistanceToolService } from '../../services/tools/distance-tool.service';
 import { EmittedAlertContextMenuComponent } from '../floating/emitted-alert-context-menu/emitted-alert-context-menu';
 import { MapPointValuesComponent, PointValuesLayoutMode } from './point-values/point-values';
 import { MapScaleToolsComponent } from './scale-tools/scale-tools';
@@ -61,6 +62,7 @@ export class MapOverlayComponent {
   private polygonsService = inject(MapPolygonsService);
   private activeAlertsMapService = inject(ActiveAlertsMapService);
   private mapInfoService = inject(MapInfoService);
+  private distanceToolService = inject(DistanceToolService);
   private mapContextMenuService = inject(MapContextMenuService);
 
   readonly drawingMode = this.polygonDrawingService.drawingMode;
@@ -131,6 +133,7 @@ export class MapOverlayComponent {
   readonly emittedAlertContextMenuState = this.activeAlertsMapService.contextMenuState;
   readonly searchResultContextMenuState = this.mapInfoService.searchResultContextMenu;
   readonly mapContextMenuState = this.mapContextMenuService.state;
+  readonly isEditingDistance = this.distanceToolService.isEditing;
 
   closeFloatingViewer(layerId: string): void {
     this.pointQueryViewerService.removeSourceSelection(layerId);
@@ -196,6 +199,14 @@ export class MapOverlayComponent {
 
   runMapContextMenuItem(item: MapContextMenuItem): void {
     this.mapContextMenuService.run(item);
+  }
+
+  handleDistanceEditAction(action: PolygonEditAction): void {
+    if (action.type === 'save') {
+      this.distanceToolService.saveEdit();
+    } else {
+      this.distanceToolService.cancelEdit();
+    }
   }
 
   clearSearchResult(): void {
