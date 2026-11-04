@@ -1,4 +1,4 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   EMPTY,
@@ -9,8 +9,8 @@ import {
   finalize,
   forkJoin,
   map,
+  mergeMap,
   of,
-  switchMap,
 } from 'rxjs';
 
 import {
@@ -48,6 +48,7 @@ import { LayersService } from '../layers/layers.service';
 import { MapInfoService } from '../layers/map-info.service';
 import { DrawingMode, PolygonDrawingService } from '../polygons/polygon-drawing.service';
 import { getDefaultCursorIndex } from '../../utils/playback-window';
+import { BoundedLruMap } from '../../utils/bounded-lru-map';
 import {
   buildEcmwfTpPointQueryUrl,
   buildRadarPointQueryUrl,
@@ -113,10 +114,35 @@ interface PersistedPointQueryViewerState {
   panelMode?: PointQueryPanelMode;
 }
 
-interface SourceQueryResult {
-  layerId: string;
-  result: PointQueryDisplayData;
+/** One source to query, with the frame key its result will belong to. */
+interface FrameQuery {
+  readonly entry: DisplaySourceItem;
+  readonly key: string;
 }
+
+interface FrameQueryBatch {
+  readonly coordinates: MouseCoordinates;
+  readonly queries: readonly FrameQuery[];
+}
+
+interface FrameQueryResult extends FrameQuery {
+  readonly result: PointQueryDisplayData;
+}
+
+/**
+ * Results kept per (source, frame, point). Enough for every frame of a few layers
+ * across several clicked points, so replaying or scrubbing back needs no request.
+ */
+const POINT_QUERY_CACHE_SIZE = 1000;
+
+/** Frame batches requested in parallel; later frames queue behind them. */
+const MAX_CONCURRENT_FRAME_QUERIES = 4;
+
+/** Decimals of the clicked point in the frame key (~1 m), so float noise doesn't miss. */
+const KEY_COORDINATE_DECIMALS = 5;
+
+const sameEntries = (a: ReadonlyMap<string, string>, b: ReadonlyMap<string, string>): boolean =>
+  a.size === b.size && [...a].every(([id, key]) => b.get(id) === key);
 
 const SECONDARY_LAYER_ID_SUFFIX = '#secondary';
 
@@ -143,7 +169,12 @@ export class PointQueryViewerService {
   private readonly timezoneSettings = inject(TimezoneSettingsService);
 
   private readonly subscriptions = new Subscription();
-  private readonly queryTriggerSubject = new Subject<MouseCoordinates>();
+  private readonly frameQuerySubject = new Subject<FrameQueryBatch>();
+  private readonly resultCache = new BoundedLruMap<string, PointQueryDisplayData>(
+    POINT_QUERY_CACHE_SIZE,
+  );
+  /** Frame keys with a request on the way, so a frame is never requested twice at once. */
+  private readonly inFlightKeys = new Set<string>();
   private initialized = false;
   private restoredSelectionFromStorage = false;
   private hasSyncedDisplayItems = false;
@@ -165,7 +196,34 @@ export class PointQueryViewerService {
   });
 
   private readonly resultsBySource = signal<Map<string, PointQueryDisplayData>>(new Map());
-  private readonly loadingLayerIds = signal<Set<string>>(new Set());
+  /** Frame key each displayed result belongs to; a mismatch with `currentKeys` is pending. */
+  private readonly displayedKeys = signal<ReadonlyMap<string, string>>(new Map());
+
+  /**
+   * What each selected source should show now: its layer, the frame it is on (tileset,
+   * run, elevation) and the clicked point. Changes on every played or scrubbed frame.
+   */
+  private readonly currentKeys = computed(
+    (): ReadonlyMap<string, string> => {
+      const coordinates = this.lastClickCoordinates();
+      if (!coordinates || !this.canRunQueries()) return new Map();
+      return new Map(
+        this.getSelectedDisplayItems().map((entry) => [
+          entry.layerId,
+          this.frameKey(entry, coordinates),
+        ]),
+      );
+    },
+    { equal: sameEntries },
+  );
+
+  /** Sources whose displayed result is from another frame (or point) than the current one. */
+  private readonly pendingLayerIds = computed((): ReadonlySet<string> => {
+    const shown = this.displayedKeys();
+    return new Set(
+      [...this.currentKeys()].filter(([id, key]) => shown.get(id) !== key).map(([id]) => id),
+    );
+  });
 
   readonly displayItems = computed<DisplaySourceItem[]>(() => {
     // Read-only: makes this computed depend on the timezone mode.
@@ -335,22 +393,20 @@ export class PointQueryViewerService {
   readonly floatingViewerEntries = computed<PointQueryViewerEntry[]>(() => {
     const selectedEntries = this.getSelectedDisplayItems();
     const results = this.resultsBySource();
-    const loadingIds = this.loadingLayerIds();
+    const pending = this.pendingLayerIds();
 
-    return selectedEntries.map((entry): PointQueryViewerEntry => {
-      const showMovingState = entry.controls.playback.isPlaying;
-
-      return {
-        layerId: entry.layerId,
-        layerName: entry.layerName,
-        periodLabel: entry.periodLabel,
-        runLabel: entry.runLabel,
-        elevationLabel: entry.elevationLabel,
-        isPlaying: showMovingState,
-        data: results.get(entry.layerId) ?? null,
-        isLoading: loadingIds.has(entry.layerId) || showMovingState,
-      };
-    });
+    // While a frame is pending, `data` is still the previous frame's result: the panel
+    // shows it dimmed instead of a spinner.
+    return selectedEntries.map((entry): PointQueryViewerEntry => ({
+      layerId: entry.layerId,
+      layerName: entry.layerName,
+      periodLabel: entry.periodLabel,
+      runLabel: entry.runLabel,
+      elevationLabel: entry.elevationLabel,
+      isPlaying: entry.controls.playback.isPlaying,
+      data: results.get(entry.layerId) ?? null,
+      isLoading: pending.has(entry.layerId),
+    }));
   });
 
   private getTilesetPeriodLabel(
@@ -429,36 +485,11 @@ export class PointQueryViewerService {
       ) {
         this.selectedLayerIdsOrdered.set(updatedSelection);
 
-        // Clean up results and loading states for removed layers
+        // Clean up results for removed layers
         const updatedSelectionSet = new Set(updatedSelection);
-        const currentResults = this.resultsBySource();
-        const currentLoading = this.loadingLayerIds();
-
-        // Remove results for deselected layers
-        const nextResults = new Map(currentResults);
-        let resultsChanged = false;
-        for (const layerId of currentResults.keys()) {
-          if (!updatedSelectionSet.has(layerId)) {
-            nextResults.delete(layerId);
-            resultsChanged = true;
-          }
-        }
-        if (resultsChanged) {
-          this.resultsBySource.set(nextResults);
-        }
-
-        // Remove loading states for deselected layers
-        const nextLoading = new Set(currentLoading);
-        let loadingChanged = false;
-        for (const layerId of currentLoading) {
-          if (!updatedSelectionSet.has(layerId)) {
-            nextLoading.delete(layerId);
-            loadingChanged = true;
-          }
-        }
-        if (loadingChanged) {
-          this.loadingLayerIds.set(nextLoading);
-        }
+        this.forgetResults(
+          [...this.resultsBySource().keys()].filter((layerId) => !updatedSelectionSet.has(layerId)),
+        );
       }
 
       if (isInitialSync) {
@@ -467,12 +498,10 @@ export class PointQueryViewerService {
       }
     });
 
+    // Query whatever the current frames need that isn't cached or already on the way.
     effect(() => {
-      if (this.canRunQueries()) {
-        return;
-      }
-
-      this.loadingLayerIds.set(new Set());
+      const keys = this.currentKeys();
+      untracked(() => this.refreshResults(keys));
     });
 
     effect(() => {
@@ -507,74 +536,14 @@ export class PointQueryViewerService {
     this.initialized = true;
 
     this.subscriptions.add(
-      this.queryTriggerSubject
+      this.frameQuerySubject
         .pipe(
-          switchMap((coordinates) => {
-            if (!this.canRunQueries()) {
-              this.loadingLayerIds.set(new Set());
-              return EMPTY;
-            }
-
-            const selectedEntries = this.getSelectedDisplayItems();
-            if (selectedEntries.length === 0) {
-              this.loadingLayerIds.set(new Set());
-              return EMPTY;
-            }
-
-            const loadingIds = new Set<string>();
-            for (const entry of selectedEntries) {
-              loadingIds.add(entry.layerId);
-            }
-            this.loadingLayerIds.set(loadingIds);
-
-            const requests: Array<Observable<SourceQueryResult>> = [];
-            for (const entry of selectedEntries) {
-              const { layerId, layerName, sourceKind, layer, controls, elevationId, forecastTs } =
-                entry;
-              const request$ =
-                sourceKind === 'secondary'
-                  ? this.queryLayerSecondaryPoint(
-                      layer,
-                      controls,
-                      coordinates.lat,
-                      coordinates.lon,
-                      forecastTs,
-                      entry.secondary,
-                    )
-                  : this.queryLayerPoint(
-                      layer,
-                      controls,
-                      coordinates.lat,
-                      coordinates.lon,
-                      elevationId,
-                      forecastTs,
-                    );
-
-              if (!request$) {
-                continue;
-              }
-
-              requests.push(
-                request$.pipe(
-                  map((result): SourceQueryResult => ({
-                    layerId,
-                    result: { ...result, layerId, layerName },
-                  })),
-                ),
-              );
-            }
-
-            return forkJoin(requests).pipe(finalize(() => this.loadingLayerIds.set(new Set())));
-          }),
+          // Not switchMap: finished frames stay cached even after playback moves on.
+          mergeMap((batch) => this.runFrameQueries(batch), MAX_CONCURRENT_FRAME_QUERIES),
         )
-        .subscribe((results) => {
-          const nextResults = new Map(this.resultsBySource());
-          for (const item of results) {
-            nextResults.set(item.layerId, item.result);
-          }
-          this.resultsBySource.set(nextResults);
-        }),
+        .subscribe((results) => this.storeFrameResults(results)),
     );
+    this.refreshResults(this.currentKeys());
   }
 
   handleMapClick(lat: number, lon: number, button: number): void {
@@ -586,14 +555,8 @@ export class PointQueryViewerService {
       return;
     }
 
-    const coordinates = { lat, lon };
-    this.lastClickCoordinates.set(coordinates);
-
-    if (!this.canRunQueries()) {
-      return;
-    }
-
-    this.queryTriggerSubject.next(coordinates);
+    // The frame-key effect queries the new point for every selected source.
+    this.lastClickCoordinates.set({ lat, lon });
   }
 
   setEnabled(enabled: boolean): void {
@@ -649,14 +612,7 @@ export class PointQueryViewerService {
       this.selectedLayerIdsOrdered.set(currentSelection.filter((id) => id !== layerId));
     }
 
-    // Always clean results and loading states
-    const nextResults = new Map(this.resultsBySource());
-    nextResults.delete(layerId);
-    this.resultsBySource.set(nextResults);
-
-    const nextLoading = new Set(this.loadingLayerIds());
-    nextLoading.delete(layerId);
-    this.loadingLayerIds.set(nextLoading);
+    this.forgetResults([layerId]);
   }
 
   private addManualDeselection(layerId: string): void {
@@ -685,8 +641,7 @@ export class PointQueryViewerService {
 
   clearSelectedSources(): void {
     this.selectedLayerIdsOrdered.set([]);
-    this.resultsBySource.set(new Map());
-    this.loadingLayerIds.set(new Set());
+    this.forgetResults([...this.resultsBySource().keys()]);
   }
 
   isSourceSelected(layerId: string): boolean {
@@ -1240,6 +1195,126 @@ export class PointQueryViewerService {
     } catch {
       return undefined;
     }
+  }
+
+  /** Identity of what a source shows: the source, its current frame and the point. */
+  private frameKey(entry: DisplaySourceItem, { lat, lon }: MouseCoordinates): string {
+    const frame = this.resolveTilesetId(entry.layer.id, entry.controls.playback.timeIndex) ?? '-';
+    const point = `${lat.toFixed(KEY_COORDINATE_DECIMALS)},${lon.toFixed(KEY_COORDINATE_DECIMALS)}`;
+    return `${entry.layerId}|${frame}|${point}`;
+  }
+
+  /** Shows cached results for the current frames and requests the missing ones. */
+  private refreshResults(keys: ReadonlyMap<string, string>): void {
+    // Before `initialize` nothing listens to the query stream yet; it refreshes once it does.
+    const coordinates = this.lastClickCoordinates();
+    if (!this.initialized || !coordinates || keys.size === 0) return;
+
+    const shown = this.displayedKeys();
+    const entries = new Map(this.getSelectedDisplayItems().map((e) => [e.layerId, e]));
+    const hits = new Map<string, { key: string; result: PointQueryDisplayData }>();
+    const missing: FrameQuery[] = [];
+
+    const results = this.resultsBySource();
+    for (const [layerId, key] of keys) {
+      // A displayed error is not a finished frame: coming back to it retries.
+      if (shown.get(layerId) === key && results.get(layerId)?.status !== PointQueryStatus.ERROR) {
+        continue;
+      }
+      const cached = this.resultCache.get(key);
+      if (cached) {
+        hits.set(layerId, { key, result: cached });
+      } else if (!this.inFlightKeys.has(key)) {
+        const entry = entries.get(layerId);
+        if (entry) missing.push({ entry, key });
+      }
+    }
+
+    if (hits.size > 0) this.showResults(hits);
+    if (missing.length > 0) {
+      missing.forEach(({ key }) => this.inFlightKeys.add(key));
+      this.frameQuerySubject.next({ coordinates, queries: missing });
+    }
+  }
+
+  /**
+   * Runs a batch, skipping frames that are no longer current by the time it starts, so a
+   * fast playback doesn't build a backlog of frames nobody will see.
+   */
+  private runFrameQueries(batch: FrameQueryBatch): Observable<FrameQueryResult[]> {
+    const current = this.currentKeys();
+    // Query with the source as it is now, not as it was queued: a config refresh can shift
+    // time indices, and the queued controls would then point at a different tileset.
+    const entries = new Map(this.getSelectedDisplayItems().map((entry) => [entry.layerId, entry]));
+    const live: FrameQuery[] = [];
+    for (const { entry: queued, key } of batch.queries) {
+      const entry = entries.get(queued.layerId);
+      if (entry && current.get(entry.layerId) === key) {
+        live.push({ entry, key });
+      } else {
+        this.inFlightKeys.delete(key);
+      }
+    }
+    if (live.length === 0) return EMPTY;
+
+    return forkJoin(
+      live.map((query) =>
+        this.querySource(query.entry, batch.coordinates).pipe(
+          map((result): FrameQueryResult => ({
+            ...query,
+            result: { ...result, layerId: query.entry.layerId, layerName: query.entry.layerName },
+          })),
+        ),
+      ),
+    ).pipe(finalize(() => live.forEach(({ key }) => this.inFlightKeys.delete(key))));
+  }
+
+  private querySource(
+    entry: DisplaySourceItem,
+    { lat, lon }: MouseCoordinates,
+  ): Observable<PointQueryDisplayData> {
+    const { layerId, layerName, sourceKind, layer, controls, elevationId, forecastTs } = entry;
+    const request$ =
+      sourceKind === 'secondary'
+        ? this.queryLayerSecondaryPoint(layer, controls, lat, lon, forecastTs, entry.secondary)
+        : this.queryLayerPoint(layer, controls, lat, lon, elevationId, forecastTs);
+    return request$ ?? of(this.buildNoData(layerId, layerName, elevationId));
+  }
+
+  private storeFrameResults(results: readonly FrameQueryResult[]): void {
+    const current = this.currentKeys();
+    const shownNow = new Map<string, { key: string; result: PointQueryDisplayData }>();
+    for (const { entry, key, result } of results) {
+      // Errors are shown but not cached, so a later pass over the frame retries it.
+      if (result.status !== PointQueryStatus.ERROR) this.resultCache.set(key, result);
+      if (current.get(entry.layerId) === key) shownNow.set(entry.layerId, { key, result });
+    }
+    if (shownNow.size > 0) this.showResults(shownNow);
+  }
+
+  private showResults(
+    updates: ReadonlyMap<string, { key: string; result: PointQueryDisplayData }>,
+  ): void {
+    const nextResults = new Map(this.resultsBySource());
+    const nextShown = new Map(this.displayedKeys());
+    for (const [layerId, { key, result }] of updates) {
+      nextResults.set(layerId, result);
+      nextShown.set(layerId, key);
+    }
+    this.resultsBySource.set(nextResults);
+    this.displayedKeys.set(nextShown);
+  }
+
+  private forgetResults(layerIds: readonly string[]): void {
+    if (layerIds.length === 0) return;
+    const nextResults = new Map(this.resultsBySource());
+    const nextShown = new Map(this.displayedKeys());
+    layerIds.forEach((layerId) => {
+      nextResults.delete(layerId);
+      nextShown.delete(layerId);
+    });
+    this.resultsBySource.set(nextResults);
+    this.displayedKeys.set(nextShown);
   }
 
   private getSelectedDisplayItems(): DisplaySourceItem[] {

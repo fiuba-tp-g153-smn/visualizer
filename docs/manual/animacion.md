@@ -87,6 +87,11 @@ corresponde, y el valor con su unidad. El valor es el dato, no el color leído d
 panel dice "Sin dato" hasta el primer clic, y donde la capa no tiene dato. Cada panel se cierra
 con su propia cruz.
 
+El valor sigue a la capa: al mover su período o al reproducirla, el panel consulta el instante
+nuevo para el mismo punto. Mientras llega, el valor anterior queda atenuado. Los instantes ya
+consultados se recuerdan, así que al repetir la animación los valores aparecen sin espera.
+Mientras la capa se reproduce, un punto que late junto a su nombre lo indica.
+
 La casilla Mostrar marcador deja una marca en el punto consultado. Con el marcador prendido
 aparece Ubicación del visor: Panel fijo junta los resultados en la columna derecha, y
 Junto al marcador los pega al punto. La consulta y sus resultados se recuerdan al volver a

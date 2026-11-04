@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { PointValuePanelComponent } from './point-value-panel';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
+import { PointQueryStatus } from '../../../models';
 
 function createPanel(): PointValuePanelComponent {
   TestBed.resetTestingModule();
@@ -46,12 +47,21 @@ describe('PointValuePanelComponent', () => {
     expect(panel.periodLine).toBe('0.5° · 23/08/2026 14:00');
   });
 
-  it('leads the period line with "Reproduciéndose" while playing', () => {
+  it('keeps the period line free of playback text (a dot shows it instead)', () => {
     const panel = createPanel();
     panel.isPlaying = true;
     panel.elevationLabel = '0.5°';
     panel.periodLabel = '23/08/2026 14:00';
-    expect(panel.periodLine).toBe('Reproduciéndose · 0.5° · 23/08/2026 14:00');
+    expect(panel.periodLine).toBe('0.5° · 23/08/2026 14:00');
+  });
+
+  it('is stale while the next frame loads over a previous result', () => {
+    const panel = createPanel();
+    panel.isLoading = true;
+    expect(panel.isStale).toBe(false);
+
+    panel.data = { layerId: 'a', layerName: 'A', status: PointQueryStatus.NO_DATA };
+    expect(panel.isStale).toBe(true);
   });
 
   describe('detailSlots', () => {

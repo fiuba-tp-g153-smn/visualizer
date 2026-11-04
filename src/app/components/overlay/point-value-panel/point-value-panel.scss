@@ -38,6 +38,22 @@
   gap: 1px;
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.playing-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mat-sys-primary);
+  animation: playing-pulse 1.2s ease-in-out infinite;
+}
+
 .layer-name {
   font-size: 11px;
   font-weight: 500;
@@ -53,7 +69,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+  // Changes every frame while playing; fixed-width glyphs keep it from jittering.
+  font-family: monospace;
 
   &.blank {
     visibility: hidden;
@@ -65,14 +82,21 @@
   display: flex;
   align-items: baseline;
   gap: 4px;
+  transition: opacity 0.2s ease;
+
+  &.stale {
+    opacity: 0.45;
+  }
 }
 
 .value {
+  display: inline-block;
+  animation: value-in 0.18s ease-out;
   font-size: 14px;
   font-weight: 600;
   color: var(--mat-sys-on-surface);
   text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-family: monospace;
 }
 
 .unit {
@@ -83,4 +107,36 @@
 .empty {
   font-size: 11px;
   color: var(--mat-sys-on-surface-variant);
+}
+
+@keyframes playing-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes value-in {
+  from {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .playing-dot,
+  .value {
+    animation: none;
+  }
 }
