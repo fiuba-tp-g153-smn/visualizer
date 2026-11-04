@@ -88,6 +88,16 @@ const WEATHER_STATIONS_POOL_MAX = 24;
  * The service uses a factory pattern to convert Layer models into
  * configured L.TileLayer instances appropriate for each layer type.
  */
+/**
+ * Same zoom behaviour as the base map: no tile requests for the intermediate levels
+ * of a running zoom animation (wheel, flyTo, pinch), whose tiles would pop in and be
+ * replaced mid-zoom, and a wider ring of kept tiles so panning back doesn't reload.
+ */
+const ZOOM_STABLE_TILE_OPTIONS: Pick<L.GridLayerOptions, 'updateWhenZooming' | 'keepBuffer'> = {
+  updateWhenZooming: false,
+  keepBuffer: 4,
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -1574,6 +1584,7 @@ export class LayerRenderService {
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
       opacity: controls.opacity,
+      ...ZOOM_STABLE_TILE_OPTIONS,
     });
 
     this.attachErrorHandlers(wmsLayer, layer.id);
@@ -1614,6 +1625,7 @@ export class LayerRenderService {
       version: IGN_WMS_BASE_CONFIG.version,
       crs: L.CRS.EPSG3857,
       opacity: controls.opacity,
+      ...ZOOM_STABLE_TILE_OPTIONS,
       // The backup only covers up to this zoom; upscale beyond it rather than
       // requesting tiles that would come back as empty miss placeholders.
       maxNativeZoom: IGN_WMS_BACKUP_MAX_NATIVE_ZOOM,
@@ -1729,6 +1741,7 @@ export class LayerRenderService {
       maxZoom: MAP_CONFIG.maxZoom,
       noWrap: true,
       opacity: opacity,
+      ...ZOOM_STABLE_TILE_OPTIONS,
     };
   }
 

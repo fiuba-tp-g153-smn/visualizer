@@ -5,6 +5,7 @@ import {
   LatLngExpression,
   LayerGroup,
   LeafletMouseEvent,
+  ZoomAnimEvent,
   Map as LeafletMap,
   Marker,
   PathOptions,
@@ -217,6 +218,9 @@ export class MapInfoService {
   // Event handlers
   private mouseMoveHandler: ((e: LeafletMouseEvent) => void) | null = null;
   private mouseOutHandler: (() => void) | null = null;
+  private zoomAnimHandler: ((e: ZoomAnimEvent) => void) | null = null;
+  /** Zoom an in-flight animation is heading to; null when the map is still. */
+  private zoomAnimationTarget: number | null = null;
   private zoomStartHandler: (() => void) | null = null;
   private zoomEndHandler: (() => void) | null = null;
   private moveHandler: (() => void) | null = null;
@@ -328,8 +332,13 @@ export class MapInfoService {
     };
 
     // Zoom final state update
+    this.zoomAnimHandler = (e: ZoomAnimEvent) => {
+      this.zoomAnimationTarget = e.zoom;
+    };
+
     this.zoomEndHandler = () => {
       this.isZooming.set(false);
+      this.zoomAnimationTarget = null;
 
       if (this.map) {
         this.currentZoom.set(Math.round(this.map.getZoom()));
@@ -354,6 +363,7 @@ export class MapInfoService {
     this.map.on('mousemove', this.mouseMoveHandler);
     this.map.on('mouseout', this.mouseOutHandler);
     this.map.on('zoomstart', this.zoomStartHandler);
+    this.map.on('zoomanim', this.zoomAnimHandler);
     this.map.on('zoomend', this.zoomEndHandler);
     this.map.on('move', this.moveHandler);
     this.map.on('resize', this.resizeHandler);
@@ -369,6 +379,10 @@ export class MapInfoService {
     if (this.mouseOutHandler) {
       this.map.off('mouseout', this.mouseOutHandler);
       this.mouseOutHandler = null;
+    }
+    if (this.zoomAnimHandler) {
+      this.map.off('zoomanim', this.zoomAnimHandler);
+      this.zoomAnimHandler = null;
     }
     if (this.zoomStartHandler) {
       this.map.off('zoomstart', this.zoomStartHandler);
@@ -479,16 +493,24 @@ export class MapInfoService {
     this.persistState();
   }
 
-  setCurrentZoom(zoom: number): void {
-    this.currentZoom.set(Math.max(MAP_CONFIG.minZoom, Math.min(MAP_CONFIG.maxZoom, zoom)));
-  }
-
   zoomIn(): void {
-    this.setCurrentZoom(this.currentZoom() + 1);
+    this.zoomBy(1);
   }
 
   zoomOut(): void {
-    this.setCurrentZoom(this.currentZoom() - 1);
+    this.zoomBy(-1);
+  }
+
+  /**
+   * Zooms the map itself, counting from where a running animation is headed so quick
+   * repeated clicks add up instead of restarting from the zoom mid-animation.
+   * `currentZoom` follows on `zoomend`; the map is the only source of truth.
+   */
+  private zoomBy(delta: number): void {
+    const map = this.map;
+    if (!map) return;
+    const base = Math.round(this.zoomAnimationTarget ?? map.getZoom());
+    map.setZoom(Math.max(MAP_CONFIG.minZoom, Math.min(MAP_CONFIG.maxZoom, base + delta)));
   }
 
   /** Moves the map to the given coordinates, optionally adjusting zoom and animating the move. */

@@ -96,16 +96,6 @@ export class MapContainer implements OnInit, OnDestroy {
       });
 
       effect(() => {
-        const targetZoom = this.mapInfoService.currentZoom();
-        if (this.map) {
-          const currentMapZoom = Math.round(this.map.getZoom());
-          if (currentMapZoom !== targetZoom) {
-            this.map.setZoom(targetZoom);
-          }
-        }
-      });
-
-      effect(() => {
         const polygons = this.polygonService.allPolygons();
         const editingId = this.editingPolygonId();
         if (this.map) {
@@ -152,6 +142,7 @@ export class MapContainer implements OnInit, OnDestroy {
       maxZoom: MAP_CONFIG.maxZoom,
       maxBounds: MAP_CONFIG.maxBounds,
       maxBoundsViscosity: MAP_CONFIG.maxBoundsViscosity,
+      wheelPxPerZoomLevel: MAP_CONFIG.wheelPxPerZoomLevel,
       zoomControl: false,
       attributionControl: false,
       fadeAnimation: false, // Disable Leaflet's default fade animation to prevent flashes during playback; CSS transitions can be used for smoother effects if desired.
@@ -167,13 +158,6 @@ export class MapContainer implements OnInit, OnDestroy {
     this.mapInfoService.initialize(this.map);
 
     this.preventUIEventPropagation();
-
-    this.map.on('zoom', () => {
-      const mapZoom = this.map?.getZoom();
-      if (mapZoom !== undefined) {
-        this.mapInfoService.setCurrentZoom(Math.round(mapZoom));
-      }
-    });
 
     this.map.on('zoomend', () => {
       const mapZoom = this.map?.getZoom();
