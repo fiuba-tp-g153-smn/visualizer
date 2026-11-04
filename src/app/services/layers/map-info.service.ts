@@ -168,8 +168,11 @@ export class MapInfoService {
   readonly canZoomOut = computed(() => this.currentZoom() > MAP_CONFIG.minZoom);
 
   // Mouse coordinates state
+  /** Cursor position on the map, also under overlays; kept when the cursor leaves the map. */
   readonly mouseLatitude = signal<number | null>(null);
   readonly mouseLongitude = signal<number | null>(null);
+  /** Whether the cursor is within the map's area (overlays on top of it included). */
+  private readonly isCursorOnMap = signal(false);
 
   // Map center for scale calculation
   private readonly mapCenterLat = signal<number>(MAP_CONFIG.initialCenter.lat);
@@ -216,8 +219,7 @@ export class MapInfoService {
   private searchPolygon: GeoJsonLayer | null = null;
 
   // Event handlers
-  private mouseMoveHandler: ((e: LeafletMouseEvent) => void) | null = null;
-  private mouseOutHandler: (() => void) | null = null;
+  private pointerMoveHandler: ((e: PointerEvent) => void) | null = null;
   private zoomAnimHandler: ((e: ZoomAnimEvent) => void) | null = null;
   /** Zoom an in-flight animation is heading to; null when the map is still. */
   private zoomAnimationTarget: number | null = null;
@@ -236,7 +238,7 @@ export class MapInfoService {
     effect(() => {
       const lat = this.mouseLatitude();
       const lng = this.mouseLongitude();
-      const show = this.showCursorLines();
+      const show = this.showCursorLines() && this.isCursorOnMap();
       this.updateCrosshair(lat, lng, show);
     });
 
@@ -315,15 +317,23 @@ export class MapInfoService {
     if (!this.map) return;
 
     // Mouse move for coordinates
-    this.mouseMoveHandler = (e: LeafletMouseEvent) => {
-      this.mouseLatitude.set(e.latlng.lat);
-      this.mouseLongitude.set(e.latlng.lng);
-    };
-
-    // Clear coordinates when mouse leaves the map
-    this.mouseOutHandler = () => {
-      this.mouseLatitude.set(null);
-      this.mouseLongitude.set(null);
+    // Panels, tools and the info column float above the map outside Leaflet's container,
+    // so Leaflet's own mousemove stops under them. Track the pointer on the whole document
+    // and project it while it is within the map's area; outside it, keep the last value.
+    this.pointerMoveHandler = (e: PointerEvent) => {
+      const map = this.map;
+      if (!map) return;
+      const rect = map.getContainer().getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+      this.isCursorOnMap.set(inside);
+      if (!inside) return;
+      const { lat, lng } = map.mouseEventToLatLng(e);
+      this.mouseLatitude.set(lat);
+      this.mouseLongitude.set(lng);
     };
 
     // Hide near-marker overlays while zooming and restore at the end.
@@ -360,8 +370,7 @@ export class MapInfoService {
       this.viewRevision.update((v) => v + 1);
     };
 
-    this.map.on('mousemove', this.mouseMoveHandler);
-    this.map.on('mouseout', this.mouseOutHandler);
+    document.addEventListener('pointermove', this.pointerMoveHandler, { passive: true });
     this.map.on('zoomstart', this.zoomStartHandler);
     this.map.on('zoomanim', this.zoomAnimHandler);
     this.map.on('zoomend', this.zoomEndHandler);
@@ -372,13 +381,9 @@ export class MapInfoService {
   private removeEventListeners(): void {
     if (!this.map) return;
 
-    if (this.mouseMoveHandler) {
-      this.map.off('mousemove', this.mouseMoveHandler);
-      this.mouseMoveHandler = null;
-    }
-    if (this.mouseOutHandler) {
-      this.map.off('mouseout', this.mouseOutHandler);
-      this.mouseOutHandler = null;
+    if (this.pointerMoveHandler) {
+      document.removeEventListener('pointermove', this.pointerMoveHandler);
+      this.pointerMoveHandler = null;
     }
     if (this.zoomAnimHandler) {
       this.map.off('zoomanim', this.zoomAnimHandler);
