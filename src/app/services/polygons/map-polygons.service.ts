@@ -30,6 +30,7 @@ import {
   lightenColor,
 } from '../../utils/map-styles.utils';
 import { isSimplePolygon } from '../../utils/polygon-validation.utils';
+import { deletePolygonMessage } from '../../utils/polygon-messages.utils';
 import { departmentKey } from '../../utils/department-key.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
 import { NotificationService } from '../notifications/notification.service';
@@ -593,14 +594,13 @@ export class MapPolygonsService {
 
   private confirmAndDeletePolygon(polygonId: string): void {
     const polygon = this.polygonService.getPolygonById(polygonId);
-    const polygonName = polygon?.name || 'Sin nombre';
 
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
       ConfirmDialogComponent,
       {
         data: {
           title: 'Eliminar polígono',
-          message: `¿Está seguro que desea eliminar el polígono "${polygonName}"? Esta acción no se puede deshacer.`,
+          message: deletePolygonMessage(polygon?.name),
           confirmText: 'Eliminar',
           cancelText: 'Cancelar',
           confirmColor: 'warn',
