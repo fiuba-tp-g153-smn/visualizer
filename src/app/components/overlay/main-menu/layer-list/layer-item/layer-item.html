@@ -527,9 +527,17 @@
                 </div>
               } @else if (hasTimeControl()) {
                 <div class="time-slider-container">
-                  <span class="time-min" [matTooltip]="getTimeLabel(minTimeIndex())">{{
-                    getTimeOnly(minTimeIndex())
-                  }}</span>
+                  <button
+                    type="button"
+                    class="time-min time-edge"
+                    [class.can-jump]="canJumpTo(minTimeIndex())"
+                    (click)="jumpTo(minTimeIndex())"
+                    [matTooltip]="getTimeLabel(minTimeIndex()) + ' · Ir a la primera imagen'"
+                    aria-label="Ir a la primera imagen"
+                    data-testid="layers-time-first"
+                  >
+                    {{ getTimeOnly(minTimeIndex()) }}
+                  </button>
                   <mat-slider
                     [min]="minTimeIndex()"
                     [max]="maxTimeIndex()"
@@ -546,9 +554,17 @@
                       (valueChange)="onTimeIndexChange($event)"
                     />
                   </mat-slider>
-                  <span class="time-max" [matTooltip]="getTimeLabel(maxTimeIndex())">{{
-                    getTimeOnly(maxTimeIndex())
-                  }}</span>
+                  <button
+                    type="button"
+                    class="time-max time-edge"
+                    [class.can-jump]="canJumpTo(maxTimeIndex())"
+                    (click)="jumpTo(maxTimeIndex())"
+                    [matTooltip]="getTimeLabel(maxTimeIndex()) + ' · Ir a la última imagen'"
+                    aria-label="Ir a la última imagen"
+                    data-testid="layers-time-latest"
+                  >
+                    {{ getTimeOnly(maxTimeIndex()) }}
+                  </button>
                   <button
                     mat-icon-button
                     (click)="togglePlayback()"
@@ -574,17 +590,6 @@
                   <span class="time-current" data-testid="layers-time-current">{{
                     getTimeLabel(currentTimeIndex())
                   }}</span>
-
-                  <button
-                    mat-icon-button
-                    (click)="goToLatest()"
-                    [disabled]="isSynced() || currentTimeIndex() === latestTimeIndex()"
-                    matTooltip="Ir a la imagen más reciente"
-                    class="latest-btn"
-                    data-testid="layers-time-latest"
-                  >
-                    <mat-icon>update</mat-icon>
-                  </button>
 
                   <div class="images-count-control">
                     <mat-form-field

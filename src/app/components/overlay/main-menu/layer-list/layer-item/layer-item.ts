@@ -784,14 +784,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     this.controlService.setTimeIndex(this.layer.id, timeIndex);
   }
 
-  /** Index of the most recent image: the forecast start for forecast layers, or the latest observation otherwise. */
-  latestTimeIndex = computed(() => {
-    const isForecast = this.layer.type === LayerType.TILE && this.layer.isForecast;
-    return isForecast ? this.minTimeIndex() : this.maxTimeIndex();
-  });
+  /** The slider's end labels double as jumps to the first/last image of the window. */
+  canJumpTo(timeIndex: number): boolean {
+    return !this.isSynced() && this.currentTimeIndex() !== timeIndex;
+  }
 
-  goToLatest(): void {
-    this.onTimeIndexChange(this.latestTimeIndex());
+  jumpTo(timeIndex: number): void {
+    // Synced layers follow the sync timeline; jumping would detach them.
+    if (!this.canJumpTo(timeIndex)) return;
+    this.onTimeIndexChange(timeIndex);
   }
 
   isElevationSelected(elevationId: string): boolean {

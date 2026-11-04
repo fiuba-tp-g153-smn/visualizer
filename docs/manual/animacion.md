@@ -26,7 +26,8 @@ Los números de la lista son los de la captura.
 2. El intervalo, en segundos por imagen, entre 0,1 y 10.
 3. La marca de tiempo de la imagen que estás viendo, con su sufijo HOA o UTC.
 4. El botón de reproducción.
-5. El botón que lleva a la imagen más reciente.
+5. Las horas de los extremos del deslizador. Un clic en la de la izquierda lleva a la primera
+   imagen y en la de la derecha a la última; al pasar el mouse se subrayan.
 6. El deslizador para moverte cuadro por cuadro. Sigue funcionando con la reproducción
    detenida.
 

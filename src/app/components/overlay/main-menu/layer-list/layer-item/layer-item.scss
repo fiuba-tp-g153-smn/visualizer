@@ -626,6 +626,28 @@
           text-overflow: ellipsis;
           flex-shrink: 0;
         }
+        // End labels are also jumps to that image; styled like the clickable polygon titles.
+        button.time-edge {
+          border: none;
+          background: none;
+          padding: 0;
+          font-family: monospace;
+          cursor: default;
+
+          &.can-jump {
+            cursor: pointer;
+
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+
+          &:focus-visible {
+            outline: 2px solid var(--mat-sys-primary);
+            outline-offset: 2px;
+            border-radius: 2px;
+          }
+        }
         button.play-btn {
           color: var(--mat-sys-primary);
           flex-shrink: 0;
@@ -657,16 +679,6 @@
         gap: 12px;
         padding-top: 8px;
 
-        button.latest-btn {
-          color: var(--mat-sys-on-surface-variant);
-          flex-shrink: 0;
-
-          &:disabled {
-            opacity: 0.38;
-            cursor: not-allowed;
-          }
-        }
-
         .time-current {
           font-size: 0.8rem;
           font-family: monospace;
@@ -692,7 +704,7 @@
           gap: 4px;
           flex-shrink: 0;
           .speed-input {
-            width: 60px;
+            width: 48px;
             height: 28px;
             padding: 0 6px;
             border: 1px solid var(--mat-sys-outline-variant);
