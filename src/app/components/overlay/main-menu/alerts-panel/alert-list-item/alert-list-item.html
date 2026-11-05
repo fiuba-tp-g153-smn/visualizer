@@ -2,7 +2,7 @@
   <div class="item-header">
     <span
       class="item-title item-title--clickable"
-      matTooltip="Centrar mapa en el polígono"
+      [matTooltip]="t.centerOnPolygon"
       matTooltipShowDelay="500"
       (click)="titleClick.emit()"
       >{{ title() }}</span

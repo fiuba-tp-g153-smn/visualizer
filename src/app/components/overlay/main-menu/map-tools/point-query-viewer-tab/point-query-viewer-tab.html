@@ -4,10 +4,10 @@
       [checked]="viewer.enabled()"
       (change)="onToolEnabledChange($event.checked)"
       color="primary"
-      matTooltip="Activar o desactivar la herramienta de consulta de valores puntuales"
+      [matTooltip]="t.pointEnableHint"
       data-testid="tools-point-enable"
     >
-      Activar herramienta
+      {{ t.enableTool }}
     </mat-checkbox>
 
     @if (viewer.enabled()) {
@@ -15,23 +15,29 @@
         [checked]="viewer.showMarker()"
         (change)="onMarkerChange($event.checked)"
         color="primary"
-        matTooltip="Mostrar un marcador en el punto de consulta"
+        [matTooltip]="t.showMarkerHint"
         class="marker-checkbox"
         data-testid="tools-point-show-marker"
       >
-        Mostrar marcador
+        {{ t.showMarker }}
       </mat-checkbox>
 
       @if (viewer.showMarker()) {
         <div class="display-mode-section">
-          <span class="section-label">Ubicacion del visor</span>
+          <span class="section-label">{{ t.viewerPosition }}</span>
           <mat-radio-group
             class="interaction-radio-group"
             [value]="viewer.panelMode()"
             (change)="onPanelModeChange($event.value)"
           >
-            <mat-radio-button [value]="panelModes.FIXED" data-testid="tools-point-mode-fixed">Panel fijo</mat-radio-button>
-            <mat-radio-button [value]="panelModes.NEAR_MARKER" data-testid="tools-point-mode-near-marker">Junto al marcador</mat-radio-button>
+            <mat-radio-button [value]="panelModes.FIXED" data-testid="tools-point-mode-fixed">{{
+              t.fixedPanel
+            }}</mat-radio-button>
+            <mat-radio-button
+              [value]="panelModes.NEAR_MARKER"
+              data-testid="tools-point-mode-near-marker"
+              >{{ t.nearMarker }}</mat-radio-button
+            >
           </mat-radio-group>
         </div>
       }
@@ -41,14 +47,14 @@
   @if (viewer.enabled()) {
     <div class="sources-section">
       <span class="section-label">
-        Capas activas
+        {{ t.activeLayers }}
         @if (viewer.selectedLayerIdsOrdered().length > 0) {
           <span class="selected-count">({{ viewer.selectedLayerIdsOrdered().length }})</span>
         }
       </span>
 
       @if (viewer.displayItems().length === 0) {
-        <p class="status-hint">No hay capas activas</p>
+        <p class="status-hint">{{ t.noActiveLayers }}</p>
       } @else {
         <div class="source-list">
           @for (item of viewer.displayItems(); track item.layerId) {

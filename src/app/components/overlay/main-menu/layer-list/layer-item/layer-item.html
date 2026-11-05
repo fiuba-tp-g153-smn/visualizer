@@ -6,10 +6,7 @@
   [attr.data-testid]="'layers-row-' + layer.id"
 >
   @if (mode === LayerItemMode.AVAILABLE) {
-    <div
-      class="layer-header"
-      [matTooltip]="isUnavailable() ? unavailableTooltip() : ''"
-    >
+    <div class="layer-header" [matTooltip]="isUnavailable() ? unavailableTooltip() : ''">
       @if (selectionMode === LayerSelectionMode.SINGLE) {
         <mat-radio-button
           [name]="radioGroupName"
@@ -20,7 +17,7 @@
           color="primary"
           class="layer-radio"
           data-testid="layers-row-radio"
-          [matTooltip]="isUnavailable() ? '' : layer.description || 'Sin descripción'"
+          [matTooltip]="isUnavailable() ? '' : layer.description || t.noDescription"
         >
           <span class="layer-option-name">{{ layerShortName() }}</span>
         </mat-radio-button>
@@ -32,7 +29,7 @@
           color="primary"
           class="layer-checkbox"
           data-testid="layers-row-checkbox"
-          [matTooltip]="isUnavailable() ? '' : layer.description || 'Sin descripción'"
+          [matTooltip]="isUnavailable() ? '' : layer.description || t.noDescription"
         >
           <span class="layer-option-name">{{ layerShortName() }}</span>
         </mat-checkbox>
@@ -49,7 +46,7 @@
             <button
               mat-icon-button
               (click)="toggleScale()"
-              [matTooltip]="isScaleSelected() ? 'Ocultar escala' : 'Mostrar escala'"
+              [matTooltip]="isScaleSelected() ? t.hideScale : t.showScale"
               class="scale-toggle-btn"
               data-testid="layers-row-scale-toggle"
               [class.scale-active]="isScaleSelected()"
@@ -60,7 +57,7 @@
           <button
             mat-icon-button
             (click)="toggleExpansion()"
-            [matTooltip]="isExpanded() ? 'Contraer' : 'Expandir'"
+            [matTooltip]="isExpanded() ? t.collapse : t.expand"
             class="expand-btn"
             data-testid="layers-row-expand"
             tabindex="0"
@@ -77,7 +74,7 @@
       @if (showDragHandle) {
         <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
       }
-      <span class="layer-name" [matTooltip]="layer.description || 'Sin descripción'">{{
+      <span class="layer-name" [matTooltip]="layer.description || t.noDescription">{{
         layerFullName()
       }}</span>
 
@@ -86,7 +83,7 @@
           <button
             mat-icon-button
             (click)="toggleScale()"
-            [matTooltip]="isScaleSelected() ? 'Ocultar escala' : 'Mostrar escala'"
+            [matTooltip]="isScaleSelected() ? t.hideScale : t.showScale"
             class="scale-toggle-btn"
             data-testid="layers-row-scale-toggle"
             [class.scale-active]="isScaleSelected()"
@@ -97,7 +94,7 @@
         <button
           mat-icon-button
           (click)="toggleExpansion()"
-          [matTooltip]="isExpanded() ? 'Contraer' : 'Expandir'"
+          [matTooltip]="isExpanded() ? t.collapse : t.expand"
           class="expand-btn"
           data-testid="layers-row-expand"
           tabindex="0"
@@ -111,7 +108,7 @@
             (click)="deactivateLayer()"
             class="close-btn"
             data-testid="layers-row-close"
-            matTooltip="Desactivar capa"
+            [matTooltip]="t.deactivate"
           >
             <mat-icon>close</mat-icon>
           </button>
@@ -123,7 +120,7 @@
   @if (isActive() && isExpanded()) {
     <div class="layer-content">
       <div class="opacity-control">
-        <span class="control-label">Opacidad</span>
+        <span class="control-label">{{ t.opacity }}</span>
         <mat-slider
           min="0"
           max="1"
@@ -147,7 +144,7 @@
       @if (hasElevationControl()) {
         <div class="elevation-control">
           <div class="elevation-header">
-            <span class="control-label">Elevaciones</span>
+            <span class="control-label">{{ t.elevations }}</span>
 
             @if (!isElevationsExpanded()) {
               <div class="elevation-checkboxes">
@@ -166,7 +163,7 @@
             <button
               mat-icon-button
               (click)="toggleElevationsExpansion()"
-              [matTooltip]="isElevationsExpanded() ? 'Contraer' : 'Expandir controles de elevación'"
+              [matTooltip]="isElevationsExpanded() ? t.collapse : t.expandElevations"
               class="expand-btn"
             >
               <mat-icon>{{ isElevationsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -211,7 +208,7 @@
       @if (hasForecastControl()) {
         <div class="forecast-control">
           <div class="forecast-header">
-            <span class="control-label">Corridas</span>
+            <span class="control-label">{{ t.runs }}</span>
 
             @if (!isForecastsExpanded()) {
               <div class="forecast-checkboxes">
@@ -231,7 +228,7 @@
             <button
               mat-icon-button
               (click)="toggleForecastsExpansion()"
-              [matTooltip]="isForecastsExpanded() ? 'Contraer' : 'Expandir controles de corrida'"
+              [matTooltip]="isForecastsExpanded() ? t.collapse : t.expandRuns"
               class="expand-btn"
             >
               <mat-icon>{{ isForecastsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -278,9 +275,7 @@
                       mat-icon-button
                       (click)="toggleForecastRunExpansion(group.forecastTs)"
                       [matTooltip]="
-                        isForecastRunExpanded(group.forecastTs)
-                          ? 'Contraer capas'
-                          : 'Expandir capas'
+                        isForecastRunExpanded(group.forecastTs) ? t.collapseLayers : t.expandLayers
                       "
                       class="expand-btn"
                     >
@@ -392,20 +387,22 @@
             @if (layer.category === LayerCategory.WEATHER_STATIONS) {
               <div class="weather-stations-temporal-control">
                 <div class="weather-stations-mode-control">
-                  <span class="control-label">Consulta</span>
+                  <span class="control-label">{{ stationsText.query }}</span>
                   <div class="weather-stations-mode-inline-actions">
                     <mat-radio-group
                       [value]="weatherStationsTemporalMode()"
                       (change)="onWeatherStationsTemporalModeChange($event.value)"
                       class="weather-stations-mode-group"
                     >
-                      <mat-radio-button [value]="WeatherStationsTemporalMode.LATEST" color="primary"
-                        >Más reciente</mat-radio-button
+                      <mat-radio-button
+                        [value]="WeatherStationsTemporalMode.LATEST"
+                        color="primary"
+                        >{{ stationsText.latest }}</mat-radio-button
                       >
                       <mat-radio-button
                         [value]="WeatherStationsTemporalMode.SPECIFIC"
                         color="primary"
-                        >Específico</mat-radio-button
+                        >{{ stationsText.specific }}</mat-radio-button
                       >
                     </mat-radio-group>
 
@@ -415,8 +412,8 @@
                         (click)="toggleWeatherStationsSettingsExpansion()"
                         [matTooltip]="
                           isWeatherStationsSettingsExpanded()
-                            ? 'Ocultar configuración específica'
-                            : 'Mostrar configuración específica'
+                            ? stationsText.hideSpecific
+                            : stationsText.showSpecific
                         "
                         class="expand-btn"
                       >
@@ -432,7 +429,7 @@
                   <div class="weather-stations-settings-control">
                     @if (isWeatherStationsSettingsExpanded()) {
                       <div class="weather-stations-tolerance-control">
-                        <span class="control-label">Tolerancia</span>
+                        <span class="control-label">{{ stationsText.tolerance }}</span>
                         <div class="tolerance-control">
                           <input
                             type="number"
@@ -456,10 +453,10 @@
                         [checked]="weatherStationsShowStationsWithoutData()"
                         (change)="onWeatherStationsShowWithoutDataChange($event.checked)"
                         class="weather-stations-no-data-toggle"
-                        matTooltip="Cuando se desactiva, las estaciones sin observación dentro del período solicitado se ocultan del mapa."
+                        [matTooltip]="stationsText.showWithoutDataHint"
                         [disabled]="isSynced()"
                       >
-                        Mostrar estaciones sin observación
+                        {{ stationsText.showWithoutData }}
                       </mat-checkbox>
                     }
                   </div>
@@ -473,15 +470,15 @@
             ) {
               <div class="time-control-header">
                 <span class="control-label">
-                  Período
+                  {{ t.period }}
                   @if (isSynced()) {
                     <span
                       class="sync-badge"
                       data-testid="layers-sync-badge"
-                      matTooltip="Controlado por sincronización"
+                      [matTooltip]="t.syncedTooltip"
                     >
                       <mat-icon>sync</mat-icon>
-                      Sincronizado
+                      {{ t.synced }}
                     </span>
                   }
                 </span>
@@ -489,11 +486,7 @@
                   mat-icon-button
                   (click)="reloadChannelConfig()"
                   [disabled]="isLoadingConfig()"
-                  [matTooltip]="
-                    isLoadingConfig()
-                      ? 'Cargando períodos disponibles...'
-                      : 'Actualizar períodos disponibles (se actualiza automáticamente cada 10 segundos)'
-                  "
+                  [matTooltip]="isLoadingConfig() ? t.loadingPeriods : t.refreshPeriods"
                   class="reload-btn"
                   data-testid="layers-period-refresh"
                 >
@@ -508,22 +501,22 @@
               @if (isInitialPeriodsLoading()) {
                 <div class="no-periods-message">
                   <mat-icon class="info-icon">info</mat-icon>
-                  <span>Cargando períodos disponibles...</span>
+                  <span>{{ t.loadingPeriods }}</span>
                 </div>
               } @else if (hasNoElevationsSelected()) {
                 <div class="no-periods-message">
                   <mat-icon class="info-icon">info</mat-icon>
-                  <span>Sin elevación seleccionada</span>
+                  <span>{{ t.noElevation }}</span>
                 </div>
               } @else if (hasNoForecastsSelected()) {
                 <div class="no-periods-message">
                   <mat-icon class="info-icon">info</mat-icon>
-                  <span>Sin pronóstico seleccionado</span>
+                  <span>{{ t.noForecast }}</span>
                 </div>
               } @else if (hasNoForecastRendersEnabled()) {
                 <div class="no-periods-message">
                   <mat-icon class="info-icon">info</mat-icon>
-                  <span>Sin capas seleccionadas</span>
+                  <span>{{ t.noRenders }}</span>
                 </div>
               } @else if (hasTimeControl()) {
                 <div class="time-slider-container">
@@ -532,8 +525,10 @@
                     class="time-min time-edge"
                     [class.can-jump]="canJumpTo(minTimeIndex())"
                     (click)="jumpTo(minTimeIndex())"
-                    [matTooltip]="getTimeLabel(minTimeIndex()) + ' · Ir a la primera imagen'"
-                    aria-label="Ir a la primera imagen"
+                    [matTooltip]="
+                      playback.edgeTooltip(getTimeLabel(minTimeIndex()), playback.firstImage)
+                    "
+                    [attr.aria-label]="playback.firstImage"
                     data-testid="layers-time-first"
                   >
                     {{ getTimeOnly(minTimeIndex()) }}
@@ -559,8 +554,10 @@
                     class="time-max time-edge"
                     [class.can-jump]="canJumpTo(maxTimeIndex())"
                     (click)="jumpTo(maxTimeIndex())"
-                    [matTooltip]="getTimeLabel(maxTimeIndex()) + ' · Ir a la última imagen'"
-                    aria-label="Ir a la última imagen"
+                    [matTooltip]="
+                      playback.edgeTooltip(getTimeLabel(maxTimeIndex()), playback.lastImage)
+                    "
+                    [attr.aria-label]="playback.lastImage"
                     data-testid="layers-time-latest"
                   >
                     {{ getTimeOnly(maxTimeIndex()) }}
@@ -570,11 +567,7 @@
                     (click)="togglePlayback()"
                     [disabled]="!canPlayback() && !isSynced()"
                     [matTooltip]="
-                      isSynced()
-                        ? 'Desconectar de sincronización'
-                        : isPlaying()
-                          ? 'Pausar'
-                          : 'Reproducir'
+                      isSynced() ? t.unsync : isPlaying() ? playback.pause : playback.play
                     "
                     class="play-btn"
                     data-testid="layers-time-play"
@@ -598,7 +591,7 @@
                       data-testid="layers-image-count-select"
                       [matTooltip]="
                         !isImageCountSelectOpen() && imageCount() === maxImageCountOption()
-                          ? imageCount() + ' imágenes'
+                          ? playback.imageCount(imageCount())
                           : ''
                       "
                     >
@@ -617,7 +610,7 @@
                             [value]="option"
                             [matTooltip]="
                               isImageCountSelectOpen() && option === maxImageCountOption()
-                                ? option + ' imágenes'
+                                ? playback.imageCount(option)
                                 : ''
                             "
                             >{{ getImageCountOptionLabel(option) }}</mat-option
@@ -646,7 +639,7 @@
               } @else if (hasNoPeriodsAvailable()) {
                 <div class="no-periods-message">
                   <mat-icon class="info-icon">info</mat-icon>
-                  <span>No hay períodos disponibles</span>
+                  <span>{{ t.noPeriods }}</span>
                 </div>
               }
             }

@@ -15,6 +15,7 @@ import { ScaleToolEntry } from '../../../services/tools/scale-tools.service';
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
 import { formatScaleLabel } from '../../../utils/number-format.utils';
+import { MAP_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-scale-tool-panel',
@@ -25,6 +26,7 @@ import { formatScaleLabel } from '../../../utils/number-format.utils';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ScaleToolPanelComponent {
+  protected readonly t = MAP_TEXTS.widgets;
   private readonly DEFAULT_LABEL_COUNT = 10;
   private readonly DEFAULT_SUBTICK_COUNT = 4;
   private readonly unitsSettings = inject(UnitsSettingsService);
@@ -65,7 +67,7 @@ export class ScaleToolPanelComponent {
     const { min, max } = this.scaleRange;
     const unit = getDisplayUnit(this.entry.scale.unit, this.unitsSettings);
     const range = `${this.formatValue(min)} - ${this.formatValue(max)}${unit ? ` ${unit}` : ''}`;
-    return `${this.entry.layerName}\nRango: ${range}`;
+    return `${this.entry.layerName}\n${MAP_TEXTS.pointValue.range(range)}`;
   }
 
   get scaleRange(): { min: number; max: number } {

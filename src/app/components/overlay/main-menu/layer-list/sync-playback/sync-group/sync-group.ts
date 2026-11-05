@@ -14,6 +14,7 @@ import { LayersService } from '../../../../../../services/layers/layers.service'
 import { syncGroupDefinition } from '../../../../../../config/layers/sync-groups.config';
 import { formatDateTimeOnly, formatDateFull } from '../../../../../../utils/tileset-timestamp';
 import { Layer, PLAYBACK_SPEED_LIMITS, SyncGroupId } from '../../../../../../models';
+import { LAYERS_TEXTS, MAP_TEXTS } from '../../../../../../texts';
 
 /** One sync group: header with play, current instant, timeline, settings and its layers. */
 @Component({
@@ -34,6 +35,9 @@ import { Layer, PLAYBACK_SPEED_LIMITS, SyncGroupId } from '../../../../../../mod
   styleUrl: './sync-group.scss',
 })
 export class SyncGroupComponent {
+  protected readonly t = LAYERS_TEXTS.syncGroup;
+  protected readonly playback = LAYERS_TEXTS.playback;
+  protected readonly leftOut = MAP_TEXTS.syncTimeline.leftOut;
   private readonly syncService = inject(SyncPlaybackService);
   private readonly layersService = inject(LayersService);
   private readonly dialog = inject(MatDialog);
@@ -64,7 +68,7 @@ export class SyncGroupComponent {
 
   /** One-word state for the header, so a collapsed group still tells what it is doing. */
   readonly headerStatus = computed(() =>
-    this.canPlay() ? this.edgeLabel(this.state().frameIndex) : 'Sin sincronizar',
+    this.canPlay() ? this.edgeLabel(this.state().frameIndex) : this.t.notSynced,
   );
 
   edgeLabel(frameIndex: number): string {

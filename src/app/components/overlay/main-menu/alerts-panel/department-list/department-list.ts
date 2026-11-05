@@ -15,6 +15,7 @@ import { DetailItemComponent } from '../../../../shared/detail-item/detail-item'
 import { DetailChipComponent } from '../../../../shared/detail-chip/detail-chip';
 import { MapInfoService } from '../../../../../services/layers/map-info.service';
 import { DepartmentRef } from '../../../../../models/geo';
+import { ALERTS_TEXTS } from '../../../../../texts';
 
 /** Minimal department shape shared by drafts (Department) and alerts (ActiveAlertDepartment). */
 export interface DepartmentListItem {
@@ -30,7 +31,7 @@ interface ProvinceGroup {
   readonly columns: readonly [ReadonlyArray<DepartmentListItem>, ReadonlyArray<DepartmentListItem>];
 }
 
-const NO_PROVINCE_LABEL = 'Sin provincia';
+const NO_PROVINCE_LABEL = ALERTS_TEXTS.details.noProvince;
 
 /**
  * Departments detail row with an inline expandable list grouped by province;
@@ -39,12 +40,19 @@ const NO_PROVINCE_LABEL = 'Sin provincia';
 @Component({
   selector: 'app-department-list',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatTooltipModule, DetailItemComponent, DetailChipComponent],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    DetailItemComponent,
+    DetailChipComponent,
+  ],
   templateUrl: './department-list.html',
   styleUrl: './department-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DepartmentListComponent {
+  protected readonly details = ALERTS_TEXTS.details;
   private readonly mapInfoService = inject(MapInfoService);
 
   readonly departments = input.required<ReadonlyArray<DepartmentListItem>>();
@@ -122,9 +130,7 @@ export class DepartmentListComponent {
   }
 
   onProvinceHover(group: ProvinceGroup): void {
-    this.provinceHover.emit(
-      group.departments.map((d) => ({ name: d.name, province: d.province })),
-    );
+    this.provinceHover.emit(group.departments.map((d) => ({ name: d.name, province: d.province })));
   }
 
   onLeave(): void {

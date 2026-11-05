@@ -7,6 +7,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/loading-spinner/load
 import { BaseMapService } from '../../../../../services/base-maps/base-map.service';
 import { BaseMap } from '../../../../../models';
 import { MenuPanelComponent } from '../../menu-section.model';
+import { SEARCH_TEXTS } from '../../../../../texts';
 
 @Component({
   selector: 'app-base-map-selector',
@@ -22,6 +23,7 @@ import { MenuPanelComponent } from '../../menu-section.model';
   styleUrl: './base-map-selector.scss',
 })
 export class BaseMapSelectorComponent implements MenuPanelComponent {
+  protected readonly t = SEARCH_TEXTS.baseMaps;
   readonly baseMapService = inject(BaseMapService);
 
   readonly baseMaps = this.baseMapService.providers;

@@ -4,13 +4,13 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="settings-tab-units">
           <mat-icon class="tab-icon">tune</mat-icon>
-          <span class="tab-label">Unidades</span>
+          <span class="tab-label">{{ t.tabs.units }}</span>
         </div>
       </ng-template>
       <div class="tab-content">
         <div class="settings-section settings-section--units">
           <div class="setting-row">
-            <h3 class="setting-title">Temperatura</h3>
+            <h3 class="setting-title">{{ t.temperature.title }}</h3>
             <mat-radio-group
               [value]="unitsSettings.temperatureUnit()"
               (change)="onTemperatureUnitChange($event.value)"
@@ -20,22 +20,22 @@
               <mat-radio-button
                 [value]="TEMPERATURE_UNITS.CELSIUS"
                 color="primary"
-                matTooltip="Mostrar temperaturas en grados Celsius (°C)"
+                [matTooltip]="t.temperature.celsiusHint"
               >
-                Celsius
+                {{ t.temperature.celsius }}
               </mat-radio-button>
               <mat-radio-button
                 [value]="TEMPERATURE_UNITS.KELVIN"
                 color="primary"
-                matTooltip="Mostrar temperaturas en Kelvin (K)"
+                [matTooltip]="t.temperature.kelvinHint"
               >
-                Kelvin
+                {{ t.temperature.kelvin }}
               </mat-radio-button>
             </mat-radio-group>
           </div>
 
           <div class="setting-row">
-            <h3 class="setting-title">Velocidad del viento</h3>
+            <h3 class="setting-title">{{ t.windSpeed.title }}</h3>
             <mat-radio-group
               [value]="unitsSettings.windSpeedUnit()"
               (change)="onWindSpeedUnitChange($event.value)"
@@ -45,22 +45,22 @@
               <mat-radio-button
                 [value]="WIND_SPEED_UNITS.KILOMETERS_PER_HOUR"
                 color="primary"
-                matTooltip="Mostrar velocidad del viento en km/h"
+                [matTooltip]="t.windSpeed.kmhHint"
               >
-                km/h
+                {{ t.windSpeed.kmh }}
               </mat-radio-button>
               <mat-radio-button
                 [value]="WIND_SPEED_UNITS.KNOTS"
                 color="primary"
-                matTooltip="Mostrar velocidad del viento en nudos"
+                [matTooltip]="t.windSpeed.knotsHint"
               >
-                Nudos
+                {{ t.windSpeed.knots }}
               </mat-radio-button>
             </mat-radio-group>
           </div>
 
           <div class="setting-row">
-            <h3 class="setting-title">Zona horaria</h3>
+            <h3 class="setting-title">{{ t.timezone.title }}</h3>
             <mat-radio-group
               [value]="timezoneSettings.mode()"
               (change)="onTimezoneModeChange($event.value)"
@@ -70,22 +70,22 @@
               <mat-radio-button
                 [value]="TIMEZONE_MODES.HOA"
                 color="primary"
-                matTooltip="Mostrar fechas y horas en Hora Oficial Argentina (UTC-3)"
+                [matTooltip]="t.timezone.hoaHint"
               >
-                HOA
+                {{ t.timezone.hoa }}
               </mat-radio-button>
               <mat-radio-button
                 [value]="TIMEZONE_MODES.UTC"
                 color="primary"
-                matTooltip="Mostrar fechas y horas en UTC+0"
+                [matTooltip]="t.timezone.utcHint"
               >
-                UTC
+                {{ t.timezone.utc }}
               </mat-radio-button>
             </mat-radio-group>
           </div>
 
           <div class="setting-row">
-            <h3 class="setting-title">Precisión decimal</h3>
+            <h3 class="setting-title">{{ t.precision.title }}</h3>
             <div class="precision-control">
               <input
                 type="number"
@@ -97,9 +97,9 @@
                 step="1"
                 class="precision-input"
                 data-testid="settings-decimal-precision"
-                matTooltip="Cantidad de decimales a mostrar (0-3)"
+                [matTooltip]="t.precision.hint"
               />
-              <span class="precision-label">decimales</span>
+              <span class="precision-label">{{ t.precision.unit }}</span>
             </div>
           </div>
         </div>
@@ -110,13 +110,13 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="settings-tab-smn">
           <mat-icon class="tab-icon">vpn_key</mat-icon>
-          <span class="tab-label">SMN</span>
+          <span class="tab-label">{{ t.tabs.smn }}</span>
         </div>
       </ng-template>
       <div class="tab-content">
         <div class="settings-section">
           <div class="setting-group setting-group--inline">
-            <h3 class="setting-title">API Key estaciones SMN</h3>
+            <h3 class="setting-title">{{ t.apiKey.title }}</h3>
             <div class="token-control">
               @if (hasUserApiKey()) {
                 <button
@@ -126,7 +126,7 @@
                   data-testid="settings-api-key-set"
                   (click)="setSmnApiKey()"
                 >
-                  Cambiar API Key
+                  {{ t.apiKey.change }}
                 </button>
                 <button
                   mat-stroked-button
@@ -134,7 +134,7 @@
                   data-testid="settings-api-key-clear"
                   (click)="clearSmnApiKey()"
                 >
-                  Borrar API Key
+                  {{ t.apiKey.clear }}
                 </button>
               } @else {
                 <button
@@ -144,7 +144,7 @@
                   data-testid="settings-api-key-set"
                   (click)="setSmnApiKey()"
                 >
-                  Configurar API Key
+                  {{ t.apiKey.set }}
                 </button>
               }
             </div>
@@ -157,16 +157,16 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="settings-tab-shortcuts">
           <mat-icon class="tab-icon">keyboard</mat-icon>
-          <span class="tab-label">Atajos</span>
+          <span class="tab-label">{{ t.tabs.shortcuts }}</span>
         </div>
       </ng-template>
       <div class="tab-content">
         <div class="settings-section">
           <div class="placeholder-section">
             <mat-icon class="placeholder-icon">construction</mat-icon>
-            <h3 class="placeholder-title">A desarrollar</h3>
+            <h3 class="placeholder-title">{{ t.shortcuts.title }}</h3>
             <p class="placeholder-description">
-              Configuración de atajos de teclado personalizados.
+              {{ t.shortcuts.description }}
             </p>
           </div>
         </div>

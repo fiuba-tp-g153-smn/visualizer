@@ -2,10 +2,6 @@
   @for (groupId of activeGroupIds(); track groupId) {
     <app-sync-group [groupId]="groupId" />
   } @empty {
-    <app-empty-state
-      icon="sync_disabled"
-      heading="Nada para sincronizar"
-      hint="Encendé radares, satélites o modelos numéricos para animarlos juntos."
-    />
+    <app-empty-state icon="sync_disabled" [heading]="t.emptyTitle" [hint]="t.emptyHint" />
   }
 </div>

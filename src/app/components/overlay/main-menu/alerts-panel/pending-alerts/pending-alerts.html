@@ -1,12 +1,12 @@
 @if (pendingAlerts().length === 0) {
-  <p class="group-empty">Sin avisos pendientes.</p>
+  <p class="group-empty">{{ emitted.noPending }}</p>
 } @else {
   <div class="items">
     @for (alert of pendingAlerts(); track alert.alertId) {
       <app-alert-list-item
         mode="pending"
         [attr.data-testid]="'alerts-pending-' + alert.alertId"
-        [title]="'Aviso #' + alert.alertId"
+        [title]="details.alertTitle(alert.alertId)"
         [hidden]="isHidden(alert.alertId)"
         [details]="getDetailRows(alert)"
         (titleClick)="flyToAlert(alert)"
@@ -15,18 +15,18 @@
           <button
             mat-icon-button
             (click)="toggleHidden(alert.alertId)"
-            [matTooltip]="isHidden(alert.alertId) ? 'Mostrar' : 'Ocultar'"
+            [matTooltip]="isHidden(alert.alertId) ? common.show : common.hide"
           >
             <mat-icon>{{ isHidden(alert.alertId) ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
         </div>
 
-        <app-detail-item icon="image" label="Imágenes:">
+        <app-detail-item icon="image" [label]="details.images">
           <div class="gif-actions">
             <button
               mat-icon-button
               (click)="openAreaGif(alert)"
-              matTooltip="Ver imagen del área"
+              [matTooltip]="details.viewAreaImage"
               data-testid="alerts-pending-gif-area"
             >
               <mat-icon>zoom_in</mat-icon>
@@ -34,7 +34,7 @@
             <button
               mat-icon-button
               (click)="openGralGif(alert)"
-              matTooltip="Ver imagen general"
+              [matTooltip]="details.viewGeneralImage"
               data-testid="alerts-pending-gif-general"
             >
               <mat-icon>public</mat-icon>
@@ -54,8 +54,8 @@
             (departmentLeave)="onDepartmentLeave()"
           />
         } @else {
-          <app-detail-item icon="map" label="Departamentos:">
-            <span class="detail-value">Sin departamentos</span>
+          <app-detail-item icon="map" [label]="details.departments">
+            <span class="detail-value">{{ details.noDepartments }}</span>
           </app-detail-item>
         }
       </app-alert-list-item>

@@ -6,7 +6,7 @@
         (change)="onTogglePending($event.checked)"
         data-testid="alerts-pending-toggle"
       >
-        Pendientes
+        {{ t.pending }}
       </mat-checkbox>
       @if (showPending()) {
         <span class="section-count">{{ pendingAlerts().length }}</span>
@@ -20,11 +20,7 @@
           class="reload-btn"
           (click)="refreshPending()"
           [disabled]="pendingLoading()"
-          [matTooltip]="
-            pendingLoading()
-              ? 'Actualizando avisos pendientes...'
-              : 'Actualizar (se actualiza automáticamente cada 10 segundos)'
-          "
+          [matTooltip]="pendingLoading() ? t.refreshingPending : t.refreshHint"
         >
           @if (pendingLoading()) {
             <app-loading-spinner [diameter]="18" />
@@ -35,7 +31,7 @@
         <button
           mat-icon-button
           (click)="togglePendingExpanded()"
-          [matTooltip]="pendingExpanded() ? 'Contraer sección' : 'Expandir sección'"
+          [matTooltip]="pendingExpanded() ? t.collapseSection : t.expandSection"
           [attr.aria-expanded]="pendingExpanded()"
         >
           <mat-icon class="chevron" [class.chevron--expanded]="pendingExpanded()"
@@ -55,7 +51,7 @@
   <div class="section">
     <div class="section-header">
       <mat-checkbox [checked]="showActive()" (change)="onToggleActive($event.checked)">
-        Activos
+        {{ t.active }}
       </mat-checkbox>
       @if (showActive()) {
         <span class="section-count">{{ activeAlerts().length }}</span>
@@ -69,11 +65,7 @@
           class="reload-btn"
           (click)="refreshActive()"
           [disabled]="activeLoading()"
-          [matTooltip]="
-            activeLoading()
-              ? 'Actualizando avisos activos...'
-              : 'Actualizar (se actualiza automáticamente cada 10 segundos)'
-          "
+          [matTooltip]="activeLoading() ? t.refreshingActive : t.refreshHint"
         >
           @if (activeLoading()) {
             <app-loading-spinner [diameter]="18" />
@@ -84,7 +76,7 @@
         <button
           mat-icon-button
           (click)="toggleActiveExpanded()"
-          [matTooltip]="activeExpanded() ? 'Contraer sección' : 'Expandir sección'"
+          [matTooltip]="activeExpanded() ? t.collapseSection : t.expandSection"
           [attr.aria-expanded]="activeExpanded()"
         >
           <mat-icon class="chevron" [class.chevron--expanded]="activeExpanded()"

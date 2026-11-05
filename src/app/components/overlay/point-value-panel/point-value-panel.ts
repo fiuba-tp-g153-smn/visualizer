@@ -8,6 +8,7 @@ import { PointQueryDisplayData, PointQueryStatus, PointQueryValueData } from '..
 import { UnitsSettingsService } from '../../../services/settings/units-settings.service';
 import { convertValueForDisplay, getDisplayUnit } from '../../../utils/unit-conversion.utils';
 import { formatPointQueryValue } from '../../../utils/number-format.utils';
+import { MAP_TEXTS } from '../../../texts';
 
 const BLANK_LINE = ' ';
 
@@ -19,12 +20,14 @@ const BLANK_LINE = ' ';
   styleUrl: './point-value-panel.scss',
 })
 export class PointValuePanelComponent {
+  protected readonly t = MAP_TEXTS.pointValue;
+  protected readonly widgets = MAP_TEXTS.widgets;
   readonly PointQueryStatus = PointQueryStatus;
   private readonly unitsSettings = inject(UnitsSettingsService);
 
   @Input() visible = false;
   @Input() isLoading = false;
-  @Input() layerName = 'Capa de datos';
+  @Input() layerName: string = MAP_TEXTS.pointValue.defaultLayerName;
   @Input() periodLabel?: string;
   @Input() runLabel?: string;
   @Input() elevationLabel?: string;
@@ -39,7 +42,7 @@ export class PointValuePanelComponent {
   }
 
   get runLine(): string | null {
-    return this.runLabel ? `Corrida ${this.runLabel}` : null;
+    return this.runLabel ? this.t.run(this.runLabel) : null;
   }
 
   get periodLine(): string | null {
@@ -99,7 +102,9 @@ export class PointValuePanelComponent {
     const displayMin = convertValueForDisplay(min, this.data.unit, this.unitsSettings);
     const displayMax = convertValueForDisplay(max, this.data.unit, this.unitsSettings);
     const displayUnit = getDisplayUnit(this.data.unit, this.unitsSettings);
-    return `Rango: ${this.formatNumber(displayMin)} - ${this.formatNumber(displayMax)} ${displayUnit}`;
+    return this.t.range(
+      `${this.formatNumber(displayMin)} - ${this.formatNumber(displayMax)} ${displayUnit}`,
+    );
   }
 
   private formatNumber(value: number): string {

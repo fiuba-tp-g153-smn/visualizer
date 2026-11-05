@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { SidebarMenuService } from './sidebar-menu.service';
+import { MAP_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-main-menu',
@@ -15,6 +16,7 @@ import { SidebarMenuService } from './sidebar-menu.service';
   styleUrl: './main-menu.scss',
 })
 export class MainMenuComponent {
+  protected readonly t = MAP_TEXTS.menu;
   private readonly sidebarMenuService = inject(SidebarMenuService);
 
   readonly activeSection = computed(() => this.sidebarMenuService.getActiveSection());

@@ -40,6 +40,7 @@ import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../texts';
 export class EmittedAlertContextMenuComponent {
   protected readonly t = ALERTS_TEXTS.emittedAlertMenu;
   protected readonly common = COMMON_TEXTS.actions;
+  protected readonly details = ALERTS_TEXTS.details;
   protected readonly polygonMenu = ALERTS_TEXTS.polygonMenu;
   readonly state = input<EmittedAlertContextMenuState | null>(null);
   readonly action = output<EmittedAlertContextMenuAction>();

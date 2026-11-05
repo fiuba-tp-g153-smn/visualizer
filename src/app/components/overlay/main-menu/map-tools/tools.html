@@ -4,7 +4,7 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="tools-tab-general">
           <mat-icon class="tab-icon">settings</mat-icon>
-          <span class="tab-label">General</span>
+          <span class="tab-label">{{ t.general }}</span>
         </div>
       </ng-template>
       <div class="tab-content">
@@ -16,7 +16,7 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="tools-tab-scales">
           <mat-icon class="tab-icon">palette</mat-icon>
-          <span class="tab-label">Escalas</span>
+          <span class="tab-label">{{ t.scales }}</span>
           <span class="active-count" [class.visible]="getScaleItemsCount() > 0">
             {{ getScaleItemsCount() }}
           </span>
@@ -31,7 +31,7 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="tools-tab-point">
           <mat-icon class="tab-icon">my_location</mat-icon>
-          <span class="tab-label">Dato puntual</span>
+          <span class="tab-label">{{ t.point }}</span>
           <span class="active-count" [class.visible]="getPointSelectedCount() > 0">
             {{ getPointSelectedCount() }}
           </span>

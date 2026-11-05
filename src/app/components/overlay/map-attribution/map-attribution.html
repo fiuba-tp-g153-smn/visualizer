@@ -1,12 +1,14 @@
 <p class="attribution" data-testid="map-attribution">
   <app-panel-close-button
     class="close-button"
-    ariaLabel="Cerrar atribución"
+    [ariaLabel]="t.closeAttribution"
     (pressed)="onClose()"
   />
-  <a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>
+  <a href="https://leafletjs.com" target="_blank" rel="noopener">{{ t.attribution.leaflet }}</a>
   |
-  <a href="https://www.ign.gob.ar/" target="_blank" rel="noopener">Instituto Geográfico Nacional</a>
+  <a href="https://www.ign.gob.ar/" target="_blank" rel="noopener">{{ t.attribution.ign }}</a>
   +
-  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>
+  <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">{{
+    t.attribution.osm
+  }}</a>
 </p>

@@ -1,5 +1,5 @@
 <mat-card class="button-bar">
-  <img src="icono.png" alt="Logo SMN" class="smn-logo" width="40" height="40" />
+  <img src="icono.png" [alt]="t.logoAlt" class="smn-logo" width="40" height="40" />
 
   <mat-divider />
 
@@ -22,7 +22,7 @@
     mat-icon-button
     routerLink="/status"
     data-testid="sidebar-status-link"
-    matTooltip="Rendimiento y estado"
+    [matTooltip]="t.status"
     matTooltipPosition="right"
   >
     <mat-icon>assessment</mat-icon>
@@ -32,7 +32,7 @@
     mat-icon-button
     routerLink="/docs"
     data-testid="sidebar-docs-link"
-    matTooltip="Documentación"
+    [matTooltip]="t.docs"
     matTooltipPosition="right"
   >
     <mat-icon>help</mat-icon>

@@ -4,24 +4,24 @@
       [checked]="scaleTools.enabled()"
       (change)="onToolEnabledChange($event.checked)"
       color="primary"
-      matTooltip="Activar o desactivar la herramienta de escalas"
+      [attr.mattooltip]="t.scalesEnableHint"
       data-testid="tools-scales-enable"
     >
-      Activar herramienta
+      {{ t.enableTool }}
     </mat-checkbox>
   </div>
 
   @if (scaleTools.enabled()) {
     <div class="sources-section">
       <span class="section-label">
-        Variables activas
+        {{ t.activeVariables }}
         @if (scaleTools.selectedLayerIdsOrdered().length > 0) {
           <span class="selected-count">({{ scaleTools.selectedLayerIdsOrdered().length }})</span>
         }
       </span>
 
       @if (scaleTools.displayItems().length === 0) {
-        <p class="status-hint">No hay variables activas con escala configurada</p>
+        <p class="status-hint">{{ t.noActiveVariables }}</p>
       } @else {
         <div class="source-list">
           @for (item of scaleTools.displayItems(); track item.layerId) {

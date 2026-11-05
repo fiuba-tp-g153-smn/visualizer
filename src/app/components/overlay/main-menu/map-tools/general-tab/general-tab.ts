@@ -7,6 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { GraticulePart, MapInfoService } from '../../../../../services/layers/map-info.service';
 import { DistanceToolService } from '../../../../../services/tools/distance-tool.service';
 import { formatDistance } from '../../../../../utils/distance.utils';
+import { MAP_TEXTS } from '../../../../../texts';
 
 interface GraticulePartOption {
   readonly id: GraticulePart;
@@ -14,19 +15,13 @@ interface GraticulePartOption {
   readonly tooltip: string;
 }
 
+const PARTS = MAP_TEXTS.tools.graticuleParts;
+
 const GRATICULE_PART_OPTIONS: ReadonlyArray<GraticulePartOption> = [
-  { id: 'major', label: 'Grilla cada 10°', tooltip: 'Paralelos y meridianos cada 10°' },
-  {
-    id: 'minor',
-    label: 'Grilla cada 5°',
-    tooltip: 'Líneas intermedias cada 5°, visibles desde zoom 4',
-  },
-  {
-    id: 'notable',
-    label: 'Ecuador, trópicos y Greenwich',
-    tooltip: 'Ecuador, trópicos (±23,5°), círculos polares (±66,5°) y meridiano de Greenwich',
-  },
-  { id: 'labels', label: 'Etiquetas', tooltip: 'Valor de cada línea en el borde del mapa' },
+  { id: 'major', ...PARTS.major },
+  { id: 'minor', ...PARTS.minor },
+  { id: 'notable', ...PARTS.notable },
+  { id: 'labels', ...PARTS.labels },
 ];
 
 @Component({
@@ -38,6 +33,7 @@ const GRATICULE_PART_OPTIONS: ReadonlyArray<GraticulePartOption> = [
   styleUrl: './general-tab.scss',
 })
 export class GeneralTabComponent {
+  protected readonly t = MAP_TEXTS.tools;
   readonly mapInfo = inject(MapInfoService);
   private readonly distanceTool = inject(DistanceToolService);
 
@@ -51,9 +47,9 @@ export class GeneralTabComponent {
 
   readonly measureStatus = computed((): string => {
     if (this.distanceTool.points().length < 2) {
-      return 'Hacé clic en el mapa para marcar puntos';
+      return this.t.measurePrompt;
     }
-    return `Total: ${formatDistance(this.distanceTool.totalMeters())}`;
+    return this.t.measureTotal(formatDistance(this.distanceTool.totalMeters()));
   });
 
   onCoordinatesChange(enabled: boolean): void {

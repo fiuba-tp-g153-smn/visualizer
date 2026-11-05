@@ -1,10 +1,6 @@
 <div class="active-layers">
   @if (getActiveLayers().length === 0) {
-    <app-empty-state
-      icon="layers_clear"
-      heading="Sin capas activas"
-      hint="Encendé capas para ajustarlas y ordenarlas acá."
-    />
+    <app-empty-state icon="layers_clear" [heading]="t.emptyTitle" [hint]="t.emptyHint" />
   } @else {
     @for (group of activeLayerGroups(); track group.id) {
       @if (group.layers.length > 0) {
@@ -25,7 +21,7 @@
                 class="clear-group-button"
                 data-testid="layers-active-group-clear"
                 (click)="group.clearGroup($event)"
-                [matTooltip]="'Desactivar todas las capas de ' + group.name.toLowerCase()"
+                [matTooltip]="t.clearGroup(group.name)"
               >
                 <mat-icon>delete_sweep</mat-icon>
               </button>

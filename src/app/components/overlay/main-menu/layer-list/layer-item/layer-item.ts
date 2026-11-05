@@ -62,6 +62,7 @@ import {
   WeatherStationsTemporalMode,
   WEATHER_STATIONS_IMAGE_COUNT_OPTIONS,
 } from '../../../../../config/layers/weather-stations/controls.constants';
+import { LAYERS_TEXTS } from '../../../../../texts';
 
 export enum LayerItemMode {
   AVAILABLE = 'available',
@@ -107,6 +108,9 @@ function isBarbTileRender(
   styleUrl: './layer-item.scss',
 })
 export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
+  protected readonly t = LAYERS_TEXTS.item;
+  protected readonly stationsText = LAYERS_TEXTS.stations;
+  protected readonly playback = LAYERS_TEXTS.playback;
   readonly LayerItemMode = LayerItemMode;
   readonly LayerCategory = LayerCategory;
   readonly LayerSelectionMode = LayerSelectionMode;
@@ -190,7 +194,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   maxImageCountOption = computed(() => Math.max(...this.lastImagesOptions()));
 
   getImageCountOptionLabel(option: number): string {
-    return option === this.maxImageCountOption() ? 'Todas' : `${option}`;
+    return option === this.maxImageCountOption() ? this.t.allImages : `${option}`;
   }
 
   lastImagesOptions = computed(() => {
@@ -323,15 +327,15 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   /** Tooltip shown on a greyed row, reflecting *why* it's unavailable. */
   readonly unavailableTooltip = computed(() =>
     this.availabilityService.state(this.layer) === 'unreachable'
-      ? 'Servicio no disponible'
-      : 'Sin datos disponibles',
+      ? this.t.unreachable
+      : this.t.noDataAvailable,
   );
 
   /** Short status pill (icon + label) shown on a greyed row so it reads at a glance. */
   readonly unavailableBadge = computed(() =>
     this.availabilityService.state(this.layer) === 'unreachable'
-      ? { icon: 'cloud_off', label: 'No disponible' }
-      : { icon: 'block', label: 'Sin datos' },
+      ? { icon: 'cloud_off', label: this.t.unreachableBadge }
+      : { icon: 'block', label: this.t.noDataBadge },
   );
 
   hasNoElevationsSelected = computed(() => {
@@ -363,8 +367,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     const activeItem = this.getActiveLayer();
     if (!activeItem || activeItem.controls.type !== LayerType.TILE) return false;
 
-    const renderControls = (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls)
-      .forecast.renderControls;
+    const renderControls = (activeItem.controls as EcmwfTpLayerControls | WrfLayerControls).forecast
+      .renderControls;
 
     // No forecast contributes to the timeline if every selected run has all
     // of its renders (primary + secondary) disabled.
@@ -633,11 +637,10 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       this.captureCurrentWeatherStationsSharedState();
       const key = await this.apiKeyService.ensureKey();
       if (!key) {
-        this.notifications.show(
-          NotificationType.WARNING,
-          'Necesitás configurar tu clave API del SMN para activar las estaciones meteorológicas.',
-          { autoClose: true, duration: 6000 },
-        );
+        this.notifications.show(NotificationType.WARNING, this.stationsText.apiKeyRequired, {
+          autoClose: true,
+          duration: 6000,
+        });
         return;
       }
       try {
@@ -646,13 +649,12 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         if (!(err instanceof HttpErrorResponse && err.status === 401)) {
           const detail =
             err instanceof HttpErrorResponse && err.status >= 500
-              ? 'el servidor no está disponible en este momento'
-              : 'no se pudo establecer la conexión';
-          this.notifications.show(
-            NotificationType.ERROR,
-            `No se pudieron cargar las estaciones meteorológicas: ${detail}.`,
-            { autoClose: true, duration: 5000 },
-          );
+              ? this.stationsText.serverDown
+              : this.stationsText.connectionFailed;
+          this.notifications.show(NotificationType.ERROR, this.stationsText.loadError(detail), {
+            autoClose: true,
+            duration: 5000,
+          });
         }
         return;
       }
@@ -858,9 +860,9 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   getTimeLabel(timeIndex: number): string {
-    if (!this.hasTimeControl()) return 'Cargando...';
+    if (!this.hasTimeControl()) return this.t.loadingTime;
     const tilesets = this.getAvailableTilesetsForLayer();
-    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return 'Sin datos';
+    if (!tilesets || timeIndex < 0 || timeIndex >= tilesets.length) return this.t.noTime;
     return formatDateFull(tilesets[timeIndex].time);
   }
 
@@ -925,9 +927,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return false;
     }
     const config = this.configService.getConfig(this.layer.id) as
-      | EcmwfTpTileLayerConfig
-      | WrfTileLayerConfig
-      | undefined;
+      EcmwfTpTileLayerConfig | WrfTileLayerConfig | undefined;
     return (config?.availableForecasts?.length ?? 0) > 0;
   });
 
@@ -940,9 +940,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return [];
     }
     const config = this.configService.getConfig(this.layer.id) as
-      | EcmwfTpTileLayerConfig
-      | WrfTileLayerConfig
-      | undefined;
+      EcmwfTpTileLayerConfig | WrfTileLayerConfig | undefined;
     return config?.availableForecasts ?? [];
   });
 
@@ -1241,7 +1239,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
     }
 
     if (isBarbTileRender(render)) {
-      return 'Barbas';
+      return LAYERS_TEXTS.forecastRenders.barbs;
     }
 
     const suffix = render.id.split('-').at(-1) ?? render.id;
@@ -1250,23 +1248,23 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       case 'slp':
       case 'isobars':
       case 'isobaras':
-        return 'Presión a nivel del mar';
+        return LAYERS_TEXTS.forecastRenders.mslp;
       case 'gust_threshold':
-        return 'Umbral de ráfagas';
+        return LAYERS_TEXTS.forecastRenders.gustThreshold;
       case 'shear_850_500':
-        return 'Cortante 850-500 hPa';
+        return LAYERS_TEXTS.forecastRenders.shear850500;
       case 'shear_850_700':
-        return 'Cortante 850-700 hPa';
+        return LAYERS_TEXTS.forecastRenders.shear850700;
       case 'brn':
-        return 'Bulk Richardson Number';
+        return LAYERS_TEXTS.forecastRenders.brn;
       case 'thickness':
-        return 'Espesores 1000/500';
+        return LAYERS_TEXTS.forecastRenders.thickness;
       case 'heights':
-        return 'Geopotencial';
+        return LAYERS_TEXTS.forecastRenders.heights;
       case 'isotherms':
-        return 'Isotermas';
+        return LAYERS_TEXTS.forecastRenders.isotherms;
       case 'haildiammax':
-        return 'Diámetro máximo de granizo';
+        return LAYERS_TEXTS.forecastRenders.hailDiameterMax;
       default:
         return suffix.replace(/[_-]+/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
     }
@@ -1398,10 +1396,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private clampPlaybackSpeed(speed: number): number {
-    return Math.max(
-      PLAYBACK_SPEED_LIMITS.MIN,
-      Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed),
-    );
+    return Math.max(PLAYBACK_SPEED_LIMITS.MIN, Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed));
   }
 
   private weatherStationsTilesetIdToDate(tilesetId: string): Date | null {

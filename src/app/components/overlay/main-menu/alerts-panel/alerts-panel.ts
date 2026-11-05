@@ -53,6 +53,10 @@ import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../../texts';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertsPanelComponent implements MenuPanelComponent {
+  protected readonly t = ALERTS_TEXTS.panel;
+  protected readonly details = ALERTS_TEXTS.details;
+  protected readonly polygonMenu = ALERTS_TEXTS.polygonMenu;
+  protected readonly common = COMMON_TEXTS.actions;
   private readonly polygonService = inject(PolygonService);
   private readonly alertEmissionService = inject(AlertEmissionService);
   private readonly panelState = inject(AlertsPanelStateService);
@@ -184,16 +188,18 @@ export class AlertsPanelComponent implements MenuPanelComponent {
     return [
       {
         icon: 'timeline',
-        label: 'Vértices:',
+        label: this.details.vertices,
         value: String(this.getCoordinatesCount(polygon)),
         dividerBefore: true,
         warn: exceedsMax,
-        tooltip: exceedsMax
-          ? `Supera el máximo de ${this.maxVertices()} vértices. Simplificá el polígono para poder generar el aviso.`
-          : undefined,
+        tooltip: exceedsMax ? this.t.tooManyVerticesDetail(this.maxVertices()) : undefined,
       },
-      { icon: 'square_foot', label: 'Área:', value: `${this.getPolygonArea(polygon)} km²` },
-      { icon: 'schedule', label: 'Modificado:', value: this.formatDate(polygon.updatedAt) },
+      {
+        icon: 'square_foot',
+        label: this.details.area,
+        value: this.details.areaValue(this.getPolygonArea(polygon)),
+      },
+      { icon: 'schedule', label: this.details.modified, value: this.formatDate(polygon.updatedAt) },
     ];
   }
 

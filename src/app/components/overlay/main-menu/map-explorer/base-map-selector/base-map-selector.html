@@ -3,20 +3,20 @@
     @case ('loading') {
       <div class="base-map-status">
         <app-loading-spinner [diameter]="32" />
-        <span>Cargando mapas base…</span>
+        <span>{{ t.loading }}</span>
       </div>
     }
     @case ('error') {
       <div class="base-map-status base-map-status--error">
         <mat-icon>error</mat-icon>
-        <span>No se pudieron cargar los mapas base.</span>
+        <span>{{ t.error }}</span>
       </div>
     }
     @default {
       @if (baseMaps().length === 0) {
         <div class="base-map-status">
           <mat-icon>layers_clear</mat-icon>
-          <span>No hay mapas base configurados.</span>
+          <span>{{ t.empty }}</span>
         </div>
       } @else {
         <div class="base-map-grid" data-testid="explorer-basemap-grid">

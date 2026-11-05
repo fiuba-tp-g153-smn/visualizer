@@ -40,6 +40,7 @@ import {
   NominatimPlace,
   PlaceSearchSource,
 } from '../../../../../models';
+import { SEARCH_TEXTS } from '../../../../../texts';
 
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 3;
@@ -140,6 +141,7 @@ function toNominatimResultItem(place: NominatimPlace): SearchResultItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlaceSearchTabComponent {
+  protected readonly t = SEARCH_TEXTS.place;
   private readonly placeSearchService = inject(PlaceSearchService);
   private readonly mapInfoService = inject(MapInfoService);
   private readonly destroyRef = inject(DestroyRef);
@@ -215,7 +217,7 @@ export class PlaceSearchTabComponent {
 
           return this.searchWith(source, term, INITIAL_RESULTS_LIMIT).pipe(
             catchError(() => {
-              this.error.set('No se pudo completar la búsqueda');
+              this.error.set(this.t.error);
               return of<ReadonlyArray<SearchResultItem>>([]);
             }),
           );
@@ -385,7 +387,9 @@ export class PlaceSearchTabComponent {
   }
 
   private loadConfigFromStorage(): void {
-    const parsed = this.storage.getJson<Partial<PlaceSearchConfig>>(STORAGE_KEYS.PLACE_SEARCH_CONFIG);
+    const parsed = this.storage.getJson<Partial<PlaceSearchConfig>>(
+      STORAGE_KEYS.PLACE_SEARCH_CONFIG,
+    );
     if (!parsed) return;
     if (isPlaceSearchSource(parsed.source)) {
       this.source.set(parsed.source);

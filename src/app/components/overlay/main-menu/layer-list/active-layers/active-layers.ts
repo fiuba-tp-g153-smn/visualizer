@@ -11,6 +11,7 @@ import { ActiveLayerGroupId, Layer } from '../../../../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../../config/layers';
 import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
 import { EmptyStateComponent } from '../../../../shared/empty-state/empty-state';
+import { LAYERS_TEXTS } from '../../../../../texts';
 
 @Component({
   selector: 'app-active-layers',
@@ -30,6 +31,7 @@ import { EmptyStateComponent } from '../../../../shared/empty-state/empty-state'
   styleUrl: './active-layers.scss',
 })
 export class ActiveLayersComponent {
+  protected readonly t = LAYERS_TEXTS.active;
   readonly LayerItemMode = LayerItemMode;
 
   private readonly controlService = inject(LayerControlService);

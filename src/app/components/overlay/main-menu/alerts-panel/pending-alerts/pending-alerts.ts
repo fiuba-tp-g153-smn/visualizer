@@ -15,6 +15,7 @@ import { DepartmentListComponent, DepartmentListItem } from '../department-list/
 import { MapInfoService } from '../../../../../services/layers/map-info.service';
 import { AlertListItemComponent, DetailRowConfig } from '../alert-list-item/alert-list-item';
 import { DetailItemComponent } from '../../../../shared/detail-item/detail-item';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../../../texts';
 
 /**
  * List of pending alerts. Presentation only: the section toggle and refresh
@@ -37,6 +38,9 @@ import { DetailItemComponent } from '../../../../shared/detail-item/detail-item'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PendingAlertsComponent {
+  protected readonly details = ALERTS_TEXTS.details;
+  protected readonly emitted = ALERTS_TEXTS.emitted;
+  protected readonly common = COMMON_TEXTS.actions;
   private readonly pendingAlertsService = inject(PendingAlertsService);
   private readonly dialog = inject(MatDialog);
   private readonly mapInfoService = inject(MapInfoService);
@@ -88,18 +92,18 @@ export class PendingAlertsComponent {
   }
 
   openAreaGif(alert: PendingAlert): void {
-    this.openGif(`Aviso #${alert.alertId} — Área`, alert.gifAreaUrl);
+    this.openGif(this.details.areaGifTitle(alert.alertId), alert.gifAreaUrl);
   }
 
   openGralGif(alert: PendingAlert): void {
-    this.openGif(`Aviso #${alert.alertId} — General`, alert.gifGralUrl);
+    this.openGif(this.details.generalGifTitle(alert.alertId), alert.gifGralUrl);
   }
 
   getDetailRows(alert: PendingAlert): DetailRowConfig[] {
     return [
       {
         icon: 'warning',
-        label: 'Fenómeno:',
+        label: this.details.phenomenon,
         value: alert.phenomenon,
         dividerBefore: true,
       },

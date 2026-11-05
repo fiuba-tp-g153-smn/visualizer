@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { SyncPlaybackService } from '../../../../../services/layers/sync-playback.service';
 import { SyncGroupComponent } from './sync-group/sync-group';
 import { EmptyStateComponent } from '../../../../shared/empty-state/empty-state';
+import { LAYERS_TEXTS } from '../../../../../texts';
 
 /** Sincronización tab: one independent timeline per group of compatible layers. */
 @Component({
@@ -13,5 +14,6 @@ import { EmptyStateComponent } from '../../../../shared/empty-state/empty-state'
   styleUrl: './sync-playback.scss',
 })
 export class SyncPlaybackComponent {
+  protected readonly t = LAYERS_TEXTS.syncGroup;
   readonly activeGroupIds = inject(SyncPlaybackService).activeGroupIds;
 }

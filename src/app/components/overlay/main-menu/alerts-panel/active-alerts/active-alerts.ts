@@ -15,6 +15,7 @@ import { DepartmentListComponent, DepartmentListItem } from '../department-list/
 import { AlertListItemComponent, DetailRowConfig } from '../alert-list-item/alert-list-item';
 import { DetailItemComponent } from '../../../../shared/detail-item/detail-item';
 import { MapInfoService } from '../../../../../services/layers/map-info.service';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../../../texts';
 
 /**
  * List of active alerts. Presentation only: the section toggle and refresh
@@ -37,6 +38,9 @@ import { MapInfoService } from '../../../../../services/layers/map-info.service'
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ActiveAlertsComponent {
+  protected readonly details = ALERTS_TEXTS.details;
+  protected readonly emitted = ALERTS_TEXTS.emitted;
+  protected readonly common = COMMON_TEXTS.actions;
   private readonly activeAlertsService = inject(ActiveAlertsService);
   private readonly mapInfoService = inject(MapInfoService);
 
@@ -102,15 +106,15 @@ export class ActiveAlertsComponent {
     return [
       {
         icon: 'warning',
-        label: 'Fenómeno:',
+        label: this.details.phenomenon,
         value: alert.phenomenon,
         dividerBefore: true,
       },
-      { icon: 'schedule', label: 'Emisión:', value: this.formatDate(alert.startDatetime) },
-      { icon: 'event_busy', label: 'Cese:', value: this.formatDate(alert.endDatetime) },
+      { icon: 'schedule', label: this.details.issued, value: this.formatDate(alert.startDatetime) },
+      { icon: 'event_busy', label: this.details.ends, value: this.formatDate(alert.endDatetime) },
       {
         icon: 'hourglass_bottom',
-        label: 'Tiempo restante:',
+        label: this.details.remaining,
         value: this.remaining(alert),
         valueClass: 'remaining',
         valueColor: this.expiryColor(alert),

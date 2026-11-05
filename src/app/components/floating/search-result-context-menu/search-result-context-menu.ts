@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { ContextMenuPositionDirective } from '../../shared/context-menu-position/context-menu-position.directive';
-import { MAP_TEXTS } from '../../../texts';
+import { SEARCH_TEXTS } from '../../../texts';
 
 /** Screen position (in map-container pixels) where the context menu should open. */
 export interface SearchResultContextMenuState {
@@ -24,7 +24,7 @@ export interface SearchResultContextMenuState {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchResultContextMenuComponent {
-  protected readonly t = MAP_TEXTS.searchResultMenu;
+  protected readonly t = SEARCH_TEXTS.place;
   readonly state = input<SearchResultContextMenuState | null>(null);
   readonly clear = output<void>();
   readonly close = output<void>();
