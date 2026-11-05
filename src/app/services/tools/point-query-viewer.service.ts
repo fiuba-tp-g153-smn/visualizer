@@ -56,6 +56,7 @@ import {
 } from '../../config';
 import { adapterForLayer } from '../../config/layers/forecast-model';
 import { formatDateFull, parseEcmwfTimestamp } from '../../utils/tileset-timestamp';
+import { SyncPlaybackService } from '../layers/sync-playback.service';
 
 interface MouseCoordinates {
   lat: number;
@@ -167,6 +168,7 @@ export class PointQueryViewerService {
   private readonly polygonDrawingService = inject(PolygonDrawingService);
   private readonly storage = inject(LocalStorageService);
   private readonly timezoneSettings = inject(TimezoneSettingsService);
+  private readonly syncPlayback = inject(SyncPlaybackService);
 
   private readonly subscriptions = new Subscription();
   private readonly frameQuerySubject = new Subject<FrameQueryBatch>();
@@ -403,7 +405,9 @@ export class PointQueryViewerService {
       periodLabel: entry.periodLabel,
       runLabel: entry.runLabel,
       elevationLabel: entry.elevationLabel,
-      isPlaying: entry.controls.playback.isPlaying,
+      // A synced layer's own playback stays paused while its group's timeline drives it.
+      isPlaying:
+        entry.controls.playback.isPlaying || this.syncPlayback.isLayerSyncing(entry.layer.id),
       data: results.get(entry.layerId) ?? null,
       isLoading: pending.has(entry.layerId),
     }));
