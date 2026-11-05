@@ -1,0 +1,145 @@
+<mat-expansion-panel
+  class="sync-group"
+  [class.is-playing]="state().isPlaying"
+  [expanded]="expanded()"
+  (expandedChange)="expanded.set($event)"
+  [attr.data-testid]="'layers-sync-group-' + groupId()"
+>
+  <mat-expansion-panel-header>
+    <mat-panel-title>
+      <mat-icon class="group-icon">{{ definition().icon }}</mat-icon>
+      <span class="group-title">{{ definition().label }}</span>
+    </mat-panel-title>
+    <!-- Visible while collapsed too: whether it plays, where it is and how many layers. -->
+    <mat-panel-description data-testid="layers-sync-status">
+      @if (state().isPlaying) {
+        <span class="playing-dot" role="img" aria-label="Reproduciéndose"></span>
+      }
+      <span class="group-status" [class.is-idle]="!canPlay()">{{ headerStatus() }}</span>
+      <button
+        mat-icon-button
+        class="timeline-btn"
+        (click)="openTimeline($event)"
+        [disabled]="!hasImages()"
+        matTooltip="Línea de tiempo"
+        aria-label="Ver y editar la línea de tiempo del grupo"
+        data-testid="layers-sync-timeline"
+      >
+        <mat-icon>timeline</mat-icon>
+      </button>
+      @if (enrolledCount() > 0) {
+        <span class="group-count" [matTooltip]="enrolledCount() + ' capas sincronizadas'">{{
+          enrolledCount()
+        }}</span>
+      }
+    </mat-panel-description>
+  </mat-expansion-panel-header>
+
+  <div class="sync-group__body">
+    @if (canPlay()) {
+      <div class="timeline">
+        <button
+          type="button"
+          class="time-edge"
+          [class.can-jump]="state().frameIndex !== 0"
+          (click)="onFrameIndexChange(0)"
+          [matTooltip]="edgeFullLabel(0) + ' · Ir a la primera imagen'"
+          aria-label="Ir a la primera imagen"
+        >
+          {{ edgeLabel(0) }}
+        </button>
+        <mat-slider
+          min="0"
+          [max]="frameTotal() - 1"
+          step="1"
+          discrete
+          class="control-slider"
+          data-testid="layers-sync-slider"
+          [displayWith]="formatFrameLabel"
+        >
+          <input
+            matSliderThumb
+            [value]="state().frameIndex"
+            (valueChange)="onFrameIndexChange($event)"
+          />
+        </mat-slider>
+        <button
+          type="button"
+          class="time-edge"
+          [class.can-jump]="state().frameIndex !== frameTotal() - 1"
+          (click)="onFrameIndexChange(frameTotal() - 1)"
+          [matTooltip]="edgeFullLabel(frameTotal() - 1) + ' · Ir a la última imagen'"
+          aria-label="Ir a la última imagen"
+        >
+          {{ edgeLabel(frameTotal() - 1) }}
+        </button>
+        <button
+          mat-icon-button
+          class="play-btn"
+          (click)="togglePlayback()"
+          [disabled]="!canPlay()"
+          [matTooltip]="state().isPlaying ? 'Pausar' : 'Reproducir'"
+          [attr.aria-label]="state().isPlaying ? 'Pausar' : 'Reproducir'"
+          data-testid="layers-sync-play"
+        >
+          <mat-icon>{{ state().isPlaying ? 'pause' : 'play_arrow' }}</mat-icon>
+        </button>
+      </div>
+
+      <div class="settings">
+        <span class="time-current" data-testid="layers-sync-current">{{ currentLabel() }}</span>
+        <mat-form-field appearance="fill" class="images-count-select" matTooltip="Imágenes">
+          <mat-select
+            [value]="frameCount()"
+            (selectionChange)="onFrameCountChange($event.value)"
+            panelClass="layer-select-panel"
+            aria-label="Cantidad de imágenes"
+          >
+            @for (n of frameCountOptions(); track n) {
+              <mat-option [value]="n">{{ n }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <label class="speed-control">
+          <input
+            type="number"
+            [value]="state().speed"
+            (change)="onSpeedChange(+$any($event.target).value)"
+            [attr.min]="PLAYBACK_SPEED_LIMITS.MIN"
+            [attr.max]="PLAYBACK_SPEED_LIMITS.MAX"
+            step="0.1"
+            class="speed-input"
+            aria-label="Segundos por imagen"
+          />
+          <span class="speed-label">s</span>
+        </label>
+      </div>
+    } @else {
+      <p class="hint" data-testid="layers-sync-hint">
+        <mat-icon>info</mat-icon>
+        <span>{{ hint() }}</span>
+      </p>
+    }
+
+    <ul class="layers" aria-label="Capas del grupo">
+      @for (item of layers(); track item.layer.id) {
+        <li
+          class="layer-row"
+          [class.is-unaligned]="item.status === 'unaligned'"
+          [attr.data-testid]="'layers-sync-pick-' + item.layer.id"
+        >
+          <mat-checkbox
+            [checked]="item.status !== 'excluded'"
+            (change)="onLayerToggle(item.layer.id, $event.checked)"
+            color="primary"
+          >
+            {{ fullNameForLayer(item.layer) }}
+          </mat-checkbox>
+          @if (item.status === 'unaligned') {
+            <span class="layer-note">sin horarios en común</span>
+          }
+        </li>
+      }
+    </ul>
+  </div>
+</mat-expansion-panel>

@@ -1,0 +1,5 @@
+<mat-icon class="empty-state__icon" aria-hidden="true">{{ icon() }}</mat-icon>
+<p class="empty-state__title">{{ heading() }}</p>
+@if (hint()) {
+  <p class="empty-state__hint">{{ hint() }}</p>
+}

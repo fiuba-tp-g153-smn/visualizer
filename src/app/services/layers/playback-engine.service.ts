@@ -13,7 +13,7 @@ interface EngineSession {
  * Pure timer engine for frame-based animation playback.
  *
  * Manages named sessions so that both individual-layer playback (session ID = layerId)
- * and synchronized multi-layer playback (session ID = 'sync') can share the same
+ * and synchronized group playback (session ID = 'sync:<groupId>') can share the same
  * timer infrastructure.
  *
  * The engine knows nothing about layers or tilesets — callers provide an `onFrame`

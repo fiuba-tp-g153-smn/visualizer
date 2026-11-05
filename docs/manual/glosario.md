@@ -49,7 +49,7 @@ Imagen, instante, paso
 :   Cada cuadro de la secuencia. En observación se llama instante; en modelos, paso.
 
 Sincronización
-:   Reproducir varias capas con sus instantes alineados, con cinco minutos de tolerancia.
+:   Reproducir varias capas mostrando en cada cuadro el mismo instante en todas.
 
 Sincronizado
 :   La marca que lleva una capa mientras la controla la sincronización.

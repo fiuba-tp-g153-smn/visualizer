@@ -11,7 +11,7 @@ import { LayerConfigService } from '../layers/layer-config.service';
 import { SyncPlaybackService } from '../layers/sync-playback.service';
 import { PolygonDrawingService, DrawingMode } from '../polygons/polygon-drawing.service';
 import { NotificationService } from '../notifications/notification.service';
-import { ActiveLayerEntry, LayerType } from '../../models';
+import { ActiveLayerEntry, LayerType, SyncGroupId } from '../../models';
 
 function contextMenuEvent(lat = -34.6037, lng = -58.3816): LeafletMouseEvent {
   return {
@@ -35,9 +35,14 @@ describe('MapContextMenuSectionsService', () => {
     stopPlayback: ReturnType<typeof vi.fn>;
     deactivateLayer: ReturnType<typeof vi.fn>;
   };
+  /** One sync group's enrolled layers and whether it plays. */
+  let groups: Map<SyncGroupId, { enrolled: string[]; isPlaying: boolean }>;
   let sync: {
-    syncState: ReturnType<typeof signal<{ isPlaying: boolean; selectedLayerIds: string[] }>>;
-    isLayerSelected: ReturnType<typeof vi.fn>;
+    activeGroupIds: () => SyncGroupId[];
+    isAnyPlaying: () => boolean;
+    canPlay: (id: SyncGroupId) => boolean;
+    groupState: (id: SyncGroupId) => { isPlaying: boolean };
+    isLayerSelected: (layerId: string) => boolean;
     play: ReturnType<typeof vi.fn>;
     pause: ReturnType<typeof vi.fn>;
   };
@@ -69,9 +74,13 @@ describe('MapContextMenuSectionsService', () => {
       stopPlayback: vi.fn((id: string) => playing.delete(id)),
       deactivateLayer: vi.fn(),
     };
+    groups = new Map();
     sync = {
-      syncState: signal({ isPlaying: false, selectedLayerIds: [] as string[] }),
-      isLayerSelected: vi.fn((id: string) => sync.syncState().selectedLayerIds.includes(id)),
+      activeGroupIds: () => [...groups.keys()],
+      isAnyPlaying: () => [...groups.values()].some((g) => g.isPlaying),
+      canPlay: (id) => (groups.get(id)?.enrolled.length ?? 0) >= 2,
+      groupState: (id) => ({ isPlaying: groups.get(id)?.isPlaying ?? false }),
+      isLayerSelected: (layerId) => [...groups.values()].some((g) => g.enrolled.includes(layerId)),
       play: vi.fn(),
       pause: vi.fn(),
     };
@@ -129,14 +138,21 @@ describe('MapContextMenuSectionsService', () => {
       expect(layerControl.startPlayback).toHaveBeenCalledWith('b');
     });
 
-    it('plays synced layers through the sync timeline', () => {
-      sync.syncState.set({ isPlaying: false, selectedLayerIds: ['a'] });
+    it('plays synced layers through their group timeline', () => {
+      activeLayers.set([tileLayer('a'), tileLayer('b'), tileLayer('c')]);
+      groups.set('observations', { enrolled: ['a', 'b'], isPlaying: false });
 
       choose('layers-play');
 
-      expect(sync.play).toHaveBeenCalled();
+      expect(sync.play).toHaveBeenCalledWith('observations');
       expect(layerControl.startPlayback).not.toHaveBeenCalledWith('a');
-      expect(layerControl.startPlayback).toHaveBeenCalledWith('b');
+      expect(layerControl.startPlayback).toHaveBeenCalledWith('c');
+    });
+
+    it('offers pausing while a sync group plays', () => {
+      groups.set('observations', { enrolled: ['a', 'b'], isPlaying: true });
+
+      expect(open()).toContain('layers-pause');
     });
 
     it('offers only pausing once everything plays', () => {
@@ -148,9 +164,11 @@ describe('MapContextMenuSectionsService', () => {
     it('pauses individual and synced playback', () => {
       playing.add('a');
 
+      groups.set('models', { enrolled: [], isPlaying: false });
+
       choose('layers-pause');
 
-      expect(sync.pause).toHaveBeenCalled();
+      expect(sync.pause).toHaveBeenCalledWith('models');
       expect(layerControl.stopPlayback).toHaveBeenCalledWith('a');
     });
 

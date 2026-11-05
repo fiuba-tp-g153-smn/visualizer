@@ -151,7 +151,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   private readonly weatherStationsPlaybackSpeed = signal(1);
 
   /** True when this layer is currently controlled by the global sync playback. */
-  isSynced = computed(() => this.syncService.isLayerSelected(this.layer.id));
+  isSynced = computed(() => this.syncService.isLayerSyncing(this.layer.id));
 
   playSpeed = computed(() => {
     if (this.isWeatherStationsLayer()) {
@@ -1121,7 +1121,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
-    this.detachIfSynced();
+    // Even while its group is paused: the group's next play would otherwise stop this one.
+    this.syncService.detachLayer(this.layer.id);
     this.controlService.togglePlayback(this.layer.id);
   }
 
@@ -1147,7 +1148,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
-    this.detachIfSynced();
+    // The group sets the image count of every layer it holds, playing or paused.
+    this.syncService.detachLayer(this.layer.id);
     this.controlService.setImageCount(this.layer.id, count);
   }
 

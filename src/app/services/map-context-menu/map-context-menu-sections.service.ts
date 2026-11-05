@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { LayerType } from '../../models';
+import { LayerType, SyncGroupId } from '../../models';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
@@ -75,14 +75,15 @@ export class MapContextMenuSectionsService {
           (this.layerConfigService.getAvailableTilesets(layer.id)?.length ?? 0) > 1,
       )
       .map(({ id }) => id);
-    const syncPlaying = this.syncService.syncState().isPlaying;
-    const anyPlaying = syncPlaying || playable.some((id) => this.layerControlService.isPlaying(id));
-    const anyIdle = playable.some(
-      (id) => !this.layerControlService.isPlaying(id) && !this.isSyncDriven(id),
-    );
+    const anyPlaying =
+      this.syncService.isAnyPlaying() ||
+      playable.some((id) => this.layerControlService.isPlaying(id));
+    const anyIdle =
+      this.idleSyncGroups().length > 0 ||
+      playable.some((id) => !this.layerControlService.isPlaying(id) && !this.isSyncDriven(id));
 
     const items: MapContextMenuItem[] = [];
-    if (anyIdle || (this.hasSyncedLayers() && !syncPlaying)) {
+    if (anyIdle) {
       items.push({
         id: 'layers-play',
         icon: 'play_arrow',
@@ -121,24 +122,27 @@ export class MapContextMenuSectionsService {
     };
   }
 
-  private hasSyncedLayers(): boolean {
-    return this.syncService.syncState().selectedLayerIds.length > 0;
+  /** Sync groups that could play but are paused. */
+  private idleSyncGroups(): SyncGroupId[] {
+    return this.syncService
+      .activeGroupIds()
+      .filter((id) => this.syncService.canPlay(id) && !this.syncService.groupState(id).isPlaying);
   }
 
   private isSyncDriven(layerId: string): boolean {
     return this.syncService.isLayerSelected(layerId);
   }
 
-  /** Synced layers play through the sync timeline; every other layer plays on its own. */
+  /** Synced layers play through their group's timeline; every other layer plays on its own. */
   private playAll(playable: readonly string[]): void {
-    if (this.hasSyncedLayers()) this.syncService.play();
+    this.idleSyncGroups().forEach((id) => this.syncService.play(id));
     playable
       .filter((id) => !this.isSyncDriven(id) && !this.layerControlService.isPlaying(id))
       .forEach((id) => this.layerControlService.startPlayback(id));
   }
 
   private pauseAll(playable: readonly string[]): void {
-    this.syncService.pause();
+    this.syncService.activeGroupIds().forEach((id) => this.syncService.pause(id));
     playable.forEach((id) => this.layerControlService.stopPlayback(id));
   }
 

@@ -10,6 +10,7 @@ import { LayerControlService } from '../../../../../services/layers/layer-contro
 import { ActiveLayerGroupId, Layer } from '../../../../../models';
 import { ACTIVE_LAYER_GROUP_DEFINITIONS } from '../../../../../config/layers';
 import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
+import { EmptyStateComponent } from '../../../../shared/empty-state/empty-state';
 
 @Component({
   selector: 'app-active-layers',
@@ -23,6 +24,7 @@ import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
     MatDividerModule,
     DragDropModule,
     LayerItemComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './active-layers.html',
   styleUrl: './active-layers.scss',

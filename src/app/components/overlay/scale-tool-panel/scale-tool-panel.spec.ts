@@ -7,6 +7,8 @@ import { LayerScale, ScaleType } from '../../../models';
 import { ScaleToolEntry } from '../../../services/tools/scale-tools.service';
 
 function createPanel(scale: LayerScale): ScaleToolPanelComponent {
+  // Labels depend on the persisted wind unit; start from the default (knots).
+  localStorage.clear();
   TestBed.configureTestingModule({});
   const panel = TestBed.runInInjectionContext(() => new ScaleToolPanelComponent());
   panel.entry = { layerName: 'Test', scale } as ScaleToolEntry;

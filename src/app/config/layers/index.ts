@@ -41,3 +41,7 @@ export { WRF_SUBGROUP } from './wrf/config';
 
 // GFS configuration
 export { GFS_SUBGROUP } from './gfs/config';
+
+// Synchronized playback groups
+export { SYNC_GROUPS, syncGroupForCategory } from './sync-groups.config';
+export type { SyncGroupDefinition } from './sync-groups.config';
