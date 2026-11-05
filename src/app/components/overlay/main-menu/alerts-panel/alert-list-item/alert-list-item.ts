@@ -3,6 +3,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DetailItemComponent } from '../../../../shared/detail-item/detail-item';
+import { ALERTS_TEXTS } from '../../../../../texts';
 
 export type AlertListItemMode = 'draft' | 'pending' | 'active';
 
@@ -38,6 +39,7 @@ export interface DetailRowConfig {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertListItemComponent {
+  protected readonly t = ALERTS_TEXTS.details;
   readonly mode = input.required<AlertListItemMode>();
   readonly title = input.required<string>();
   readonly hidden = input<boolean>(false);

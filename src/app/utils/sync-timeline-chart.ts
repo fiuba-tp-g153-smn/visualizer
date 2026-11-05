@@ -1,5 +1,6 @@
 import type { SyncFrameSpec } from '../models';
 import type { SyncFrame, SyncImage, SyncPlan } from './sync-alignment';
+import { MAP_TEXTS } from '../texts';
 
 /** A layer's lane in the timeline chart. */
 export interface SyncChartLane {
@@ -267,7 +268,7 @@ export function buildSyncTimelineOption(
           const lane = lanes.find((l) => l.id === target.layerId);
           return `${lane?.name ?? ''}<br>${formats.full(target.time)}`;
         }
-        return `Cuadro ${target.index + 1}<br>${formats.full(plan.frames[target.index].time)}`;
+        return `${MAP_TEXTS.syncTimeline.frameNumber(target.index + 1)}<br>${formats.full(plan.frames[target.index].time)}`;
       },
     },
     xAxis: {

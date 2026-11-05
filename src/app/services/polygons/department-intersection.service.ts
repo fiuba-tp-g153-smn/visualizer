@@ -20,6 +20,7 @@ import {
 } from '../../models/geo';
 import { Phenomenon } from '../../models/phenomenon.model';
 import { coordinatesToGeoJSON, geoJSONToCoordinates } from '../../utils/geojson.utils';
+import { ALERTS_TEXTS } from '../../texts';
 
 const HTTP_PARAMS = {
   DETAIL_LEVEL: 'detail_level',
@@ -69,8 +70,7 @@ export interface AlertJobStatus {
  * with its ETag, or confirmation that the cached list is still valid.
  */
 export type PendingAlertsResult =
-  | { kind: 'updated'; alerts: PendingAlertResponse[]; etag: string }
-  | { kind: 'not-modified' };
+  { kind: 'updated'; alerts: PendingAlertResponse[]; etag: string } | { kind: 'not-modified' };
 
 @Injectable({
   providedIn: 'root',
@@ -102,7 +102,9 @@ export class DepartmentIntersectionService {
           .map((dept) => {
             const departmentCode = dept.properties?.['in1'];
             return {
-              name: (dept.properties && dept.properties['nam']) || 'Desconocido',
+              name:
+                (dept.properties && dept.properties['nam']) ||
+                ALERTS_TEXTS.polygons.unknownDepartment,
               province: getProvinceNameFromDepartmentCode(departmentCode),
               geometry: dept.geometry,
               intersection: dept.intersection,
@@ -113,10 +115,7 @@ export class DepartmentIntersectionService {
     );
   }
 
-  generateAlerts(
-    coordinates: Array<LatLng>,
-    phenomenonCode: number,
-  ): Observable<AlertJobAccepted> {
+  generateAlerts(coordinates: Array<LatLng>, phenomenonCode: number): Observable<AlertJobAccepted> {
     const url = buildGenerateAlertsUrl();
     const geojson = coordinatesToGeoJSON(coordinates);
 

@@ -2,8 +2,8 @@
   @if (!hasAvailableLayers()) {
     <div class="empty-state-container">
       <mat-icon class="empty-icon">layers_clear</mat-icon>
-      <h3>Sin capas disponibles</h3>
-      <p>No hay capas configuradas para visualizar.</p>
+      <h3>{{ t.noLayers.title }}</h3>
+      <p>{{ t.noLayers.hint }}</p>
     </div>
   } @else {
     <mat-tab-group class="layer-tabs" animationDuration="0ms">
@@ -11,7 +11,7 @@
         <ng-template mat-tab-label>
           <div class="tab-label-container" data-testid="layers-tab-available">
             <mat-icon class="tab-icon">grid_view</mat-icon>
-            <span class="tab-label">Disponibles</span>
+            <span class="tab-label">{{ t.tabs.available }}</span>
           </div>
         </ng-template>
         <div class="tab-content">
@@ -23,7 +23,7 @@
         <ng-template mat-tab-label>
           <div class="tab-label-container" data-testid="layers-tab-active">
             <mat-icon class="tab-icon">tune</mat-icon>
-            <span class="tab-label">Activas</span>
+            <span class="tab-label">{{ t.tabs.active }}</span>
             <span class="active-count" [class.visible]="getActiveLayersCount() > 0">
               {{ getActiveLayersCount() }}
             </span>
@@ -38,7 +38,7 @@
         <ng-template mat-tab-label>
           <div class="tab-label-container" data-testid="layers-tab-sync">
             <mat-icon class="tab-icon">sync</mat-icon>
-            <span class="tab-label">Sincronización</span>
+            <span class="tab-label">{{ t.tabs.sync }}</span>
             <span class="active-count" [class.visible]="syncSelectedCount() > 0">
               {{ syncSelectedCount() }}
             </span>

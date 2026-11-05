@@ -65,6 +65,7 @@ import {
   WeatherStationPopupComponent,
   WeatherStationPopupData,
 } from '../../components/floating/weather-station-popup/weather-station-popup.component';
+import { LAYERS_TEXTS, STATIONS_TEXTS } from '../../texts';
 
 /**
  * Max pooled tile layers. Well above the number ever on the map at once
@@ -304,7 +305,7 @@ export class LayerRenderService {
     }
 
     const STALE_COLOR = '#9ca3af';
-    const STALE_TOOLTIP = 'Sin datos en el período solicitado';
+    const STALE_TOOLTIP = STATIONS_TEXTS.staleTooltip;
 
     const declutterFactor = stationLayer.variable === WeatherStationVariable.WIND_SPEED ? 4 : 1;
     const markerOpacity = Math.max(0, Math.min(1, opacity));
@@ -1065,15 +1066,15 @@ export class LayerRenderService {
       weatherDescription: formatText(observation.weather.weather?.description),
       values: [
         {
-          label: 'Humedad',
+          label: STATIONS_TEXTS.variables.humidity,
           value: formatValue(observation.weather.humidity, 0, WEATHER_STATION_UNITS.HUMIDITY),
         },
         {
-          label: 'Presión',
+          label: STATIONS_TEXTS.variables.pressure,
           value: formatValue(observation.weather.pressure, 1, ` ${WEATHER_STATION_UNITS.PRESSURE}`),
         },
         {
-          label: 'Visibilidad',
+          label: STATIONS_TEXTS.variables.visibility,
           value: formatValue(
             observation.weather.visibility,
             1,
@@ -1778,10 +1779,7 @@ export class LayerRenderService {
         const currentErrors = this.errorTracker.get(trackingKey) || 0;
 
         if (currentErrors === 0) {
-          this.notificationService.error(
-            `La capa "${layerName}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
-            trackingKey,
-          );
+          this.notificationService.error(LAYERS_TEXTS.refresh.unavailable(layerName), trackingKey);
         }
 
         this.errorTracker.set(trackingKey, currentErrors + 1);

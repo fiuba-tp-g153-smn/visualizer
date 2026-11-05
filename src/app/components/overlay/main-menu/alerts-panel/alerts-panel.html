@@ -9,7 +9,7 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="alerts-tab-generate">
           <mat-icon class="tab-icon">draw</mat-icon>
-          <span class="tab-label">Generar</span>
+          <span class="tab-label">{{ t.generateTab }}</span>
         </div>
       </ng-template>
       <div class="tab-content">
@@ -19,35 +19,31 @@
               mat-flat-button
               color="primary"
               (click)="toggleDrawMode()"
-              [matTooltip]="
-                isEditing()
-                  ? 'No disponible mientras se edita un polígono'
-                  : 'Dibujar nuevo polígono. Click en el mapa para crear puntos. Cierra el polígono clickeando el primer punto o doble-click en el último.'
-              "
+              [matTooltip]="isEditing() ? t.drawUnavailable : t.drawHint"
               class="control-button"
               data-testid="alerts-draw-toggle"
               [class.cancel]="isDrawing()"
               [disabled]="isEditing()"
             >
               <mat-icon>{{ isDrawing() ? 'close' : 'draw' }}</mat-icon>
-              {{ isDrawing() ? 'Cancelar' : 'Dibujar' }}
+              {{ isDrawing() ? common.cancel : t.draw }}
             </button>
             <button
               mat-button
               (click)="deleteAll()"
               [disabled]="polygonCount() === 0"
-              matTooltip="Eliminar todos los polígonos"
+              [matTooltip]="t.deleteAllTooltip"
               class="control-button delete-button"
               data-testid="alerts-delete-all"
             >
               <mat-icon>delete_sweep</mat-icon>
-              Borrar todos
+              {{ t.deleteAll }}
             </button>
           </div>
 
           <div class="simplification-slider-container">
             <div class="slider-header">
-              <span class="slider-label">Nivel de detalle</span>
+              <span class="slider-label">{{ t.detailLevel }}</span>
               <span class="slider-value">{{ detailLevel() }}</span>
             </div>
             <mat-slider
@@ -64,7 +60,7 @@
                 [value]="detailLevel()"
                 (input)="onDetailLevelChange($any($event.target).value)"
                 (valueChange)="onDetailLevelChange($event)"
-                matTooltip="Controla el nivel de detalle para las herramientas de recorte y carga de departamentos. Un valor de 1 es más rápido con menor precisión, mientras que 5 proporciona máximo detalle."
+                [matTooltip]="t.detailLevelHint"
               />
             </mat-slider>
           </div>
@@ -75,9 +71,9 @@
         @if (polygonCount() === 0) {
           <div class="empty-state-container">
             <mat-icon class="empty-icon">draw</mat-icon>
-            <h3>Sin polígonos</h3>
-            <p>Usa el botón "Dibujar" arriba para crear polígonos.</p>
-            <p>Click en el mapa para crear puntos, doble-click para finalizar.</p>
+            <h3>{{ t.emptyTitle }}</h3>
+            <p>{{ t.emptyHintDraw }}</p>
+            <p>{{ t.emptyHintClick }}</p>
           </div>
         } @else {
           <div class="polygon-list-container">
@@ -86,7 +82,7 @@
                 <app-alert-list-item
                   mode="draft"
                   [attr.data-testid]="'alerts-draft-' + polygon.id"
-                  [title]="polygon.name || 'Borrador #' + polygon.draftNumber"
+                  [title]="polygon.name || details.draftTitle(polygon.draftNumber)"
                   [hidden]="!polygon.visible"
                   [details]="getDetailRows(polygon)"
                   (titleClick)="flyToPolygon(polygon)"
@@ -95,7 +91,7 @@
                     <button
                       mat-icon-button
                       (click)="editPolygon(polygon.id)"
-                      matTooltip="Editar geometría del polígono"
+                      [matTooltip]="t.editGeometryTooltip"
                       data-testid="alerts-draft-edit"
                       [disabled]="isLoadingAlerts(polygon)"
                     >
@@ -105,7 +101,7 @@
                       <button
                         mat-icon-button
                         (click)="cutPolygon(polygon.id)"
-                        matTooltip="Recortar con Argentina"
+                        [matTooltip]="polygonMenu.cutWithArgentina"
                         data-testid="alerts-draft-cut"
                         [disabled]="isLoadingCut(polygon) || isLoadingAlerts(polygon)"
                       >
@@ -120,7 +116,7 @@
                         mat-icon-button
                         color="accent"
                         (click)="undoCut(polygon.id)"
-                        matTooltip="Deshacer recorte"
+                        [matTooltip]="polygonMenu.undoCut"
                         data-testid="alerts-draft-undo-cut"
                         [disabled]="isLoadingAlerts(polygon)"
                       >
@@ -130,7 +126,7 @@
                     <button
                       mat-icon-button
                       (click)="toggleVisibility(polygon.id)"
-                      [matTooltip]="polygon.visible ? 'Ocultar' : 'Mostrar'"
+                      [matTooltip]="polygon.visible ? common.hide : common.show"
                       data-testid="alerts-draft-visibility"
                     >
                       <mat-icon>{{ polygon.visible ? 'visibility' : 'visibility_off' }}</mat-icon>
@@ -139,7 +135,7 @@
                       mat-icon-button
                       color="warn"
                       (click)="deletePolygon(polygon.id)"
-                      matTooltip="Eliminar"
+                      [matTooltip]="common.delete"
                       data-testid="alerts-draft-delete"
                       [disabled]="isLoadingAlerts(polygon)"
                     >
@@ -157,9 +153,9 @@
                       (departmentLeave)="onDepartmentLeave()"
                     />
                   } @else {
-                    <app-detail-item icon="map" label="Departamentos:">
+                    <app-detail-item icon="map" [label]="details.departments">
                       <app-detail-chip
-                        tooltip="Detectar departamentos afectados"
+                        [tooltip]="t.detectDepartments"
                         data-testid="alerts-departments-search"
                         [disabled]="isLoadingDepartments(polygon)"
                         (clicked)="loadDepartments(polygon.id)"
@@ -169,7 +165,7 @@
                         } @else {
                           <mat-icon>search</mat-icon>
                         }
-                        Buscar
+                        {{ t.searchDepartments }}
                       </app-detail-chip>
                     </app-detail-item>
                   }
@@ -180,7 +176,7 @@
                     color="primary"
                     (click)="generateAlerts(polygon.id)"
                     [disabled]="isLoadingAlerts(polygon) || exceedsMaxVertices(polygon)"
-                    [matTooltip]="'Supera el máximo de ' + maxVertices() + ' vértices permitidos'"
+                    [matTooltip]="polygonMenu.tooManyVertices(maxVertices())"
                     [matTooltipDisabled]="!exceedsMaxVertices(polygon)"
                     class="generate-alert-button"
                     data-testid="alerts-generate"
@@ -188,12 +184,12 @@
                     @if (isLoadingAlerts(polygon)) {
                       <ng-container>
                         <mat-icon class="spinning">autorenew</mat-icon>
-                        Generando aviso...
+                        {{ polygonMenu.generatingAlert }}
                       </ng-container>
                     } @else {
                       <ng-container>
                         <mat-icon>warning</mat-icon>
-                        Generar aviso
+                        {{ polygonMenu.generateAlert }}
                       </ng-container>
                     }
                   </button>
@@ -212,7 +208,7 @@
       <ng-template mat-tab-label>
         <div class="tab-label-container" data-testid="alerts-tab-emitted">
           <mat-icon class="tab-icon">notifications_active</mat-icon>
-          <span class="tab-label">Emitidos</span>
+          <span class="tab-label">{{ t.emittedTab }}</span>
         </div>
       </ng-template>
       <div class="tab-content">

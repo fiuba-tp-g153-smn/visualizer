@@ -1,12 +1,12 @@
 @if (activeAlerts().length === 0) {
-  <p class="group-empty">Sin avisos activos en este momento.</p>
+  <p class="group-empty">{{ emitted.noActive }}</p>
 } @else {
   <div class="items">
     @for (alert of activeAlerts(); track alert.alertId) {
       <app-alert-list-item
         mode="active"
         [attr.data-testid]="'alerts-active-' + alert.alertId"
-        [title]="'Aviso #' + alert.alertId"
+        [title]="details.alertTitle(alert.alertId)"
         [hidden]="isHidden(alert.alertId)"
         [details]="getDetailRows(alert)"
         (titleClick)="flyToAlert(alert)"
@@ -15,7 +15,7 @@
           <button
             mat-icon-button
             (click)="toggleHidden(alert.alertId)"
-            [matTooltip]="isHidden(alert.alertId) ? 'Mostrar' : 'Ocultar'"
+            [matTooltip]="isHidden(alert.alertId) ? common.show : common.hide"
           >
             <mat-icon>{{ isHidden(alert.alertId) ? 'visibility_off' : 'visibility' }}</mat-icon>
           </button>
@@ -33,8 +33,8 @@
             (departmentLeave)="onDepartmentLeave()"
           />
         } @else {
-          <app-detail-item icon="map" label="Departamentos:">
-            <span class="detail-value">Sin departamentos</span>
+          <app-detail-item icon="map" [label]="details.departments">
+            <span class="detail-value">{{ details.noDepartments }}</span>
           </app-detail-item>
         }
       </app-alert-list-item>

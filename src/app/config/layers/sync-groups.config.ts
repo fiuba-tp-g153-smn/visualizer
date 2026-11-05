@@ -1,4 +1,5 @@
 import { LayerCategory, SyncGroupId } from '../../models';
+import { LAYER_NAMES } from '../../texts';
 
 const MINUTE_MS = 60 * 1000;
 
@@ -24,23 +25,23 @@ export interface SyncGroupDefinition {
 export const SYNC_GROUPS: readonly SyncGroupDefinition[] = [
   {
     id: 'observations',
-    label: 'Radares y satélites',
+    label: LAYER_NAMES.syncGroups.observations.label,
     icon: 'satellite_alt',
     categories: [LayerCategory.RADAR, LayerCategory.GOES_19],
     toleranceMs: 5 * MINUTE_MS,
     frameCounts: [6, 12, 24],
     defaultFrameCount: 6,
-    peerHint: 'Encendé otro radar o satélite para animarlos juntos',
+    peerHint: LAYER_NAMES.syncGroups.observations.peerHint,
   },
   {
     id: 'models',
-    label: 'Modelos numéricos',
+    label: LAYER_NAMES.syncGroups.models.label,
     icon: 'insights',
     categories: [LayerCategory.WRF, LayerCategory.ECMWF_TP],
     toleranceMs: 30 * MINUTE_MS,
     frameCounts: [6, 12, 24, 48],
     defaultFrameCount: 12,
-    peerHint: 'Encendé otro modelo para animarlos juntos',
+    peerHint: LAYER_NAMES.syncGroups.models.peerHint,
   },
 ] as const;
 

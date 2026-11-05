@@ -20,6 +20,7 @@ import {
 } from '../../../../services/settings/timezone-settings.service';
 import { TEMPERATURE_UNITS, WIND_SPEED_UNITS } from '../../../../constants';
 import { WeatherStationsApiKeyService } from '../../../../services/weather-stations/weather-stations-api-key.service';
+import { SETTINGS_TEXTS } from '../../../../texts';
 
 const DECIMAL_BASE_10 = 10;
 const MIN_DECIMAL_PRECISION: DecimalPrecision = 0;
@@ -40,6 +41,7 @@ const MAX_DECIMAL_PRECISION: DecimalPrecision = 3;
   styleUrl: './general-settings.scss',
 })
 export class GeneralSettingsComponent implements MenuPanelComponent {
+  protected readonly t = SETTINGS_TEXTS;
   readonly unitsSettings = inject(UnitsSettingsService);
   readonly timezoneSettings = inject(TimezoneSettingsService);
   readonly apiKeyService = inject(WeatherStationsApiKeyService);

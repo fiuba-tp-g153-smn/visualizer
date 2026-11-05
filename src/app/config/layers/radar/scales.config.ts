@@ -1,6 +1,7 @@
 import { LayerScale, ScaleType } from '../../../models';
 import { RADAR_UNITS } from '../../../constants';
 import { buildScaleFromThresholds } from '../scale-builders';
+import { SCALE_NAMES } from '../../../texts';
 
 const baseScaleConfig = {
   labelCount: 10,
@@ -15,7 +16,7 @@ const baseScaleConfig = {
 export const RADAR_VRAD_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   unit: RADAR_UNITS.VELOCITY,
-  scaleDisplayName: 'Velocidad radial',
+  scaleDisplayName: SCALE_NAMES.radarVrad,
   labelCount: 17,
   stops: [
     { value: -40, color: '#6C0498' },
@@ -97,7 +98,7 @@ export const RADAR_RHOHV_SCALE: LayerScale = buildScaleFromThresholds({
     0.3,
   ],
   unit: RADAR_UNITS.CORRELATION,
-  scaleDisplayName: 'Coeficiente de correlación',
+  scaleDisplayName: SCALE_NAMES.radarRhohv,
   stops: [
     { value: 0.225, color: '#151391' },
     { value: 0.2417, color: '#141296' },
@@ -130,7 +131,7 @@ export const RADAR_ZDR_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   labelValues: Array.from({ length: 11 }, (_, i) => -3 + i * 1),
   unit: RADAR_UNITS.DIFFERENTIAL_REFLECTIVITY,
-  scaleDisplayName: 'Reflectividad diferencial',
+  scaleDisplayName: SCALE_NAMES.radarZdr,
   stops: [
     { value: -3.0, color: '#707070' },
     { value: -0.1, color: '#DCDCDC' },
@@ -206,7 +207,7 @@ export const RADAR_KDP_SCALE: LayerScale = buildScaleFromThresholds({
   ...baseScaleConfig,
   labelValues: Array.from({ length: 15 }, (_, i) => -1 + i * 0.5),
   unit: RADAR_UNITS.DIFFERENTIAL_PHASE,
-  scaleDisplayName: 'Fase diferencial específica',
+  scaleDisplayName: SCALE_NAMES.radarKdp,
   stops: [
     { value: -1.0, color: '#474747' },
     { value: -0.95, color: '#444444' },

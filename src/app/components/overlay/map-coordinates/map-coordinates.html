@@ -2,17 +2,17 @@
   <div class="coordinates" data-testid="map-coordinates">
     <app-panel-close-button
       class="close-button"
-      ariaLabel="Cerrar coordenadas"
+      [ariaLabel]="t.closeCoordinates"
       (pressed)="onClose()"
     />
     @if (latitude() !== null && longitude() !== null) {
-      <span class="coord">Lat {{ latitude() | number: '1.4-4' }}°</span>
+      <span class="coord">{{ t.latPrefix }} {{ latitude() | number: '1.4-4' }}°</span>
       <span class="separator">,</span>
-      <span class="coord">Lon {{ longitude() | number: '1.4-4' }}°</span>
+      <span class="coord">{{ t.lonPrefix }} {{ longitude() | number: '1.4-4' }}°</span>
     } @else {
-      <span class="coord placeholder">Lat --.----°</span>
+      <span class="coord placeholder">{{ t.latPrefix }} {{ t.coordPlaceholder }}</span>
       <span class="separator">,</span>
-      <span class="coord placeholder">Lon --.----°</span>
+      <span class="coord placeholder">{{ t.lonPrefix }} {{ t.coordPlaceholder }}</span>
     }
   </div>
 }

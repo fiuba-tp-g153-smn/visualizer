@@ -13,45 +13,48 @@ import {
   type ColumnSpec,
   type SortState,
 } from '../../dashboard/sortable-table/sortable-table.models';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 function resultCell(outcome: string): Cell {
   if (outcome === 'ok') {
-    return pillCell('success', 'ok');
+    return pillCell('success', DATA.outcomes.ok);
   }
   if (outcome === 'error') {
-    return pillCell('error', 'error');
+    return pillCell('error', DATA.outcomes.error);
   }
   return textCell(outcome, { muted: true });
 }
 
+const DATA = DASHBOARDS_TEXTS.data;
+
 const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncCycle>> = [
   {
-    header: { key: 'finalizado', label: 'finalizado', align: 'center', sortable: true },
+    header: { key: 'finalizado', label: DATA.columns.finished, align: 'center', sortable: true },
     cell: (c) => textCell(ago(c.finished_at), { muted: true, title: fmtInstant(c.finished_at) }),
     sortValue: (c) => c.finished_at,
   },
   {
-    header: { key: 'dominio', label: 'dominio', align: 'left', sortable: true },
+    header: { key: 'dominio', label: DATA.columns.domain, align: 'left', sortable: true },
     cell: (c) => textCell(domainLabel(c.domain)),
     sortValue: (c) => domainLabel(c.domain),
   },
   {
-    header: { key: 'descargado', label: 'descargado', align: 'center', sortable: true },
+    header: { key: 'descargado', label: DATA.columns.downloaded, align: 'center', sortable: true },
     cell: (c) => textCell(c.downloaded.toLocaleString('es-AR')),
     sortValue: (c) => c.downloaded,
   },
   {
-    header: { key: 'errores', label: 'errores', align: 'center', sortable: true },
+    header: { key: 'errores', label: DATA.columns.errors, align: 'center', sortable: true },
     cell: (c) => textCell(String(c.errors), { tone: c.errors > 0 ? 'err' : undefined }),
     sortValue: (c) => c.errors,
   },
   {
-    header: { key: 'duracion', label: 'duración', align: 'center', sortable: true },
+    header: { key: 'duracion', label: DATA.columns.duration, align: 'center', sortable: true },
     cell: (c) => textCell(secs(c.duration_ms / 1000)),
     sortValue: (c) => c.duration_ms,
   },
   {
-    header: { key: 'resultado', label: 'resultado', align: 'center', sortable: true },
+    header: { key: 'resultado', label: DATA.columns.outcome, align: 'center', sortable: true },
     cell: (c) => resultCell(c.outcome),
     sortValue: (c) => c.outcome,
   },
@@ -69,15 +72,15 @@ const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncCycle>> = [
         [headers]="table().headers"
         [rows]="table().tableRows"
         [initialSort]="initialSort"
-        emptyText="Sin ciclos en la ventana seleccionada."
+        [emptyText]="t.noCyclesInWindow"
       />
     </div>
     <div class="cycles__foot">
       <button mat-stroked-button [disabled]="!hasMore()" (click)="loadMore.emit()">
-        cargar 50 más
+        {{ t.loadMore }}
       </button>
-      <span class="cycles__count">{{ cycles().length }} cargados</span>
-      <span class="cycles__hint">(el orden aplica a las filas cargadas)</span>
+      <span class="cycles__count">{{ t.loadedCount(cycles().length) }}</span>
+      <span class="cycles__hint">{{ t.sortHint }}</span>
     </div>
   `,
   styles: `
@@ -107,6 +110,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncCycle>> = [
   `,
 })
 export class DataSyncCyclesTableComponent {
+  protected readonly t = DASHBOARDS_TEXTS.data;
   readonly cycles = input.required<readonly DataSyncCycle[]>();
   readonly hasMore = input<boolean>(false);
   readonly loadMore = output<void>();

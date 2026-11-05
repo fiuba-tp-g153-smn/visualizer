@@ -51,6 +51,7 @@ import {
   lanesSpan,
   sameLanes,
 } from '../../../utils/sync-timeline-chart';
+import { COMMON_TEXTS, MAP_TEXTS } from '../../../texts';
 
 export interface SyncTimelineDialogData {
   readonly groupId: SyncGroupId;
@@ -61,12 +62,7 @@ const MIN_CHART_HEIGHT = 260;
 const LANE_HEIGHT = 56;
 
 /** Why a layer of the group sits outside its timeline, under its greyed-out lane. */
-const LEFT_OUT_NOTES: Record<SyncLayerStatus, string> = {
-  unaligned: 'sin horarios en común',
-  excluded: 'no sincronizada',
-  waiting: 'sin sincronizar',
-  enrolled: '',
-};
+const LEFT_OUT_NOTES: Readonly<Record<SyncLayerStatus, string>> = MAP_TEXTS.syncTimeline.leftOut;
 
 /** The frame being edited, kept apart from the saved frames until Listo writes it. */
 interface Draft {
@@ -107,6 +103,8 @@ interface Draft {
   styleUrl: './sync-timeline-dialog.scss',
 })
 export class SyncTimelineDialogComponent {
+  protected readonly t = MAP_TEXTS.syncTimeline;
+  protected readonly common = COMMON_TEXTS.actions;
   private readonly syncService = inject(SyncPlaybackService);
   private readonly layersService = inject(LayersService);
   private readonly groupId = inject<SyncTimelineDialogData>(MAT_DIALOG_DATA).groupId;
@@ -224,9 +222,7 @@ export class SyncTimelineDialogComponent {
 
   /** What to do with no draft open, or why the group can't sync yet. */
   readonly hint = computed(() =>
-    this.lanes().length > 0
-      ? 'Clic en puntos de distintas capas para unirlos en un cuadro'
-      : (this.syncService.groupHint(this.groupId) ?? ''),
+    this.lanes().length > 0 ? this.t.hint : (this.syncService.groupHint(this.groupId) ?? ''),
   );
 
   /** The layer the draft would send back in time, crossing another frame's line. */
@@ -237,12 +233,12 @@ export class SyncTimelineDialogComponent {
 
   readonly status = computed(() => {
     const crossing = this.crossing();
-    if (crossing) return `Cruza otro cuadro en ${crossing}: ninguna capa puede volver atrás`;
+    if (crossing) return this.t.crossing(crossing);
     const line = this.draftLine();
     const frame = line === null ? undefined : this.plan().frames[line];
     return this.draft()?.index === null || !frame
-      ? 'Clic en puntos de otras capas para sumarlos'
-      : `Cuadro ${line! + 1} · ${formatDateFull(new Date(frame.time))}`;
+      ? this.t.addPoints
+      : this.t.frame(line! + 1, formatDateFull(new Date(frame.time)));
   });
 
   /**

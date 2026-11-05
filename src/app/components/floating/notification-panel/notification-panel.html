@@ -15,7 +15,7 @@
         mat-icon-button
         class="notification-close"
         (click)="notificationService.dismiss(notification.id)"
-        aria-label="Cerrar notificación"
+        [attr.aria-label]="t.closeNotification"
       >
         <mat-icon>close</mat-icon>
       </button>

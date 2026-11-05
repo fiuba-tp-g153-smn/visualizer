@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MenuPanelComponent } from '../menu-section.model';
 import { PlaceSearchTabComponent } from './place-search-tab/place-search-tab';
 import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector';
+import { SEARCH_TEXTS } from '../../../../texts';
 
 /**
  * "Explorar mapa" panel: groups place search and base map selection — both are
@@ -25,6 +26,7 @@ import { BaseMapSelectorComponent } from './base-map-selector/base-map-selector'
   styleUrl: './map-explorer.scss',
 })
 export class MapExplorerComponent implements MenuPanelComponent {
+  protected readonly t = SEARCH_TEXTS.tabs;
   onPanelOpen(): void {}
 
   onPanelClose(): void {}

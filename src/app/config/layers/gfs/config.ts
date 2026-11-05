@@ -25,6 +25,7 @@ import {
   isothermStyleFor,
   thicknessStyleFor,
 } from './gfs-overlay-styles';
+import { LAYER_NAMES } from '../../../texts';
 
 /**
  * Capas del modelo global GFS 0.25°.
@@ -90,14 +91,14 @@ const contourRender = (
  */
 const THICKNESS_POINT_QUERY = {
   variable: 'thickness',
-  name: 'Espesores 1000/500',
+  name: LAYER_NAMES.gfs.espesores1000500.name,
   unit: GFS_UNITS.GEOPOTENTIAL,
   scaleRange: { min: 4800, max: 6000, totalSteps: 20 },
 } as const;
 
 const TEMPERATURE_500_POINT_QUERY = {
   variable: 'temperature',
-  name: 'Isotermas',
+  name: LAYER_NAMES.gfs.isotermas.name,
   unit: GFS_UNITS.TEMPERATURE,
   scaleRange: { min: -50, max: 10, totalSteps: 12 },
 } as const;
@@ -105,26 +106,24 @@ const TEMPERATURE_500_POINT_QUERY = {
 const geopotentialPointQuery = (scaleRange: ScaleRangeInfo) =>
   ({
     variable: 'geopotential',
-    name: 'Geopotencial',
+    name: LAYER_NAMES.gfs.geopotencial.name,
     unit: GFS_UNITS.GEOPOTENTIAL,
     scaleRange,
   }) as const;
 
 export const GFS_SUBGROUP: LayerSubgroup = {
   id: 'gfs',
-  name: 'GFS',
-  description: 'Modelo global GFS 0.25° del NCEP',
+  name: LAYER_NAMES.gfs.gfs.name,
+  description: LAYER_NAMES.gfs.gfs.description,
   expanded: false,
   layers: [
     {
       ...GFS_DEFAULTS,
       id: 'gfs/mean-sea-level-pressure',
       productId: 'mean-sea-level-pressure',
-      name: 'Presión a nivel del mar',
-      pointQueryLabel: 'Presión a nivel del mar',
-      description:
-        'Presión a nivel del mar (isobaras cada 3 hPa) y espesores 1000/500 cada 60 m — GFS. ' +
-        'Los espesores de 5280, 5400, 5580 y 5700 m se resaltan en color.',
+      name: LAYER_NAMES.gfs.gfsMeanSeaLevelPressure.name,
+      pointQueryLabel: LAYER_NAMES.gfs.gfsMeanSeaLevelPressure.pointQueryLabel,
+      description: LAYER_NAMES.gfs.gfsMeanSeaLevelPressure.description,
       // Carta de puro contorno: `slpb.gs` no sombrea nada, así que
       // tiles-processor no genera pirámide raster para este producto.
       hasRaster: false,
@@ -153,10 +152,9 @@ export const GFS_SUBGROUP: LayerSubgroup = {
       ...GFS_DEFAULTS,
       id: 'gfs/geopotential-500hpa',
       productId: 'geopotential-500hpa',
-      name: 'Geopotencial 500 hPa',
-      pointQueryLabel: 'Intensidad del viento en 500 hPa',
-      description:
-        'Viento en 500 hPa (kt) — GFS. Geopotencial cada 60 m, isotermas cada 5 °C y barbas de viento.',
+      name: LAYER_NAMES.gfs.gfsGeopotential500hpa.name,
+      pointQueryLabel: LAYER_NAMES.gfs.gfsGeopotential500hpa.pointQueryLabel,
+      description: LAYER_NAMES.gfs.gfsGeopotential500hpa.description,
       scale: GFS_WIND_500_SCALE,
       secondaryRenders: [
         contourRender('geopotential-500hpa', 'isotherms', {
@@ -181,9 +179,9 @@ export const GFS_SUBGROUP: LayerSubgroup = {
       ...GFS_DEFAULTS,
       id: 'gfs/geopotential-250hpa',
       productId: 'geopotential-250hpa',
-      name: 'Geopotencial 250 hPa',
-      pointQueryLabel: 'Intensidad del viento en 250 hPa',
-      description: 'Viento en 250 hPa (kt) — GFS. Geopotencial cada 60 m.',
+      name: LAYER_NAMES.gfs.gfsGeopotential250hpa.name,
+      pointQueryLabel: LAYER_NAMES.gfs.gfsGeopotential250hpa.pointQueryLabel,
+      description: LAYER_NAMES.gfs.gfsGeopotential250hpa.description,
       scale: GFS_WIND_250_SCALE,
       secondaryRenders: [
         contourRender('geopotential-250hpa', 'heights', {

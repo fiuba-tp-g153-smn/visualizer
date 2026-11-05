@@ -6,26 +6,19 @@
         [class.dash__status--up]="online() === true"
         [class.dash__status--down]="online() === false"
         [matTooltip]="
-          online() === false
-            ? 'Mapa base sin conexión'
-            : online() === true
-              ? 'Mapa base operativo'
-              : 'Conectando…'
+          online() === false ? t.offline : online() === true ? t.online : page.connecting
         "
       ></span>
-      <span class="dash__title">Scraper de respaldo de mapa base (data service)</span>
+      <span class="dash__title">{{ t.title }}</span>
     </span>
     <span class="dash__spacer"></span>
 
     <label class="dash__ctl">
-      <span
-        class="dash__ctl-title"
-        matTooltipClass="nav-tip"
-        matTooltip="Frecuencia del refresco automático. 'no' lo desactiva."
-        >Actualización cada</span
-      >
+      <span class="dash__ctl-title" matTooltipClass="nav-tip" [matTooltip]="page.refreshHint">{{
+        page.refreshEvery
+      }}</span>
       <select [value]="refreshSecs()" (change)="onRefreshChange($event)">
-        <option value="0">no</option>
+        <option value="0">{{ page.off }}</option>
         <option value="10">10s</option>
         <option value="30">30s</option>
         <option value="60">60s</option>
@@ -37,7 +30,7 @@
         class="dash__refresh"
         (click)="refreshNow()"
         [disabled]="loading()"
-        matTooltip="Refresca los datos ahora."
+        [matTooltip]="page.refreshNowHint"
         matTooltipClass="nav-tip"
       >
         <span class="dash__refresh-glyph">
@@ -47,9 +40,9 @@
             <mat-icon>refresh</mat-icon>
           }
         </span>
-        Actualizar
+        {{ page.refresh }}
       </button>
-      <span class="dash__updated">Actualizado {{ updatedAt() }}</span>
+      <span class="dash__updated">{{ page.updated(updatedAt()) }}</span>
     </div>
   </header>
 
@@ -57,15 +50,15 @@
     @if (errorMsg(); as err) {
       <div class="dash__error" role="alert">
         <mat-icon>error</mat-icon>
-        <span>No se pudo actualizar el estado del scraper: {{ err }}</span>
-        <button mat-button (click)="refreshNow()" [disabled]="loading()">Reintentar</button>
+        <span>{{ t.updateError(err) }}</span>
+        <button mat-button (click)="refreshNow()" [disabled]="loading()">{{ page.retry }}</button>
       </div>
     }
 
     @if (firstLoad()) {
       <div class="dash__loading">
         <mat-spinner diameter="40" />
-        <span>Cargando estado del scraper…</span>
+        <span>{{ t.loading }}</span>
       </div>
     } @else {
       <div
@@ -73,7 +66,7 @@
         [class.dash__content--busy]="reloading()"
         [attr.aria-busy]="reloading()"
       >
-        <app-metric-panel heading="Scraper de mapa base" [tip]="tip">
+        <app-metric-panel [heading]="t.panel" [tip]="tip">
           <span panelActions class="dash__stamp">{{ basemapStamp() }}</span>
           <div class="dash__scroll-x">
             <app-basemap-providers-table [providers]="providers()" />
@@ -84,7 +77,7 @@
       @if (reloading()) {
         <div class="dash__overlay" role="status" aria-live="polite">
           <mat-spinner diameter="40" />
-          <span>Cargando estado del scraper…</span>
+          <span>{{ t.loading }}</span>
         </div>
       }
     }

@@ -1,5 +1,6 @@
 import { GLM_UNITS } from '../../../../constants';
 import { buildLogScale } from '../../scale-builders';
+import { SCALE_NAMES } from '../../../../texts';
 
 const baseLogScaleConfig = {
   subTickCount: 9,
@@ -11,7 +12,7 @@ export const GLM_FED_SCALE = buildLogScale({
   min: 1,
   max: 128,
   unit: GLM_UNITS.FLASH_DENSITY,
-  scaleDisplayName: 'Densidad de flashes',
+  scaleDisplayName: SCALE_NAMES.glmFed,
   colors: [
     '#0000b8',
     '#0702c1',
@@ -40,7 +41,7 @@ export const GLM_TOE_SCALE = buildLogScale({
   min: 0.01,
   max: 1500,
   unit: GLM_UNITS.ENERGY,
-  scaleDisplayName: 'Energia optica total',
+  scaleDisplayName: SCALE_NAMES.glmToe,
   colors: [
     '#000004',
     '#0a0822',
@@ -69,7 +70,7 @@ export const GLM_MFA_SCALE = buildLogScale({
   min: 64,
   max: 2500,
   unit: GLM_UNITS.AREA,
-  scaleDisplayName: 'Area media de flash',
+  scaleDisplayName: SCALE_NAMES.glmMfa,
   colors: [
     '#fde725',
     '#d5e21a',

@@ -5,6 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import type { JobTypeSummary } from '../../../models/metrics/metrics.models';
 import { pct } from '../../../services/metrics/metrics-format.util';
 import { prod } from '../../../services/metrics/metrics-labels.constants';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 type Accent = '' | 'green' | 'orange' | 'red';
 
@@ -50,6 +51,7 @@ interface StatCard {
   styleUrl: './metric-stat-cards.component.scss',
 })
 export class MetricStatCardsComponent {
+  protected readonly t = DASHBOARDS_TEXTS.statCards;
   readonly summary = input.required<readonly JobTypeSummary[]>();
 
   readonly cards = computed<StatCard[]>(() => {
@@ -69,8 +71,8 @@ export class MetricStatCardsComponent {
     const rateBase = totals.success + failures + totals.skipped;
     const successRate = rateBase ? totals.success / rateBase : null;
     const rateText = rateBase
-      ? `${totals.success} éxitos ÷ ${rateBase} (éxitos + fallos + omitidos) = ${pct(successRate)}. Excluye reencolados (reintentos transitorios).`
-      : 'Sin trabajos en la ventana.';
+      ? this.t.successRateHint(totals.success, rateBase, pct(successRate))
+      : this.t.noJobsInWindow;
     const typeLines = this.summary()
       .map((entry) => prod(entry.product_label ?? entry.job_type))
       .sort((a, b) => a.localeCompare(b))
@@ -79,56 +81,51 @@ export class MetricStatCardsComponent {
 
     return [
       {
-        label: 'Trabajos finalizados',
+        label: this.t.finished,
         value: String(totals.total),
-        tooltip:
-          'Total de trabajos finalizados en la ventana (éxitos + fallos + reencolados + omitidos). Se cuenta por intento.',
+        tooltip: this.t.finishedHint,
         accent: '',
       },
       {
-        label: 'Éxitos',
+        label: this.t.successes,
         value: String(totals.success),
-        tooltip:
-          'Trabajos que completaron el procesamiento correctamente (tiles generados y subidos).',
+        tooltip: this.t.successesHint,
         accent: 'green',
       },
       {
-        label: 'Fallos',
+        label: this.t.failures,
         value: String(failures),
-        tooltip: `Trabajos que fallaron con una excepción: errores (${totals.error}) + descartes DLQ (${totals.dlq}). El DLQ es un subconjunto de Fallos.`,
+        tooltip: this.t.failuresHint(totals.error, totals.dlq),
         accent: failures > 0 ? 'orange' : '',
       },
       {
-        label: 'Omitidos',
+        label: this.t.skipped,
         value: String(totals.skipped),
-        tooltip:
-          'Trabajos omitidos porque el dato aún no estaba disponible; se reintentan en el próximo ciclo. No son fallos.',
+        tooltip: this.t.skippedHint,
         accent: '',
       },
       {
-        label: 'Tasa de éxito',
+        label: this.t.successRate,
         value: rateBase ? pct(successRate) : '—',
         tooltip: rateText,
         accent: '',
       },
       {
-        label: 'Descartes (DLQ)',
+        label: this.t.dlq,
         value: String(totals.dlq),
-        tooltip:
-          'Trabajos que agotaron los reintentos y fueron a la cola de descartes (fallos terminales que requieren atención).',
+        tooltip: this.t.dlqHint,
         accent: totals.dlq > 0 ? 'red' : '',
       },
       {
-        label: 'Reencolados',
+        label: this.t.requeued,
         value: String(totals.requeued),
-        tooltip:
-          'Trabajos reencolados por un error transitorio de descarga para reintentarse. No son fallos.',
+        tooltip: this.t.requeuedHint,
         accent: '',
       },
       {
-        label: 'Tipos',
+        label: this.t.types,
         value: String(this.summary().length),
-        tooltip: typeLines ? `Tipos de trabajo activos:\n${typeLines}` : 'Sin tipos activos.',
+        tooltip: typeLines ? this.t.typesHint(typeLines) : this.t.noTypes,
         accent: '',
       },
     ];

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { deleteAllPolygonsMessage, deletePolygonMessage } from './polygon-messages.utils';
+import { ALERTS_TEXTS } from './alerts.texts';
+
+const { deleteOne: deletePolygonMessage, deleteAll: deleteAllPolygonsMessage } =
+  ALERTS_TEXTS.polygons;
 
 describe('deletePolygonMessage', () => {
   it('names the polygon when it has a name', () => {

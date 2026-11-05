@@ -4,6 +4,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
+import { MAP_TEXTS } from '../../../../../texts';
 
 @Component({
   selector: 'app-scale-tab',
@@ -13,6 +14,7 @@ import { ScaleToolsService } from '../../../../../services/tools/scale-tools.ser
   styleUrl: './scale-tab.scss',
 })
 export class ScaleTabComponent {
+  protected readonly t = MAP_TEXTS.tools;
   readonly scaleTools = inject(ScaleToolsService);
 
   onToolEnabledChange(enabled: boolean): void {

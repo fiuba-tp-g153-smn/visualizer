@@ -1,9 +1,9 @@
-<h1 mat-dialog-title>Generar aviso</h1>
+<h1 mat-dialog-title>{{ t.title }}</h1>
 <mat-dialog-content>
   @if (loading()) {
     <div class="loading-container">
       <app-loading-spinner [diameter]="50" />
-      <p>Cargando fenómenos meteorológicos...</p>
+      <p>{{ t.loading }}</p>
     </div>
   } @else {
     @if (error()) {
@@ -13,10 +13,10 @@
       </div>
     }
 
-    <p class="dialog-message">Seleccione el código de fenómeno meteorológico:</p>
+    <p class="dialog-message">{{ t.prompt }}</p>
 
     <mat-form-field appearance="outline" class="phenomenon-select">
-      <mat-label>Código de fenómeno</mat-label>
+      <mat-label>{{ t.codeLabel }}</mat-label>
       <mat-select
         [value]="selectedCode()"
         (valueChange)="selectedCode.set($event)"
@@ -32,7 +32,9 @@
   }
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()" data-testid="dialog-phenomenon-cancel">Cancelar</button>
+  <button mat-button (click)="onCancel()" data-testid="dialog-phenomenon-cancel">
+    {{ common.cancel }}
+  </button>
   <button
     mat-flat-button
     color="primary"
@@ -41,6 +43,6 @@
     cdkFocusInitial
     data-testid="dialog-phenomenon-confirm"
   >
-    Generar aviso
+    {{ t.confirm }}
   </button>
 </mat-dialog-actions>

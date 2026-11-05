@@ -7,6 +7,7 @@ import {
   buildStagePieChart,
   type StagePieOptions,
 } from '../../../services/metrics/metrics-chart.util';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /**
  * Torta (donut) reutilizable del desglose por etapa de un trabajo o tipo.
@@ -25,7 +26,7 @@ import {
         [checked]="includeRed()"
         (change)="includeRed.set($event.checked)"
       >
-        {{ includeRed() ? 'Incluir descarga' : 'Solo procesamiento' }}
+        {{ includeRed() ? t.includeDownload : t.processingOnly }}
       </mat-slide-toggle>
     }
 
@@ -42,7 +43,7 @@ import {
         [stroke]="options().stroke"
       ></apx-chart>
     } @else {
-      <div class="spc__empty">Sin desglose disponible.</div>
+      <div class="spc__empty">{{ t.empty }}</div>
     }
   `,
   styles: `
@@ -65,6 +66,7 @@ import {
   `,
 })
 export class StagePieChartComponent {
+  protected readonly t = DASHBOARDS_TEXTS.stagePie;
   readonly stages = input.required<StageTimings>();
   readonly networkSecs = input<number | null>(null);
   readonly height = input<number>(280);

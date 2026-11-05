@@ -9,6 +9,7 @@ import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-sp
 import { DepartmentIntersectionService } from '../../../services/polygons/department-intersection.service';
 import { Phenomenon } from '../../../models/phenomenon.model';
 import { PHENOMENON_CODES } from '../../../constants';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-phenomenon-selection-dialog',
@@ -27,6 +28,8 @@ import { PHENOMENON_CODES } from '../../../constants';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PhenomenonSelectionDialogComponent implements OnInit {
+  protected readonly t = ALERTS_TEXTS.phenomenonDialog;
+  protected readonly common = COMMON_TEXTS.actions;
   private readonly departmentIntersectionService = inject(DepartmentIntersectionService);
   readonly dialogRef = inject(MatDialogRef<PhenomenonSelectionDialogComponent>);
 
@@ -56,7 +59,7 @@ export class PhenomenonSelectionDialogComponent implements OnInit {
           description: p.description,
         }));
         this.phenomenonCodes.set(fallbackPhenomena);
-        this.error.set('Usando datos locales (backend no disponible)');
+        this.error.set(this.t.usingLocalData);
         this.loading.set(false);
       },
     });

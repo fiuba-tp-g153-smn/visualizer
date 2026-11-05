@@ -3,6 +3,7 @@ import { convertValueForDisplay, getDisplayUnit } from '../../utils/unit-convers
 import { formatStationValue } from '../../utils/number-format.utils';
 import { UnitsSettingsService } from '../settings/units-settings.service';
 import { StationSeries, StationSeriesPoint } from '../../models/geo/weather-station-series.model';
+import { STATIONS_TEXTS } from '../../texts';
 
 export interface SummaryRow {
   label: string;
@@ -24,57 +25,53 @@ interface MetricDef {
   accessor: (point: StationSeriesPoint) => number | null;
 }
 
-const STAT_LABELS: Record<Stat, string> = {
-  max: 'Máxima',
-  min: 'Mínima',
-  avg: 'Promedio',
-};
+const STAT_LABELS: Readonly<Record<Stat, string>> = STATIONS_TEXTS.stats;
 
 const METRICS: readonly MetricDef[] = [
   {
-    title: 'Temperatura',
+    title: STATIONS_TEXTS.variables.temperature,
     sourceUnit: TEMPERATURE_UNITS.CELSIUS,
     decimals: 1,
     stats: ['max', 'min', 'avg'],
     accessor: (p) => p.temperature,
   },
   {
-    title: 'Sensación térmica',
+    title: STATIONS_TEXTS.variables.feelsLike,
     sourceUnit: TEMPERATURE_UNITS.CELSIUS,
     decimals: 1,
     stats: ['max', 'min', 'avg'],
     accessor: (p) => p.feelsLike,
   },
   {
-    title: 'Punto de rocío',
+    title: STATIONS_TEXTS.variables.dewPoint,
     sourceUnit: TEMPERATURE_UNITS.CELSIUS,
     decimals: 1,
     stats: ['max', 'min', 'avg'],
     accessor: (p) => p.dewPoint,
   },
   {
-    title: 'Humedad',
+    title: STATIONS_TEXTS.variables.humidity,
     sourceUnit: WEATHER_STATION_UNITS.HUMIDITY,
     decimals: 0,
     stats: ['max', 'min', 'avg'],
     accessor: (p) => p.humidity,
   },
   {
-    title: 'Presión',
+    title: STATIONS_TEXTS.variables.pressure,
     sourceUnit: WEATHER_STATION_UNITS.PRESSURE,
     decimals: 1,
     stats: ['max', 'min', 'avg'],
     accessor: (p) => p.pressure,
   },
   {
-    title: 'Visibilidad',
+    title: STATIONS_TEXTS.variables.visibility,
     sourceUnit: WEATHER_STATION_UNITS.VISIBILITY,
     decimals: 1,
     stats: ['max', 'min', 'avg'],
     accessor: (p) => p.visibility,
   },
   {
-    title: 'Viento',
+    title: STATIONS_TEXTS.variables.wind,
     sourceUnit: WEATHER_STATION_UNITS.WIND_SPEED,
     decimals: 0,
     stats: ['max', 'min', 'avg'],

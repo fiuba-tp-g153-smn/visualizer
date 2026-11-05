@@ -24,6 +24,7 @@ import {
   WeatherStationHistoryChartsComponent,
   WeatherStationHistoryChartsData,
 } from '../weather-station-history-charts/weather-station-history-charts.component';
+import { STATIONS_TEXTS } from '../../../texts';
 
 export interface WeatherStationPopupItem {
   label: string;
@@ -64,6 +65,7 @@ enum PopupTab {
   styleUrl: './weather-station-popup.component.scss',
 })
 export class WeatherStationPopupComponent implements OnInit {
+  protected readonly t = STATIONS_TEXTS;
   @Input({ required: true }) data!: WeatherStationPopupData;
 
   private readonly historyService = inject(WeatherStationsHistoryService);

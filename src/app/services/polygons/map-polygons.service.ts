@@ -30,7 +30,7 @@ import {
   lightenColor,
 } from '../../utils/map-styles.utils';
 import { isSimplePolygon } from '../../utils/polygon-validation.utils';
-import { deletePolygonMessage } from '../../utils/polygon-messages.utils';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../texts';
 import { departmentKey } from '../../utils/department-key.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
 import { NotificationService } from '../notifications/notification.service';
@@ -297,9 +297,7 @@ export class MapPolygonsService {
       if (this.map && this.map.hasLayer(layer)) {
         this.map.removeLayer(layer);
       }
-      this.notificationService.warning(
-        'El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.',
-      );
+      this.notificationService.warning(ALERTS_TEXTS.polygons.selfIntersectingDraw);
       return;
     }
 
@@ -599,10 +597,10 @@ export class MapPolygonsService {
       ConfirmDialogComponent,
       {
         data: {
-          title: 'Eliminar polígono',
-          message: deletePolygonMessage(polygon?.name),
-          confirmText: 'Eliminar',
-          cancelText: 'Cancelar',
+          title: ALERTS_TEXTS.polygons.deleteOneTitle,
+          message: ALERTS_TEXTS.polygons.deleteOne(polygon?.name),
+          confirmText: COMMON_TEXTS.actions.delete,
+          cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
         },
       },
@@ -652,9 +650,7 @@ export class MapPolygonsService {
           layer.setLatLngs([originalLatLngs]);
         }
 
-        this.notificationService.warning(
-          'El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.',
-        );
+        this.notificationService.warning(ALERTS_TEXTS.polygons.selfIntersectingEdit);
 
         if (layer.disableEdit) {
           layer.disableEdit();

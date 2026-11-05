@@ -15,6 +15,7 @@ import {
   RADAR_ZDR_SCALE,
   RADAR_KDP_SCALE,
 } from './scales.config';
+import { LAYER_NAMES } from '../../../texts';
 
 /**
  * Valores por defecto para capas RADAR
@@ -84,12 +85,12 @@ const RADAR_SCALES: Record<RadarProduct, LayerScale> = {
  * crudo y se mostraba en minúscula en el panel de capas.
  */
 const RADAR_PRODUCT_LABELS: Record<RadarProduct, string> = {
-  [RadarProduct.DBZH]: 'ZH',
-  [RadarProduct.DBZH_450KM]: 'ZH 450 km',
-  [RadarProduct.KDP]: 'KDP',
-  [RadarProduct.VRAD]: 'VRAD',
-  [RadarProduct.RHOHV]: 'RHOHV',
-  [RadarProduct.ZDR]: 'ZDR',
+  [RadarProduct.DBZH]: LAYER_NAMES.radar.products.dbzh,
+  [RadarProduct.DBZH_450KM]: LAYER_NAMES.radar.products.dbzh450km,
+  [RadarProduct.KDP]: LAYER_NAMES.radar.products.kdp,
+  [RadarProduct.VRAD]: LAYER_NAMES.radar.products.vrad,
+  [RadarProduct.RHOHV]: LAYER_NAMES.radar.products.rhohv,
+  [RadarProduct.ZDR]: LAYER_NAMES.radar.products.zdr,
 };
 
 /**
@@ -263,7 +264,7 @@ const RADARES_SMN = [
   {
     id: 'rma1',
     number: 1,
-    ubi: 'Córdoba',
+    ubi: LAYER_NAMES.radar.rma1.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -274,7 +275,7 @@ const RADARES_SMN = [
   {
     id: 'rma2',
     number: 2,
-    ubi: 'Ezeiza',
+    ubi: LAYER_NAMES.radar.rma2.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -285,7 +286,7 @@ const RADARES_SMN = [
   {
     id: 'rma3',
     number: 3,
-    ubi: 'Las Lomitas',
+    ubi: LAYER_NAMES.radar.rma3.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -296,7 +297,7 @@ const RADARES_SMN = [
   {
     id: 'rma4',
     number: 4,
-    ubi: 'Resistencia',
+    ubi: LAYER_NAMES.radar.rma4.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -307,7 +308,7 @@ const RADARES_SMN = [
   {
     id: 'rma5',
     number: 5,
-    ubi: 'Bernardo de Irigoyen',
+    ubi: LAYER_NAMES.radar.rma5.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -318,7 +319,7 @@ const RADARES_SMN = [
   {
     id: 'rma6',
     number: 6,
-    ubi: 'Mar del Plata',
+    ubi: LAYER_NAMES.radar.rma6.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -329,7 +330,7 @@ const RADARES_SMN = [
   {
     id: 'rma7',
     number: 7,
-    ubi: 'Neuquén',
+    ubi: LAYER_NAMES.radar.rma7.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -340,7 +341,7 @@ const RADARES_SMN = [
   {
     id: 'rma8',
     number: 8,
-    ubi: 'Mercedes',
+    ubi: LAYER_NAMES.radar.rma8.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -351,7 +352,7 @@ const RADARES_SMN = [
   {
     id: 'rma9',
     number: 9,
-    ubi: 'Río Grande',
+    ubi: LAYER_NAMES.radar.rma9.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -362,7 +363,7 @@ const RADARES_SMN = [
   {
     id: 'rma10',
     number: 10,
-    ubi: 'Bahía Blanca',
+    ubi: LAYER_NAMES.radar.rma10.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -373,7 +374,7 @@ const RADARES_SMN = [
   {
     id: 'rma11',
     number: 11,
-    ubi: 'Termas de Río Hondo',
+    ubi: LAYER_NAMES.radar.rma11.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -384,7 +385,7 @@ const RADARES_SMN = [
   {
     id: 'rma12',
     number: 12,
-    ubi: 'Las Grutas',
+    ubi: LAYER_NAMES.radar.rma12.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -395,7 +396,7 @@ const RADARES_SMN = [
   {
     id: 'rma13',
     number: 13,
-    ubi: 'Ituzaingó',
+    ubi: LAYER_NAMES.radar.rma13.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -406,7 +407,7 @@ const RADARES_SMN = [
   {
     id: 'rma14',
     number: 14,
-    ubi: 'Bolívar',
+    ubi: LAYER_NAMES.radar.rma14.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -417,7 +418,7 @@ const RADARES_SMN = [
   {
     id: 'rma15',
     number: 15,
-    ubi: 'Patquía',
+    ubi: LAYER_NAMES.radar.rma15.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -428,7 +429,7 @@ const RADARES_SMN = [
   {
     id: 'rma16',
     number: 16,
-    ubi: 'Villa Reynolds',
+    ubi: LAYER_NAMES.radar.rma16.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -439,7 +440,7 @@ const RADARES_SMN = [
   {
     id: 'rma17',
     number: 17,
-    ubi: 'Alejandro Roca',
+    ubi: LAYER_NAMES.radar.rma17.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -450,7 +451,7 @@ const RADARES_SMN = [
   {
     id: 'rma18',
     number: 18,
-    ubi: 'Santa Isabel',
+    ubi: LAYER_NAMES.radar.rma18.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     boundingBox: [
@@ -461,7 +462,7 @@ const RADARES_SMN = [
   {
     id: 'rma20',
     number: 20,
-    ubi: 'Las Lajitas',
+    ubi: LAYER_NAMES.radar.rma20.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     // Derivada de la posición que declara el propio archivo ODIM
@@ -485,8 +486,8 @@ const RADARES_SMN = [
 const RADARES_INTA = [
   {
     id: 'par',
-    name: 'INTA Paraná',
-    ubi: 'Paraná',
+    name: LAYER_NAMES.radar.par.name,
+    ubi: LAYER_NAMES.radar.par.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     // lat -31.848438, lon -60.537289
@@ -497,8 +498,8 @@ const RADARES_INTA = [
   },
   {
     id: 'ang',
-    name: 'INTA Anguil',
-    ubi: 'Anguil',
+    name: LAYER_NAMES.radar.ang.name,
+    ubi: LAYER_NAMES.radar.ang.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     // lat -36.539684, lon -63.990067
@@ -509,8 +510,8 @@ const RADARES_INTA = [
   },
   {
     id: 'per',
-    name: 'INTA Pergamino',
-    ubi: 'Pergamino',
+    name: LAYER_NAMES.radar.per.name,
+    ubi: LAYER_NAMES.radar.per.ubi,
     minNativeZoom: MIN_ZOOM,
     maxNativeZoom: MAX_ZOOM,
     // lat -33.946098, lon -60.562500
@@ -556,7 +557,7 @@ function buildRadarLayers(
       id: `${prefix}/${site.id.toUpperCase()}/${product}`,
       name: label,
       scale: RADAR_SCALES[product],
-      description: `Producto ${label} del radar meteorológico ${siteLabel}`,
+      description: LAYER_NAMES.radar.productDescription(label, siteLabel),
       minNativeZoom: site.minNativeZoom,
       maxNativeZoom: site.maxNativeZoom,
       availableElevations: productElevations[product] ?? RADAR_DEFAULTS.availableElevations,
@@ -566,11 +567,11 @@ function buildRadarLayers(
 }
 
 const SINARAME_SUBGROUPS: LayerSubgroup[] = RADARES_SMN.map((radar) => {
-  const siteLabel = `RMA ${radar.number} de ${radar.ubi}`;
+  const siteLabel = LAYER_NAMES.radar.sinarameSite(radar.number, radar.ubi);
   return {
     id: radar.id,
-    name: `RMA ${radar.number} - ${radar.ubi}`,
-    description: `Capas del radar meteorológico ${siteLabel}`,
+    name: LAYER_NAMES.radar.sinarameName(radar.number, radar.ubi),
+    description: LAYER_NAMES.radar.siteDescription(siteLabel),
     expanded: false,
     layers: buildRadarLayers(SINARAME_PREFIX, radar, siteLabel, products),
   };
@@ -581,12 +582,12 @@ const INTA_SUBGROUPS: LayerSubgroup[] = [...RADARES_INTA]
   .map((radar) => ({
     id: radar.id,
     name: radar.name,
-    description: `Capas del radar meteorológico ${radar.name} del INTA`,
+    description: LAYER_NAMES.radar.siteDescription(LAYER_NAMES.radar.intaSite(radar.name)),
     expanded: false,
     layers: buildRadarLayers(
       INTA_PREFIX,
       radar,
-      `${radar.name} del INTA`,
+      LAYER_NAMES.radar.intaSite(radar.name),
       INTA_PRODUCTS,
       INTA_PRODUCT_ELEVATIONS,
     ),

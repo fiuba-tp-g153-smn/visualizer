@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, output } from '@angular/core';
 import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel-close-button';
+import { MAP_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-map-attribution',
@@ -10,6 +11,7 @@ import { PanelCloseButtonComponent } from '../../shared/panel-close-button/panel
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapAttributionComponent {
+  protected readonly t = MAP_TEXTS.widgets;
   readonly close = output<void>();
 
   onClose(): void {

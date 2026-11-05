@@ -1,4 +1,5 @@
 import { TEMPERATURE_UNITS, WEATHER_STATION_UNITS } from '../../constants';
+import { STATIONS_TEXTS } from '../../texts';
 
 /**
  * One station's 48 h history. The data-service bundles everything in a single
@@ -77,7 +78,7 @@ export interface SeriesVariable {
 export const SERIES_VARIABLES: readonly SeriesVariable[] = [
   {
     id: 'temperature',
-    label: 'Temperatura',
+    label: STATIONS_TEXTS.variables.temperature,
     sourceUnit: TEMPERATURE_UNITS.CELSIUS,
     color: '#ff6b59',
     decimals: 1,
@@ -85,7 +86,7 @@ export const SERIES_VARIABLES: readonly SeriesVariable[] = [
   },
   {
     id: 'feelsLike',
-    label: 'Sensación térmica',
+    label: STATIONS_TEXTS.variables.feelsLike,
     sourceUnit: TEMPERATURE_UNITS.CELSIUS,
     color: '#ffa600',
     decimals: 1,
@@ -93,7 +94,7 @@ export const SERIES_VARIABLES: readonly SeriesVariable[] = [
   },
   {
     id: 'humidity',
-    label: 'Humedad',
+    label: STATIONS_TEXTS.variables.humidity,
     sourceUnit: WEATHER_STATION_UNITS.HUMIDITY,
     color: '#003d5c',
     decimals: 0,
@@ -101,7 +102,7 @@ export const SERIES_VARIABLES: readonly SeriesVariable[] = [
   },
   {
     id: 'pressure',
-    label: 'Presión',
+    label: STATIONS_TEXTS.variables.pressure,
     sourceUnit: WEATHER_STATION_UNITS.PRESSURE,
     color: '#464c89',
     decimals: 1,
@@ -109,7 +110,7 @@ export const SERIES_VARIABLES: readonly SeriesVariable[] = [
   },
   {
     id: 'visibility',
-    label: 'Visibilidad',
+    label: STATIONS_TEXTS.variables.visibility,
     sourceUnit: WEATHER_STATION_UNITS.VISIBILITY,
     color: '#954e9b',
     decimals: 1,
@@ -117,7 +118,7 @@ export const SERIES_VARIABLES: readonly SeriesVariable[] = [
   },
   {
     id: 'windSpeed',
-    label: 'Viento',
+    label: STATIONS_TEXTS.variables.wind,
     sourceUnit: WEATHER_STATION_UNITS.WIND_SPEED,
     color: '#dd4d88',
     decimals: 0,

@@ -22,6 +22,7 @@ import type {
 import { denseBucketAxis } from './bucket-axis.util';
 import { fmtBucket, secs } from './metrics-format.util';
 import { stageLabel } from './metrics-labels.constants';
+import { METRICS_TEXTS } from '../../texts';
 
 export interface MetricsChartOptions {
   series: ApexAxisChartSeries;
@@ -213,7 +214,7 @@ const secsFormatter: ValueFormatter = (value) => (value == null ? '' : secs(valu
 const countFormatter: ValueFormatter = (value) => (value == null ? '' : String(Math.round(value)));
 /** En el tooltip un null es un intervalo sin datos, no un cero. */
 const tooltipCountFormatter: ValueFormatter = (value) =>
-  value == null ? 'sin datos' : String(Math.round(value));
+  value == null ? METRICS_TEXTS.charts.noDataLower : String(Math.round(value));
 
 // ── Shared option fragments ──────────────────────────────────────────────────
 
@@ -296,10 +297,10 @@ function renderCountTooltip(context: CustomTooltipContext): string {
     if (count > 0) {
       rows.push(
         `<div class="apx-tip__row">` +
-        `<span class="apx-tip__dot" style="background:${colors[i]}"></span>` +
-        `<span class="apx-tip__name">${seriesNames[i]}</span>` +
-        `<span class="apx-tip__val">${Math.round(count)}</span>` +
-        `</div>`,
+          `<span class="apx-tip__dot" style="background:${colors[i]}"></span>` +
+          `<span class="apx-tip__name">${seriesNames[i]}</span>` +
+          `<span class="apx-tip__val">${Math.round(count)}</span>` +
+          `</div>`,
       );
     }
   }
@@ -309,11 +310,11 @@ function renderCountTooltip(context: CustomTooltipContext): string {
   // Intervalo del hueco: todas las series en null. Sin esto el pie diría
   // "Total 0", que es justo lo que el corte de la línea busca desmentir.
   if (series.every((line) => line?.[dataPointIndex] == null)) {
-    return `<div class="apx-tip">${title}<div class="apx-tip__row"><span class="apx-tip__name">Sin datos</span></div></div>`;
+    return `<div class="apx-tip">${title}<div class="apx-tip__row"><span class="apx-tip__name">${METRICS_TEXTS.charts.noData}</span></div></div>`;
   }
   const totalRow =
     `<div class="apx-tip__row apx-tip__total">` +
-    `<span class="apx-tip__name">Total</span>` +
+    `<span class="apx-tip__name">${METRICS_TEXTS.charts.total}</span>` +
     `<span class="apx-tip__val">${Math.round(total)}</span>` +
     `</div>`;
   return `<div class="apx-tip">${title}${rows.join('')}${totalRow}</div>`;
@@ -464,7 +465,9 @@ export function buildTotalThroughputChart(
   const buckets = [...axis.buckets];
   const color = TYPE_PALETTE[0]; // un solo color para la línea agregada
   // Los slots sintéticos no están en `totals`: quedan null y cortan la línea.
-  const series = [{ name: 'Total', data: buckets.map((bucket) => totals.get(bucket) ?? null) }];
+  const series = [
+    { name: METRICS_TEXTS.charts.total, data: buckets.map((bucket) => totals.get(bucket) ?? null) },
+  ];
   return {
     series,
     chart: baseChart('line', false, height),
@@ -538,7 +541,7 @@ export function buildStagePieChart(
     colors.push(stageColor(name));
   }
   if (includeRed && networkSecs != null && networkSecs > 0) {
-    labels.push('Descarga');
+    labels.push(METRICS_TEXTS.charts.download);
     series.push(networkSecs);
     colors.push(NETWORK_COLOR);
   }

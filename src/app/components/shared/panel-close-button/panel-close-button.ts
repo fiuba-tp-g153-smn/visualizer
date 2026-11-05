@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { COMMON_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-panel-close-button',
@@ -11,7 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PanelCloseButtonComponent {
-  readonly ariaLabel = input<string>('Cerrar panel');
+  readonly ariaLabel = input<string>(COMMON_TEXTS.aria.closePanel);
   readonly pressed = output<void>();
 
   onPressed(): void {

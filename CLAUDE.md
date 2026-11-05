@@ -172,6 +172,24 @@ Vars (see `.env.example`):
 - All interactive elements keyboard-accessible (Tab, Enter, Space)
 - Programmatic focus management in modals, dynamic content, navigation
 
+## Texts
+
+Every user-visible string lives in `src/app/texts/` — one `*.texts.ts` per area
+(`COMMON_TEXTS`, `ALERTS_TEXTS`, `LAYERS_TEXTS`, `MAP_TEXTS`, `DASHBOARDS_TEXTS`,
+`LAYER_NAMES`, `SCALE_NAMES`, …), each an `as const` object, re-exported from
+`texts/index.ts`. No i18n library: Spanish is the only language, and typed keys
+make a typo or a removed key a build error.
+
+- Templates: expose `protected readonly t = X_TEXTS.section;` and bind
+  (`{{ t.title }}`, `[matTooltip]="t.hint"`, `[attr.aria-label]="t.close"`).
+- Interpolation and plurals are pure functions in the catalog
+  (`deleteAll: (count: number): string => …`), never string concatenation at the call site.
+- Layer/scale configs reference `LAYER_NAMES.<product>.<camelCasedId>.name` and
+  `SCALE_NAMES.<constant>`.
+- Not text: backend protocol values compared in code (`'Calma'`, `'Sin departamentos'`,
+  GeoJSON types, attribution patterns), thrown developer errors, `console.*`, units.
+- Specs keep literal Spanish assertions on purpose — they guard the rendered text.
+
 ## Code Organization
 
 - **Feature folders**: group components, services, models by feature — not by type

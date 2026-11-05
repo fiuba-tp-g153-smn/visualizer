@@ -7,6 +7,7 @@ import { buildAlertImageUrl } from '../../../config/alerts-metrics.config';
 import type { AlertJobMetric } from '../../../models/metrics/alerts-metrics.models';
 import { GifPreviewDialogComponent } from '../../floating/gif-preview-dialog/gif-preview-dialog';
 import { StagePieChartComponent } from '../stage-pie-chart/stage-pie-chart.component';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /** Data passed in by the dashboard: the job row + its resolved phenomenon text. */
 export interface AlertJobDialogData {
@@ -50,7 +51,7 @@ function ms(value: number | null): string {
     <h1 mat-dialog-title class="ajd__title">
       <span class="ajd__name">{{ data.phenomenon }}</span>
       <span class="ajd__pill" [class]="'ajd__pill--' + data.job.outcome">
-        {{ data.job.outcome === 'done' ? 'OK' : 'Falló' }}
+        {{ data.job.outcome === 'done' ? t.ok : t.failed }}
       </span>
     </h1>
 
@@ -75,12 +76,12 @@ function ms(value: number | null): string {
       }
 
       @if (hasStages()) {
-        <h2 class="ajd__subtitle">Desglose por etapa</h2>
+        <h2 class="ajd__subtitle">{{ common.stageBreakdown }}</h2>
         <app-stage-pie-chart [stages]="stageSeconds()" />
       }
 
       @if (images().length) {
-        <h2 class="ajd__subtitle">Imágenes</h2>
+        <h2 class="ajd__subtitle">{{ t.images }}</h2>
         <div class="ajd__images">
           @for (img of images(); track img.filename) {
             <button mat-stroked-button type="button" (click)="openImage(img)">
@@ -92,7 +93,7 @@ function ms(value: number | null): string {
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cerrar</button>
+      <button mat-button mat-dialog-close>{{ common.close }}</button>
     </mat-dialog-actions>
   `,
   styles: `
@@ -164,6 +165,8 @@ function ms(value: number | null): string {
   `,
 })
 export class AlertJobDetailDialogComponent {
+  protected readonly t = DASHBOARDS_TEXTS.alertJob;
+  protected readonly common = DASHBOARDS_TEXTS.common;
   readonly data = inject<AlertJobDialogData>(MAT_DIALOG_DATA);
   private readonly dialog = inject(MatDialog);
 
@@ -173,16 +176,16 @@ export class AlertJobDetailDialogComponent {
     const out: AlertImage[] = [];
     if (j.gif_area_filename) {
       out.push({
-        label: 'Imagen del área',
-        title: `${this.data.phenomenon} — área`,
+        label: this.t.areaImage,
+        title: this.t.areaImageTitle(this.data.phenomenon),
         filename: j.gif_area_filename,
         icon: 'zoom_in',
       });
     }
     if (j.gif_gral_filename) {
       out.push({
-        label: 'Imagen general',
-        title: `${this.data.phenomenon} — general`,
+        label: this.t.generalImage,
+        title: this.t.generalImageTitle(this.data.phenomenon),
         filename: j.gif_gral_filename,
         icon: 'public',
       });
@@ -202,14 +205,14 @@ export class AlertJobDetailDialogComponent {
   readonly rows = computed<DetailRow[]>(() => {
     const j = this.data.job;
     return [
-      { label: 'Fenómeno', value: `${j.phenomenon_code} — ${this.data.phenomenon}` },
-      { label: 'Departamentos', value: j.affected_departments?.toString() ?? '—' },
-      { label: 'Vértices', value: j.polygon_vertices?.toString() ?? '—' },
-      { label: 'Duración total', value: ms(j.duration_ms) },
-      { label: 'Intersección', value: ms(j.intersection_ms) },
-      { label: 'Filtrado deptos.', value: ms(j.filter_ms) },
-      { label: 'Render (GIF)', value: ms(j.render_ms) },
-      { label: 'Guardado', value: ms(j.persist_ms) },
+      { label: this.t.rows.phenomenon, value: `${j.phenomenon_code} — ${this.data.phenomenon}` },
+      { label: this.t.rows.departments, value: j.affected_departments?.toString() ?? '—' },
+      { label: this.t.rows.vertices, value: j.polygon_vertices?.toString() ?? '—' },
+      { label: this.t.rows.totalDuration, value: ms(j.duration_ms) },
+      { label: this.t.rows.intersection, value: ms(j.intersection_ms) },
+      { label: this.t.rows.departmentFilter, value: ms(j.filter_ms) },
+      { label: this.t.rows.render, value: ms(j.render_ms) },
+      { label: this.t.rows.persist, value: ms(j.persist_ms) },
     ];
   });
 

@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NotificationService } from '../../../services/notifications/notification.service';
 import { NotificationType } from '../../../models';
+import { COMMON_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-notification-panel',
@@ -15,6 +16,7 @@ import { NotificationType } from '../../../models';
 export class NotificationPanelComponent {
   readonly notificationService = inject(NotificationService);
   readonly NotificationType = NotificationType;
+  protected readonly t = COMMON_TEXTS.aria;
 
   getIcon(type: NotificationType): string {
     switch (type) {

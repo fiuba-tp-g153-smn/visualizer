@@ -1,7 +1,7 @@
-<app-detail-item icon="map" label="Departamentos:">
+<app-detail-item icon="map" [label]="details.departments">
   <app-detail-chip
     [expanded]="expanded()"
-    [tooltip]="expanded() ? 'Ocultar lista' : 'Ver lista'"
+    [tooltip]="expanded() ? details.hideList : details.showList"
     (clicked)="toggle()"
     data-testid="alerts-departments-toggle"
   >

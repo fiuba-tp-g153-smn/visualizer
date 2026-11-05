@@ -12,8 +12,11 @@ import {
   type SortState,
 } from '../../dashboard/sortable-table/sortable-table.models';
 import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.component';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
-type State = 'respaldado' | 'respaldando' | 'pendiente' | 'con errores';
+const BP = DASHBOARDS_TEXTS.basemapProviders;
+
+type State = keyof typeof BP.states;
 
 /** ok / attempted como porcentaje con 2 decimales (para que 99.99% siga visible). */
 function scrapedPct(ok: number, attempted: number): string {
@@ -22,38 +25,38 @@ function scrapedPct(ok: number, attempted: number): string {
 
 function stateOf(p: BasemapProviderStatus): State {
   if (p.circuit_open) {
-    return 'con errores';
+    return 'errors';
   }
   if (p.in_progress) {
-    return 'respaldando';
+    return 'backing';
   }
   // Nunca se completó un respaldo ni se intentó ningún tile: aún no respaldado.
   if (p.last_completed == null && p.attempted === 0) {
-    return 'pendiente';
+    return 'pending';
   }
-  return 'respaldado';
+  return 'backed';
 }
 
 function statePill(p: BasemapProviderStatus): Cell {
   const state = stateOf(p);
-  if (state === 'con errores') {
-    return pillCell('dlq', 'con errores', undefined, p.last_reason ?? '');
+  if (state === 'errors') {
+    return pillCell('dlq', BP.states.errors, undefined, p.last_reason ?? '');
   }
-  if (state === 'respaldando') {
-    return pillCell('requeued', 'respaldando');
+  if (state === 'backing') {
+    return pillCell('requeued', BP.states.backing);
   }
-  if (state === 'pendiente') {
-    return pillCell('skipped', 'pendiente', undefined, 'Sin barridos registrados todavía.');
+  if (state === 'pending') {
+    return pillCell('skipped', BP.states.pending, undefined, BP.noSweeps);
   }
-  return pillCell('success', 'respaldado');
+  return pillCell('success', BP.states.backed);
 }
 
 function scrapedCell(p: BasemapProviderStatus): Cell {
   const hasSweep = p.attempted > 0;
   const tip = hasSweep
-    ? `${p.ok.toLocaleString('es-AR')} ok de ${p.attempted.toLocaleString('es-AR')} intentos` +
-      (p.completed ? '' : ' (barrido incompleto)')
-    : 'Sin barridos registrados todavía.';
+    ? BP.sweepTip(p.ok.toLocaleString('es-AR'), p.attempted.toLocaleString('es-AR')) +
+      (p.completed ? '' : BP.incompleteSweep)
+    : BP.noSweeps;
   return textCell(scrapedPct(p.ok, p.attempted), {
     title: tip,
     tone: !hasSweep ? undefined : p.failed === 0 ? 'ok' : 'warn',
@@ -62,36 +65,37 @@ function scrapedCell(p: BasemapProviderStatus): Cell {
 
 const COLUMNS: ReadonlyArray<ColumnSpec<BasemapProviderStatus>> = [
   {
-    header: { key: 'provider', label: 'provider', align: 'left', sortable: true },
+    header: { key: 'provider', label: BP.columns.provider, align: 'left', sortable: true },
     cell: (p) => textCell(p.name, { strong: true }),
     sortValue: (p) => p.name,
   },
   {
-    header: { key: 'estado', label: 'estado', align: 'center', sortable: true },
+    header: { key: 'estado', label: BP.columns.state, align: 'center', sortable: true },
     cell: statePill,
-    sortValue: (p) => stateOf(p),
+    sortValue: (p) => BP.states[stateOf(p)],
   },
   {
-    header: { key: 'respaldado', label: 'respaldado', align: 'center', sortable: true },
+    header: { key: 'respaldado', label: BP.columns.backed, align: 'center', sortable: true },
     cell: scrapedCell,
     sortValue: (p) => (p.attempted ? p.ok / p.attempted : -1),
   },
   {
-    header: { key: 'fallidos', label: 'fallidos', align: 'center', sortable: true },
+    header: { key: 'fallidos', label: BP.columns.failed, align: 'center', sortable: true },
     cell: (p) =>
       textCell(p.failed.toLocaleString('es-AR'), {
         tone: p.failed === 0 ? undefined : p.circuit_open ? 'err' : 'warn',
-        title: p.attempted ? `de ${p.attempted.toLocaleString('es-AR')} intentos` : '',
+        title: p.attempted ? BP.ofAttempts(p.attempted.toLocaleString('es-AR')) : '',
       }),
     sortValue: (p) => p.failed,
   },
   {
-    header: { key: 'trips', label: 'trips', align: 'center', sortable: true },
-    cell: (p) => textCell(String(p.consecutive_trips), { tone: p.consecutive_trips > 0 ? 'err' : undefined }),
+    header: { key: 'trips', label: BP.columns.trips, align: 'center', sortable: true },
+    cell: (p) =>
+      textCell(String(p.consecutive_trips), { tone: p.consecutive_trips > 0 ? 'err' : undefined }),
     sortValue: (p) => p.consecutive_trips,
   },
   {
-    header: { key: 'cursor', label: 'cursor', align: 'center', sortable: true },
+    header: { key: 'cursor', label: BP.columns.cursor, align: 'center', sortable: true },
     cell: (p) =>
       textCell(
         p.in_progress && p.cursor_zoom != null
@@ -102,12 +106,12 @@ const COLUMNS: ReadonlyArray<ColumnSpec<BasemapProviderStatus>> = [
     sortValue: (p) => p.cursor_zoom ?? -1,
   },
   {
-    header: { key: 'zooms', label: 'zooms', align: 'center', sortable: true },
+    header: { key: 'zooms', label: BP.columns.zooms, align: 'center', sortable: true },
     cell: (p) => textCell(`${p.min_zoom}–${p.max_zoom}`, { muted: true }),
     sortValue: (p) => p.min_zoom,
   },
   {
-    header: { key: 'completado', label: 'último completado', align: 'center', sortable: true },
+    header: { key: 'completado', label: BP.columns.lastCompleted, align: 'center', sortable: true },
     cell: (p) =>
       textCell(
         p.last_completed == null ? '—' : ago(new Date(p.last_completed * 1000).toISOString()),
@@ -131,11 +135,12 @@ const COLUMNS: ReadonlyArray<ColumnSpec<BasemapProviderStatus>> = [
       [headers]="table().headers"
       [rows]="table().tableRows"
       [initialSort]="initialSort"
-      emptyText="El scraper de basemap no está activo (o no hay providers)."
+      [emptyText]="t.empty"
     />
   `,
 })
 export class BasemapProvidersTableComponent {
+  protected readonly t = DASHBOARDS_TEXTS.basemapProviders;
   readonly providers = input.required<readonly BasemapProviderStatus[]>();
 
   readonly initialSort: SortState = { key: 'fallidos', dir: 'desc' };
@@ -161,29 +166,28 @@ export class BasemapProvidersTableComponent {
     }
     return [
       {
-        label: 'Respaldado',
+        label: BP.cards.backed,
         value: scrapedPct(ok, attempted),
-        tooltip: 'ok / intentos del último barrido, sumado sobre todos los providers.',
+        tooltip: BP.cards.backedHint,
         accent: attempted === 0 ? '' : failed === 0 ? 'green' : 'orange',
       },
       {
-        label: 'Tiles fallidos',
+        label: BP.cards.failedTiles,
         value: failed.toLocaleString('es-AR'),
         suffix: attempted ? ` / ${attempted.toLocaleString('es-AR')}` : undefined,
-        tooltip:
-          'Tiles que fallaron sobre el total de intentos del último barrido (ok + fallidos), sumado sobre todos los providers.',
+        tooltip: BP.cards.failedTilesHint,
         accent: failed > 0 ? 'red' : '',
       },
       {
-        label: 'Providers',
+        label: BP.cards.providers,
         value: String(providers.length),
-        tooltip: 'Providers de mapa base configurados.',
+        tooltip: BP.cards.providersHint,
         accent: '',
       },
       {
-        label: 'Con errores',
+        label: BP.cards.withErrors,
         value: String(tripped),
-        tooltip: 'Providers con el circuito abierto (su tasa de error superó el umbral).',
+        tooltip: BP.cards.withErrorsHint,
         accent: tripped > 0 ? 'red' : 'green',
       },
     ];

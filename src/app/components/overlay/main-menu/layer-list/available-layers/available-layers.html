@@ -3,7 +3,7 @@
     <mat-icon>search</mat-icon>
     <input
       type="text"
-      placeholder="Buscar capas"
+      [placeholder]="t.searchPlaceholder"
       data-testid="layers-search-input"
       [(ngModel)]="searchText"
     />
@@ -12,8 +12,8 @@
   @if (hasSearch() && filteredGroups().length === 0) {
     <div class="empty-state">
       <mat-icon>search_off</mat-icon>
-      <p>No se encontraron resultados</p>
-      <span>Intenta con otros términos de búsqueda</span>
+      <p>{{ t.noResults }}</p>
+      <span>{{ t.noResultsHint }}</span>
     </div>
   }
 
@@ -62,11 +62,7 @@
                       mat-icon-button
                       (click)="recheckSubgroup(subgroup, $event)"
                       [disabled]="isSubgroupRechecking(subgroup.id)"
-                      [matTooltip]="
-                        isSubgroupRechecking(subgroup.id)
-                          ? 'Verificando…'
-                          : 'Volver a verificar disponibilidad'
-                      "
+                      [matTooltip]="isSubgroupRechecking(subgroup.id) ? t.rechecking : t.recheck"
                       class="recheck-btn"
                       data-testid="layers-recheck-availability"
                     >

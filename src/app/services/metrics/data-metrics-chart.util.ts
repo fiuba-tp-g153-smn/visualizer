@@ -1,10 +1,4 @@
-import type {
-  ApexChart,
-  ApexGrid,
-  ApexLegend,
-  ApexXAxis,
-  ApexYAxis,
-} from 'ng-apexcharts';
+import type { ApexChart, ApexGrid, ApexLegend, ApexXAxis, ApexYAxis } from 'ng-apexcharts';
 
 import type {
   DataSyncHistoryPoint,
@@ -22,6 +16,7 @@ import {
   type MetricsChartOptions,
 } from './metrics-chart.util';
 import { fmtBucket } from './metrics-format.util';
+import { METRICS_TEXTS } from '../../texts';
 
 const GRID_COLOR = '#e3e3e6';
 const LABEL_COLOR = '#5f6368';
@@ -77,11 +72,11 @@ function renderThroughputTooltip(context: CustomTooltipContext): string {
   const title = label == null ? '' : `<div class="apx-tip__title">${label}</div>`;
   // Intervalo del hueco: todas las series en null — no es un total de 0.
   if (series.every((line) => line?.[dataPointIndex] == null)) {
-    return `<div class="apx-tip">${title}<div class="apx-tip__row"><span class="apx-tip__name">Sin datos</span></div></div>`;
+    return `<div class="apx-tip">${title}<div class="apx-tip__row"><span class="apx-tip__name">${METRICS_TEXTS.charts.noData}</span></div></div>`;
   }
   const totalRow =
     `<div class="apx-tip__row apx-tip__total">` +
-    `<span class="apx-tip__name">Total</span>` +
+    `<span class="apx-tip__name">${METRICS_TEXTS.charts.total}</span>` +
     `<span class="apx-tip__val">${compactCount(total)}</span>` +
     `</div>`;
   return `<div class="apx-tip">${title}${rows.join('')}${totalRow}</div>`;
@@ -108,10 +103,8 @@ export function formatBytes(bytes: number | null | undefined): string {
 type Formatter = (value: number | null) => string;
 
 const bytesFormatter: Formatter = (value) => (value == null ? '' : formatBytes(value));
-const countFormatter: Formatter = (value) =>
-  value == null ? '' : String(Math.round(value));
-const compactCountFormatter: Formatter = (value) =>
-  value == null ? '' : compactCount(value);
+const countFormatter: Formatter = (value) => (value == null ? '' : String(Math.round(value)));
+const compactCountFormatter: Formatter = (value) => (value == null ? '' : compactCount(value));
 
 function baseChart(type: ApexChart['type'], stacked: boolean, height: number): ApexChart {
   return {
@@ -198,11 +191,9 @@ export function buildMemoryAreaChart(
 }
 
 /** Vertical bars of current Redis memory per domain (one color per domain). */
-export function buildMemoryBarChart(
-  domains: readonly RedisMemoryDomain[],
-): MetricsChartOptions {
+export function buildMemoryBarChart(domains: readonly RedisMemoryDomain[]): MetricsChartOptions {
   return {
-    series: [{ name: 'memoria', data: domains.map((d) => d.memory_bytes) }],
+    series: [{ name: METRICS_TEXTS.charts.memorySeries, data: domains.map((d) => d.memory_bytes) }],
     chart: baseChart('bar', false, 300),
     colors: domains.map((d) => typeColor(d.domain)),
     xaxis: categoryXAxis(domains.map((d) => d.domain)),

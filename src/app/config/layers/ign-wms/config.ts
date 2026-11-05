@@ -1,5 +1,6 @@
 import { LayerCategory, LayerType } from '../../../models';
 import { ActiveLayerGroupId, LayerSubgroup } from '../../../models/layers/groups.models';
+import { LAYER_NAMES } from '../../../texts';
 
 const IGN_GROUP_DEFAULTS = {
   expanded: false,
@@ -16,8 +17,7 @@ export const IGN_WMS_BASE_CONFIG = {
   version: '1.3.0',
   format: 'image/png',
   transparent: true,
-  attribution:
-    '<a href="https://www.ign.gob.ar/" target="_blank">Instituto Geográfico Nacional</a>',
+  attribution: LAYER_NAMES.ign.attribution,
 } as const;
 
 export const IGN_WMS_WORKSPACE_URLS: Record<string, string> = {
@@ -73,22 +73,20 @@ export const IGN_WMS_BACKED_UP_LAYER_IDS: ReadonlySet<string> = new Set([
 export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-limits',
-  name: 'Límites',
-  description: 'Límites políticos y administrativos',
+  name: LAYER_NAMES.ign.ignLimits.name,
+  description: LAYER_NAMES.ign.ignLimits.description,
   layers: [
     {
       id: 'ign-limite-interdepartamental-o-de-partido',
-      name: 'Límite interdepartamental o de partido',
-      description:
-        'Línea que constituye la representación de la traza demarcadora que delimita la jurisdicción de un departamento o partido de otro.',
+      name: LAYER_NAMES.ign.ignLimiteInterdepartamentalODePartido.name,
+      description: LAYER_NAMES.ign.ignLimiteInterdepartamentalODePartido.description,
       wmsLayerName: 'ign:linea_de_limite_070110',
       ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-limite-internacional',
-      name: 'Límite internacional',
-      description:
-        'Línea que constituye la representación de la traza demarcadora que delimita un país.',
+      name: LAYER_NAMES.ign.ignLimiteInternacional.name,
+      description: LAYER_NAMES.ign.ignLimiteInternacional.description,
       wmsLayerName: 'linea_de_limite_FA004',
       wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
@@ -99,38 +97,35 @@ export const IGN_WMS_LIMITS_SUBGROUP: LayerSubgroup = {
 export const IGN_WMS_ADMINISTRATIVE_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-administrative',
-  name: 'Administrativo',
-  description: 'Límites administrativos y divisiones territoriales',
+  name: LAYER_NAMES.ign.ignAdministrative.name,
+  description: LAYER_NAMES.ign.ignAdministrative.description,
   layers: [
     {
       id: 'ign-localidad',
-      name: 'Localidad',
-      description:
-        'Superficie terrestre caracterizada por la continuidad de áreas edificadas y no edificadas conectadas entre sí por una red de calles donde se concentra población.',
+      name: LAYER_NAMES.ign.ignLocalidad.name,
+      description: LAYER_NAMES.ign.ignLocalidad.description,
       wmsLayerName: 'ign:localidad_bahra',
       ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-sublocalidad',
-      name: 'Sublocalidad',
-      description: 'Subdivisión de una localidad según legislación del gobierno local.',
+      name: LAYER_NAMES.ign.ignSublocalidad.name,
+      description: LAYER_NAMES.ign.ignSublocalidad.description,
       wmsLayerName: 'ign:sublocalidad_entidad_bahra',
       ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-gobierno-local',
-      name: 'Gobierno local',
-      description:
-        'Jurisdicción político-administrativa de tercer o cuarto orden. Incluye Municipios, Comunas, Juntas y Comisiones.',
+      name: LAYER_NAMES.ign.ignGobiernoLocal.name,
+      description: LAYER_NAMES.ign.ignGobiernoLocal.description,
       wmsLayerName: 'gobiernoslocales_2022',
       wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
     },
     {
       id: 'ign-provincia',
-      name: 'Provincia',
-      description:
-        'División político territorial de primer orden. Incluye la Ciudad Autónoma de Buenos Aires (CABA).',
+      name: LAYER_NAMES.ign.ignProvincia.name,
+      description: LAYER_NAMES.ign.ignProvincia.description,
       wmsLayerName: 'provincia_FA003',
       wmsWorkspace: 'limites',
       ...IGN_WMS_DEFAULTS,
@@ -146,14 +141,13 @@ const IGN_WMS_TERRITORIAL_DEFAULTS = {
 export const IGN_WMS_TERRITORIAL_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-territorial',
-  name: 'Territorial',
-  description: 'Organización territorial',
+  name: LAYER_NAMES.ign.ignTerritorial.name,
+  description: LAYER_NAMES.ign.ignTerritorial.description,
   layers: [
     {
       id: 'ign-area-de-montana',
-      name: 'Área de montaña',
-      description:
-        'Áreas que representan las diferentes regiones montañosas de la República Argentina.',
+      name: LAYER_NAMES.ign.ignAreaDeMontana.name,
+      description: LAYER_NAMES.ign.ignAreaDeMontana.description,
       wmsLayerName: 'ign:area_de_montana',
       wmsWorkspace: 'relieve-suelo',
       ...IGN_WMS_TERRITORIAL_DEFAULTS,
@@ -169,38 +163,34 @@ const IGN_WMS_INFRASTRUCTURE_DEFAULTS = {
 export const IGN_WMS_INFRASTRUCTURE_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-infrastructure',
-  name: 'Infraestructura',
-  description: 'Infraestructura física y construcciones',
+  name: LAYER_NAMES.ign.ignInfrastructure.name,
+  description: LAYER_NAMES.ign.ignInfrastructure.description,
   layers: [
     {
       id: 'ign-aerodromo',
-      name: 'Aeródromo',
-      description:
-        'Lugar de aterrizaje de aeronaves de menor porte que un aeropuerto, con o sin instalaciones de servicios y sin aduana. Incluye aeroclub.',
+      name: LAYER_NAMES.ign.ignAerodromo.name,
+      description: LAYER_NAMES.ign.ignAerodromo.description,
       wmsLayerName: 'ign:puntos_de_transporte_aereo_GB001',
       ...IGN_WMS_INFRASTRUCTURE_DEFAULTS,
     },
     {
       id: 'ign-aeropuerto',
-      name: 'Aeropuerto',
-      description:
-        'Estación terrestre provista de un conjunto de pistas, instalaciones y servicios destinados al tráfico regular de aeronaves. Puede tener aduana.',
+      name: LAYER_NAMES.ign.ignAeropuerto.name,
+      description: LAYER_NAMES.ign.ignAeropuerto.description,
       wmsLayerName: 'ign:puntos_de_transporte_aereo_GB005',
       ...IGN_WMS_INFRASTRUCTURE_DEFAULTS,
     },
     {
       id: 'ign-helipuerto',
-      name: 'Helipuerto',
-      description:
-        'Pista circular marcada con una letra ¨H¨, para la operación de aeronaves de despegue vertical. Puede incluir instalaciones asociadas.',
+      name: LAYER_NAMES.ign.ignHelipuerto.name,
+      description: LAYER_NAMES.ign.ignHelipuerto.description,
       wmsLayerName: 'ign:puntos_de_transporte_aereo_GB035',
       ...IGN_WMS_INFRASTRUCTURE_DEFAULTS,
     },
     {
       id: 'ign-red-vial-nacional',
-      name: 'Red vial nacional',
-      description:
-        'Representa los objetos geográficos relativos a vías de circulación de jurisdicción nacional.',
+      name: LAYER_NAMES.ign.ignRedVialNacional.name,
+      description: LAYER_NAMES.ign.ignRedVialNacional.description,
       wmsLayerName: 'ign:vial_nacional',
       ...IGN_WMS_INFRASTRUCTURE_DEFAULTS,
     },
@@ -214,22 +204,20 @@ const IGN_WMS_HYDROGRAPHY_DEFAULTS = {
 export const IGN_WMS_HYDROGRAPHY_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-hydrography',
-  name: 'Hidrografía',
-  description: 'Cursos de agua, lagos y características hidrográficas',
+  name: LAYER_NAMES.ign.ignHydrography.name,
+  description: LAYER_NAMES.ign.ignHydrography.description,
   layers: [
     {
       id: 'ign-corriente-de-agua',
-      name: 'Corriente de agua',
-      description:
-        'Flujo natural de agua que sigue los desniveles del terreno y desemboca en otra corriente de agua, en un espejo de agua o en el mar.',
+      name: LAYER_NAMES.ign.ignCorrienteDeAgua.name,
+      description: LAYER_NAMES.ign.ignCorrienteDeAgua.description,
       wmsLayerName: 'ign:areas_de_aguas_continentales_BH140',
       ...IGN_WMS_HYDROGRAPHY_DEFAULTS,
     },
     {
       id: 'ign-ferrocarril',
-      name: 'Ferrocarril',
-      description:
-        'Vía férrea constituida por dos o tres rieles o carriles paralelos entre sí, sobre los cuales encajan y giran las ruedas de las locomotoras y vagones que conforman los trenes.',
+      name: LAYER_NAMES.ign.ignFerrocarril.name,
+      description: LAYER_NAMES.ign.ignFerrocarril.description,
       wmsLayerName: 'ign:lineas_de_transporte_ferroviario_AN010',
       ...IGN_WMS_HYDROGRAPHY_DEFAULTS,
     },
@@ -244,22 +232,20 @@ const IGN_WMS_DEFENSE_SECURITY_DEFAULTS = {
 export const IGN_WMS_DEFENSE_SECURITY_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-defense-security',
-  name: 'Defensa y seguridad',
-  description: 'Infraestructura de defensa y seguridad',
+  name: LAYER_NAMES.ign.ignDefenseSecurity.name,
+  description: LAYER_NAMES.ign.ignDefenseSecurity.description,
   layers: [
     {
       id: 'ign-cuartel-de-bomberos',
-      name: 'Cuartel de bomberos',
-      description:
-        'Estructura preparada para almacenar el equipamiento necesario para apagar fuegos, incluyendo mangueras, vehículos, equipos de protección del personal, extintores de fuego, entre otros. Incluye instalaciones anexas.',
+      name: LAYER_NAMES.ign.ignCuartelDeBomberos.name,
+      description: LAYER_NAMES.ign.ignCuartelDeBomberos.description,
       wmsLayerName: 'estructuras_operativas_y_defensivas_090102',
       ...IGN_WMS_DEFENSE_SECURITY_DEFAULTS,
     },
     {
       id: 'ign-pasos-de-fronteras-internacionales',
-      name: 'Pasos de fronteras internacionales',
-      description:
-        'Paso de Frontera Internacional (PFI) identifica un punto de entrada y salida de personas, mercaderías y medios de transporte, que vincula de manera directa (por medios fluviales o terrestres) a la República Argentina con los cinco países vecinos. Quedan exceptuados el Puerto de Buenos Aires, todos los Aeropuertos, los puertos ubicados sobre la Hidrovía y los puertos Marítimos.',
+      name: LAYER_NAMES.ign.ignPasosDeFronterasInternacionales.name,
+      description: LAYER_NAMES.ign.ignPasosDeFronterasInternacionales.description,
       wmsLayerName: 'pasos_de_fronteras_internacionales',
       ...IGN_WMS_DEFENSE_SECURITY_DEFAULTS,
     },
@@ -274,29 +260,27 @@ const IGN_WMS_OTHER_DEFAULTS = {
 export const IGN_WMS_OTHER_SUBGROUP: LayerSubgroup = {
   ...IGN_GROUP_DEFAULTS,
   id: 'ign-other',
-  name: 'Otros',
-  description: 'Otras capas temáticas',
+  name: LAYER_NAMES.ign.ignOther.name,
+  description: LAYER_NAMES.ign.ignOther.description,
   layers: [
     {
       id: 'ign-linea-de-transmision-electrica',
-      name: 'Línea de transmisión eléctrica',
-      description:
-        'Sistema de cableado compuesto por torres y cables que transmite o distribuye energía eléctrica.',
+      name: LAYER_NAMES.ign.ignLineaDeTransmisionElectrica.name,
+      description: LAYER_NAMES.ign.ignLineaDeTransmisionElectrica.description,
       wmsLayerName: 'ign:lineas_de_energia_AT030',
       ...IGN_WMS_OTHER_DEFAULTS,
     },
     {
       id: 'ign-central-electrica',
-      name: 'Central eléctrica',
-      description: 'Edificio y equipamiento necesario para la generación de energía eléctrica. ',
+      name: LAYER_NAMES.ign.ignCentralElectrica.name,
+      description: LAYER_NAMES.ign.ignCentralElectrica.description,
       wmsLayerName: 'ign:puntos_de_energia_AD010',
       ...IGN_WMS_OTHER_DEFAULTS,
     },
     {
       id: 'ign-centro-de-esqui',
-      name: 'Centro de esquí',
-      description:
-        'Área que dispone de pistas de esquí y medios de elevación. Puede contener hoteles y espacio para usar trineos.',
+      name: LAYER_NAMES.ign.ignCentroDeEsqui.name,
+      description: LAYER_NAMES.ign.ignCentroDeEsqui.description,
       wmsLayerName: 'ign:puntos_de_recreacion_020401',
       ...IGN_WMS_OTHER_DEFAULTS,
     },

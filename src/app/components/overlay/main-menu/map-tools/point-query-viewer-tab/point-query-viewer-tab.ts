@@ -9,6 +9,7 @@ import {
   PointQueryPanelMode,
   PointQueryViewerService,
 } from '../../../../../services/tools/point-query-viewer.service';
+import { MAP_TEXTS } from '../../../../../texts';
 
 @Component({
   selector: 'app-point-query-viewer-tab',
@@ -18,6 +19,7 @@ import {
   styleUrl: './point-query-viewer-tab.scss',
 })
 export class PointQueryViewerTabComponent {
+  protected readonly t = MAP_TEXTS.tools;
   readonly viewer = inject(PointQueryViewerService);
   readonly panelModes = POINT_QUERY_PANEL_MODES;
 

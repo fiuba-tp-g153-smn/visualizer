@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { COMMON_TEXTS } from '../../../texts';
 
 export interface ConfirmDialogData {
   title: string;
@@ -23,11 +24,11 @@ export class ConfirmDialogComponent {
   readonly dialogRef = inject(MatDialogRef<ConfirmDialogComponent>);
 
   get confirmText(): string {
-    return this.data.confirmText || 'Confirmar';
+    return this.data.confirmText || COMMON_TEXTS.actions.confirm;
   }
 
   get cancelText(): string {
-    return this.data.cancelText || 'Cancelar';
+    return this.data.cancelText || COMMON_TEXTS.actions.cancel;
   }
 
   get confirmColor(): 'primary' | 'accent' | 'warn' {

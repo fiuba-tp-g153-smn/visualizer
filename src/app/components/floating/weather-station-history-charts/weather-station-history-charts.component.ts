@@ -16,6 +16,7 @@ import {
 import { buildSeriesCharts } from '../../../services/layers/weather-station-chart.util';
 import { buildSeriesSummary } from '../../../services/layers/weather-station-summary.util';
 import { buildObservationRows } from '../../../services/layers/weather-station-observations.util';
+import { COMMON_TEXTS, STATIONS_TEXTS } from '../../../texts';
 
 export interface WeatherStationHistoryChartsData {
   stationId: number;
@@ -48,13 +49,15 @@ enum DetailSection {
   styleUrl: './weather-station-history-charts.component.scss',
 })
 export class WeatherStationHistoryChartsComponent {
+  protected readonly t = STATIONS_TEXTS;
+  protected readonly common = COMMON_TEXTS.actions;
   private readonly data = inject<WeatherStationHistoryChartsData>(MAT_DIALOG_DATA);
   private readonly historyService = inject(WeatherStationsHistoryService);
   private readonly unitsSettings = inject(UnitsSettingsService);
   private readonly timezone = inject(TimezoneSettingsService);
   readonly dialogRef = inject(MatDialogRef<WeatherStationHistoryChartsComponent>);
 
-  readonly stationName = this.data.stationName ?? 'Estación';
+  readonly stationName = this.data.stationName ?? STATIONS_TEXTS.defaultName;
   readonly province = this.data.province ?? '';
   readonly stationId = this.data.stationId;
   readonly latText = this.data.lat === null ? '—' : this.data.lat.toFixed(2);

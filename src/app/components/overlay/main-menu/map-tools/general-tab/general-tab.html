@@ -1,71 +1,71 @@
 <div class="tool-section">
   <section class="tool-group" aria-labelledby="tools-group-controls">
-    <span class="section-label" id="tools-group-controls">Controles del mapa</span>
+    <span class="section-label" id="tools-group-controls">{{ t.controls }}</span>
 
     <mat-checkbox
       [checked]="mapInfo.showZoom()"
       (change)="onZoomChange($event.checked)"
       color="primary"
-      matTooltip="Mostrar controles de zoom (+/-) en el mapa"
+      [matTooltip]="t.zoomHint"
       data-testid="tools-toggle-zoom"
     >
-      Controles de zoom
+      {{ t.zoom }}
     </mat-checkbox>
 
     <mat-checkbox
       [checked]="mapInfo.showScale()"
       (change)="onScaleChange($event.checked)"
       color="primary"
-      matTooltip="Mostrar escala gráfica de referencia en el mapa"
+      [matTooltip]="t.scaleHint"
       data-testid="tools-toggle-scale"
     >
-      Escala
+      {{ t.scale }}
     </mat-checkbox>
 
     <mat-checkbox
       [checked]="mapInfo.showCoordinates()"
       (change)="onCoordinatesChange($event.checked)"
       color="primary"
-      matTooltip="Mostrar coordenadas del cursor en el mapa"
+      [matTooltip]="t.coordinatesHint"
       data-testid="tools-toggle-coordinates"
     >
-      Coordenadas
+      {{ t.coordinates }}
     </mat-checkbox>
 
     <mat-checkbox
       [checked]="mapInfo.showAttribution()"
       (change)="onAttributionChange($event.checked)"
       color="primary"
-      matTooltip="Mostrar atribución de fuentes de datos en el mapa"
+      [matTooltip]="t.attributionHint"
       data-testid="tools-toggle-attribution"
     >
-      Atribución
+      {{ t.attribution }}
     </mat-checkbox>
   </section>
 
   <mat-divider />
 
   <section class="tool-group" aria-labelledby="tools-group-guides">
-    <span class="section-label" id="tools-group-guides">Guías</span>
+    <span class="section-label" id="tools-group-guides">{{ t.guides }}</span>
 
     <mat-checkbox
       [checked]="mapInfo.showCursorLines()"
       (change)="onCursorLinesChange($event.checked)"
       color="primary"
-      matTooltip="Mostrar líneas de latitud y longitud que siguen al cursor"
+      [matTooltip]="t.cursorLinesHint"
       data-testid="tools-toggle-cursor-lines"
     >
-      Líneas de cursor
+      {{ t.cursorLines }}
     </mat-checkbox>
 
     <mat-checkbox
       [checked]="mapInfo.showGraticule()"
       (change)="onGraticuleChange($event.checked)"
       color="primary"
-      matTooltip="Paralelos y meridianos de referencia sobre el mapa"
+      [matTooltip]="t.graticuleHint"
       data-testid="tools-toggle-graticule"
     >
-      Trópicos y meridianos
+      {{ t.graticule }}
     </mat-checkbox>
 
     @if (mapInfo.showGraticule()) {
@@ -88,16 +88,16 @@
   <mat-divider />
 
   <section class="tool-group" aria-labelledby="tools-group-measure">
-    <span class="section-label" id="tools-group-measure">Medición</span>
+    <span class="section-label" id="tools-group-measure">{{ t.measurement }}</span>
 
     <mat-checkbox
       [checked]="isMeasuring()"
       (change)="onDistanceChange($event.checked)"
       color="primary"
-      matTooltip="Medir un recorrido haciendo clic en el mapa"
+      [matTooltip]="t.measureHint"
       data-testid="tools-toggle-distance"
     >
-      Medir distancias
+      {{ t.measure }}
     </mat-checkbox>
 
     @if (isMeasuring()) {

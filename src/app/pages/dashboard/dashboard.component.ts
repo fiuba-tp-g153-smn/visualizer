@@ -53,6 +53,7 @@ import {
   TIMEZONE_MODES,
   TimezoneSettingsService,
 } from '../../services/settings/timezone-settings.service';
+import { COMMON_TEXTS, DASHBOARDS_TEXTS } from '../../texts';
 
 const JOBS_PAGE = 50;
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
@@ -107,6 +108,8 @@ const TP_CUSTOM_DEFAULT_HOURS = 12;
   styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent {
+  protected readonly t = DASHBOARDS_TEXTS.processing;
+  protected readonly page = DASHBOARDS_TEXTS.page;
   private readonly metrics = inject(MetricsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
@@ -537,7 +540,9 @@ export class DashboardComponent {
   }
 
   private async loadTp10(): Promise<void> {
-    this.tp10.set(await firstValueFrom(this.metrics.getThroughput('10min', this.tpEffectiveHours())));
+    this.tp10.set(
+      await firstValueFrom(this.metrics.getThroughput('10min', this.tpEffectiveHours())),
+    );
   }
 
   private async loadSummaryTable(): Promise<void> {
@@ -623,9 +628,9 @@ export class DashboardComponent {
     if (error instanceof HttpErrorResponse) {
       // status 0 = inalcanzable (servicio caído / conexión rechazada / CORS).
       return error.status === 0
-        ? 'el servicio no responde'
-        : `el servicio respondió HTTP ${error.status}`;
+        ? COMMON_TEXTS.errors.serviceDown
+        : COMMON_TEXTS.errors.httpStatus(error.status);
     }
-    return error instanceof Error ? error.message : 'error desconocido';
+    return error instanceof Error ? error.message : COMMON_TEXTS.errors.unknown;
   }
 }

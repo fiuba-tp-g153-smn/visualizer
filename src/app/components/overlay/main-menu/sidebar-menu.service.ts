@@ -5,44 +5,47 @@ import { AlertsPanelComponent } from './alerts-panel/alerts-panel';
 import { MapToolsComponent } from './map-tools/tools';
 import { MapExplorerComponent } from './map-explorer/map-explorer';
 import { GeneralSettingsComponent } from './general-settings/general-settings';
+import { MAP_TEXTS } from '../../../texts';
 
 /**
  * Configuración de secciones del menú.
  */
+const SECTIONS = MAP_TEXTS.menu.sections;
+
 const MENU_SECTIONS: ReadonlyArray<MenuSection> = [
   {
     id: 'layers',
-    title: 'Capas del Mapa',
+    title: SECTIONS.layers.title,
     icon: 'layers',
-    tooltip: 'Capas del mapa',
+    tooltip: SECTIONS.layers.tooltip,
     component: LayerListComponent,
   },
   {
     id: 'alerts',
-    title: 'Avisos a corto plazo',
+    title: SECTIONS.alerts.title,
     icon: 'warning',
-    tooltip: 'Avisos a corto plazo',
+    tooltip: SECTIONS.alerts.tooltip,
     component: AlertsPanelComponent,
   },
   {
     id: 'map-tools',
-    title: 'Herramientas del mapa',
+    title: SECTIONS.mapTools.title,
     icon: 'handyman',
-    tooltip: 'Herramientas del mapa',
+    tooltip: SECTIONS.mapTools.tooltip,
     component: MapToolsComponent,
   },
   {
     id: 'explore',
-    title: 'Explorador',
+    title: SECTIONS.explore.title,
     icon: 'map',
-    tooltip: 'Buscar lugares y elegir mapa base',
+    tooltip: SECTIONS.explore.tooltip,
     component: MapExplorerComponent,
   },
   {
     id: 'settings',
-    title: 'Configuración',
+    title: SECTIONS.settings.title,
     icon: 'tune',
-    tooltip: 'Configuración general',
+    tooltip: SECTIONS.settings.tooltip,
     component: GeneralSettingsComponent,
   },
 ];

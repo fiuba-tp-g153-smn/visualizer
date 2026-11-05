@@ -23,6 +23,7 @@ import {
 import { CSS_VARIABLES } from '../../constants/map-polygons.constants';
 import { ensureEditTools } from '../../utils/leaflet-edit-tools';
 import { GeoPoint, formatDistance, pathSegmentsMeters } from '../../utils/distance.utils';
+import { MAP_TEXTS } from '../../texts';
 
 /**
  * - `idle`: nothing on the map.
@@ -216,32 +217,34 @@ export class DistanceToolService {
       label,
       run,
     });
-    const clear = item('clear', 'delete_outline', 'Eliminar medición', () => this.clear());
+    const clear = item('clear', 'delete_outline', MAP_TEXTS.distance.clear, () => this.clear());
 
     switch (this.modeState()) {
       case 'idle':
-        return { items: [item('start', 'straighten', 'Medir distancia', () => this.start())] };
+        return {
+          items: [item('start', 'straighten', MAP_TEXTS.distance.start, () => this.start())],
+        };
       case 'measuring':
         // Nothing placed yet: the only thing to do is back out.
         if (this.pointsState().length === 0) {
           return {
             exclusive: true,
-            items: [item('cancel', 'close', 'Cancelar medición', () => this.clear())],
+            items: [item('cancel', 'close', MAP_TEXTS.distance.cancel, () => this.clear())],
           };
         }
         return {
           exclusive: true,
           items: [
-            item('finish', 'check', 'Terminar medición', () => this.finish()),
-            item('undo', 'undo', 'Deshacer último punto', () => this.removeLastPoint()),
+            item('finish', 'check', MAP_TEXTS.distance.finish, () => this.finish()),
+            item('undo', 'undo', MAP_TEXTS.distance.undo, () => this.removeLastPoint()),
             clear,
           ],
         };
       case 'done':
         return {
           items: [
-            item('edit', 'edit', 'Editar medición', () => this.startEdit()),
-            item('restart', 'straighten', 'Nueva medición', () => this.start()),
+            item('edit', 'edit', MAP_TEXTS.distance.edit, () => this.startEdit()),
+            item('restart', 'straighten', MAP_TEXTS.distance.restart, () => this.start()),
             clear,
           ],
         };

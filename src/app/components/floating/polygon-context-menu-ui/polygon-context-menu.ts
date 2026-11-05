@@ -8,6 +8,7 @@ import {
   PolygonContextMenuAction,
   PolygonContextMenuActionType,
 } from '../../../models/polygon-context-menu-action.model';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-polygon-context-menu',
@@ -17,6 +18,8 @@ import {
   styleUrl: './polygon-context-menu.scss',
 })
 export class PolygonContextMenuComponent {
+  protected readonly t = ALERTS_TEXTS.polygonMenu;
+  protected readonly common = COMMON_TEXTS.actions;
   @Input() polygonId!: string;
   @Input() polygonVisible: boolean = true;
   @Input() hasDepartments: boolean = false;

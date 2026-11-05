@@ -8,6 +8,7 @@ import { prod } from '../../../services/metrics/metrics-labels.constants';
 import { outcomePillsCell, stageBarCell } from '../metrics-cells.util';
 import type { BarSegment } from '../sortable-table/sortable-table.models';
 import { StagePieChartComponent } from '../stage-pie-chart/stage-pie-chart.component';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /** Fila etiqueta/valor del detalle. */
 interface DetailRow {
@@ -39,6 +40,7 @@ interface OutcomePill {
   styleUrl: './job-type-detail-dialog.component.scss',
 })
 export class JobTypeDetailDialogComponent {
+  protected readonly common = DASHBOARDS_TEXTS.common;
   readonly summary = inject<JobTypeSummary>(MAT_DIALOG_DATA);
 
   readonly title = computed<string>(() =>
@@ -49,14 +51,18 @@ export class JobTypeDetailDialogComponent {
   readonly rows = computed<DetailRow[]>(() => {
     const summary = this.summary;
     return [
-      { label: 'Trabajos', value: String(summary.counts.total) },
-      { label: '% error', value: pct(summary.error_rate) },
-      { label: 'Prom', value: secs(summary.total_s.avg) },
-      { label: 'Mín', value: secs(summary.total_s.min) },
-      { label: 'Máx', value: secs(summary.total_s.max) },
-      { label: 'p95', value: secs(summary.total_s.p95) },
-      { label: 'Descarga', value: secs(summary.download_s.avg) },
-      { label: 'Último', value: ago(summary.last_finished), title: fmtInstant(summary.last_finished) },
+      { label: DASHBOARDS_TEXTS.jobTypes.detail.jobs, value: String(summary.counts.total) },
+      { label: DASHBOARDS_TEXTS.jobTypes.detail.errorRate, value: pct(summary.error_rate) },
+      { label: DASHBOARDS_TEXTS.jobTypes.detail.avg, value: secs(summary.total_s.avg) },
+      { label: DASHBOARDS_TEXTS.jobTypes.detail.min, value: secs(summary.total_s.min) },
+      { label: DASHBOARDS_TEXTS.jobTypes.detail.max, value: secs(summary.total_s.max) },
+      { label: DASHBOARDS_TEXTS.jobTypes.detail.p95, value: secs(summary.total_s.p95) },
+      { label: DASHBOARDS_TEXTS.jobTypes.detail.download, value: secs(summary.download_s.avg) },
+      {
+        label: DASHBOARDS_TEXTS.jobTypes.detail.last,
+        value: ago(summary.last_finished),
+        title: fmtInstant(summary.last_finished),
+      },
     ];
   });
 

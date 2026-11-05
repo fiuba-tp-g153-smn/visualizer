@@ -19,6 +19,7 @@ import {
   ActiveLayerGroupId,
   LayerGroup,
 } from '../../models/layers/groups.models';
+import { LAYER_NAMES } from '../../texts';
 
 /**
  * Definición de capas disponibles en el visualizador
@@ -26,40 +27,40 @@ import {
 export const LAYER_DEFINITIONS: LayerGroup[] = [
   {
     id: 'goes19',
-    name: 'Satélite',
-    description: 'Capas satelitales GOES-19',
+    name: LAYER_NAMES.groups.goes19.name,
+    description: LAYER_NAMES.groups.goes19.description,
     icon: 'satellite_alt',
     expanded: false,
     subgroups: [ABI_SUBGROUP, GLM_SUBGROUP],
   },
   {
     id: 'radar',
-    name: 'Radar',
-    description: 'Capas de radar meteorológico',
+    name: LAYER_NAMES.groups.radar.name,
+    description: LAYER_NAMES.groups.radar.description,
     icon: 'track_changes',
     expanded: false,
     subgroups: RADAR_SUBGROUPS,
   },
   {
     id: 'modelos',
-    name: 'Modelos',
-    description: 'Modelos numéricos de pronóstico',
+    name: LAYER_NAMES.groups.modelos.name,
+    description: LAYER_NAMES.groups.modelos.description,
     icon: 'insights',
     expanded: false,
     subgroups: [ECMWF_SUBGROUP, WRF_SUBGROUP, GFS_SUBGROUP],
   },
   {
     id: 'smn-estaciones',
-    name: 'Estaciones meteorológicas',
-    description: 'Observaciones actuales de estaciones meteorológicas del SMN',
+    name: LAYER_NAMES.groups.smnEstaciones.name,
+    description: LAYER_NAMES.groups.smnEstaciones.description,
     icon: 'thermostat',
     expanded: false,
     subgroups: [WEATHER_STATIONS_SUBGROUP],
   },
   {
     id: 'ign-wms',
-    name: 'IGN Argentina',
-    description: 'Capas WMS del Instituto Geográfico Nacional',
+    name: LAYER_NAMES.groups.ignWms.name,
+    description: LAYER_NAMES.groups.ignWms.description,
     icon: 'map',
     expanded: false,
     subgroups: [
@@ -81,28 +82,25 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
 export const ACTIVE_LAYER_GROUP_DEFINITIONS: Record<ActiveLayerGroupId, ActiveLayerGroup> = {
   [ActiveLayerGroupId.BASE]: {
     id: ActiveLayerGroupId.BASE,
-    name: 'Capas de datos',
-    subtitle: 'Radar, modelos numéricos',
-    description:
-      'Capas de datos científicos: radar meteorológico, salidas de modelos numéricos, imágenes satelitales, etc.',
+    name: LAYER_NAMES.groups.base.name,
+    subtitle: LAYER_NAMES.groups.base.subtitle,
+    description: LAYER_NAMES.groups.base.description,
     icon: 'satellite_alt',
     zIndexRange: { min: 1, max: 1000 },
   },
   [ActiveLayerGroupId.OVERLAY]: {
     id: ActiveLayerGroupId.OVERLAY,
-    name: 'Capas de referencia',
-    subtitle: 'IGN, cartografía',
-    description:
-      'Capas de referencia cartográfica del IGN. Siempre se muestran por encima de las capas de datos.',
+    name: LAYER_NAMES.groups.overlay.name,
+    subtitle: LAYER_NAMES.groups.overlay.subtitle,
+    description: LAYER_NAMES.groups.overlay.description,
     icon: 'terrain',
     zIndexRange: { min: 1001, max: 2000 },
   },
   [ActiveLayerGroupId.POINTS]: {
     id: ActiveLayerGroupId.POINTS,
-    name: 'Capas puntuales',
-    subtitle: 'Estaciones, puntos de observación',
-    description:
-      'Capas puntuales interactivas. Se muestran por encima de las capas de referencia para mantener legibilidad.',
+    name: LAYER_NAMES.groups.points.name,
+    subtitle: LAYER_NAMES.groups.points.subtitle,
+    description: LAYER_NAMES.groups.points.description,
     icon: 'place',
     zIndexRange: { min: 2001, max: 3000 },
   },

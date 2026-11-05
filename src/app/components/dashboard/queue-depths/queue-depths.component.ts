@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 import type { QueueDepths } from '../../../models/metrics/metrics.models';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 interface QueueTile {
   readonly key: string;
@@ -22,23 +23,23 @@ interface QueueTile {
   styleUrl: './queue-depths.component.scss',
 })
 export class QueueDepthsComponent {
+  protected readonly t = DASHBOARDS_TEXTS.queues;
   readonly queues = input<QueueDepths | null>(null);
 
   readonly tiles = computed<QueueTile[]>(() => {
     const queues = this.queues();
     const fmt = (value: number | null | undefined): string =>
-      value == null ? 'N/A' : String(value);
+      value == null ? DASHBOARDS_TEXTS.common.notAvailable : String(value);
     // N/A unless BOTH depths are known — coercing one null to 0 would understate
     // the total (e.g. work=12, light=null must read N/A, not 12).
-    const total =
-      queues?.work == null || queues?.light == null ? null : queues.work + queues.light;
+    const total = queues?.work == null || queues?.light == null ? null : queues.work + queues.light;
     return [
-      { key: 'total en espera', value: fmt(total), sub: 'general + ligera' },
-      { key: 'cola de trabajo general', value: fmt(queues?.work), sub: 'en espera' },
-      { key: 'cola de trabajo ligera', value: fmt(queues?.light), sub: 'radar + WRF' },
-      { key: 'cola ligera · radar', value: fmt(queues?.radar_light), sub: 'en espera' },
-      { key: 'cola ligera · WRF', value: fmt(queues?.wrf_light), sub: 'en espera' },
-      { key: 'descartes (DLQ)', value: fmt(queues?.dlq), sub: 'mensajes' },
+      { key: this.t.totalWaiting, value: fmt(total), sub: this.t.generalPlusLight },
+      { key: this.t.generalQueue, value: fmt(queues?.work), sub: this.t.waiting },
+      { key: this.t.lightQueue, value: fmt(queues?.light), sub: this.t.radarPlusWrf },
+      { key: this.t.lightRadar, value: fmt(queues?.radar_light), sub: this.t.waiting },
+      { key: this.t.lightWrf, value: fmt(queues?.wrf_light), sub: this.t.waiting },
+      { key: this.t.dlq, value: fmt(queues?.dlq), sub: this.t.messages },
     ];
   });
 

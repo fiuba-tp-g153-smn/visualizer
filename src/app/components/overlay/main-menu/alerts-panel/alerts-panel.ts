@@ -29,10 +29,7 @@ import { DetailItemComponent } from '../../../shared/detail-item/detail-item';
 import { DetailChipComponent } from '../../../shared/detail-chip/detail-chip';
 import { DetailRowConfig } from './alert-list-item/alert-list-item';
 import { MapInfoService } from '../../../../services/layers/map-info.service';
-import {
-  deleteAllPolygonsMessage,
-  deletePolygonMessage,
-} from '../../../../utils/polygon-messages.utils';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../../texts';
 
 @Component({
   selector: 'app-alerts-panel',
@@ -56,6 +53,10 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlertsPanelComponent implements MenuPanelComponent {
+  protected readonly t = ALERTS_TEXTS.panel;
+  protected readonly details = ALERTS_TEXTS.details;
+  protected readonly polygonMenu = ALERTS_TEXTS.polygonMenu;
+  protected readonly common = COMMON_TEXTS.actions;
   private readonly polygonService = inject(PolygonService);
   private readonly alertEmissionService = inject(AlertEmissionService);
   private readonly panelState = inject(AlertsPanelStateService);
@@ -108,10 +109,10 @@ export class AlertsPanelComponent implements MenuPanelComponent {
       ConfirmDialogComponent,
       {
         data: {
-          title: 'Eliminar polígono',
-          message: deletePolygonMessage(polygon?.name),
-          confirmText: 'Eliminar',
-          cancelText: 'Cancelar',
+          title: ALERTS_TEXTS.polygons.deleteOneTitle,
+          message: ALERTS_TEXTS.polygons.deleteOne(polygon?.name),
+          confirmText: COMMON_TEXTS.actions.delete,
+          cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
         },
       },
@@ -131,10 +132,10 @@ export class AlertsPanelComponent implements MenuPanelComponent {
       ConfirmDialogComponent,
       {
         data: {
-          title: 'Eliminar todos los polígonos',
-          message: deleteAllPolygonsMessage(count),
-          confirmText: 'Eliminar todos',
-          cancelText: 'Cancelar',
+          title: ALERTS_TEXTS.polygons.deleteAllTitle,
+          message: ALERTS_TEXTS.polygons.deleteAll(count),
+          confirmText: ALERTS_TEXTS.polygons.deleteAllConfirm,
+          cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
         },
       },
@@ -187,16 +188,18 @@ export class AlertsPanelComponent implements MenuPanelComponent {
     return [
       {
         icon: 'timeline',
-        label: 'Vértices:',
+        label: this.details.vertices,
         value: String(this.getCoordinatesCount(polygon)),
         dividerBefore: true,
         warn: exceedsMax,
-        tooltip: exceedsMax
-          ? `Supera el máximo de ${this.maxVertices()} vértices. Simplificá el polígono para poder generar el aviso.`
-          : undefined,
+        tooltip: exceedsMax ? this.t.tooManyVerticesDetail(this.maxVertices()) : undefined,
       },
-      { icon: 'square_foot', label: 'Área:', value: `${this.getPolygonArea(polygon)} km²` },
-      { icon: 'schedule', label: 'Modificado:', value: this.formatDate(polygon.updatedAt) },
+      {
+        icon: 'square_foot',
+        label: this.details.area,
+        value: this.details.areaValue(this.getPolygonArea(polygon)),
+      },
+      { icon: 'schedule', label: this.details.modified, value: this.formatDate(polygon.updatedAt) },
     ];
   }
 

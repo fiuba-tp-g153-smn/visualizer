@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SidebarMenuService } from '../main-menu/sidebar-menu.service';
+import { MAP_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-sidebar-buttons',
@@ -23,6 +24,7 @@ import { SidebarMenuService } from '../main-menu/sidebar-menu.service';
   styleUrl: './sidebar-buttons.scss',
 })
 export class SidebarButtonsComponent {
+  protected readonly t = MAP_TEXTS.menu;
   private readonly sidebarMenuService = inject(SidebarMenuService);
 
   readonly sections = this.sidebarMenuService.sections;

@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Línea de tiempo · {{ definition.label }}</h2>
+<h2 mat-dialog-title>{{ t.title(definition.label) }}</h2>
 
 <mat-dialog-content class="timeline-dialog">
   <div class="toolbar" data-testid="sync-timeline-toolbar">
@@ -9,14 +9,16 @@
           <button
             mat-button
             (click)="deleteFrame()"
-            matTooltip="Supr"
+            [matTooltip]="t.deleteShortcut"
             data-testid="sync-timeline-unlink"
           >
             <mat-icon>delete</mat-icon>
-            Borrar conexión
+            {{ t.unlink }}
           </button>
         }
-        <button mat-button (click)="cancel()" data-testid="sync-timeline-cancel">Cancelar</button>
+        <button mat-button (click)="cancel()" data-testid="sync-timeline-cancel">
+          {{ common.cancel }}
+        </button>
         <button
           #actionButton
           mat-stroked-button
@@ -24,12 +26,14 @@
           [disabled]="crossing() !== null"
           data-testid="sync-timeline-done"
         >
-          Listo
+          {{ t.done }}
         </button>
       </div>
     } @else {
       <span class="status">{{ hint() }}</span>
-      <span class="summary" data-testid="sync-timeline-summary">{{ frameCount() }} cuadros</span>
+      <span class="summary" data-testid="sync-timeline-summary">{{
+        t.frameCount(frameCount())
+      }}</span>
     }
   </div>
 
@@ -52,10 +56,7 @@
           [class.left-out]="lane.note !== undefined"
           [checked]="lane.included"
           (change)="setIncluded(lane.id, $event.checked)"
-          [matTooltip]="
-            lane.name +
-            (lane.included ? ' · desmarcá para desincronizar' : ' · marcá para sincronizar')
-          "
+          [matTooltip]="t.laneTooltip(lane.name, lane.included)"
           matTooltipPosition="left"
           [attr.data-testid]="'sync-timeline-lane-' + lane.id"
         >
@@ -74,13 +75,13 @@
     appearance="outline"
     subscriptSizing="dynamic"
     class="image-count"
-    [matTooltip]="isCustomized() ? 'Cambiarla vuelve a la combinación automática' : ''"
+    [matTooltip]="isCustomized() ? t.imageCountTooltip : ''"
   >
-    <mat-label>Imágenes</mat-label>
+    <mat-label>{{ t.images }}</mat-label>
     <mat-select
       [value]="imageCount()"
       (selectionChange)="setImageCount($event.value)"
-      aria-label="Cantidad de imágenes"
+      [aria-label]="t.imageCountAria"
       data-testid="sync-timeline-images"
     >
       @for (n of imageCountOptions; track n) {
@@ -96,7 +97,7 @@
     data-testid="sync-timeline-clear"
   >
     <mat-icon>delete_sweep</mat-icon>
-    Borrar todas
+    {{ t.clearAll }}
   </button>
   <button
     mat-button
@@ -105,7 +106,9 @@
     data-testid="sync-timeline-reset"
   >
     <mat-icon>restart_alt</mat-icon>
-    Restablecer
+    {{ t.reset }}
   </button>
-  <button mat-flat-button color="primary" mat-dialog-close cdkFocusInitial>Cerrar</button>
+  <button mat-flat-button color="primary" mat-dialog-close cdkFocusInitial>
+    {{ common.close }}
+  </button>
 </mat-dialog-actions>

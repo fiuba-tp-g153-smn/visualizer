@@ -5,13 +5,13 @@
       <app-loading-spinner [diameter]="40" />
     }
     @if (failed()) {
-      <p class="gif-error">No se pudo cargar la imagen.</p>
+      <p class="gif-error">{{ t.loadError }}</p>
     } @else {
       <a
         [href]="data.url"
         target="_blank"
         rel="noopener noreferrer"
-        matTooltip="Abrir en pestaña nueva"
+        [matTooltip]="common.openInNewTab"
       >
         <img
           [src]="data.url"
@@ -27,7 +27,9 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <a mat-button [href]="data.url" target="_blank" rel="noopener noreferrer">
-    Abrir en pestaña nueva
+    {{ common.openInNewTab }}
   </a>
-  <button mat-flat-button color="primary" mat-dialog-close cdkFocusInitial>Cerrar</button>
+  <button mat-flat-button color="primary" mat-dialog-close cdkFocusInitial>
+    {{ common.close }}
+  </button>
 </mat-dialog-actions>

@@ -2,7 +2,7 @@
   <div class="point-panel" data-testid="map-point-value-panel">
     <app-panel-close-button
       class="close-button"
-      ariaLabel="Cerrar panel de valor del punto"
+      [ariaLabel]="widgets.closePointValue"
       (pressed)="onClose()"
     />
 
@@ -12,8 +12,8 @@
           <span
             class="playing-dot"
             role="img"
-            aria-label="Reproduciéndose"
-            matTooltip="Reproduciéndose"
+            [attr.aria-label]="t.playing"
+            [matTooltip]="t.playing"
             data-testid="map-point-value-playing"
           ></span>
         }
@@ -40,9 +40,9 @@
         }
         <span class="unit">{{ displayUnit }}</span>
       } @else if (!data || data.status === PointQueryStatus.NO_DATA) {
-        <span class="empty">Sin dato</span>
+        <span class="empty">{{ t.noData }}</span>
       } @else {
-        <span class="empty">Error</span>
+        <span class="empty">{{ t.error }}</span>
       }
     </div>
   </div>

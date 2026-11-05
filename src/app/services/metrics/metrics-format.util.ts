@@ -1,4 +1,5 @@
 import { formatDateFull } from '../../utils/tileset-timestamp';
+import { METRICS_TEXTS } from '../../texts';
 
 export function secs(value: number | null | undefined): string {
   if (value == null) {
@@ -23,15 +24,15 @@ export function ago(iso: string | null | undefined, now: number = Date.now()): s
     return '—';
   }
   if (seconds < 60) {
-    return 'hace ' + Math.floor(seconds) + 's';
+    return METRICS_TEXTS.ago.seconds(Math.floor(seconds));
   }
   if (seconds < 3600) {
-    return 'hace ' + Math.floor(seconds / 60) + 'm';
+    return METRICS_TEXTS.ago.minutes(Math.floor(seconds / 60));
   }
   if (seconds < 86400) {
-    return 'hace ' + Math.floor(seconds / 3600) + 'h';
+    return METRICS_TEXTS.ago.hours(Math.floor(seconds / 3600));
   }
-  return 'hace ' + Math.floor(seconds / 86400) + 'd';
+  return METRICS_TEXTS.ago.days(Math.floor(seconds / 86400));
 }
 
 /**

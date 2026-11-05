@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
+import { STATIONS_TEXTS } from '../../../texts';
 
 @Component({
   selector: 'app-wind-compass',
@@ -28,8 +29,8 @@ export class WindCompassComponent {
 
   get caption(): string {
     if (this.isCalm) {
-      return 'Calma · sin dirección';
+      return STATIONS_TEXTS.wind.calmCaption;
     }
-    return this.direction ? `desde el ${this.direction}` : 'Sin dato';
+    return this.direction ? STATIONS_TEXTS.wind.from(this.direction) : STATIONS_TEXTS.wind.noData;
   }
 }

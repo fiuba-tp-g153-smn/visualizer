@@ -9,6 +9,7 @@ import { MenuPanelComponent } from '../menu-section.model';
 import { PointQueryViewerTabComponent } from './point-query-viewer-tab/point-query-viewer-tab';
 import { ScaleTabComponent } from './scale-tab/scale-tab';
 import { GeneralTabComponent } from './general-tab/general-tab';
+import { MAP_TEXTS } from '../../../../texts';
 
 @Component({
   selector: 'app-map-tools',
@@ -25,6 +26,7 @@ import { GeneralTabComponent } from './general-tab/general-tab';
   styleUrl: './tools.scss',
 })
 export class MapToolsComponent implements MenuPanelComponent {
+  protected readonly t = MAP_TEXTS.tools.tabs;
   private readonly viewer = inject(PointQueryViewerService);
   private readonly scaleTools = inject(ScaleToolsService);
 

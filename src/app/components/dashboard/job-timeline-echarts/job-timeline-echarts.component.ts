@@ -37,6 +37,7 @@ import {
   TIMEZONE_MODES,
   TimezoneSettingsService,
 } from '../../../services/settings/timezone-settings.service';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 const DRAG_THRESHOLD_PX = 6;
 /** Cerca del borde izquierdo: si la ventana llega a <12 h del dato más viejo, pedir más. */
@@ -77,19 +78,19 @@ type Range = [number, number];
           [checked]="colorBy() === 'type'"
           (change)="colorBy.set($event.checked ? 'type' : 'outcome')"
         >
-          {{ colorBy() === 'type' ? 'Color: ' + typeLabel() : 'Color: resultado' }}
+          {{ colorBy() === 'type' ? t.colorByType(typeLabel()) : t.colorByOutcome }}
         </mat-slide-toggle>
         <span class="jt__spacer"></span>
         <button
           mat-icon-button
           type="button"
-          matTooltip="Volver al zoom anterior"
+          [matTooltip]="t.zoomBack"
           [disabled]="!canBack()"
           (click)="zoomBack()"
         >
           <mat-icon>undo</mat-icon>
         </button>
-        <button mat-icon-button type="button" matTooltip="Ver todo" (click)="zoomAll()">
+        <button mat-icon-button type="button" [matTooltip]="t.zoomAll" (click)="zoomAll()">
           <mat-icon>zoom_out_map</mat-icon>
         </button>
       </div>
@@ -103,7 +104,7 @@ type Range = [number, number];
     </div>
 
     @if (!hasData()) {
-      <div class="jt__empty">Sin trabajos en este rango.</div>
+      <div class="jt__empty">{{ t.empty }}</div>
     }
     <div #wrap class="jt__wrap" (pointerdown)="onDown($event)">
       <div #chart class="jt__chart"></div>
@@ -196,6 +197,7 @@ type Range = [number, number];
   `,
 })
 export class JobTimelineEchartsComponent implements OnInit {
+  protected readonly t = DASHBOARDS_TEXTS.timeline;
   readonly jobs = input.required<readonly RecentJob[]>();
   /** Ancho máximo de la ventana visible (ms); null = sin tope (rangos fijos). */
   readonly maxSpanMs = input<number | null>(null);
@@ -206,7 +208,7 @@ export class JobTimelineEchartsComponent implements OnInit {
   /** Color inicial (resultado/tipo); el toggle puede cambiarlo después. */
   readonly initialColorBy = input<TimelineColorBy>('outcome');
   /** Etiqueta del modo "tipo" en el toggle (p. ej. "dominio"). */
-  readonly typeLabel = input<string>('tipo');
+  readonly typeLabel = input<string>(DASHBOARDS_TEXTS.timeline.defaultTypeLabel);
   readonly jobClick = output<RecentJob>();
   /** Se emite al desplazarse cerca del borde izquierdo (modo "todo"): cargar más viejo. */
   readonly loadOlder = output<void>();

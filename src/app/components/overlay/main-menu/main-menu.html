@@ -2,7 +2,12 @@
   <mat-card class="menu-panel" data-testid="menu-panel">
     <mat-toolbar class="menu-header">
       <span data-testid="menu-panel-title">{{ section.title }}</span>
-      <button mat-icon-button (click)="closePanel()" aria-label="Cerrar menú" data-testid="menu-close">
+      <button
+        mat-icon-button
+        (click)="closePanel()"
+        [attr.aria-label]="t.close"
+        data-testid="menu-close"
+      >
         <mat-icon>close</mat-icon>
       </button>
     </mat-toolbar>

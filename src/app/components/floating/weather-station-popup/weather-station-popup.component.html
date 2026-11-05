@@ -3,9 +3,9 @@
     <div class="ws-card__name">{{ data.stationName }}</div>
     <div class="ws-card__meta">
       <span class="ws-card__id"
-        >ID estación: <strong>{{ data.stationId }}</strong></span
+        >{{ t.stationId }} <strong>{{ data.stationId }}</strong></span
       >
-      <span class="ws-card__coords">Lat {{ latText }} · Lon {{ lonText }}</span>
+      <span class="ws-card__coords">{{ t.coords(latText, lonText) }}</span>
     </div>
     @if (data.province && data.province !== '-') {
       <div class="ws-card__province">{{ data.province }}</div>
@@ -19,7 +19,7 @@
       [class.ws-card__tab--active]="tab() === PopupTab.CURRENT"
       (click)="setTab(PopupTab.CURRENT)"
     >
-      Actual
+      {{ t.popup.currentTab }}
     </button>
     <button
       type="button"
@@ -27,7 +27,7 @@
       [class.ws-card__tab--active]="tab() === PopupTab.GRAPH"
       (click)="setTab(PopupTab.GRAPH)"
     >
-      Gráfico
+      {{ t.popup.graphTab }}
     </button>
   </div>
 
@@ -36,7 +36,7 @@
       <div class="ws-card__primary">
         <div class="ws-card__temp-block">
           <div class="ws-card__temp">{{ data.temperature }}</div>
-          <div class="ws-card__feels">Sensación {{ data.feelsLike }}</div>
+          <div class="ws-card__feels">{{ t.popup.feelsLike(data.feelsLike) }}</div>
           <div class="ws-card__desc">{{ data.weatherDescription }}</div>
         </div>
         <app-wind-compass
@@ -49,7 +49,7 @@
 
       <ul class="ws-card__grid">
         <li>
-          <span>Punto de rocío</span>
+          <span>{{ t.popup.dewPoint }}</span>
           <strong>{{ dewPointText() }}</strong>
         </li>
         @for (item of data.values; track item.label) {
@@ -60,7 +60,7 @@
         }
       </ul>
 
-      <div class="ws-card__updated">Actualizado: {{ data.updatedAt }}</div>
+      <div class="ws-card__updated">{{ t.popup.updated(data.updatedAt) }}</div>
     </div>
   } @else {
     <div class="ws-card__graph">
@@ -79,17 +79,17 @@
             [colors]="vm.colors"
           ></apx-chart>
         } @else {
-          <div class="ws-card__state">Sin datos en las últimas 48 h.</div>
+          <div class="ws-card__state">{{ t.popup.noData }}</div>
         }
       } @else if (loading()) {
-        <div class="ws-card__state">Cargando…</div>
+        <div class="ws-card__state">{{ t.popup.loading }}</div>
       } @else {
-        <div class="ws-card__state">No se pudo cargar el gráfico.</div>
+        <div class="ws-card__state">{{ t.popup.chartError }}</div>
       }
     </div>
   }
 
   <button type="button" class="ws-card__all-link" (click)="openFullScreen()">
-    Ver todas las variables y gráficos
+    {{ t.popup.viewAll }}
   </button>
 </div>

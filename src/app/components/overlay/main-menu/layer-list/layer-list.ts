@@ -9,6 +9,7 @@ import { MenuPanelComponent } from '../menu-section.model';
 import { AvailableLayersComponent } from './available-layers/available-layers';
 import { ActiveLayersComponent } from './active-layers/active-layers';
 import { SyncPlaybackComponent } from './sync-playback/sync-playback';
+import { LAYERS_TEXTS } from '../../../../texts';
 
 @Component({
   selector: 'app-layer-list',
@@ -25,6 +26,7 @@ import { SyncPlaybackComponent } from './sync-playback/sync-playback';
   styleUrl: './layer-list.scss',
 })
 export class LayerListComponent implements MenuPanelComponent {
+  protected readonly t = LAYERS_TEXTS;
   private readonly layersService = inject(LayersService);
   private readonly controlService = inject(LayerControlService);
   private readonly syncService = inject(SyncPlaybackService);

@@ -11,6 +11,7 @@ import { LocalStorageService } from '../../../../../services/storage/local-stora
 import { STORAGE_KEYS } from '../../../../../constants';
 import { ActiveAlertsComponent } from '../active-alerts/active-alerts';
 import { PendingAlertsComponent } from '../pending-alerts/pending-alerts';
+import { ALERTS_TEXTS } from '../../../../../texts';
 
 interface PersistedEmittedAlertsSections {
   readonly pendingExpanded: boolean;
@@ -41,6 +42,7 @@ interface PersistedEmittedAlertsSections {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmittedAlertsComponent {
+  protected readonly t = ALERTS_TEXTS.emitted;
   private readonly activeAlertsService = inject(ActiveAlertsService);
   private readonly pendingAlertsService = inject(PendingAlertsService);
   private readonly storage = inject(LocalStorageService);

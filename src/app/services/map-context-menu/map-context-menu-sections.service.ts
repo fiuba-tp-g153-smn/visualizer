@@ -16,6 +16,7 @@ import {
   MapContextMenuItem,
   MapContextMenuSection,
 } from './map-context-menu.models';
+import { COMMON_TEXTS, MAP_TEXTS } from '../../texts';
 
 /** Section order in the menu. Feature tools (distance, at 0) render first. */
 export const MAP_CONTEXT_MENU_ORDER = {
@@ -56,7 +57,7 @@ export class MapContextMenuSectionsService {
         {
           id: 'alert-draw',
           icon: 'draw',
-          label: 'Dibujar polígono',
+          label: MAP_TEXTS.sections.drawPolygon,
           run: () => this.polygonDrawingService.startDrawing(),
         },
       ],
@@ -87,7 +88,7 @@ export class MapContextMenuSectionsService {
       items.push({
         id: 'layers-play',
         icon: 'play_arrow',
-        label: 'Reproducir todas las capas',
+        label: MAP_TEXTS.sections.playAll,
         run: () => this.playAll(playable),
       });
     }
@@ -95,14 +96,14 @@ export class MapContextMenuSectionsService {
       items.push({
         id: 'layers-pause',
         icon: 'pause',
-        label: 'Pausar todas las capas',
+        label: MAP_TEXTS.sections.pauseAll,
         run: () => this.pauseAll(playable),
       });
     }
     items.push({
       id: 'layers-clear',
       icon: 'layers_clear',
-      label: 'Desactivar todas las capas',
+      label: MAP_TEXTS.sections.clearAll,
       run: () => this.confirmClearLayers(active.length),
     });
     return { items };
@@ -115,7 +116,7 @@ export class MapContextMenuSectionsService {
         {
           id: 'copy-coordinates',
           icon: 'content_copy',
-          label: 'Copiar coordenadas',
+          label: MAP_TEXTS.sections.copyCoordinates,
           run: () => void this.copy(text),
         },
       ],
@@ -151,11 +152,10 @@ export class MapContextMenuSectionsService {
       ConfirmDialogComponent,
       {
         data: {
-          title: 'Desactivar todas las capas',
-          message:
-            count === 1 ? '¿Desactivar la capa activa?' : `¿Desactivar las ${count} capas activas?`,
-          confirmText: 'Desactivar',
-          cancelText: 'Cancelar',
+          title: MAP_TEXTS.sections.clearAll,
+          message: MAP_TEXTS.sections.clearAllConfirm(count),
+          confirmText: MAP_TEXTS.sections.deactivate,
+          cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
         },
       },
@@ -172,9 +172,9 @@ export class MapContextMenuSectionsService {
   private async copy(text: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
-      this.notificationService.success('Coordenadas copiadas al portapapeles');
+      this.notificationService.success(MAP_TEXTS.sections.copied);
     } catch {
-      this.notificationService.warning('No se pudieron copiar las coordenadas');
+      this.notificationService.warning(MAP_TEXTS.sections.copyFailed);
     }
   }
 }

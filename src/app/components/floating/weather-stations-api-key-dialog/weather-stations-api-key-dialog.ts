@@ -16,6 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpBackend, HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { buildWeatherStationsTilesetsUrl } from '../../../config/backend.config';
+import { COMMON_TEXTS, STATIONS_TEXTS } from '../../../texts';
 
 export interface WeatherStationsApiKeyDialogData {
   initialKey: string;
@@ -46,6 +47,8 @@ export interface WeatherStationsApiKeyDialogResult {
   styleUrl: './weather-stations-api-key-dialog.scss',
 })
 export class WeatherStationsApiKeyDialogComponent {
+  protected readonly t = STATIONS_TEXTS.apiKeyDialog;
+  protected readonly common = COMMON_TEXTS.actions;
   readonly dialogRef = inject(
     MatDialogRef<WeatherStationsApiKeyDialogComponent, WeatherStationsApiKeyDialogResult | null>,
   );
@@ -84,7 +87,7 @@ export class WeatherStationsApiKeyDialogComponent {
       this.dialogRef.close({ key: trimmed });
     } catch (err) {
       if (err instanceof HttpErrorResponse && err.status === 401) {
-        this.validationError.set('La clave ingresada no es válida. Verificá que sea correcta e intentá de nuevo.');
+        this.validationError.set(this.t.invalidKey);
       } else {
         // Red de conectividad u otro error del servidor — cerramos y el
         // interceptor maneja el error cuando se haga la primera request real.

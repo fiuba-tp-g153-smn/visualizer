@@ -12,6 +12,7 @@ import { LayerAvailabilityService } from '../../../../../services/layers/layer-a
 import { LayerGroup, LayerSelectionMode, LayerSubgroup } from '../../../../../models';
 import { LayerItemComponent, LayerItemMode } from '../layer-item/layer-item';
 import { LoadingSpinnerComponent } from '../../../../shared/loading-spinner/loading-spinner';
+import { LAYERS_TEXTS } from '../../../../../texts';
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -33,6 +34,7 @@ const MIN_SEARCH_LENGTH = 2;
   styleUrl: './available-layers.scss',
 })
 export class AvailableLayersComponent {
+  protected readonly t = LAYERS_TEXTS.available;
   readonly LayerItemMode = LayerItemMode;
   readonly LayerSelectionMode = LayerSelectionMode;
 

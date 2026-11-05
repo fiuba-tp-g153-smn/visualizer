@@ -1,6 +1,7 @@
 import { PRECIPITATION_UNITS } from '../../../constants';
 import { LayerScale, ScaleType } from '../../../models';
 import { buildScaleFromThresholds } from '../scale-builders';
+import { SCALE_NAMES } from '../../../texts';
 
 /**
  * TOTAL PRECIPITATION SCALE — discrete thresholds (ECMWF Total Precipitation).
@@ -9,7 +10,7 @@ import { buildScaleFromThresholds } from '../scale-builders';
 export const ECMWF_TP_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: PRECIPITATION_UNITS.MILLIMETERS,
-  scaleDisplayName: 'Precipitacion total',
+  scaleDisplayName: SCALE_NAMES.ecmwfTp,
   stops: [
     { value: 0.5, color: '#00FFFF' },
     { value: 2, color: '#007FFF' },

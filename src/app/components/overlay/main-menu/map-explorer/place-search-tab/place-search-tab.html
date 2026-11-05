@@ -3,7 +3,7 @@
     <mat-icon>search</mat-icon>
     <input
       type="text"
-      placeholder="Buscar localidad, departamento o provincia…"
+      [placeholder]="t.placeholder"
       autocomplete="off"
       spellcheck="false"
       [ngModel]="query()"
@@ -18,7 +18,7 @@
         mat-icon-button
         type="button"
         class="search-action-btn"
-        matTooltip="Limpiar texto"
+        [matTooltip]="t.clear"
         (click)="clearQuery()"
       >
         <mat-icon>close</mat-icon>
@@ -29,9 +29,7 @@
       type="button"
       class="search-action-btn"
       [class.active]="configOpen()"
-      [matTooltip]="
-        configOpen() ? 'Ocultar configuración de búsqueda' : 'Configuración de búsqueda'
-      "
+      [matTooltip]="configOpen() ? t.hideConfig : t.showConfig"
       (click)="toggleConfig()"
     >
       <mat-icon>tune</mat-icon>
@@ -40,7 +38,7 @@
 
   @if (configOpen()) {
     <div class="search-config">
-      <span class="control-label">Fuente de búsqueda</span>
+      <span class="control-label">{{ t.source }}</span>
       <mat-radio-group
         [value]="source()"
         (change)="onSourceChange($event.value)"
@@ -49,19 +47,19 @@
         <mat-radio-button
           [value]="placeSearchSource.IGN"
           color="primary"
-          matTooltip="Nomenclátor oficial argentino: localidades, departamentos y provincias, ubicadas por centroide."
-          >IGN (Argentina)</mat-radio-button
+          [matTooltip]="t.ignHint"
+          >{{ t.ign }}</mat-radio-button
         >
         <mat-radio-button
           [value]="placeSearchSource.NOMINATIM"
           color="primary"
-          matTooltip="OpenStreetMap: también puede marcar el límite de un área como un polígono en el mapa."
-          >Nominatim (OSM)</mat-radio-button
+          [matTooltip]="t.nominatimHint"
+          >{{ t.nominatim }}</mat-radio-button
         >
       </mat-radio-group>
 
       @if (source() === placeSearchSource.NOMINATIM) {
-        <span class="control-label">Cómo mostrar resultados de área</span>
+        <span class="control-label">{{ t.areaDisplay }}</span>
         <mat-radio-group
           [value]="nominatimDisplayMode()"
           (change)="onNominatimDisplayModeChange($event.value)"
@@ -70,14 +68,14 @@
           <mat-radio-button
             [value]="nominatimDisplayModeOption.POLYGON"
             color="primary"
-            matTooltip="Dibuja el límite del área como un polígono sobre el mapa."
-            >Polígono</mat-radio-button
+            [matTooltip]="t.polygonHint"
+            >{{ t.polygon }}</mat-radio-button
           >
           <mat-radio-button
             [value]="nominatimDisplayModeOption.MARKER"
             color="primary"
-            matTooltip="Marca el centro del área con un pin, sin dibujar su límite."
-            >Marcador</mat-radio-button
+            [matTooltip]="t.markerHint"
+            >{{ t.marker }}</mat-radio-button
           >
         </mat-radio-group>
       }
@@ -86,9 +84,9 @@
         [checked]="animateFlyTo()"
         (change)="onAnimateFlyToChange($event.checked)"
         color="primary"
-        matTooltip="Anima el desplazamiento del mapa al ir a un resultado, en vez de saltar directo."
+        [matTooltip]="t.animateHint"
       >
-        Animar desplazamiento al resultado
+        {{ t.animate }}
       </mat-checkbox>
     </div>
   }
@@ -96,11 +94,8 @@
   @if (query().trim().length < minQueryLength) {
     <div class="hint-state">
       <mat-icon>map</mat-icon>
-      <p>Buscá un lugar de Argentina</p>
-      <span
-        >Escribí al menos {{ minQueryLength }} letras de una localidad, departamento o
-        provincia</span
-      >
+      <p>{{ t.promptTitle }}</p>
+      <span>{{ t.promptHint(minQueryLength) }}</span>
     </div>
   } @else if (error(); as message) {
     <div class="empty-state empty-state--error">
@@ -110,8 +105,8 @@
   } @else if (!loading() && results().length === 0) {
     <div class="empty-state">
       <mat-icon>search_off</mat-icon>
-      <p>No se encontraron resultados</p>
-      <span>Probá con otros términos de búsqueda</span>
+      <p>{{ t.noResults }}</p>
+      <span>{{ t.noResultsHint }}</span>
     </div>
   } @else if (results().length > 0) {
     <ul class="search-results" role="listbox">
@@ -122,7 +117,7 @@
           role="option"
           [class.active]="i === activeIndex()"
           [attr.aria-selected]="i === activeIndex()"
-          [matTooltip]="item.title + ' — ' + item.subtitle"
+          [matTooltip]="t.resultTooltip(item.title, item.subtitle)"
           matTooltipPosition="left"
           (mouseenter)="activeIndex.set(i)"
           (click)="selectPlace(item)"
@@ -135,7 +130,7 @@
           @if (item === selectedResult()) {
             <span class="remove-result" (click)="$event.stopPropagation()">
               <app-panel-close-button
-                ariaLabel="Quitar marca del mapa"
+                [ariaLabel]="t.clearMarker"
                 (pressed)="removeMapResult(item)"
               />
             </span>
@@ -152,10 +147,10 @@
           >
             @if (loadingMore()) {
               <app-loading-spinner [diameter]="16" />
-              <span>Cargando…</span>
+              <span>{{ t.loadingMore }}</span>
             } @else {
               <mat-icon>expand_more</mat-icon>
-              <span>Cargar más resultados</span>
+              <span>{{ t.loadMore }}</span>
             }
           </button>
         </li>

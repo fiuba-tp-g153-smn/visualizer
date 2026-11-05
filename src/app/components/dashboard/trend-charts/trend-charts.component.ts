@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -22,6 +15,7 @@ import {
   TimezoneSettingsService,
 } from '../../../services/settings/timezone-settings.service';
 import { MetricChartComponent } from '../metric-chart/metric-chart.component';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /**
  * Las cuatro tendencias del panel: evolución de tiempos, throughput apilado,
@@ -37,6 +31,8 @@ import { MetricChartComponent } from '../metric-chart/metric-chart.component';
   styleUrl: './trend-charts.component.scss',
 })
 export class TrendChartsComponent {
+  protected readonly t = DASHBOARDS_TEXTS.trends;
+  protected readonly common = DASHBOARDS_TEXTS.common;
   readonly timing = input.required<readonly TimingSeriesPoint[]>();
   readonly throughput = input.required<readonly ThroughputBucket[]>();
 
