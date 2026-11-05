@@ -1,9 +1,9 @@
 <div class="status">
   <header class="status__bar">
-    <button mat-icon-button (click)="goBack()" aria-label="Volver" matTooltip="Ir al mapa">
+    <button mat-icon-button (click)="goBack()" [attr.aria-label]="t.back" [matTooltip]="t.goToMap">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <div class="status__tabs" role="tablist" aria-label="Paneles de estado">
+    <div class="status__tabs" role="tablist" [attr.aria-label]="t.tabsAria">
       <a
         class="status__tab"
         role="tab"
@@ -14,7 +14,7 @@
         [attr.aria-selected]="rlaProcessing.isActive"
       >
         <mat-icon>assessment</mat-icon>
-        <span>Procesamiento</span>
+        <span>{{ t.tabs.processing }}</span>
       </a>
       <a
         class="status__tab"
@@ -26,7 +26,7 @@
         [attr.aria-selected]="rlaCache.isActive"
       >
         <mat-icon>save_clock</mat-icon>
-        <span>Caché</span>
+        <span>{{ t.tabs.cache }}</span>
       </a>
       <a
         class="status__tab"
@@ -38,7 +38,7 @@
         [attr.aria-selected]="rlaBasemap.isActive"
       >
         <mat-icon>layers</mat-icon>
-        <span>Mapas base</span>
+        <span>{{ t.tabs.basemap }}</span>
       </a>
       <a
         class="status__tab"
@@ -50,7 +50,7 @@
         [attr.aria-selected]="rlaAlerts.isActive"
       >
         <mat-icon>warning</mat-icon>
-        <span>Alertas</span>
+        <span>{{ t.tabs.alerts }}</span>
       </a>
     </div>
   </header>

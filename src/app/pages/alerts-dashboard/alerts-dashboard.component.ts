@@ -49,6 +49,7 @@ import {
   TIMEZONE_MODES,
   TimezoneSettingsService,
 } from '../../services/settings/timezone-settings.service';
+import { COMMON_TEXTS, DASHBOARDS_TEXTS } from '../../texts';
 
 interface FailureRow {
   readonly label: string;
@@ -63,17 +64,15 @@ interface AvgStageRow {
 /** Range options for the "Actividad por hora" panel (hours). */
 type ActivityHours = 24 | 168 | 720;
 
+const A = DASHBOARDS_TEXTS.alerts;
+const AJ = DASHBOARDS_TEXTS.alertJob;
+
 /** Human labels for the backend `error_code` values. */
-const ERROR_CODE_LABELS: Record<string, string> = {
-  timeout: 'Tiempo de generación agotado',
-  area_too_large: 'Área afectada demasiado grande',
-  generation_failed: 'Error de generación',
-  unknown: 'Desconocido',
-};
+const ERROR_CODE_LABELS: Readonly<Record<string, string>> = A.errorCodes;
 
 const OUTCOME_COLORS: Record<string, string> = {
-  Exitosas: '#2e9b51',
-  Fallidas: '#d23b4e',
+  [A.series.success]: '#2e9b51',
+  [A.series.failed]: '#d23b4e',
 };
 
 function formatMs(ms: number): string {
@@ -121,6 +120,8 @@ function fmtTime(iso: string): string {
   styleUrl: './alerts-dashboard.component.scss',
 })
 export class AlertsDashboardComponent {
+  protected readonly t = DASHBOARDS_TEXTS.alerts;
+  protected readonly page = DASHBOARDS_TEXTS.page;
   private readonly metrics = inject(AlertsMetricsService);
   private readonly departments = inject(DepartmentIntersectionService);
   private readonly dialog = inject(MatDialog);
@@ -170,51 +171,51 @@ export class AlertsDashboardComponent {
     const successRate = rateBase ? (jobs.done / rateBase) * 100 : null;
     return [
       {
-        label: 'Alertas generadas',
+        label: A.cards.generated,
         value: String(jobs.total),
-        tooltip: 'Alertas finalizadas en la ventana (exitosas + fallidas).',
+        tooltip: A.cards.generatedHint,
         accent: '',
       },
       {
-        label: 'Exitosas',
+        label: A.cards.success,
         value: String(jobs.done),
-        tooltip: 'Alertas generadas correctamente (intersección + GIFs + guardado).',
+        tooltip: A.cards.successHint,
         accent: 'green',
       },
       {
-        label: 'Fallidas',
+        label: A.cards.failed,
         value: String(jobs.failed),
-        tooltip: 'Alertas que terminaron en error (ver desglose por motivo).',
+        tooltip: A.cards.failedHint,
         accent: jobs.failed > 0 ? 'orange' : '',
       },
       {
-        label: 'Tasa de éxito',
+        label: A.cards.successRate,
         value: successRate === null ? '—' : `${successRate.toFixed(0)}%`,
-        tooltip: 'Exitosas ÷ (exitosas + fallidas) en la ventana.',
+        tooltip: A.cards.successRateHint,
         accent: '',
       },
       {
-        label: 'Duración prom.',
+        label: A.cards.avgDuration,
         value: formatMs(jobs.avg_duration_ms),
-        tooltip: 'Duración media de las alertas generadas con éxito.',
+        tooltip: A.cards.avgDurationHint,
         accent: '',
       },
       {
-        label: 'Duración p95',
+        label: A.cards.p95Duration,
         value: formatMs(jobs.p95_duration_ms),
-        tooltip: 'Percentil 95 de la duración de las alertas exitosas.',
+        tooltip: A.cards.p95DurationHint,
         accent: '',
       },
       {
-        label: 'Workers',
+        label: A.cards.workers,
         value: String(processor.workers),
-        tooltip: 'Workers activos del procesador (último muestreo).',
+        tooltip: A.cards.workersHint,
         accent: '',
       },
       {
-        label: 'Pendientes',
+        label: A.cards.pending,
         value: String(processor.pending_alerts),
-        tooltip: 'Avisos generados que aún no se sincronizaron a la tabla activa.',
+        tooltip: A.cards.pendingHint,
         accent: '',
       },
     ];
@@ -236,12 +237,12 @@ export class AlertsDashboardComponent {
     buildTable<FailureRow>(
       [
         {
-          header: { key: 'motivo', label: 'Motivo', align: 'left', sortable: true },
+          header: { key: 'motivo', label: A.columns.reason, align: 'left', sortable: true },
           cell: (r) => textCell(r.label),
           sortValue: (r) => r.label,
         },
         {
-          header: { key: 'cantidad', label: 'Cantidad', align: 'right', sortable: true },
+          header: { key: 'cantidad', label: A.columns.count, align: 'right', sortable: true },
           cell: (r) => textCell(String(r.count)),
           sortValue: (r) => r.count,
         },
@@ -255,21 +256,21 @@ export class AlertsDashboardComponent {
     buildTable<AlertJobMetric>(
       [
         {
-          header: { key: 'hora', label: 'Hora', align: 'left', sortable: true },
+          header: { key: 'hora', label: A.columns.time, align: 'left', sortable: true },
           cell: (j) => textCell(fmtTime(j.finished_at)),
           sortValue: (j) => Date.parse(j.finished_at),
         },
         {
-          header: { key: 'fenomeno', label: 'Fenómeno', align: 'left', sortable: true },
+          header: { key: 'fenomeno', label: A.columns.phenomenon, align: 'left', sortable: true },
           cell: (j) => textCell(this.phenomenonLabel(j.phenomenon_code)),
           sortValue: (j) => j.phenomenon_code,
         },
         {
-          header: { key: 'resultado', label: 'Resultado', align: 'left', sortable: true },
+          header: { key: 'resultado', label: A.columns.outcome, align: 'left', sortable: true },
           cell: (j) =>
             pillCell(
               j.outcome === 'done' ? 'success' : 'error',
-              j.outcome === 'done' ? 'OK' : 'Falló',
+              j.outcome === 'done' ? AJ.ok : AJ.failed,
               undefined,
               // Hover the failed pill to read the full message without opening the dialog.
               j.outcome === 'failed' ? (j.error_message ?? undefined) : undefined,
@@ -277,12 +278,12 @@ export class AlertsDashboardComponent {
           sortValue: (j) => j.outcome,
         },
         {
-          header: { key: 'deptos', label: 'Deptos.', align: 'right', sortable: true },
+          header: { key: 'deptos', label: A.columns.departments, align: 'right', sortable: true },
           cell: (j) => textCell(j.affected_departments?.toString() ?? '—'),
           sortValue: (j) => j.affected_departments ?? -1,
         },
         {
-          header: { key: 'duracion', label: 'Duración', align: 'right', sortable: true },
+          header: { key: 'duracion', label: A.columns.duration, align: 'right', sortable: true },
           cell: (j) => textCell(this.formatDuration(j.duration_ms)),
           sortValue: (j) => j.duration_ms ?? -1,
         },
@@ -299,8 +300,8 @@ export class AlertsDashboardComponent {
       return null;
     }
     const lineRows = rows.flatMap((p) => [
-      { bucket: p.bucket, job_type: 'Exitosas', count: p.done },
-      { bucket: p.bucket, job_type: 'Fallidas', count: p.failed },
+      { bucket: p.bucket, job_type: A.series.success, count: p.done },
+      { bucket: p.bucket, job_type: A.series.failed, count: p.failed },
     ]);
     const utc = this.timezone.mode() === TIMEZONE_MODES.UTC;
     return buildLineChart(
@@ -338,10 +339,10 @@ export class AlertsDashboardComponent {
       return [];
     }
     return [
-      { label: 'Intersección', value: formatMs(j.avg_intersection_ms) },
-      { label: 'Filtrado deptos.', value: formatMs(j.avg_filter_ms) },
-      { label: 'Render (GIF)', value: formatMs(j.avg_render_ms) },
-      { label: 'Guardado', value: formatMs(j.avg_persist_ms) },
+      { label: AJ.rows.intersection, value: formatMs(j.avg_intersection_ms) },
+      { label: AJ.rows.departmentFilter, value: formatMs(j.avg_filter_ms) },
+      { label: AJ.rows.render, value: formatMs(j.avg_render_ms) },
+      { label: AJ.rows.persist, value: formatMs(j.avg_persist_ms) },
     ];
   });
 
@@ -354,12 +355,12 @@ export class AlertsDashboardComponent {
 
   /** Custom timeline tooltip (avoids the processing default's worker line). */
   readonly timelineTooltip = (rj: RecentJob): string => {
-    const outcome = rj.outcome === 'success' ? 'OK' : 'Falló';
+    const outcome = rj.outcome === 'success' ? AJ.ok : AJ.failed;
     const dur = rj.total_s == null ? '—' : `${rj.total_s.toFixed(1)} s`;
     return (
       `<div style="font-weight:600;margin-bottom:2px">${rj.product_label ?? rj.job_type}</div>` +
-      `<div>Duración: ${dur}</div>` +
-      `<div>Resultado: ${outcome}</div>`
+      `<div>${A.tooltip.duration(dur)}</div>` +
+      `<div>${A.tooltip.outcome(outcome)}</div>`
     );
   };
 
@@ -505,7 +506,7 @@ export class AlertsDashboardComponent {
       processor_id: null,
       band_id: null,
       job_type: String(j.phenomenon_code),
-      product_label: name || `Fenómeno ${j.phenomenon_code}`,
+      product_label: name || A.phenomenonFallback(j.phenomenon_code),
       image_timestamp: null,
       outcome: j.outcome === 'done' ? 'success' : 'error',
       worker_host: null,
@@ -543,9 +544,9 @@ export class AlertsDashboardComponent {
   private describeError(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       return error.status === 0
-        ? 'el servicio no responde'
-        : `el servicio respondió HTTP ${error.status}`;
+        ? COMMON_TEXTS.errors.serviceDown
+        : COMMON_TEXTS.errors.httpStatus(error.status);
     }
-    return error instanceof Error ? error.message : 'error desconocido';
+    return error instanceof Error ? error.message : COMMON_TEXTS.errors.unknown;
   }
 }

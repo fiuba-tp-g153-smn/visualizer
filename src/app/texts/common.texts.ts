@@ -14,6 +14,11 @@ export const COMMON_TEXTS = {
     hide: 'Ocultar',
     openInNewTab: 'Abrir en pestaña nueva',
   },
+  errors: {
+    serviceDown: 'el servicio no responde',
+    httpStatus: (status: number): string => `el servicio respondió HTTP ${status}`,
+    unknown: 'error desconocido',
+  },
   aria: {
     loading: 'Cargando',
     closePanel: 'Cerrar panel',

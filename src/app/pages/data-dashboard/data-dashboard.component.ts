@@ -49,6 +49,7 @@ import {
   TIMEZONE_MODES,
   TimezoneSettingsService,
 } from '../../services/settings/timezone-settings.service';
+import { COMMON_TEXTS, DASHBOARDS_TEXTS } from '../../texts';
 
 type WindowHours = 24 | 168 | 0;
 type RefreshSeconds = 0 | 10 | 30 | 60;
@@ -102,58 +103,14 @@ function tipRow(label: string, value: string): string {
   );
 }
 
-/** Resúmenes con viñetas para los tooltips de cada panel (clase `panel__tooltip`
- *  respeta los saltos de línea). Clave: qué muestra · de dónde · cada cuánto. */
-const PANEL_TIPS = {
-  summary:
-    'Estado de un vistazo.\n' +
-    '• Memoria y claves: colector de Redis, ~15 min\n' +
-    '• Sync (ciclos, fallos): hash sync:status, ~60 s',
-  syncStatus:
-    'Último ciclo de cada dominio (tabla sync_cycles).\n' +
-    '• Tiles S3→Redis (sat/radar/ECMWF/WRF): ~60 s\n' +
-    '• Estaciones (SMN): ~5 min · Mapa base: ~7 días\n' +
-    '• "descargado" = ítems nuevos del ciclo',
-  memory:
-    'Qué está llenando Redis.\n' +
-    '• SCAN + MEMORY USAGE por prefijo de clave, ~15 min\n' +
-    '• Lo llenan tiles (~60 s) y estaciones (~5 min)\n' +
-    '• Mapa base (backup_only): escribe S3, ≈ 0 en Redis',
-  memoryHistory:
-    'Crecimiento de memoria por dominio (área apilada).\n' +
-    '• Tabla redis_memory_samples\n' +
-    '• 1 punto cada ~15 min · retención 14 días\n' +
-    '• Sigue la ventana e intervalo',
-  throughput:
-    'Ítems descargados por intervalo y dominio.\n' +
-    '• Agrega sync_cycles por bucket (hora/día)\n' +
-    '• Tiles S3→Redis, obs. del SMN, tiles de mapa base',
-  throughput10:
-    'Ítems descargados en buckets de 10 minutos (ventana corta).\n' +
-    '• "Total" agrega todos los dominios; "Por tipo" abre uno por dominio\n' +
-    '• Rango propio (1–12 h o personalizado), independiente de la ventana global',
-  errors:
-    'Errores por intervalo y dominio.\n' +
-    '• Agrega sync_cycles por bucket\n' +
-    '• Picos sostenidos = problema persistente (S3, SMN, providers)',
-  info:
-    'Redis INFO + DBSIZE, ~15 min.\n' +
-    '• Fragmentación = RSS ÷ used_memory\n' +
-    '• Hit rate = hits ÷ (hits + misses)\n' +
-    '• Desalojadas > 0 = descartando datos por memoria',
-  cycles:
-    'Filas crudas de sync_cycles (más nuevas primero, máx. 100).\n' +
-    '• El detalle sin agregar detrás de throughput y errores',
-  timeline:
-    'Cada ciclo de sync como una barra (inicio → fin), apilado en filas sin solaparse.\n' +
-    '• Color por dominio (toggle a resultado); las filas son concurrencia, no workers\n' +
-    '• Rango 6h…7d + "todo" con carga perezosa al desplazarte; rueda/arrastre = zoom\n' +
-    '• Se carga al cambiar el rango (no en el auto-refresh, para no perder el zoom)',
-} as const;
+/** Bulleted panel tooltips (`panel__tooltip` keeps the line breaks). */
+const PANEL_TIPS = DASHBOARDS_TEXTS.cache.tips;
+const TIP = DASHBOARDS_TEXTS.cache.cycleTip;
+const OUTCOMES = DASHBOARDS_TEXTS.data.outcomes;
 
 /** "muestreado hace …" para un timestamp ISO, o '' si no hay. */
 function stampAgo(iso: string | null | undefined): string {
-  return iso ? 'muestreado ' + ago(iso) : '';
+  return iso ? DASHBOARDS_TEXTS.cache.sampled(ago(iso)) : '';
 }
 
 // Cotas del rango personalizado del throughput de sync a 10 min (en horas).
@@ -197,6 +154,8 @@ const SYNC_TP_CUSTOM_DEFAULT_HOURS = 12;
   styleUrl: './data-dashboard.component.scss',
 })
 export class DataDashboardComponent {
+  protected readonly t = DASHBOARDS_TEXTS.cache;
+  protected readonly page = DASHBOARDS_TEXTS.page;
   private readonly metrics = inject(DataMetricsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly timezone = inject(TimezoneSettingsService);
@@ -285,12 +244,12 @@ export class DataDashboardComponent {
     const c = this.cycleByKey().get(`${job.job_type}|${job.started_at}|${job.finished_at}`);
     const utc = this.utc;
     const rows =
-      tipRow('Inicio', clock(job.started_at, utc)) +
-      tipRow('Fin', clock(job.finished_at, utc)) +
-      tipRow('Duración', secs(job.total_s)) +
-      tipRow('Descargados', c ? c.downloaded.toLocaleString('es-AR') : '—') +
-      tipRow('Errores', c ? String(c.errors) : '—') +
-      tipRow('Resultado', c && c.errors > 0 ? 'error' : 'ok');
+      tipRow(TIP.start, clock(job.started_at, utc)) +
+      tipRow(TIP.end, clock(job.finished_at, utc)) +
+      tipRow(TIP.duration, secs(job.total_s)) +
+      tipRow(TIP.downloaded, c ? c.downloaded.toLocaleString('es-AR') : '—') +
+      tipRow(TIP.errors, c ? String(c.errors) : '—') +
+      tipRow(TIP.outcome, c && c.errors > 0 ? OUTCOMES.error : OUTCOMES.ok);
     return `<div class="apx-tip"><div class="apx-tip__title">${job.product_label}</div>${rows}</div>`;
   };
 
@@ -554,9 +513,9 @@ export class DataDashboardComponent {
   private describeError(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       return error.status === 0
-        ? 'el servicio no responde'
-        : `el servicio respondió HTTP ${error.status}`;
+        ? COMMON_TEXTS.errors.serviceDown
+        : COMMON_TEXTS.errors.httpStatus(error.status);
     }
-    return error instanceof Error ? error.message : 'error desconocido';
+    return error instanceof Error ? error.message : COMMON_TEXTS.errors.unknown;
   }
 }

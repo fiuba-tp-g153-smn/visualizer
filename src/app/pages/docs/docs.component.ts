@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinnerComponent } from '../../components/shared/loading-spinner/loading-spinner';
 import { docsPageUrl, docsShellUrl } from './docs-url';
+import { DASHBOARDS_TEXTS } from '../../texts';
 
 /**
  * MkDocs Material publishes `document$` on its own window: it emits once per
@@ -31,10 +32,15 @@ interface MaterialWindow extends Window {
   template: `
     <div class="docs-container">
       <div class="docs-header">
-        <button mat-icon-button (click)="goBack()" aria-label="Volver" matTooltip="Ir al mapa">
+        <button
+          mat-icon-button
+          (click)="goBack()"
+          [attr.aria-label]="status.back"
+          [matTooltip]="status.goToMap"
+        >
           <mat-icon>arrow_back</mat-icon>
         </button>
-        <span class="docs-title">Documentación</span>
+        <span class="docs-title">{{ t.title }}</span>
       </div>
 
       <div class="iframe-wrapper">
@@ -44,12 +50,12 @@ interface MaterialWindow extends Window {
           [src]="safeUrl"
           (load)="onIframeLoad()"
           frameborder="0"
-          title="Documentación"
+          [title]="t.title"
         ></iframe>
 
         <div class="loading-overlay" *ngIf="isLoading">
           <app-loading-spinner [diameter]="50" />
-          <p>Cargando documentación...</p>
+          <p>{{ t.loading }}</p>
         </div>
       </div>
     </div>
@@ -57,6 +63,8 @@ interface MaterialWindow extends Window {
   styleUrl: './docs.component.scss',
 })
 export class DocsComponent implements OnInit, OnDestroy {
+  protected readonly t = DASHBOARDS_TEXTS.docs;
+  protected readonly status = DASHBOARDS_TEXTS.status;
   safeUrl: SafeResourceUrl | null = null;
   isLoading = true;
 

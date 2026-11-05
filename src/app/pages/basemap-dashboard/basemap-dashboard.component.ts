@@ -19,16 +19,12 @@ import { MetricPanelComponent } from '../../components/dashboard/metric-panel/me
 import type { BasemapProviderStatus } from '../../models/metrics/data-metrics.models';
 import { DataMetricsService } from '../../services/metrics/data-metrics.service';
 import { ago } from '../../services/metrics/metrics-format.util';
+import { COMMON_TEXTS, DASHBOARDS_TEXTS } from '../../texts';
 
 type RefreshSeconds = 0 | 10 | 30 | 60;
 
 /** Tooltip del panel del scraper de mapa base. */
-const BASEMAP_TIP =
-  'Estado en vivo del scraper de mapa base (SQLite propio).\n' +
-  '• respaldado · respaldando (cursor z·índice) · con errores\n' +
-  '• respaldado % y fallidos = del último barrido (ok / intentos)\n' +
-  '• "con errores" = pausado: la tasa de error superó el umbral\n' +
-  '• Barrido completo cada ~7 días (backup_only → S3)';
+const BASEMAP_TIP = DASHBOARDS_TEXTS.basemap.panelTip;
 
 /**
  * Panel del scraper de respaldo de mapa base (pestaña "Mapas base" del shell
@@ -58,6 +54,8 @@ const BASEMAP_TIP =
   styleUrl: './basemap-dashboard.component.scss',
 })
 export class BasemapDashboardComponent {
+  protected readonly t = DASHBOARDS_TEXTS.basemap;
+  protected readonly page = DASHBOARDS_TEXTS.page;
   private readonly metrics = inject(DataMetricsService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -94,7 +92,7 @@ export class BasemapDashboardComponent {
       return '';
     }
     const latest = times.reduce((m, t) => (t > m ? t : m), times[0]);
-    return 'último barrido ' + ago(new Date(latest * 1000).toISOString());
+    return this.t.lastSweep(ago(new Date(latest * 1000).toISOString()));
   });
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
@@ -150,9 +148,9 @@ export class BasemapDashboardComponent {
   private describeError(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       return error.status === 0
-        ? 'el servicio no responde'
-        : `el servicio respondió HTTP ${error.status}`;
+        ? COMMON_TEXTS.errors.serviceDown
+        : COMMON_TEXTS.errors.httpStatus(error.status);
     }
-    return error instanceof Error ? error.message : 'error desconocido';
+    return error instanceof Error ? error.message : COMMON_TEXTS.errors.unknown;
   }
 }

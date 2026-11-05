@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { DASHBOARDS_TEXTS } from '../../texts';
 
 /**
  * Shell de la ruta `/status`: una barra superior (volver + tres pestañas) y, en
@@ -29,6 +30,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
   styleUrl: './status.component.scss',
 })
 export class StatusComponent {
+  protected readonly t = DASHBOARDS_TEXTS.status;
   private readonly router = inject(Router);
 
   goBack(): void {

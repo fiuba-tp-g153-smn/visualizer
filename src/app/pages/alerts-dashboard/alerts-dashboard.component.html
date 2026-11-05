@@ -6,39 +6,29 @@
         [class.dash__status--up]="online() === true"
         [class.dash__status--down]="online() === false"
         [matTooltip]="
-          online() === false
-            ? 'Servicio de alertas sin conexión'
-            : online() === true
-              ? 'Servicio de alertas operativo'
-              : 'Conectando…'
+          online() === false ? t.offline : online() === true ? t.online : page.connecting
         "
       ></span>
-      <span class="dash__title">Estado de generación de alertas (alerts service)</span>
+      <span class="dash__title">{{ t.title }}</span>
     </span>
     <span class="dash__spacer"></span>
 
     <label class="dash__ctl">
-      <span
-        class="dash__ctl-title"
-        matTooltipClass="nav-tip"
-        matTooltip="Ventana de tiempo de los datos mostrados (24h, 7 días o todo el histórico)."
-        >ventana</span
-      >
+      <span class="dash__ctl-title" matTooltipClass="nav-tip" [matTooltip]="t.windowHint">{{
+        page.window
+      }}</span>
       <select [value]="windowHours()" (change)="onWindowChange($event)">
         <option value="24">24h</option>
         <option value="168">7d</option>
-        <option value="0">todo</option>
+        <option value="0">{{ page.all }}</option>
       </select>
     </label>
     <label class="dash__ctl">
-      <span
-        class="dash__ctl-title"
-        matTooltipClass="nav-tip"
-        matTooltip="Frecuencia del refresco automático. 'no' lo desactiva."
-        >Actualización cada</span
-      >
+      <span class="dash__ctl-title" matTooltipClass="nav-tip" [matTooltip]="page.refreshHint">{{
+        page.refreshEvery
+      }}</span>
       <select [value]="refreshSecs()" (change)="onRefreshChange($event)">
-        <option value="0">no</option>
+        <option value="0">{{ page.off }}</option>
         <option value="10">10s</option>
         <option value="30">30s</option>
         <option value="60">60s</option>
@@ -50,7 +40,7 @@
         class="dash__refresh"
         (click)="refreshNow()"
         [disabled]="loading()"
-        matTooltip="Refresca los datos ahora."
+        [matTooltip]="page.refreshNowHint"
         matTooltipClass="nav-tip"
       >
         <span class="dash__refresh-glyph">
@@ -60,9 +50,9 @@
             <mat-icon>refresh</mat-icon>
           }
         </span>
-        Actualizar
+        {{ page.refresh }}
       </button>
-      <span class="dash__updated">Actualizado {{ updatedAt() }}</span>
+      <span class="dash__updated">{{ page.updated(updatedAt()) }}</span>
     </div>
   </header>
 
@@ -70,15 +60,15 @@
     @if (errorMsg(); as err) {
       <div class="dash__error" role="alert">
         <mat-icon>error</mat-icon>
-        <span>No se pudieron actualizar las métricas: {{ err }}</span>
-        <button mat-button (click)="refreshNow()" [disabled]="loading()">Reintentar</button>
+        <span>{{ page.metricsError(err) }}</span>
+        <button mat-button (click)="refreshNow()" [disabled]="loading()">{{ page.retry }}</button>
       </div>
     }
 
     @if (firstLoad()) {
       <div class="dash__loading">
         <mat-spinner diameter="40" />
-        <span>Cargando métricas…</span>
+        <span>{{ page.loadingMetrics }}</span>
       </div>
     } @else {
       <div
@@ -87,20 +77,13 @@
         [attr.aria-busy]="reloading()"
       >
         <!-- 2 · Resumen -->
-        <app-metric-panel
-          heading="Resumen"
-          tip="Totales de generación de avisos y salud del procesador en la ventana."
-        >
+        <app-metric-panel [heading]="t.summary" [tip]="t.summaryTip">
           <app-stat-cards [cards]="cards()" />
         </app-metric-panel>
 
         <!-- 3 · Tiempo promedio por etapa + Línea de tiempo de trabajos (lado a lado) -->
         <div class="dash__row">
-          <app-metric-panel
-            class="dash__row-side"
-            heading="Tiempo promedio por etapa"
-            tip="Promedio de cada etapa de generación (intersección, filtrado, render, guardado) en la ventana."
-          >
+          <app-metric-panel class="dash__row-side" [heading]="t.avgStages" [tip]="t.avgStagesTip">
             @if (hasAvgStages()) {
               <div class="stages">
                 <div class="stages__chart">
@@ -118,17 +101,13 @@
                 </table>
               </div>
             } @else {
-              <p class="tbl__empty">Sin datos de etapas en la ventana.</p>
+              <p class="tbl__empty">{{ t.noStages }}</p>
             }
           </app-metric-panel>
 
-          <app-metric-panel
-            class="dash__row-grow"
-            heading="Línea de tiempo de trabajos"
-            tip="Cada alerta es una barra sobre su duración. Rueda para zoom, arrastrá para seleccionar un rango, clic en una barra para el desglose por etapa."
-          >
+          <app-metric-panel class="dash__row-grow" [heading]="t.timeline" [tip]="t.timelineTip">
             <label panelActions class="dash__ctl">
-              rango
+              {{ page.range }}
               <select [value]="timelineHours()" (change)="onTimelineRangeChange($event)">
                 <option value="24">24h</option>
                 <option value="168">7d</option>
@@ -139,19 +118,16 @@
               [jobs]="timelineRecentJobs()"
               [reloadKey]="timelineReloadKey()"
               [tooltip]="timelineTooltip"
-              typeLabel="fenómeno"
+              [typeLabel]="t.timelineTypeLabel"
               (jobClick)="onTimelineJobClick($event)"
             />
           </app-metric-panel>
         </div>
 
         <!-- 4 · Actividad por hora -->
-        <app-metric-panel
-          heading="Actividad"
-          tip="Alertas generadas con éxito vs. fallidas por intervalo de tiempo."
-        >
+        <app-metric-panel [heading]="t.activity" [tip]="t.activityTip">
           <label panelActions class="dash__ctl">
-            rango
+            {{ page.range }}
             <select [value]="activityHours()" (change)="onActivityRangeChange($event)">
               <option value="24">24h</option>
               <option value="168">7d</option>
@@ -162,35 +138,29 @@
             @if (activityChart(); as opts) {
               <app-metric-chart [options]="opts" />
             } @else {
-              <div class="dash__note">Sin actividad en el rango.</div>
+              <div class="dash__note">{{ t.noActivity }}</div>
             }
           </div>
         </app-metric-panel>
 
         <!-- 5 · Fallos por motivo -->
-        <app-metric-panel
-          heading="Fallos por motivo"
-          tip="Desglose de los trabajos fallidos por código de error. Clic en un encabezado para ordenar."
-        >
+        <app-metric-panel [heading]="t.failures" [tip]="t.failuresTip">
           <app-sortable-table
             [headers]="failuresTable().headers"
             [rows]="failuresTable().tableRows"
             [initialSort]="failuresSort"
-            emptyText="Sin fallos en la ventana."
+            [emptyText]="t.noFailures"
           />
         </app-metric-panel>
 
         <!-- 6 · Trabajos recientes -->
-        <app-metric-panel
-          heading="Trabajos recientes"
-          tip="Últimas alertas generadas. Clic en un encabezado para ordenar, o en una fila para ver el desglose por etapa."
-        >
+        <app-metric-panel [heading]="t.recent" [tip]="t.recentTip">
           <div class="tbl-wrap">
             <app-sortable-table
               [headers]="jobsTable().headers"
               [rows]="jobsTable().tableRows"
               [initialSort]="jobsSort"
-              emptyText="Sin trabajos en la ventana."
+              [emptyText]="t.noJobs"
               (rowClick)="onJobRowClick($event)"
             />
           </div>
@@ -200,7 +170,7 @@
       @if (reloading()) {
         <div class="dash__overlay" role="status" aria-live="polite">
           <mat-spinner diameter="40" />
-          <span>Cargando métricas…</span>
+          <span>{{ page.loadingMetrics }}</span>
         </div>
       }
     }
