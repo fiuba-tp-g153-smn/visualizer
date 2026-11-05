@@ -1,9 +1,11 @@
 export { COMMON_TEXTS } from './common.texts';
 export { ALERTS_TEXTS } from './alerts.texts';
 export { DASHBOARDS_TEXTS } from './dashboards.texts';
+export { LAYER_NAMES } from './layer-names.texts';
 export { LAYERS_TEXTS } from './layers.texts';
 export { MAP_TEXTS } from './map.texts';
 export { METRICS_TEXTS } from './metrics.texts';
+export { SCALE_NAMES } from './scales.texts';
 export { SEARCH_TEXTS } from './search.texts';
 export { SETTINGS_TEXTS } from './settings.texts';
 export { STATIONS_TEXTS } from './stations.texts';

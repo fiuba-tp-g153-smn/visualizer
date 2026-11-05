@@ -15,6 +15,7 @@ import {
   VISIBILITY_SCALE,
   WIND_SPEED_SCALE,
 } from './scales.config';
+import { LAYER_NAMES } from '../../../texts';
 
 export const WEATHER_STATION_PANE = 'weather-station-pane';
 // Fallback z-index; MapLayersService sets this dynamically per active-layer order.
@@ -41,57 +42,57 @@ function createStationLayer(
 
 export const WEATHER_STATIONS_SUBGROUP: LayerSubgroup = {
   id: 'weather-stations-current',
-  name: 'Estaciones convencionales',
-  description: 'Variables actuales de las estaciones meteorológicas convencionales',
+  name: LAYER_NAMES.weatherStations.weatherStationsCurrent.name,
+  description: LAYER_NAMES.weatherStations.weatherStationsCurrent.description,
   expanded: false,
   selectionMode: LayerSelectionMode.SINGLE,
   layers: [
     createStationLayer(
       'weather-stations/temperature',
-      'Temperatura',
-      'Temperatura observada en estaciones meteorológicas',
+      LAYER_NAMES.weatherStations.temperature.name,
+      LAYER_NAMES.weatherStations.temperature.description,
       WeatherStationVariable.TEMPERATURE,
       TEMPERATURE_SCALE,
     ),
     createStationLayer(
       'weather-stations/dew-point',
-      'Punto de rocío',
-      'Punto de rocío observado en estaciones meteorológicas',
+      LAYER_NAMES.weatherStations.dewPoint.name,
+      LAYER_NAMES.weatherStations.dewPoint.description,
       WeatherStationVariable.DEW_POINT,
       TEMPERATURE_SCALE,
     ),
     createStationLayer(
       'weather-stations/feels-like',
-      'Sensación térmica',
-      'Sensación térmica observada en estaciones meteorológicas',
+      LAYER_NAMES.weatherStations.feelsLike.name,
+      LAYER_NAMES.weatherStations.feelsLike.description,
       WeatherStationVariable.FEELS_LIKE,
       FEELS_LIKE_SCALE,
     ),
     createStationLayer(
       'weather-stations/humidity',
-      'Humedad',
-      'Humedad relativa observada en estaciones meteorológicas',
+      LAYER_NAMES.weatherStations.humidity.name,
+      LAYER_NAMES.weatherStations.humidity.description,
       WeatherStationVariable.HUMIDITY,
       HUMIDITY_SCALE,
     ),
     createStationLayer(
       'weather-stations/pressure',
-      'Presión',
-      'Presión atmosférica observada en estaciones meteorológicas',
+      LAYER_NAMES.weatherStations.pressure.name,
+      LAYER_NAMES.weatherStations.pressure.description,
       WeatherStationVariable.PRESSURE,
       PRESSURE_SCALE,
     ),
     createStationLayer(
       'weather-stations/visibility',
-      'Visibilidad',
-      'Visibilidad observada en estaciones meteorológicas',
+      LAYER_NAMES.weatherStations.visibility.name,
+      LAYER_NAMES.weatherStations.visibility.description,
       WeatherStationVariable.VISIBILITY,
       VISIBILITY_SCALE,
     ),
     createStationLayer(
       'weather-stations/wind-speed',
-      'Viento',
-      'Intensidad del viento observada en estaciones meteorológicas',
+      LAYER_NAMES.weatherStations.windSpeed.name,
+      LAYER_NAMES.weatherStations.windSpeed.description,
       WeatherStationVariable.WIND_SPEED,
       WIND_SPEED_SCALE,
     ),

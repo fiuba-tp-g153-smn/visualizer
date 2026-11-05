@@ -3,6 +3,7 @@ import { LayerSubgroup } from '../../../models/layers/groups.models';
 import { buildEcmwfMslpGeojsonUrl, buildEcmwfMslpPointQueryUrl } from '../../backend.config';
 import { ECMWF_TP_SCALE } from './scales.config';
 import { ISOBAR_TEXTPATH_OPTIONS, isobarLabelFor, isobarStyleFor } from './mslp-isobar-style';
+import { LAYER_NAMES } from '../../../texts';
 
 /**
  * Default values for the ECMWF Total Precipitation layer.
@@ -23,17 +24,16 @@ const ECMWF_TP_DEFAULTS = {
 
 export const ECMWF_SUBGROUP: LayerSubgroup = {
   id: 'ecmwf-ifs',
-  name: 'ECMWF',
-  description: 'Modelo numérico europeo (ECMWF)',
+  name: LAYER_NAMES.ecmwf.ecmwfIfs.name,
+  description: LAYER_NAMES.ecmwf.ecmwfIfs.description,
   expanded: true,
   layers: [
     {
       ...ECMWF_TP_DEFAULTS,
       id: 'ecmwf-ifs/total-precipitation',
       variable: 'tp',
-      name: 'Precipitación total',
-      description:
-        'Precipitación total acumulada en las 6 horas previas — modelo ECMWF',
+      name: LAYER_NAMES.ecmwf.ecmwfIfsTotalPrecipitation.name,
+      description: LAYER_NAMES.ecmwf.ecmwfIfsTotalPrecipitation.description,
       scale: ECMWF_TP_SCALE,
       // MSLP isobars are rendered as a secondary vector overlay over TP raster.
       // Always tied to TP visually: same toggle, same timeline, same forecast run.
@@ -43,7 +43,7 @@ export const ECMWF_SUBGROUP: LayerSubgroup = {
         buildPointQueryUrl: buildEcmwfMslpPointQueryUrl,
         pointQuery: {
           variable: 'pressure_hpa',
-          name: 'Presión a nivel del mar',
+          name: LAYER_NAMES.ecmwf.presionANivelDelMar.name,
           unit: 'hPa',
           scaleRange: { min: 950, max: 1050, totalSteps: 100 },
         },

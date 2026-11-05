@@ -1,10 +1,11 @@
 import { WEATHER_STATION_UNITS, TEMPERATURE_UNITS } from '../../../constants';
 import { buildScaleFromThresholds } from '../scale-builders';
+import { SCALE_NAMES } from '../../../texts';
 
 // Temperatura: -45 °C a 50 °C (stops cada 10 °C, en Kelvin; piso extendido a -45).
 export const TEMPERATURE_SCALE = buildScaleFromThresholds({
   unit: TEMPERATURE_UNITS.KELVIN,
-  scaleDisplayName: 'Temperatura',
+  scaleDisplayName: SCALE_NAMES.temperature,
   stops: [
     { value: 228.15, color: '#021026' }, // -45 °C (piso, azul casi negro)
     { value: 233.15, color: '#041a3a' }, // -40
@@ -29,7 +30,7 @@ export const TEMPERATURE_SCALE = buildScaleFromThresholds({
 // Rango extendido para capturar wind chill y heat index extremos.
 export const FEELS_LIKE_SCALE = buildScaleFromThresholds({
   unit: TEMPERATURE_UNITS.KELVIN,
-  scaleDisplayName: 'Sensacion termica',
+  scaleDisplayName: SCALE_NAMES.feelsLike,
   stops: [
     { value: 223.15, color: '#010f24' },
     { value: 233.15, color: '#041a3a' },
@@ -51,7 +52,7 @@ export const FEELS_LIKE_SCALE = buildScaleFromThresholds({
 // Humedad: 0–100 % (stops cada 25 %).
 export const HUMIDITY_SCALE = buildScaleFromThresholds({
   unit: WEATHER_STATION_UNITS.HUMIDITY,
-  scaleDisplayName: 'Humedad relativa',
+  scaleDisplayName: SCALE_NAMES.humidity,
   stops: [
     { value: 0, color: '#f7fcf0' },
     { value: 25, color: '#c7e9c0' },
@@ -68,7 +69,7 @@ export const HUMIDITY_SCALE = buildScaleFromThresholds({
 // 10 hPa en la banda sinóptica 980–1020 y gruesos (~50–100 hPa) por debajo.
 export const PRESSURE_SCALE = buildScaleFromThresholds({
   unit: WEATHER_STATION_UNITS.PRESSURE,
-  scaleDisplayName: 'Presion',
+  scaleDisplayName: SCALE_NAMES.pressure,
   stops: [
     { value: 600, color: '#2c003e' },
     { value: 700, color: '#3b1466' },
@@ -93,7 +94,7 @@ export const PRESSURE_SCALE = buildScaleFromThresholds({
 // Visibilidad: 0–50 km (6 stops cada 10 km)
 export const VISIBILITY_SCALE = buildScaleFromThresholds({
   unit: WEATHER_STATION_UNITS.VISIBILITY,
-  scaleDisplayName: 'Visibilidad',
+  scaleDisplayName: SCALE_NAMES.visibility,
   stops: [
     { value: 0, color: '#5e4fa2' },
     { value: 10, color: '#3288bd' },
@@ -113,7 +114,7 @@ export const VISIBILITY_SCALE = buildScaleFromThresholds({
 // tocar estos valores.
 export const WIND_SPEED_SCALE = buildScaleFromThresholds({
   unit: WEATHER_STATION_UNITS.WIND_SPEED,
-  scaleDisplayName: 'Velocidad del viento',
+  scaleDisplayName: SCALE_NAMES.windSpeed,
   stops: [
     { value: 0, color: '#1a9850' },
     { value: 15, color: '#66bd63' },

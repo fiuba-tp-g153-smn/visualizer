@@ -1,6 +1,7 @@
 import { RADAR_UNITS, ScaleToolGroupKey } from '../../constants';
 import { LayerScale, ScaleType } from '../../models';
 import { buildScaleFromThresholds } from './scale-builders';
+import { SCALE_NAMES } from '../../texts';
 
 const DBZH_MIN = -18;
 const DBZH_MAX = 76.5;
@@ -31,7 +32,7 @@ const DBZH_BASE_SCALE_CONFIG = {
 export const SHARED_DBZH_SCALE: LayerScale = buildScaleFromThresholds({
   ...DBZH_BASE_SCALE_CONFIG,
   unit: RADAR_UNITS.REFLECTIVITY,
-  scaleDisplayName: 'Reflectividad',
+  scaleDisplayName: SCALE_NAMES.sharedDbzh,
   scaleRoutingKey: ScaleToolGroupKey.SHARED_REFLECTIVITY_DBZ,
   stops: [
     { value: -18, color: '#3C426D' },

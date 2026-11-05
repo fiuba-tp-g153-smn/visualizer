@@ -1,6 +1,7 @@
 import { LayerType, LayerCategory, ABIGoesTileLayer } from '../../../../models';
 import { ActiveLayerGroupId, LayerSubgroup } from '../../../../models/layers/groups.models';
 import { ABI_CH13_SCALE, ABI_CH2_SCALE, ABI_CH9_SCALE } from './scales.config';
+import { LAYER_NAMES } from '../../../../texts';
 
 /**
  * Valores por defecto para capas ABI
@@ -28,8 +29,8 @@ const idPrefix = 'goes19/abi';
  */
 export const ABI_SUBGROUP: LayerSubgroup = {
   id: 'abi',
-  name: 'ABI',
-  description: 'Advanced Baseline Imager',
+  name: LAYER_NAMES.goesAbi.abi.name,
+  description: LAYER_NAMES.goesAbi.abi.description,
   expanded: true,
   layers: [
     {
@@ -37,24 +38,24 @@ export const ABI_SUBGROUP: LayerSubgroup = {
       id: `${idPrefix}/c02`,
       channel: 'c02',
       scale: ABI_CH2_SCALE,
-      name: 'Canal 2',
-      description: 'Banda visible (0.64 μm)',
+      name: LAYER_NAMES.goesAbi.canal2.name,
+      description: LAYER_NAMES.goesAbi.bandaVisible064M.description,
     },
     {
       ...ABI_DEFAULTS,
       id: `${idPrefix}/c09`,
       channel: 'c09',
       scale: ABI_CH9_SCALE,
-      name: 'Canal 9',
-      description: 'Banda de vapor de agua (6.9 μm)',
+      name: LAYER_NAMES.goesAbi.canal9.name,
+      description: LAYER_NAMES.goesAbi.bandaDeVaporDeAgua69M.description,
     },
     {
       ...ABI_DEFAULTS,
       id: `${idPrefix}/c13`,
       channel: 'c13',
       scale: ABI_CH13_SCALE,
-      name: 'Canal 13',
-      description: 'Banda infrarroja (10.3 μm)',
+      name: LAYER_NAMES.goesAbi.canal13.name,
+      description: LAYER_NAMES.goesAbi.bandaInfrarroja103M.description,
     },
   ] as ABIGoesTileLayer[],
 };

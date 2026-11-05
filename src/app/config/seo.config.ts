@@ -1,3 +1,4 @@
+import { COMMON_TEXTS } from '../texts';
 /**
  * SEO / social-sharing metadata.
  *
@@ -12,7 +13,7 @@
 /** Public production origin — also used for absolute og:url / canonical / image URLs. */
 export const SITE_URL = 'https://mapasmn.com';
 
-export const SITE_NAME = 'Visualizador SMN';
+export const SITE_NAME = COMMON_TEXTS.seo.siteName;
 
 /** Shared social preview image (reused SMN logo, 960×851). */
 export const OG_IMAGE = `${SITE_URL}/SMN_Logo_Alta.png`;
@@ -24,20 +25,8 @@ export interface RouteSeo {
   readonly description: string;
 }
 
-export const DEFAULT_SEO: RouteSeo = {
-  title: 'Visualizador SMN — Mapa meteorológico interactivo',
-  description:
-    'Visualizador interactivo del Servicio Meteorológico Nacional: imágenes satelitales GOES-19, radar meteorológico, modelos de pronóstico y estaciones en Argentina.',
-};
+export const DEFAULT_SEO: RouteSeo = COMMON_TEXTS.seo.default;
 
-export const STATUS_SEO: RouteSeo = {
-  title: 'Estado del sistema — Visualizador SMN',
-  description:
-    'Estado operativo del Visualizador SMN: salud del procesamiento de datos, caché de mapas base y disponibilidad de los proveedores de mapas.',
-};
+export const STATUS_SEO: RouteSeo = COMMON_TEXTS.seo.status;
 
-export const DOCS_SEO: RouteSeo = {
-  title: 'Documentación — Visualizador SMN',
-  description:
-    'Documentación del Visualizador SMN: guías de uso, capas disponibles y referencia técnica de la plataforma meteorológica del SMN.',
-};
+export const DOCS_SEO: RouteSeo = COMMON_TEXTS.seo.docs;

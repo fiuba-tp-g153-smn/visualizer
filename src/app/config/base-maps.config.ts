@@ -1,3 +1,4 @@
+import { LAYER_NAMES } from '../texts';
 /**
  * Base map configuration
  *
@@ -76,8 +77,8 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/capabaseargenmap@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
-    name: 'Argenmap',
-    attribution: 'Instituto Geográfico Nacional + OpenStreetMap contributors',
+    name: LAYER_NAMES.baseMaps.argenmap.name,
+    attribution: LAYER_NAMES.baseMaps.argenmap.attribution,
     minZoom: 3,
     maxNativeZoom: 21,
   },
@@ -85,8 +86,8 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_gris@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
-    name: 'Argenmap gris',
-    attribution: 'Instituto Geográfico Nacional',
+    name: LAYER_NAMES.baseMaps.argenmapGris.name,
+    attribution: LAYER_NAMES.baseMaps.argenmapGris.attribution,
     minZoom: 3,
     maxNativeZoom: 21,
   },
@@ -94,8 +95,8 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/argenmap_oscuro@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
-    name: 'Argenmap oscuro',
-    attribution: 'Instituto Geográfico Nacional',
+    name: LAYER_NAMES.baseMaps.argenmapOscuro.name,
+    attribution: LAYER_NAMES.baseMaps.argenmapOscuro.attribution,
     minZoom: 3,
     maxNativeZoom: 21,
   },
@@ -103,8 +104,8 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://wms.ign.gob.ar/geoserver/gwc/service/tms/1.0.0/mapabase_topo@EPSG%3A3857@png/{z}/{x}/{y}.png',
     isTms: true,
-    name: 'Argenmap topográfico',
-    attribution: 'Instituto Geográfico Nacional',
+    name: LAYER_NAMES.baseMaps.argenmapTopografico.name,
+    attribution: LAYER_NAMES.baseMaps.argenmapTopografico.attribution,
     minZoom: 3,
     maxNativeZoom: 21,
   },
@@ -112,8 +113,8 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     isTms: false,
-    name: 'Imágenes satelitales Esri',
-    attribution: 'Tiles © Esri',
+    name: LAYER_NAMES.baseMaps.satellite.name,
+    attribution: LAYER_NAMES.baseMaps.satellite.attribution,
     minZoom: 3,
     maxNativeZoom: 17,
   },
@@ -121,16 +122,16 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}',
     isTms: false,
-    name: 'Mapa topográfico Esri',
-    attribution: 'Tiles © Esri',
+    name: LAYER_NAMES.baseMaps.topographic.name,
+    attribution: LAYER_NAMES.baseMaps.topographic.attribution,
     minZoom: 3,
     maxNativeZoom: 8,
   },
   googleSatellite: {
     urlTemplate: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
     isTms: false,
-    name: 'Imágenes satelitales Google',
-    attribution: '© Google',
+    name: LAYER_NAMES.baseMaps.googleSatellite.name,
+    attribution: LAYER_NAMES.baseMaps.googleSatellite.attribution,
     minZoom: 3,
     maxNativeZoom: 20,
   },
@@ -138,8 +139,8 @@ export const BASEMAP_DIRECT_SOURCES: Readonly<Record<string, DirectTileSource>> 
     urlTemplate:
       'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
     isTms: false,
-    name: 'Mapa Esri Fondo Oceánico',
-    attribution: 'Tiles © Esri',
+    name: LAYER_NAMES.baseMaps.oceanBase.name,
+    attribution: LAYER_NAMES.baseMaps.oceanBase.attribution,
     minZoom: 3,
     maxNativeZoom: 16,
   },

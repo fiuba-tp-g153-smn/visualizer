@@ -1,6 +1,7 @@
 import { WIND_SPEED_UNITS } from '../../../constants';
 import { LayerScale, ScaleType } from '../../../models';
 import { buildScaleFromThresholds } from '../scale-builders';
+import { SCALE_NAMES } from '../../../texts';
 
 /**
  * Escalas de intensidad de viento para los niveles isobáricos de GFS.
@@ -17,7 +18,7 @@ import { buildScaleFromThresholds } from '../scale-builders';
 export const GFS_WIND_500_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WIND_SPEED_UNITS.KNOTS,
-  scaleDisplayName: 'Viento en 500 hPa',
+  scaleDisplayName: SCALE_NAMES.gfsWind500,
   stops: [
     { value: 80, color: '#82D2FF' },
     { value: 100, color: '#4BB4F0' },
@@ -33,7 +34,7 @@ export const GFS_WIND_500_SCALE: LayerScale = buildScaleFromThresholds({
 export const GFS_WIND_250_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WIND_SPEED_UNITS.KNOTS,
-  scaleDisplayName: 'Viento en 250 hPa',
+  scaleDisplayName: SCALE_NAMES.gfsWind250,
   stops: [
     { value: 80, color: '#FFFAAA' },
     { value: 90, color: '#FFE878' },

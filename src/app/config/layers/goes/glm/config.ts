@@ -1,6 +1,7 @@
 import { LayerType, LayerCategory, GLMGoesTileLayer } from '../../../../models';
 import { ActiveLayerGroupId, LayerSubgroup } from '../../../../models/layers/groups.models';
 import { GLM_FED_SCALE, GLM_MFA_SCALE, GLM_TOE_SCALE } from './scales.config';
+import { LAYER_NAMES } from '../../../../texts';
 
 /**
  * Valores por defecto para capas GLM
@@ -25,8 +26,8 @@ const GLM_DEFAULTS = {
  */
 export const GLM_SUBGROUP: LayerSubgroup = {
   id: 'glm',
-  name: 'GLM',
-  description: 'Geostationary Lightning Mapper',
+  name: LAYER_NAMES.goesGlm.glm.name,
+  description: LAYER_NAMES.goesGlm.glm.description,
   expanded: false,
   layers: [
     {
@@ -34,24 +35,24 @@ export const GLM_SUBGROUP: LayerSubgroup = {
       id: 'goes19/glm/fed',
       variable: 'fed',
       scale: GLM_FED_SCALE,
-      name: 'Flash Extent Density',
-      description: 'Densidad de extensión de rayos',
+      name: LAYER_NAMES.goesGlm.goes19GlmFed.name,
+      description: LAYER_NAMES.goesGlm.goes19GlmFed.description,
     },
     {
       ...GLM_DEFAULTS,
       id: 'goes19/glm/toe',
       variable: 'toe',
       scale: GLM_TOE_SCALE,
-      name: 'Total Optical Energy',
-      description: 'Energía óptica total de los rayos',
+      name: LAYER_NAMES.goesGlm.goes19GlmToe.name,
+      description: LAYER_NAMES.goesGlm.goes19GlmToe.description,
     },
     {
       ...GLM_DEFAULTS,
       id: 'goes19/glm/mfa',
       variable: 'mfa',
       scale: GLM_MFA_SCALE,
-      name: 'Minimum Flash Area',
-      description: 'Área mínima de los rayos',
+      name: LAYER_NAMES.goesGlm.goes19GlmMfa.name,
+      description: LAYER_NAMES.goesGlm.goes19GlmMfa.description,
     },
   ] as GLMGoesTileLayer[],
 };

@@ -38,6 +38,7 @@ import {
   slpStyleFor,
 } from './wrf-overlay-styles';
 import { SHARED_DBZH_SCALE } from '../shared-scales.config';
+import { LAYER_NAMES } from '../../../texts';
 
 const WRF_DEFAULTS = {
   type: LayerType.TILE,
@@ -62,7 +63,7 @@ const WRF_DEFAULTS = {
 // `variable: 'wind'` matchea el COG secundario del backend.
 const WIND_POINT_QUERY = {
   variable: 'wind',
-  name: 'Viento',
+  name: LAYER_NAMES.wrf.viento.name,
   unit: WRF_UNITS.WIND_SPEED,
   scaleRange: { min: 0, max: 80, totalSteps: 80 },
 } as const;
@@ -86,7 +87,7 @@ const slpRender = (productId: string): SecondaryVectorRender => ({
   prefetchWindow: 4,
   pointQuery: {
     variable: 'slp',
-    name: 'Presión a nivel del mar',
+    name: LAYER_NAMES.wrf.presionANivelDelMar.name,
     unit: WRF_UNITS.SEA_LEVEL_PRESSURE,
     scaleRange: { min: 950, max: 1050, totalSteps: 100 },
   },
@@ -119,25 +120,24 @@ const contourRender = (
 
 export const WRF_SUBGROUP: LayerSubgroup = {
   id: 'wrf-arg4k',
-  name: 'WRF',
-  description: 'Modelo numérico WRF-ARG4K del Servicio Meteorológico Nacional',
+  name: LAYER_NAMES.wrf.wrfArg4k.name,
+  description: LAYER_NAMES.wrf.wrfArg4k.description,
   expanded: false,
   layers: [
     {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/colmax',
       productId: 'colmax',
-      name: 'Colmax',
-      description: 'Reflectividad máxima en la columna (dBZ) — WRF-ARG4K',
+      name: LAYER_NAMES.wrf.wrfArg4kColmax.name,
+      description: LAYER_NAMES.wrf.wrfArg4kColmax.description,
       scale: SHARED_DBZH_SCALE,
     },
     {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/rafagas',
       productId: 'rafagas',
-      name: 'Ráfagas en superficie',
-      description:
-        'Ráfagas viento 10 m (kt) — WRF-ARG4K. Barbas de viento. Contorno azul en 35 kt.',
+      name: LAYER_NAMES.wrf.wrfArg4kRafagas.name,
+      description: LAYER_NAMES.wrf.wrfArg4kRafagas.description,
       scale: WRF_RAFAGAS_SCALE,
       secondaryRenders: [
         barbsRender('rafagas'),
@@ -152,9 +152,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/campo-900hpa',
       productId: 'campo-900hpa',
-      name: 'Humedad específica 900 hPa',
-      description:
-        'Humedad específica 900 hPa (g/kg) — WRF-ARG4K. Barbas de viento. Máscara marrón en cordillera y zona sur.',
+      name: LAYER_NAMES.wrf.wrfArg4kCampo900hpa.name,
+      description: LAYER_NAMES.wrf.wrfArg4kCampo900hpa.description,
       scale: WRF_CAMPO900_SCALE,
       secondaryRenders: [barbsRender('campo-900hpa')],
     },
@@ -162,10 +161,9 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/precipitacion-1h',
       productId: 'precipitacion-1h',
-      name: 'Precipitación 1h',
-      pointQueryLabel: 'Precipitación acumulada 1 hora',
-      description:
-        'Precipitación acumulada 1 hora (mm) — WRF-ARG4K. Barbas de viento. Isobaras de presión a nivel del mar (976/984/992/1000/1008/1016 hPa).',
+      name: LAYER_NAMES.wrf.wrfArg4kPrecipitacion1h.name,
+      pointQueryLabel: LAYER_NAMES.wrf.wrfArg4kPrecipitacion1h.pointQueryLabel,
+      description: LAYER_NAMES.wrf.wrfArg4kPrecipitacion1h.description,
       scale: WRF_PRECIPITACION1H_SCALE,
       secondaryRenders: [barbsRender('precipitacion-1h'), slpRender('precipitacion-1h')],
     },
@@ -173,8 +171,8 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/mucape',
       productId: 'mucape',
-      name: 'MUCAPE',
-      description: 'CAPE máximo (J/kg) — WRF-ARG4K',
+      name: LAYER_NAMES.wrf.wrfArg4kMucape.name,
+      description: LAYER_NAMES.wrf.wrfArg4kMucape.description,
       scale: WRF_MUCAPE_SCALE,
       secondaryRenders: [
         contourRender('mucape', 'shear_850_500', {
@@ -182,7 +180,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           textpathOptions: SHEAR_850_500_TEXTPATH_OPTIONS,
           pointQuery: {
             variable: 'shear_850_500',
-            name: 'Cortante 850-500 hPa',
+            name: LAYER_NAMES.wrf.cortante850500Hpa.name,
             unit: WRF_UNITS.WIND_SPEED,
             scaleRange: { min: 0, max: 60, totalSteps: 60 },
           },
@@ -193,18 +191,17 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/agua-precipitable',
       productId: 'agua-precipitable',
-      name: 'Agua precipitable',
-      description: 'Agua precipitable (mm) — WRF-ARG4K',
+      name: LAYER_NAMES.wrf.wrfArg4kAguaPrecipitable.name,
+      description: LAYER_NAMES.wrf.wrfArg4kAguaPrecipitable.description,
       scale: WRF_AGUAPRECIPITABLE_SCALE,
     },
     {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/jet-capas-bajas',
       productId: 'jet-capas-bajas',
-      name: 'Jet capas bajas',
-      pointQueryLabel: 'Componente meridional 850 hPa',
-      description:
-        'Componente meridional del viento 850 hPa (kt) — WRF-ARG4K. Barbas de viento. Contornos de cizalladura 850–700 hPa (6/10/14 kt). Máscara marrón en cordillera y zona sur.',
+      name: LAYER_NAMES.wrf.wrfArg4kJetCapasBajas.name,
+      pointQueryLabel: LAYER_NAMES.wrf.wrfArg4kJetCapasBajas.pointQueryLabel,
+      description: LAYER_NAMES.wrf.wrfArg4kJetCapasBajas.description,
       scale: WRF_JETCAPASBAJAS_SCALE,
       secondaryRenders: [
         barbsRender('jet-capas-bajas'),
@@ -213,7 +210,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           textpathOptions: SHEAR_850_700_TEXTPATH_OPTIONS,
           pointQuery: {
             variable: 'shear_850_700',
-            name: 'Cortante 850-700 hPa',
+            name: LAYER_NAMES.wrf.cortante850700Hpa.name,
             unit: WRF_UNITS.WIND_SPEED,
             scaleRange: { min: 0, max: 30, totalSteps: 30 },
           },
@@ -224,9 +221,9 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/cortante-niveles-bajos',
       productId: 'cortante-niveles-bajos',
-      name: 'Cortante niveles bajos',
-      pointQueryLabel: 'Intensidad cortante niveles bajos',
-      description: 'Cortante sigma1-sigma2 (kt) — WRF-ARG4K',
+      name: LAYER_NAMES.wrf.wrfArg4kCortanteNivelesBajos.name,
+      pointQueryLabel: LAYER_NAMES.wrf.wrfArg4kCortanteNivelesBajos.pointQueryLabel,
+      description: LAYER_NAMES.wrf.wrfArg4kCortanteNivelesBajos.description,
       scale: WRF_CORTANTE_SCALE,
       secondaryRenders: [barbsRender('cortante-niveles-bajos', false)],
     },
@@ -234,10 +231,9 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/cape-brn',
       productId: 'cape-brn',
-      name: 'CAPE-BRN',
-      pointQueryLabel: 'CAPE',
-      description:
-        'CAPE máximo + Bulk Richardson Number — WRF-ARG4K. Contornos BRN (niveles 10 y 45).',
+      name: LAYER_NAMES.wrf.wrfArg4kCapeBrn.name,
+      pointQueryLabel: LAYER_NAMES.wrf.wrfArg4kCapeBrn.pointQueryLabel,
+      description: LAYER_NAMES.wrf.wrfArg4kCapeBrn.description,
       scale: WRF_CAPE_BRN_SCALE,
       secondaryRenders: [
         contourRender('cape-brn', 'brn', {
@@ -245,7 +241,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           textpathOptions: BRN_TEXTPATH_OPTIONS,
           pointQuery: {
             variable: 'brn',
-            name: 'Bulk Richardson Number',
+            name: LAYER_NAMES.wrf.bulkRichardsonNumber.name,
             unit: WRF_UNITS.DIMENSIONLESS,
             scaleRange: { min: 0, max: 100, totalSteps: 100 },
           },
@@ -256,10 +252,9 @@ export const WRF_SUBGROUP: LayerSubgroup = {
       ...WRF_DEFAULTS,
       id: 'wrf-arg4k/granizo',
       productId: 'granizo',
-      name: 'Granizo',
-      pointQueryLabel: 'SHIP',
-      description:
-        'Severe Hail Parameter + diámetro Hailcast — WRF-ARG4K. Contornos de diámetro de granizo (0.5/3/5 cm). Máscara marrón en cordillera y zona sur.',
+      name: LAYER_NAMES.wrf.wrfArg4kGranizo.name,
+      pointQueryLabel: LAYER_NAMES.wrf.wrfArg4kGranizo.pointQueryLabel,
+      description: LAYER_NAMES.wrf.wrfArg4kGranizo.description,
       scale: WRF_GRANIZO_SCALE,
       secondaryRenders: [
         contourRender('granizo', 'haildiammax', {
@@ -268,7 +263,7 @@ export const WRF_SUBGROUP: LayerSubgroup = {
           labelFor: haildiamLabelFor,
           pointQuery: {
             variable: 'haildiammax',
-            name: 'Diámetro máximo de granizo',
+            name: LAYER_NAMES.wrf.diametroMaximoDeGranizo.name,
             unit: WRF_UNITS.HAIL_DIAMETER,
             scaleRange: { min: 0, max: 100, totalSteps: 100 },
           },

@@ -2,6 +2,7 @@ import { WRF_UNITS } from '../../../constants';
 import { ScaleToolGroupKey } from '../../../constants/scale-tools.constants';
 import { LayerScale, ScaleType } from '../../../models';
 import { buildScaleFromThresholds, buildScaleFromUniformThresholds } from '../scale-builders';
+import { SCALE_NAMES } from '../../../texts';
 
 /**
  * Escalas legend para los productos WRF-ARG4K.
@@ -16,11 +17,11 @@ import { buildScaleFromThresholds, buildScaleFromUniformThresholds } from '../sc
 export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.WIND_SPEED,
-  scaleDisplayName: 'Ráfagas',
+  scaleDisplayName: SCALE_NAMES.wrfRafagas,
   specialPoints: [
     {
       value: 35,
-      label: 'Umbral',
+      label: SCALE_NAMES.wrfRafagasThreshold,
       color: '#0000FF',
     },
   ],
@@ -40,7 +41,7 @@ export const WRF_RAFAGAS_SCALE: LayerScale = buildScaleFromThresholds({
 export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.SPECIFIC_HUMIDITY,
-  scaleDisplayName: 'Humedad específica en 900 hPa',
+  scaleDisplayName: SCALE_NAMES.wrfCampo900,
   min: 0,
   max: 19,
   colors: [
@@ -69,7 +70,7 @@ export const WRF_CAMPO900_SCALE: LayerScale = buildScaleFromUniformThresholds({
 export const WRF_PRECIPITACION1H_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.PRECIPITATION,
-  scaleDisplayName: 'Precipitación en 1 h',
+  scaleDisplayName: SCALE_NAMES.wrfPrecipitacion1h,
   stops: [
     { value: 0.1, color: '#006736' },
     { value: 1.0, color: '#31a154' },
@@ -112,13 +113,13 @@ const SHARED_WRF_CAPE_SCALE: LayerScale = buildScaleFromThresholds({
 
 export const WRF_MUCAPE_SCALE: LayerScale = {
   ...SHARED_WRF_CAPE_SCALE,
-  scaleDisplayName: 'CAPE máximo',
+  scaleDisplayName: SCALE_NAMES.wrfMucape,
 };
 
 export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.PRECIPITATION,
-  scaleDisplayName: 'Agua precipitable',
+  scaleDisplayName: SCALE_NAMES.wrfAguaprecipitable,
   min: 20,
   max: 70,
   colors: ['#cecfe4', '#a5bbd8', '#74a8cd', '#358fbf', '#0570b0'],
@@ -127,7 +128,7 @@ export const WRF_AGUAPRECIPITABLE_SCALE: LayerScale = buildScaleFromUniformThres
 export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.WIND_SPEED,
-  scaleDisplayName: 'Viento meridional en 850 hPa',
+  scaleDisplayName: SCALE_NAMES.wrfJetcapasbajas,
   min: -48,
   max: -24,
   colors: ['#df1400', '#fd3200', '#fd6000', '#fd9f00', '#fdbf3c', '#fdf8a9'],
@@ -136,7 +137,7 @@ export const WRF_JETCAPASBAJAS_SCALE: LayerScale = buildScaleFromUniformThreshol
 export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromUniformThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.WIND_SPEED,
-  scaleDisplayName: 'Cortante en niveles bajos',
+  scaleDisplayName: SCALE_NAMES.wrfCortante,
   min: 10,
   max: 50,
   colors: ['#fdf8a8', '#ffc03c', '#ff6000', '#e11400'],
@@ -144,13 +145,13 @@ export const WRF_CORTANTE_SCALE: LayerScale = buildScaleFromUniformThresholds({
 
 export const WRF_CAPE_BRN_SCALE: LayerScale = {
   ...SHARED_WRF_CAPE_SCALE,
-  scaleDisplayName: 'CAPE + BRN',
+  scaleDisplayName: SCALE_NAMES.wrfCapeBrn,
 };
 
 export const WRF_GRANIZO_SCALE: LayerScale = buildScaleFromThresholds({
   type: ScaleType.DISCRETE,
   unit: WRF_UNITS.DIMENSIONLESS,
-  scaleDisplayName: 'Granizo (SHIP)',
+  scaleDisplayName: SCALE_NAMES.wrfGranizo,
   stops: [
     { value: 0.1, color: '#fdf8a9' },
     { value: 1.0, color: '#ffc03c' },
