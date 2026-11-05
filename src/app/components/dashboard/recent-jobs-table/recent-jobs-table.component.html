@@ -3,15 +3,15 @@
     [headers]="table().headers"
     [rows]="table().tableRows"
     [initialSort]="initialSort"
-    emptyText="Aún no hay trabajos registrados."
+    [emptyText]="t.noJobsYet"
     (rowClick)="onRowClick($event)"
   />
 </div>
 
 <div class="jobs__foot">
   <button mat-stroked-button [disabled]="!hasMore()" (click)="loadMore.emit()">
-    cargar 50 más
+    {{ t.loadMore }}
   </button>
-  <span class="jobs__count">{{ jobs().length }} cargados</span>
-  <span class="jobs__hint">(el orden aplica a las filas cargadas)</span>
+  <span class="jobs__count">{{ t.loadedCount(jobs().length) }}</span>
+  <span class="jobs__hint">{{ t.sortHint }}</span>
 </div>

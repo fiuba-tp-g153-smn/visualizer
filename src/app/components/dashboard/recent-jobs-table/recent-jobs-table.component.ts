@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -25,6 +18,7 @@ import {
   type ColumnSpec,
   type SortState,
 } from '../sortable-table/sortable-table.models';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 const INITIAL_SORT: SortState = { key: 'finished', dir: 'desc' };
 
@@ -35,25 +29,28 @@ function detailCell(job: RecentJob): Cell {
     : errorCell(job.error_message ?? '');
 }
 
+const COL = DASHBOARDS_TEXTS.jobs.columns;
+
 const COLUMNS: ReadonlyArray<ColumnSpec<RecentJob>> = [
   {
-    header: { key: 'finished', label: 'finalizado', align: 'center', sortable: true },
-    cell: (row) => textCell(ago(row.finished_at), { muted: true, title: fmtInstant(row.finished_at) }),
+    header: { key: 'finished', label: COL.finished, align: 'center', sortable: true },
+    cell: (row) =>
+      textCell(ago(row.finished_at), { muted: true, title: fmtInstant(row.finished_at) }),
     sortValue: (row) => row.finished_at,
   },
   {
-    header: { key: 'job', label: 'trabajo', align: 'left', sortable: true },
+    header: { key: 'job', label: COL.job, align: 'left', sortable: true },
     cell: (row) =>
       textCell(prod(row.product_label ?? row.job_type), { title: row.job_type, strong: true }),
     sortValue: (row) => prod(row.product_label ?? row.job_type),
   },
   {
-    header: { key: 'scene', label: 'escena', align: 'left', sortable: true },
+    header: { key: 'scene', label: COL.scene, align: 'left', sortable: true },
     cell: (row) => textCell(row.image_timestamp ?? row.image_id, { muted: true }),
     sortValue: (row) => row.image_timestamp ?? row.image_id,
   },
   {
-    header: { key: 'outcome', label: 'resultado', align: 'center', sortable: true },
+    header: { key: 'outcome', label: COL.outcome, align: 'center', sortable: true },
     cell: (row) =>
       pillCell(
         row.outcome,
@@ -63,22 +60,22 @@ const COLUMNS: ReadonlyArray<ColumnSpec<RecentJob>> = [
     sortValue: (row) => row.outcome,
   },
   {
-    header: { key: 'total', label: 'total', align: 'center', sortable: true },
+    header: { key: 'total', label: COL.total, align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.total_s)),
     sortValue: (row) => row.total_s,
   },
   {
-    header: { key: 'net', label: 'descarga', align: 'center', sortable: true },
+    header: { key: 'net', label: COL.download, align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.download_s)),
     sortValue: (row) => row.download_s,
   },
   {
-    header: { key: 'worker', label: 'nodo', align: 'left', sortable: true },
+    header: { key: 'worker', label: COL.node, align: 'left', sortable: true },
     cell: (row) => textCell(row.worker_host ?? '', { muted: true }),
     sortValue: (row) => row.worker_host ?? '',
   },
   {
-    header: { key: 'detail', label: 'detalle', align: 'left', sortable: false },
+    header: { key: 'detail', label: COL.detail, align: 'left', sortable: false },
     cell: detailCell,
     sortValue: (row) => row.total_s ?? 0,
   },
@@ -97,6 +94,7 @@ const COLUMNS: ReadonlyArray<ColumnSpec<RecentJob>> = [
   styleUrl: './recent-jobs-table.component.scss',
 })
 export class RecentJobsTableComponent {
+  protected readonly t = DASHBOARDS_TEXTS.jobs;
   readonly jobs = input.required<readonly RecentJob[]>();
   readonly hasMore = input<boolean>(false);
   readonly loadMore = output<void>();

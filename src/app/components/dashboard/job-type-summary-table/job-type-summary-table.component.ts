@@ -11,65 +11,68 @@ import {
   type ColumnSpec,
   type SortState,
 } from '../sortable-table/sortable-table.models';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 // Por defecto: por tiempo promedio, el más largo primero. Los tipos sin trabajos
 // exitosos (prom = null) quedan al final (el comparador manda los null abajo en desc).
 const INITIAL_SORT: SortState = { key: 'avg', dir: 'desc' };
 
+const COL = DASHBOARDS_TEXTS.jobTypes.columns;
+
 const COLUMNS: ReadonlyArray<ColumnSpec<JobTypeSummary>> = [
   {
-    header: { key: 'type', label: 'tipo de trabajo', align: 'left', sortable: true },
+    header: { key: 'type', label: COL.type, align: 'left', sortable: true },
     cell: (row) =>
       textCell(prod(row.product_label ?? row.job_type), { title: row.job_type, strong: true }),
     sortValue: (row) => prod(row.product_label ?? row.job_type),
   },
   {
-    header: { key: 'n', label: 'n', align: 'center', sortable: true },
+    header: { key: 'n', label: COL.n, align: 'center', sortable: true },
     cell: (row) => textCell(String(row.counts.total)),
     sortValue: (row) => row.counts.total,
   },
   {
-    header: { key: 'outcomes', label: 'resultados', align: 'center', sortable: true },
+    header: { key: 'outcomes', label: COL.outcomes, align: 'center', sortable: true },
     cell: (row) => outcomePillsCell(row.counts),
     sortValue: (row) => row.counts.error + row.counts.dlq,
   },
   {
-    header: { key: 'err', label: '% error', align: 'center', sortable: true },
+    header: { key: 'err', label: COL.errorRate, align: 'center', sortable: true },
     cell: (row) => textCell(pct(row.error_rate)),
     sortValue: (row) => row.error_rate,
   },
   {
-    header: { key: 'avg', label: 'prom', align: 'center', sortable: true },
+    header: { key: 'avg', label: COL.avg, align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.total_s.avg)),
     sortValue: (row) => row.total_s.avg,
   },
   {
-    header: { key: 'min', label: 'mín', align: 'center', sortable: true },
+    header: { key: 'min', label: COL.min, align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.total_s.min)),
     sortValue: (row) => row.total_s.min,
   },
   {
-    header: { key: 'max', label: 'máx', align: 'center', sortable: true },
+    header: { key: 'max', label: COL.max, align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.total_s.max)),
     sortValue: (row) => row.total_s.max,
   },
   {
-    header: { key: 'p95', label: 'p95', align: 'center', sortable: true },
+    header: { key: 'p95', label: COL.p95, align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.total_s.p95)),
     sortValue: (row) => row.total_s.p95,
   },
   {
-    header: { key: 'net', label: 'descarga', align: 'center', sortable: true },
+    header: { key: 'net', label: COL.download, align: 'center', sortable: true },
     cell: (row) => textCell(secs(row.download_s.avg)),
     sortValue: (row) => row.download_s.avg,
   },
   {
-    header: { key: 'stages', label: 'desglose por etapa', align: 'center', sortable: true },
+    header: { key: 'stages', label: COL.stages, align: 'center', sortable: true },
     cell: (row) => stageBarCell(row.stages),
     sortValue: (row) => stageTotal(row.stages),
   },
   {
-    header: { key: 'last', label: 'último', align: 'center', sortable: true },
+    header: { key: 'last', label: COL.last, align: 'center', sortable: true },
     cell: (row) => textCell(ago(row.last_finished), { muted: true, title: row.last_finished }),
     sortValue: (row) => row.last_finished,
   },
@@ -86,12 +89,13 @@ const COLUMNS: ReadonlyArray<ColumnSpec<JobTypeSummary>> = [
       [headers]="table().headers"
       [rows]="table().tableRows"
       [initialSort]="initialSort"
-      emptyText="Aún no hay trabajos registrados."
+      [emptyText]="t.noJobsYet"
       (rowClick)="onRowClick($event)"
     />
   `,
 })
 export class JobTypeSummaryTableComponent {
+  protected readonly t = DASHBOARDS_TEXTS.jobs;
   readonly summary = input.required<readonly JobTypeSummary[]>();
 
   /** Emite el `job_type` de la fila clickeada (drill-down hacia los trabajos). */

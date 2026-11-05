@@ -7,6 +7,7 @@ import type { RecentJob } from '../../../models/metrics/metrics.models';
 import { fmtInstant, secs } from '../../../services/metrics/metrics-format.util';
 import { outcomeLabel, prod } from '../../../services/metrics/metrics-labels.constants';
 import { StagePieChartComponent } from '../stage-pie-chart/stage-pie-chart.component';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /** Fila etiqueta/valor del detalle. */
 interface DetailRow {
@@ -30,6 +31,7 @@ interface DetailRow {
   styleUrl: './job-detail-dialog.component.scss',
 })
 export class JobDetailDialogComponent {
+  protected readonly common = DASHBOARDS_TEXTS.common;
   readonly job = inject<RecentJob>(MAT_DIALOG_DATA);
 
   readonly title = computed<string>(() => prod(this.job.product_label ?? this.job.job_type));
@@ -39,21 +41,28 @@ export class JobDetailDialogComponent {
   readonly rows = computed<DetailRow[]>(() => {
     const job = this.job;
     return [
-      { label: 'Imagen', value: job.image_id, title: job.image_id },
-      { label: 'Escena', value: job.image_timestamp ?? '—' },
-      { label: 'Work unit', value: job.work_unit_id ?? '—' },
-      { label: 'Fuente de datos', value: job.data_source_id },
-      { label: 'Procesador', value: job.processor_id ?? '—' },
-      { label: 'Banda', value: job.band_id ?? '—' },
-      { label: 'Tipo', value: job.job_type },
-      { label: 'Nodo', value: job.worker_host ?? '—' },
-      { label: 'Inicio', value: fmtInstant(job.started_at), title: job.started_at },
-      { label: 'Fin', value: fmtInstant(job.finished_at), title: job.finished_at },
-      { label: 'Total', value: secs(job.total_s) },
-      { label: 'Descarga', value: secs(job.download_s) },
-      { label: 'Proceso', value: secs(job.process_s) },
-      { label: 'Reintentos', value: String(job.retry_count) },
+      { label: DASHBOARDS_TEXTS.jobs.detail.image, value: job.image_id, title: job.image_id },
+      { label: DASHBOARDS_TEXTS.jobs.detail.scene, value: job.image_timestamp ?? '—' },
+      { label: DASHBOARDS_TEXTS.jobs.detail.workUnit, value: job.work_unit_id ?? '—' },
+      { label: DASHBOARDS_TEXTS.jobs.detail.dataSource, value: job.data_source_id },
+      { label: DASHBOARDS_TEXTS.jobs.detail.processor, value: job.processor_id ?? '—' },
+      { label: DASHBOARDS_TEXTS.jobs.detail.band, value: job.band_id ?? '—' },
+      { label: DASHBOARDS_TEXTS.jobs.detail.type, value: job.job_type },
+      { label: DASHBOARDS_TEXTS.jobs.detail.node, value: job.worker_host ?? '—' },
+      {
+        label: DASHBOARDS_TEXTS.jobs.detail.start,
+        value: fmtInstant(job.started_at),
+        title: job.started_at,
+      },
+      {
+        label: DASHBOARDS_TEXTS.jobs.detail.end,
+        value: fmtInstant(job.finished_at),
+        title: job.finished_at,
+      },
+      { label: DASHBOARDS_TEXTS.jobs.detail.total, value: secs(job.total_s) },
+      { label: DASHBOARDS_TEXTS.jobs.detail.download, value: secs(job.download_s) },
+      { label: DASHBOARDS_TEXTS.jobs.detail.process, value: secs(job.process_s) },
+      { label: DASHBOARDS_TEXTS.jobs.detail.retries, value: String(job.retry_count) },
     ];
   });
-
 }

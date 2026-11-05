@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import type { RedisMemoryResponse } from '../../../models/metrics/data-metrics.models';
 import { formatBytes } from '../../../services/metrics/data-metrics-chart.util';
 import { domainLabel } from '../../../services/metrics/data-metrics-labels';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 interface Row {
   readonly label: string;
@@ -21,10 +22,10 @@ interface Row {
       <table class="tbl">
         <thead>
           <tr>
-            <th>dominio</th>
-            <th class="num">memoria</th>
-            <th class="num">% del total</th>
-            <th class="num">claves</th>
+            <th>{{ t.domain }}</th>
+            <th class="num">{{ t.memory }}</th>
+            <th class="num">{{ t.share }}</th>
+            <th class="num">{{ t.keys }}</th>
           </tr>
         </thead>
         <tbody>
@@ -42,7 +43,7 @@ interface Row {
         </tbody>
         <tfoot>
           <tr>
-            <td>Total</td>
+            <td>{{ t.total }}</td>
             <td class="num">{{ totalBytes() }}</td>
             <td class="num">100%</td>
             <td class="num">{{ totalKeys() }}</td>
@@ -50,7 +51,7 @@ interface Row {
         </tfoot>
       </table>
     } @else {
-      <div class="empty">Sin muestras de memoria todavía (el colector corre cada ~15 min).</div>
+      <div class="empty">{{ t.empty }}</div>
     }
   `,
   styles: `
@@ -102,12 +103,11 @@ interface Row {
   `,
 })
 export class RedisMemoryTableComponent {
+  protected readonly t = DASHBOARDS_TEXTS.data.redisMemory;
   readonly memory = input.required<RedisMemoryResponse | null>();
 
   readonly totalBytes = computed(() => formatBytes(this.memory()?.total_bytes ?? 0));
-  readonly totalKeys = computed(() =>
-    (this.memory()?.total_keys ?? 0).toLocaleString('es-AR'),
-  );
+  readonly totalKeys = computed(() => (this.memory()?.total_keys ?? 0).toLocaleString('es-AR'));
 
   readonly rows = computed<Row[]>(() => {
     const mem = this.memory();

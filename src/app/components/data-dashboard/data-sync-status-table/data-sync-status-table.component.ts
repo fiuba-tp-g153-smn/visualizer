@@ -12,36 +12,39 @@ import {
   type ColumnSpec,
   type SortState,
 } from '../../dashboard/sortable-table/sortable-table.models';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 function resultCell(outcome: string | null): Cell {
   if (outcome === 'ok') {
-    return pillCell('success', 'ok');
+    return pillCell('success', DATA.outcomes.ok);
   }
   if (outcome === 'error') {
-    return pillCell('error', 'error');
+    return pillCell('error', DATA.outcomes.error);
   }
   return textCell('—', { muted: true });
 }
 
+const DATA = DASHBOARDS_TEXTS.data;
+
 const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncDomainStatus>> = [
   {
-    header: { key: 'dominio', label: 'dominio', align: 'left', sortable: true },
+    header: { key: 'dominio', label: DATA.columns.domain, align: 'left', sortable: true },
     cell: (r) => textCell(domainLabel(r.domain), { strong: true }),
     sortValue: (r) => domainLabel(r.domain),
   },
   {
-    header: { key: 'resultado', label: 'resultado', align: 'center', sortable: true },
+    header: { key: 'resultado', label: DATA.columns.outcome, align: 'center', sortable: true },
     cell: (r) => resultCell(r.outcome),
     sortValue: (r) => r.outcome ?? '',
   },
   {
-    header: { key: 'descargado', label: 'descargado', align: 'center', sortable: true },
+    header: { key: 'descargado', label: DATA.columns.downloaded, align: 'center', sortable: true },
     cell: (r) =>
       textCell(r.last_downloaded == null ? '—' : r.last_downloaded.toLocaleString('es-AR')),
     sortValue: (r) => r.last_downloaded ?? -1,
   },
   {
-    header: { key: 'errores', label: 'errores', align: 'center', sortable: true },
+    header: { key: 'errores', label: DATA.columns.errors, align: 'center', sortable: true },
     cell: (r) =>
       textCell(String(r.last_errors ?? 0), {
         tone: (r.last_errors ?? 0) > 0 ? 'err' : undefined,
@@ -49,13 +52,14 @@ const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncDomainStatus>> = [
     sortValue: (r) => r.last_errors ?? 0,
   },
   {
-    header: { key: 'duracion', label: 'duración', align: 'center', sortable: true },
+    header: { key: 'duracion', label: DATA.columns.duration, align: 'center', sortable: true },
     cell: (r) => textCell(secs(r.last_duration_ms == null ? null : r.last_duration_ms / 1000)),
     sortValue: (r) => r.last_duration_ms ?? -1,
   },
   {
-    header: { key: 'ultimo', label: 'último ciclo', align: 'center', sortable: true },
-    cell: (r) => textCell(ago(r.last_finished), { muted: true, title: fmtInstant(r.last_finished) }),
+    header: { key: 'ultimo', label: DATA.columns.lastCycle, align: 'center', sortable: true },
+    cell: (r) =>
+      textCell(ago(r.last_finished), { muted: true, title: fmtInstant(r.last_finished) }),
     // Parse to epoch ms so ordering is chronological, not lexicographic on the
     // ISO string (and nulls sort first rather than mixing with real timestamps).
     sortValue: (r) => (r.last_finished ? Date.parse(r.last_finished) : -1),
@@ -73,11 +77,12 @@ const COLUMNS: ReadonlyArray<ColumnSpec<DataSyncDomainStatus>> = [
       [headers]="table().headers"
       [rows]="table().tableRows"
       [initialSort]="initialSort"
-      emptyText="Sin ciclos de sync registrados todavía."
+      [emptyText]="t.noCyclesYet"
     />
   `,
 })
 export class DataSyncStatusTableComponent {
+  protected readonly t = DASHBOARDS_TEXTS.data;
   readonly domains = input.required<readonly DataSyncDomainStatus[]>();
 
   readonly initialSort: SortState = { key: 'ultimo', dir: 'desc' };

@@ -4,6 +4,7 @@ import type { RedisInfo } from '../../../models/metrics/data-metrics.models';
 import { formatBytes } from '../../../services/metrics/data-metrics-chart.util';
 import { pct } from '../../../services/metrics/metrics-format.util';
 import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.component';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /** Tarjetas con las estadísticas globales de Redis INFO. */
 @Component({
@@ -15,7 +16,7 @@ import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.comp
     @if (cards().length) {
       <app-stat-cards [cards]="cards()" />
     } @else {
-      <div class="empty">Sin snapshot de Redis INFO todavía.</div>
+      <div class="empty">{{ t.empty }}</div>
     }
   `,
   styles: `
@@ -27,6 +28,7 @@ import { StatCardsComponent, type StatCard } from '../stat-cards/stat-cards.comp
   `,
 })
 export class RedisInfoCardsComponent {
+  protected readonly t = DASHBOARDS_TEXTS.data.redisInfo;
   readonly info = input.required<RedisInfo | null>();
 
   readonly cards = computed<StatCard[]>(() => {
@@ -40,53 +42,51 @@ export class RedisInfoCardsComponent {
     const frag = i.mem_fragmentation_ratio;
     return [
       {
-        label: 'used_memory',
+        label: this.t.usedMemory,
         value: formatBytes(i.used_memory),
-        tooltip: 'Memoria asignada por Redis a su dataset (INFO used_memory).',
+        tooltip: this.t.usedMemoryHint,
         accent: '',
       },
       {
-        label: 'RSS',
+        label: this.t.rss,
         value: formatBytes(i.used_memory_rss),
-        tooltip: 'Memoria física reservada por el SO para el proceso Redis (used_memory_rss).',
+        tooltip: this.t.rssHint,
         accent: '',
       },
       {
-        label: 'Max alcanzado',
+        label: this.t.peak,
         value: formatBytes(i.used_memory_peak),
-        tooltip: 'Máximo histórico de used_memory desde el arranque (used_memory_peak).',
+        tooltip: this.t.peakHint,
         accent: '',
       },
       {
-        label: 'maxmemory',
-        value: i.maxmemory ? formatBytes(i.maxmemory) : 'sin límite',
-        tooltip: 'Tope de memoria configurado (0 = sin límite).',
+        label: this.t.maxmemory,
+        value: i.maxmemory ? formatBytes(i.maxmemory) : this.t.unlimited,
+        tooltip: this.t.maxmemoryHint,
         accent: '',
       },
       {
-        label: 'Fragmentación',
+        label: this.t.fragmentation,
         value: frag == null ? '—' : frag.toFixed(2),
-        tooltip:
-          'mem_fragmentation_ratio = RSS / used_memory. ~1.0 es ideal; >1.5 indica fragmentación alta.',
+        tooltip: this.t.fragmentationHint,
         accent: frag != null && frag > 1.5 ? 'orange' : '',
       },
       {
-        label: 'Claves desalojadas',
+        label: this.t.evicted,
         value: (i.evicted_keys ?? 0).toLocaleString('es-AR'),
-        tooltip:
-          'Claves desalojadas por presión de memoria (evicted_keys). >0 indica que Redis está descartando datos.',
+        tooltip: this.t.evictedHint,
         accent: (i.evicted_keys ?? 0) > 0 ? 'red' : '',
       },
       {
-        label: 'Hit rate',
+        label: this.t.hitRate,
         value: pct(hitRate),
-        tooltip: 'keyspace_hits / (hits + misses): proporción de lecturas que encontraron la clave.',
+        tooltip: this.t.hitRateHint,
         accent: '',
       },
       {
-        label: 'Clientes',
+        label: this.t.clients,
         value: (i.connected_clients ?? 0).toLocaleString('es-AR'),
-        tooltip: 'Conexiones de cliente activas (connected_clients).',
+        tooltip: this.t.clientsHint,
         accent: '',
       },
     ];

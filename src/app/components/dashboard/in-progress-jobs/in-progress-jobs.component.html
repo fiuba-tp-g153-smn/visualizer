@@ -1,5 +1,5 @@
 <div class="ip__stat">
-  <div class="ip__k">en proceso</div>
+  <div class="ip__k">{{ t.title }}</div>
   <div class="ip__v">{{ jobs().length }}</div>
 </div>
 
@@ -8,10 +8,10 @@
     <table class="ip__table">
       <thead>
         <tr>
-          <th>imagen</th>
-          <th>banda</th>
-          <th>estado</th>
-          <th>desde</th>
+          <th>{{ t.columns.image }}</th>
+          <th>{{ t.columns.band }}</th>
+          <th>{{ t.columns.status }}</th>
+          <th>{{ t.columns.since }}</th>
         </tr>
       </thead>
       <tbody>
@@ -27,5 +27,5 @@
     </table>
   </div>
 } @else {
-  <div class="ip__empty">No hay trabajos en proceso.</div>
+  <div class="ip__empty">{{ t.empty }}</div>
 }

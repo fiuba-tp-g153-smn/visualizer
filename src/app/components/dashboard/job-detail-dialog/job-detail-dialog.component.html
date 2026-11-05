@@ -18,10 +18,10 @@
     </div>
   }
 
-  <h2 class="jd__subtitle">Desglose por etapa</h2>
+  <h2 class="jd__subtitle">{{ common.stageBreakdown }}</h2>
   <app-stage-pie-chart [stages]="job.stage_timings" [networkSecs]="job.download_s" />
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button mat-dialog-close>Cerrar</button>
+  <button mat-button mat-dialog-close>{{ common.close }}</button>
 </mat-dialog-actions>

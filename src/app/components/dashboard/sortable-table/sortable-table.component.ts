@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 
 import type { HeaderDef, SortDir, SortState, TableRow } from './sortable-table.models';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /**
  * Tabla genérica con encabezados centrados, todas las columnas ordenables y
@@ -18,7 +19,7 @@ export class SortableTableComponent {
   readonly headers = input.required<readonly HeaderDef[]>();
   readonly rows = input.required<readonly TableRow[]>();
   readonly initialSort = input<SortState | null>(null);
-  readonly emptyText = input<string>('Sin datos');
+  readonly emptyText = input<string>(DASHBOARDS_TEXTS.common.noData);
 
   /** Emite la `key` de la fila clickeada (solo en filas con identidad). */
   readonly rowClick = output<string | number>();

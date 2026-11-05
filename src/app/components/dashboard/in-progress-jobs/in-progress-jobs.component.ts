@@ -10,6 +10,7 @@ import {
 
 import type { InProgressJob } from '../../../models/metrics/metrics.models';
 import { ago } from '../../../services/metrics/metrics-format.util';
+import { DASHBOARDS_TEXTS } from '../../../texts';
 
 /** A job row with its "desde" elapsed label precomputed against the live clock. */
 type InProgressRow = InProgressJob & { readonly since: string };
@@ -26,6 +27,7 @@ type InProgressRow = InProgressJob & { readonly since: string };
   styleUrl: './in-progress-jobs.component.scss',
 })
 export class InProgressJobsComponent {
+  protected readonly t = DASHBOARDS_TEXTS.inProgress;
   readonly jobs = input<readonly InProgressJob[]>([]);
 
   /** Ticks every second so the "desde" elapsed time advances between refreshes. */
