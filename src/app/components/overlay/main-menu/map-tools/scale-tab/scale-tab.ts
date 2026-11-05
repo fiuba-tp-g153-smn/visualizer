@@ -1,13 +1,14 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
 
 @Component({
   selector: 'app-scale-tab',
   standalone: true,
-  imports: [CommonModule, MatCheckboxModule],
+  imports: [CommonModule, MatCheckboxModule, MatTooltipModule],
   templateUrl: './scale-tab.html',
   styleUrl: './scale-tab.scss',
 })
