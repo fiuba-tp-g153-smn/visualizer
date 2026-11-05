@@ -15,6 +15,9 @@ import { LayerControlService } from '../../services/layers/layer-control.service
 import { LayerConfigService } from '../../services/layers/layer-config.service';
 import { TilePrefetchService } from '../../services/layers/tile-prefetch.service';
 import { PointQueryViewerService } from '../../services/tools/point-query-viewer.service';
+import { DistanceToolService } from '../../services/tools/distance-tool.service';
+import { MapContextMenuService } from '../../services/map-context-menu/map-context-menu.service';
+import { MapContextMenuSectionsService } from '../../services/map-context-menu/map-context-menu-sections.service';
 import { MapInfoService } from '../../services/layers/map-info.service';
 import { BaseMap } from '../../models';
 import { BaseMapService } from '../../services/base-maps/base-map.service';
@@ -46,6 +49,8 @@ export class MapContainer implements OnInit, OnDestroy {
   private polygonService = inject(PolygonService);
   private polygonDrawingService = inject(PolygonDrawingService);
   private pointQueryViewerService = inject(PointQueryViewerService);
+  private distanceToolService = inject(DistanceToolService);
+  private mapContextMenuService = inject(MapContextMenuService);
   private mapInfoService = inject(MapInfoService);
 
   // Services
@@ -64,6 +69,10 @@ export class MapContainer implements OnInit, OnDestroy {
   readonly editingPolygonId = this.polygonDrawingService.editingPolygonId;
 
   constructor() {
+    // Creating it registers the general sections (alerts, layers, coordinates) of the
+    // map's context menu; nothing else needs a handle on it.
+    inject(MapContextMenuSectionsService);
+
     if (isPlatformBrowser(this.platformId)) {
       effect(() => {
         const baseMap = this.baseMapService.currentBaseMap();
@@ -96,16 +105,6 @@ export class MapContainer implements OnInit, OnDestroy {
       });
 
       effect(() => {
-        const targetZoom = this.mapInfoService.currentZoom();
-        if (this.map) {
-          const currentMapZoom = Math.round(this.map.getZoom());
-          if (currentMapZoom !== targetZoom) {
-            this.map.setZoom(targetZoom);
-          }
-        }
-      });
-
-      effect(() => {
         const polygons = this.polygonService.allPolygons();
         const editingId = this.editingPolygonId();
         if (this.map) {
@@ -134,6 +133,8 @@ export class MapContainer implements OnInit, OnDestroy {
     this.layersService.destroy();
     this.polygonsService.destroy();
     this.mapInfoService.destroy();
+    this.distanceToolService.destroy();
+    this.mapContextMenuService.close();
 
     // Clear event blocking interval
     if ((this as any)._eventBlockingInterval) {
@@ -152,6 +153,7 @@ export class MapContainer implements OnInit, OnDestroy {
       maxZoom: MAP_CONFIG.maxZoom,
       maxBounds: MAP_CONFIG.maxBounds,
       maxBoundsViscosity: MAP_CONFIG.maxBoundsViscosity,
+      wheelPxPerZoomLevel: MAP_CONFIG.wheelPxPerZoomLevel,
       zoomControl: false,
       attributionControl: false,
       fadeAnimation: false, // Disable Leaflet's default fade animation to prevent flashes during playback; CSS transitions can be used for smoother effects if desired.
@@ -165,15 +167,9 @@ export class MapContainer implements OnInit, OnDestroy {
     this.polygonsService.initialize(this.map);
     this.activeAlertsMapService.initialize(this.map);
     this.mapInfoService.initialize(this.map);
+    this.distanceToolService.initialize(this.map);
 
     this.preventUIEventPropagation();
-
-    this.map.on('zoom', () => {
-      const mapZoom = this.map?.getZoom();
-      if (mapZoom !== undefined) {
-        this.mapInfoService.setCurrentZoom(Math.round(mapZoom));
-      }
-    });
 
     this.map.on('zoomend', () => {
       const mapZoom = this.map?.getZoom();
@@ -189,8 +185,13 @@ export class MapContainer implements OnInit, OnDestroy {
 
     this.map.on('click', (event: LeafletMouseEvent) => {
       this.polygonsService.closeContextMenu();
+      if (this.distanceToolService.handleMapClick(event.latlng.lat, event.latlng.lng)) return;
       const button = (event.originalEvent as MouseEvent | undefined)?.button ?? 0;
       this.pointQueryViewerService.handleMapClick(event.latlng.lat, event.latlng.lng, button);
+    });
+
+    this.map.on('contextmenu', (event: LeafletMouseEvent) => {
+      this.mapContextMenuService.handleMapContextMenu(event);
     });
   }
 

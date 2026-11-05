@@ -87,25 +87,81 @@ de un problema general de la aplicación.
 
 ## Indicadores sobre el mapa
 
-La pestaña General de Herramientas del mapa controla seis ayudas visuales.
+La pestaña General de Herramientas del mapa agrupa sus opciones en tres
+secciones: Controles del mapa, Guías y Medición.
 
-![Herramientas del mapa ▸ General, con los seis indicadores](../imgs/manual/02-indicadores.png){ .doc-figure loading=lazy }
+![Herramientas del mapa ▸ General](../imgs/manual/02-indicadores.png){ .doc-figure loading=lazy }
 
-En la captura están activas la escala, las coordenadas y la atribución. La
-casilla marcada con el número 4 controla los botones de zoom.
+En la captura, los números 1 a 3 marcan la escala, las coordenadas y la atribución sobre el
+mapa, y el 4 la casilla de los controles de zoom.
 
-| Indicador | Estado inicial |
-|---|---|
-| Controles de zoom | Activo |
-| Escala | Inactivo |
-| Coordenadas | Inactivo |
-| Líneas de cursor | Inactivo |
-| Trópicos y meridianos | Inactivo |
-| Atribución | Activo |
+| Sección | Opción | Estado inicial |
+|---|---|---|
+| Controles del mapa | Controles de zoom | Activo |
+| | Escala | Inactivo |
+| | Coordenadas | Inactivo |
+| | Atribución | Activo |
+| Guías | Líneas de cursor | Inactivo |
+| | Trópicos y meridianos | Inactivo |
+| Medición | Medir distancias | Inactivo |
+
+Al marcar Trópicos y meridianos aparecen, debajo, sus partes: la grilla cada
+10°, la grilla cada 5° (visible desde zoom 4), el Ecuador con los trópicos, los
+círculos polares y Greenwich, y las etiquetas en el borde del mapa. Cada una se
+muestra u oculta por separado y la elección se recuerda.
 
 La escala, las coordenadas y la atribución también tienen un botón de cierre.
 Las líneas de cursor y los trópicos sólo se desactivan desde la casilla del
 panel.
+
+## Menú del clic derecho
+
+El clic derecho sobre una zona libre del mapa abre un menú con acciones,
+agrupadas por tema. Sobre un polígono, un aviso o una estación, el clic derecho
+sigue abriendo el menú propio de cada uno.
+
+- **Medir distancia** activa la medición de distancias.
+- **Dibujar polígono** activa el dibujo de un polígono, igual que el botón
+  Dibujar del panel Avisos a corto plazo. Desde el polígono se genera después
+  el aviso.
+- **Reproducir todas las capas** y **Pausar todas las capas** inician o frenan
+  la animación de las capas activas a la vez. Las capas sincronizadas avanzan
+  juntas; las demás, cada una a su ritmo.
+- **Desactivar todas las capas** apaga las capas activas, después de pedir
+  confirmación.
+- **Copiar coordenadas** copia la latitud y la longitud del punto, en grados
+  decimales, listas para pegar en otra herramienta.
+
+Cada opción aparece solo cuando tiene sentido: por ejemplo, Pausar todas las
+capas solo si alguna capa se está reproduciendo. Las estaciones meteorológicas
+se animan desde su propia capa.
+
+### Medir distancias
+
+La medición también se activa con la casilla Medir distancias, en Herramientas
+del mapa ▸ General. Mientras está marcada, debajo se ve el total; al desmarcarla
+se elimina la medición.
+
+1. Hacé clic derecho en el mapa y elegí Medir distancia. El cursor pasa a ser
+   una cruz.
+2. Hacé clic en el punto de partida y en cada punto siguiente. El mapa dibuja el
+   recorrido y muestra el total junto al último punto.
+3. Para terminar, hacé clic derecho y elegí Terminar medición, o apretá Esc.
+
+Mientras medís, el menú ofrece solo acciones de la medición: terminar, deshacer
+el último punto o eliminarla. Si todavía no marcaste ningún punto, ofrece
+Cancelar medición. Los clics no hacen consultas puntuales y el doble clic no
+acerca el mapa.
+
+Al terminar, el recorrido queda en el mapa y los clics vuelven a hacer consultas
+puntuales. El clic derecho ofrece entonces Editar medición, Nueva medición y
+Eliminar medición. La edición funciona como la de los polígonos: arrastrá un
+vértice para moverlo, arrastrá el punto intermedio de un tramo para agregar uno
+y hacé clic en un vértice para quitarlo. El total se actualiza mientras editás.
+Guardar conserva los cambios y Cancelar vuelve al recorrido anterior.
+
+La distancia es geodésica: sigue la curvatura de la Tierra, no la línea recta de
+la proyección.
 
 ## Configuración
 

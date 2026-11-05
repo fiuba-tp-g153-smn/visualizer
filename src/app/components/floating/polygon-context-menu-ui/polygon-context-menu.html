@@ -3,6 +3,28 @@
     <mat-icon matListItemIcon>edit_location</mat-icon>
     <span matListItemTitle>Editar geometría</span>
   </mat-list-item>
+
+  @if (!canUndoCut) {
+    <mat-list-item
+      (click)="!isLoadingCut && !isLoadingAlerts && onCut()"
+      [class.disabled]="isLoadingCut || isLoadingAlerts"
+    >
+      @if (isLoadingCut) {
+        <mat-icon matListItemIcon class="spinning">autorenew</mat-icon>
+      } @else {
+        <mat-icon matListItemIcon>crop</mat-icon>
+      }
+      <span matListItemTitle>{{ isLoadingCut ? 'Recortando...' : 'Recortar con Argentina' }}</span>
+    </mat-list-item>
+  } @else {
+    <mat-list-item (click)="!isLoadingAlerts && onUndoCut()" [class.disabled]="isLoadingAlerts">
+      <mat-icon matListItemIcon>undo</mat-icon>
+      <span matListItemTitle>Deshacer recorte</span>
+    </mat-list-item>
+  }
+
+  <mat-divider />
+
   <mat-list-item (click)="onToggleVisibility()">
     <mat-icon matListItemIcon>{{ polygonVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
     <span matListItemTitle>{{ polygonVisible ? 'Ocultar' : 'Mostrar' }}</span>
@@ -36,24 +58,7 @@
     }
   }
 
-  @if (!canUndoCut) {
-    <mat-list-item
-      (click)="!isLoadingCut && !isLoadingAlerts && onCut()"
-      [class.disabled]="isLoadingCut || isLoadingAlerts"
-    >
-      @if (isLoadingCut) {
-        <mat-icon matListItemIcon class="spinning">autorenew</mat-icon>
-      } @else {
-        <mat-icon matListItemIcon>crop</mat-icon>
-      }
-      <span matListItemTitle>{{ isLoadingCut ? 'Recortando...' : 'Recortar con Argentina' }}</span>
-    </mat-list-item>
-  } @else {
-    <mat-list-item (click)="!isLoadingAlerts && onUndoCut()" [class.disabled]="isLoadingAlerts">
-      <mat-icon matListItemIcon>undo</mat-icon>
-      <span matListItemTitle>Deshacer recorte</span>
-    </mat-list-item>
-  }
+  <mat-divider />
 
   <mat-list-item
     (click)="!isLoadingAlerts && !exceedsMaxVertices && onGenerateAlert()"
@@ -68,6 +73,8 @@
     }
     <span matListItemTitle>{{ isLoadingAlerts ? 'Generando aviso...' : 'Generar aviso' }}</span>
   </mat-list-item>
+
+  <mat-divider />
 
   <mat-list-item (click)="!isLoadingAlerts && onDelete()" [class.disabled]="isLoadingAlerts">
     <mat-icon matListItemIcon color="warn">delete</mat-icon>

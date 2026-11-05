@@ -29,6 +29,10 @@ import { DetailItemComponent } from '../../../shared/detail-item/detail-item';
 import { DetailChipComponent } from '../../../shared/detail-chip/detail-chip';
 import { DetailRowConfig } from './alert-list-item/alert-list-item';
 import { MapInfoService } from '../../../../services/layers/map-info.service';
+import {
+  deleteAllPolygonsMessage,
+  deletePolygonMessage,
+} from '../../../../utils/polygon-messages.utils';
 
 @Component({
   selector: 'app-alerts-panel',
@@ -99,14 +103,13 @@ export class AlertsPanelComponent implements MenuPanelComponent {
 
   deletePolygon(id: string): void {
     const polygon = this.polygons().find((p) => p.id === id);
-    const polygonName = polygon?.name || 'Sin nombre';
 
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
       ConfirmDialogComponent,
       {
         data: {
           title: 'Eliminar polígono',
-          message: `¿Está seguro que desea eliminar el polígono "${polygonName}"? Esta acción no se puede deshacer.`,
+          message: deletePolygonMessage(polygon?.name),
           confirmText: 'Eliminar',
           cancelText: 'Cancelar',
           confirmColor: 'warn',
@@ -129,7 +132,7 @@ export class AlertsPanelComponent implements MenuPanelComponent {
       {
         data: {
           title: 'Eliminar todos los polígonos',
-          message: `¿Está seguro que desea eliminar todos los polígonos (${count})? Esta acción no se puede deshacer.`,
+          message: deleteAllPolygonsMessage(count),
           confirmText: 'Eliminar todos',
           cancelText: 'Cancelar',
           confirmColor: 'warn',

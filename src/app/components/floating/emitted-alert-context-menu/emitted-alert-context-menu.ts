@@ -14,6 +14,7 @@ import {
 } from '../../../utils/active-alert.utils';
 import { darkenColor, lightenColor } from '../../../utils/map-styles.utils';
 import { formatDateFull } from '../../../utils/tileset-timestamp';
+import { ContextMenuPositionDirective } from '../../shared/context-menu-position/context-menu-position.directive';
 
 /**
  * Right-click menu for emitted (pending/active) alert polygons on the map.
@@ -24,7 +25,13 @@ import { formatDateFull } from '../../../utils/tileset-timestamp';
 @Component({
   selector: 'app-emitted-alert-context-menu',
   standalone: true,
-  imports: [MatIconModule, MatListModule, MatDividerModule, DetailItemComponent],
+  imports: [
+    MatIconModule,
+    MatListModule,
+    MatDividerModule,
+    DetailItemComponent,
+    ContextMenuPositionDirective,
+  ],
   templateUrl: './emitted-alert-context-menu.html',
   styleUrl: './emitted-alert-context-menu.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

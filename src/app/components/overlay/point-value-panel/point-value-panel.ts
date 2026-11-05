@@ -45,10 +45,6 @@ export class PointValuePanelComponent {
   get periodLine(): string | null {
     const parts: string[] = [];
 
-    if (this.isPlaying) {
-      parts.push('Reproduciéndose');
-    }
-
     if (this.elevationLabel) {
       parts.push(this.elevationLabel);
     }
@@ -69,6 +65,11 @@ export class PointValuePanelComponent {
     }
 
     return slots;
+  }
+
+  /** True while the shown data belongs to a previous frame and the current one is on its way. */
+  get isStale(): boolean {
+    return this.isLoading && this.data !== null;
   }
 
   get valueData(): PointQueryValueData | null {

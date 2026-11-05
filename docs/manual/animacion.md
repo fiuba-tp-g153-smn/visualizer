@@ -26,7 +26,8 @@ Los números de la lista son los de la captura.
 2. El intervalo, en segundos por imagen, entre 0,1 y 10.
 3. La marca de tiempo de la imagen que estás viendo, con su sufijo HOA o UTC.
 4. El botón de reproducción.
-5. El botón que lleva a la imagen más reciente.
+5. Las horas de los extremos del deslizador. Un clic en la de la izquierda lleva a la primera
+   imagen y en la de la derecha a la última; al pasar el mouse se subrayan.
 6. El deslizador para moverte cuadro por cuadro. Sigue funcionando con la reproducción
    detenida.
 
@@ -86,6 +87,11 @@ Cada capa consultada tiene un panel (2) con su nombre, su instante, su corrida o
 corresponde, y el valor con su unidad. El valor es el dato, no el color leído de la imagen. El
 panel dice "Sin dato" hasta el primer clic, y donde la capa no tiene dato. Cada panel se cierra
 con su propia cruz.
+
+El valor sigue a la capa: al mover su período o al reproducirla, el panel consulta el instante
+nuevo para el mismo punto. Mientras llega, el valor anterior queda atenuado. Los instantes ya
+consultados se recuerdan, así que al repetir la animación los valores aparecen sin espera.
+Mientras la capa se reproduce, un punto que late junto a su nombre lo indica.
 
 La casilla Mostrar marcador deja una marca en el punto consultado. Con el marcador prendido
 aparece Ubicación del visor: Panel fijo junta los resultados en la columna derecha, y

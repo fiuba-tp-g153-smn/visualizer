@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Output, Input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -11,7 +12,7 @@ import {
 @Component({
   selector: 'app-polygon-context-menu',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatListModule, MatTooltipModule],
+  imports: [MatButtonModule, MatDividerModule, MatIconModule, MatListModule, MatTooltipModule],
   templateUrl: './polygon-context-menu.html',
   styleUrl: './polygon-context-menu.scss',
 })

@@ -22,6 +22,14 @@ export const MAP_CONFIG = {
   minZoom: 2,
   maxZoom: 18,
 
+  /**
+   * Wheel pixels per zoom level. Leaflet's default (60) turns one notch into ~1.1–1.3
+   * levels on Chrome/Linux (it divides wheel pixels by devicePixelRatio only, so a notch
+   * arrives as ~100–120 px), and whole-level snapping rounds that up to 2. At 120 a
+   * notch of up to ~180 px is one level on every platform; fast flicks still add up.
+   */
+  wheelPxPerZoomLevel: 120,
+
   maxBounds: [
     [-MAX_PANNABLE_LATITUDE, CENTER_LONGITUDE - PANNABLE_LONGITUDE_RADIUS],
     [MAX_PANNABLE_LATITUDE, CENTER_LONGITUDE + PANNABLE_LONGITUDE_RADIUS],

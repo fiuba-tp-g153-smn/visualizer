@@ -1,0 +1,36 @@
+@if (state(); as menuState) {
+  <div
+    class="context-menu-backdrop"
+    (click)="onBackdropClick(); $event.stopPropagation()"
+    (contextmenu)="onBackdropClick(); $event.preventDefault()"
+  >
+    <!-- cdkTrapFocus moves focus to the first action on open and gives it back on close. -->
+    <div
+      class="context-menu-positioner"
+      [appContextMenuPosition]="menuState"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="true"
+      (click)="onMenuClick($event)"
+      (keydown.escape)="close.emit()"
+    >
+      <mat-action-list class="map-context-menu" aria-label="Acciones sobre el mapa">
+        @for (section of menuState.sections; track $index; let first = $first) {
+          @if (!first) {
+            <mat-divider />
+          }
+          @for (item of section.items; track item.id) {
+            <button
+              mat-list-item
+              type="button"
+              (click)="select.emit(item)"
+              [attr.data-testid]="'map-menu-' + item.id"
+            >
+              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              <span matListItemTitle>{{ item.label }}</span>
+            </button>
+          }
+        }
+      </mat-action-list>
+    </div>
+  </div>
+}

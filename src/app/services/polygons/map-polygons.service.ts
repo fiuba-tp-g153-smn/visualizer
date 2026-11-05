@@ -3,6 +3,7 @@ import { Injectable, inject, effect, signal, computed } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import * as L from 'leaflet';
 import 'leaflet-editable';
+import { ensureEditTools } from '../../utils/leaflet-edit-tools';
 import { PolygonService } from './polygon.service';
 import { AlertEmissionService } from './alert-emission.service';
 import { PolygonDrawingService, DrawingMode } from './polygon-drawing.service';
@@ -29,6 +30,7 @@ import {
   lightenColor,
 } from '../../utils/map-styles.utils';
 import { isSimplePolygon } from '../../utils/polygon-validation.utils';
+import { deletePolygonMessage } from '../../utils/polygon-messages.utils';
 import { departmentKey } from '../../utils/department-key.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
 import { NotificationService } from '../notifications/notification.service';
@@ -146,13 +148,7 @@ export class MapPolygonsService {
 
   private ensureEditTools(): void {
     if (this.editToolsReady || !this.map) return;
-    if (!this.map.editTools) {
-      this.map.editTools = new L.Editable(this.map, {});
-      (this.map.editTools as any).createVertexIcon = (options: L.DivIconOptions): L.DivIcon => {
-        const size = L.Browser.mobile && L.Browser.touch ? 20 : 12;
-        return L.divIcon({ ...options, iconSize: [size, size] });
-      };
-    }
+    ensureEditTools(this.map);
     this.editToolsReady = true;
   }
 
@@ -598,14 +594,13 @@ export class MapPolygonsService {
 
   private confirmAndDeletePolygon(polygonId: string): void {
     const polygon = this.polygonService.getPolygonById(polygonId);
-    const polygonName = polygon?.name || 'Sin nombre';
 
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
       ConfirmDialogComponent,
       {
         data: {
           title: 'Eliminar polígono',
-          message: `¿Está seguro que desea eliminar el polígono "${polygonName}"? Esta acción no se puede deshacer.`,
+          message: deletePolygonMessage(polygon?.name),
           confirmText: 'Eliminar',
           cancelText: 'Cancelar',
           confirmColor: 'warn',
