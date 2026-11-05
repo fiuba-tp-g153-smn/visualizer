@@ -85,6 +85,31 @@ export const MAP_TEXTS = {
     run: (run: string): string => `Corrida ${run}`,
     range: (range: string): string => `Rango: ${range}`,
   },
+  sections: {
+    drawPolygon: 'Dibujar polígono',
+    playAll: 'Reproducir todas las capas',
+    pauseAll: 'Pausar todas las capas',
+    clearAll: 'Desactivar todas las capas',
+    copyCoordinates: 'Copiar coordenadas',
+    clearAllConfirm: (count: number): string =>
+      count === 1 ? '¿Desactivar la capa activa?' : `¿Desactivar las ${count} capas activas?`,
+    deactivate: 'Desactivar',
+    copied: 'Coordenadas copiadas al portapapeles',
+    copyFailed: 'No se pudieron copiar las coordenadas',
+  },
+  distance: {
+    clear: 'Eliminar medición',
+    start: 'Medir distancia',
+    cancel: 'Cancelar medición',
+    finish: 'Terminar medición',
+    undo: 'Deshacer último punto',
+    edit: 'Editar medición',
+    restart: 'Nueva medición',
+  },
+  health: {
+    down: 'El Caché y mapas no está disponible. Algunas capas pueden no cargar. Reintentando…',
+    recovered: 'Caché y mapas reconectado.',
+  },
   contextMenu: {
     ariaLabel: 'Acciones sobre el mapa',
   },
@@ -106,6 +131,7 @@ export const MAP_TEXTS = {
       `Cruza otro cuadro en ${layer}: ninguna capa puede volver atrás`,
     addPoints: 'Clic en puntos de otras capas para sumarlos',
     frame: (n: number, time: string): string => `Cuadro ${n} · ${time}`,
+    frameNumber: (n: number): string => `Cuadro ${n}`,
     /** Why a layer of the group sits outside its timeline, under its greyed-out lane. */
     leftOut: {
       unaligned: 'sin horarios en común',

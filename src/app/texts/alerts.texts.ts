@@ -25,6 +25,11 @@ export const ALERTS_TEXTS = {
     generalGifTitle: (alertId: number): string => `Aviso #${alertId} — General`,
   },
   polygons: {
+    selfIntersectingDraw:
+      'El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.',
+    selfIntersectingEdit:
+      'El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.',
+    unknownDepartment: 'Desconocido',
     deleteOneTitle: 'Eliminar polígono',
     deleteAllTitle: 'Eliminar todos los polígonos',
     deleteAllConfirm: 'Eliminar todos',
@@ -51,6 +56,49 @@ export const ALERTS_TEXTS = {
     tooManyVertices: (max: number): string => `Supera el máximo de ${max} vértices permitidos`,
     generatingAlert: 'Generando aviso...',
     generateAlert: 'Generar aviso',
+  },
+  emission: {
+    areaTooLarge:
+      'El área afectada por el polígono es demasiado grande. Reducí el tamaño del ' +
+      'polígono e intentá de nuevo.',
+    clientTimeout:
+      'La generación del aviso está tardando más de lo esperado. Revisá la sección ' +
+      'Pendientes en unos minutos.',
+    backendTimeout: 'La generación del aviso tardó demasiado y se canceló. Intentá de nuevo.',
+    genericFailure: 'No se pudo generar el aviso. Intentá de nuevo.',
+    tooManyVertices: (max: number): string =>
+      `El polígono supera el máximo de ${max} vértices permitidos. Simplificá el polígono para poder generar el aviso.`,
+  },
+  expired: 'Vencido',
+  /** Fallback descriptions of the phenomenon codes, used when the backend list is unavailable. */
+  phenomena: {
+    1: 'Tormentas fuertes con ráfagas',
+    2: 'Tormentas fuertes con ocasional caída de granizo',
+    3: 'Tormentas fuertes con caída de granizo',
+    4: 'Tormentas fuertes con lluvias intensas',
+    5: 'Tormentas fuertes con ráfagas y ocasional caída de granizo',
+    6: 'Tormentas fuertes con ráfagas y caída de granizo',
+    7: 'Tormentas fuertes con lluvias intensas y ráfagas',
+    8: 'Tormentas fuertes con lluvias intensas y ocasional caída de granizo',
+    9: 'Tormentas fuertes con lluvias intensas y caída de granizo',
+    10: 'Tormentas fuertes con lluvias intensas, ráfagas y ocasional caída de granizo',
+    11: 'Tormentas fuertes con lluvias intensas, ráfagas y caída de granizo',
+    21: 'Tormentas severas con ráfagas',
+    22: 'Tormentas severas con ocasional caída de granizo',
+    23: 'Tormentas severas con caída de granizo',
+    24: 'Tormentas severas con lluvias intensas',
+    25: 'Tormentas severas con ráfagas y ocasional caída de granizo',
+    26: 'Tormentas severas con ráfagas y caída de granizo',
+    27: 'Tormentas severas con lluvias intensas y ráfagas',
+    28: 'Tormentas severas con lluvias intensas y ocasional caída de granizo',
+    29: 'Tormentas severas con lluvias intensas y caída de granizo',
+    30: 'Tormentas severas con lluvias intensas, ráfagas y ocasional caída de granizo',
+    31: 'Tormentas severas con lluvias intensas, ráfagas y caída de granizo',
+    40: 'Lluvias intensas',
+    41: 'Nevadas intensas',
+    90: 'Posible formación de tornados',
+    91: 'Tormentas severas con lluvias intensas, ráfagas, granizo y posible formación de tornados',
+    92: 'Tormentas severas con lluvias intensas, ráfagas, granizo y tornados',
   },
   panel: {
     generateTab: 'Generar',

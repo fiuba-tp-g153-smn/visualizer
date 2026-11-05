@@ -8,6 +8,7 @@ import {
   PendingAlertResponse,
 } from '../models/geo';
 import { DepartmentListItem } from '../components/overlay/main-menu/alerts-panel/department-list/department-list';
+import { ALERTS_TEXTS } from '../texts';
 
 /**
  * Marker the backend uses when no departments fall inside the area.
@@ -35,7 +36,7 @@ export function activeAlertColorForExpiry(endDatetime: Date, now: number = Date.
 
 export function formatActiveAlertRemaining(endDatetime: Date, now: number = Date.now()): string {
   const remainingMs = endDatetime.getTime() - now;
-  if (remainingMs <= 0) return 'Vencido';
+  if (remainingMs <= 0) return ALERTS_TEXTS.expired;
 
   const totalMinutes = Math.floor(remainingMs / 60_000);
   if (totalMinutes < 1) return '<1min';

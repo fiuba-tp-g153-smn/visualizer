@@ -28,6 +28,7 @@ import {
   SyncPlan,
   SyncTimeline,
 } from '../../utils/sync-alignment';
+import { LAYERS_TEXTS } from '../../texts';
 
 type SyncTileLayer = Extract<Layer, { type: LayerType.TILE }>;
 
@@ -274,9 +275,10 @@ export class SyncPlaybackService {
     if (this.canPlay(groupId)) return null;
     const included = this.includedLayers(groupId);
     if (included.length < MIN_SYNC_LAYERS) return syncGroupDefinition(groupId).peerHint;
-    if (included.some((layer) => !this.timeline(layer))) return 'Cargando imágenes…';
-    if (this.isCustomized(groupId)) return 'Uní al menos dos cuadros en la línea de tiempo';
-    return 'Las capas no tienen horarios en común';
+    if (included.some((layer) => !this.timeline(layer)))
+      return LAYERS_TEXTS.syncGroup.loadingImages;
+    if (this.isCustomized(groupId)) return LAYERS_TEXTS.syncGroup.joinTwoFrames;
+    return LAYERS_TEXTS.syncGroup.noCommonTimes;
   }
 
   /** Whether the layer belongs to its group's timeline (playing or paused). */

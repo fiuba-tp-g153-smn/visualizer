@@ -2,6 +2,7 @@ import type { RecentJob } from '../../models/metrics/metrics.models';
 import { buildTypeColorMap } from './metrics-chart.util';
 import { secs } from './metrics-format.util';
 import { outcomeColor, outcomeLabel, prod } from './metrics-labels.constants';
+import { METRICS_TEXTS } from '../../texts';
 
 export type TimelineColorBy = 'outcome' | 'type';
 
@@ -217,11 +218,11 @@ export function tooltipHtml(job: RecentJob, utc: boolean): string {
   return [
     '<div class="apx-tip">',
     `<div class="apx-tip__title">${escapeHtml(prod(job.product_label ?? job.job_type))}</div>`,
-    tipRow('Worker', escapeHtml(workerLabel(job))),
-    tipRow('Inicio', clock(job.started_at, utc)),
-    tipRow('Fin', clock(job.finished_at, utc)),
-    tipRow('Duración', secs(job.total_s)),
-    tipRow('Resultado', outcomeLabel(job.outcome)),
+    tipRow(METRICS_TEXTS.tooltip.worker, escapeHtml(workerLabel(job))),
+    tipRow(METRICS_TEXTS.tooltip.start, clock(job.started_at, utc)),
+    tipRow(METRICS_TEXTS.tooltip.end, clock(job.finished_at, utc)),
+    tipRow(METRICS_TEXTS.tooltip.duration, secs(job.total_s)),
+    tipRow(METRICS_TEXTS.tooltip.outcome, outcomeLabel(job.outcome)),
     '</div>',
   ].join('');
 }

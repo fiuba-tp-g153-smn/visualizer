@@ -11,6 +11,7 @@ import { DEFAULT_MAX_POLYGON_VERTICES } from '../../config/polygon.config';
 import { POLYGON_STATUS, STORAGE_KEYS } from '../../constants';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { NotificationService } from '../notifications/notification.service';
+import { ALERTS_TEXTS } from '../../texts';
 
 const HTTP_STATUS_PAYLOAD_TOO_LARGE = 413;
 
@@ -312,14 +313,12 @@ export class PolygonService {
         if (maxVertexCount) {
           this.maxVerticesSignal.set(maxVertexCount);
         }
-        this.notifications.error(
-          `El polígono supera el máximo de ${this.maxVerticesSignal()} vértices permitidos. Simplificá el polígono para poder generar el aviso.`,
-        );
+        this.notifications.error(ALERTS_TEXTS.emission.tooManyVertices(this.maxVerticesSignal()));
         return null;
       }
 
       console.error('Error al generar alertas:', error);
-      this.notifications.error('No se pudo generar el aviso. Intentá de nuevo.');
+      this.notifications.error(ALERTS_TEXTS.emission.genericFailure);
       return null;
     }
   }

@@ -1,10 +1,6 @@
-export const OUTCOME_LABELS: Readonly<Record<string, string>> = {
-  success: 'Éxito',
-  error: 'Error',
-  dlq: 'DLQ',
-  requeued: 'Reencolado',
-  skipped: 'Omitido',
-};
+import { METRICS_TEXTS } from '../../texts';
+
+export const OUTCOME_LABELS: Readonly<Record<string, string>> = METRICS_TEXTS.outcomes;
 
 // Colores por resultado, alineados con las píldoras `.pill--*` de la tabla
 // (sortable-table.component.scss). Fuente única para las barras de la línea de
@@ -19,49 +15,9 @@ export const OUTCOME_COLORS: Readonly<Record<string, string>> = {
 
 const FALLBACK_OUTCOME_COLOR = '#8e8e8e';
 
-export const STAGE_LABELS: Readonly<Record<string, string>> = {
-  startup: 'Arranque',
-  setup: 'Inicialización',
-  teardown: 'Cierre',
-  read: 'Lectura',
-  load: 'Carga',
-  aggregate: 'Agregación',
-  georef: 'Georref.',
-  extract: 'Extracción',
-  mapping: 'Mapeo',
-  brightness_temp: 'Temp. brillo',
-  reproject: 'Reproyección',
-  rgba: 'RGBA',
-  cog: 'COG',
-  geotiff: 'GeoTIFF',
-  prewarp: 'Prewarp',
-  secondary_cog: 'COG sec.',
-  geojson: 'GeoJSON',
-  tiling: 'Teselado',
-  upload: 'Subida',
-  list: 'Verif. existentes', // ECMWF producer: S3 existence-check (GRIB/COG HEADs)
-  // Alert-generation stages (alerts-service dashboard).
-  intersect: 'Intersección',
-  filter: 'Filtrado deptos.',
-  render: 'Render (GIF)',
-  persist: 'Guardado',
-};
+export const STAGE_LABELS: Readonly<Record<string, string>> = METRICS_TEXTS.stages;
 
-export const PRODUCT_TERMS: Readonly<Record<string, string>> = {
-  'Cloud Tops': 'Tope de nubes',
-  'Water Vapor': 'Vapor de agua',
-  Visible: 'Visible',
-  'GLM Lightning': 'Rayos GLM',
-  'Horizontal Reflectivity': 'Reflectividad horizontal',
-  'Radial Velocity': 'Velocidad radial',
-  'Cross-correlation Coefficient': 'Coef. correlación cruzada',
-  'Differential Reflectivity': 'Reflectividad diferencial',
-  'Specific Differential Phase': 'Fase dif. específica',
-  'Differential Phase': 'Fase diferencial',
-  'Spectrum Width': 'Ancho espectral',
-  'Total Power': 'Potencia total',
-  Reflectivity: 'Reflectividad',
-};
+export const PRODUCT_TERMS: Readonly<Record<string, string>> = METRICS_TEXTS.productTerms;
 
 export function prod(label: string | null | undefined): string {
   let text = label ?? '';

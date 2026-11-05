@@ -3,6 +3,7 @@ export { ALERTS_TEXTS } from './alerts.texts';
 export { DASHBOARDS_TEXTS } from './dashboards.texts';
 export { LAYERS_TEXTS } from './layers.texts';
 export { MAP_TEXTS } from './map.texts';
+export { METRICS_TEXTS } from './metrics.texts';
 export { SEARCH_TEXTS } from './search.texts';
 export { SETTINGS_TEXTS } from './settings.texts';
 export { STATIONS_TEXTS } from './stations.texts';

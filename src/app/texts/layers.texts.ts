@@ -71,6 +71,37 @@ export const LAYERS_TEXTS = {
     loadError: (detail: string): string =>
       `No se pudieron cargar las estaciones meteorológicas: ${detail}.`,
   },
+  refresh: {
+    periodsAvailable: (count: number, layer: string): string =>
+      `${count} períodos disponibles para ${layer}`,
+    noChanges: (layer: string): string => `Sin cambios para ${layer}`,
+    added: (n: number, layer: string): string => {
+      const plural = n !== 1 ? 's' : '';
+      return `${n} período${plural} agregado${plural} para ${layer}`;
+    },
+    removed: (n: number, layer: string): string => {
+      const plural = n !== 1 ? 's' : '';
+      return `${n} período${plural} eliminado${plural} para ${layer}`;
+    },
+    modified: (n: number, layer: string): string => {
+      const plural = n !== 1 ? 's' : '';
+      return `${n} período${plural} modificado${plural} para ${layer}`;
+    },
+    addedAndRemoved: (added: number, removed: number, layer: string): string =>
+      `${added} período${added !== 1 ? 's' : ''} agregado${added !== 1 ? 's' : ''}, ${removed} eliminado${removed !== 1 ? 's' : ''} para ${layer}`,
+    unavailable: (layer: string): string =>
+      `La capa "${layer}" no está disponible temporalmente. Verificá la conexión con el servidor.`,
+  },
+  /** Prefixes and names used to build a layer's full display name. */
+  displayNames: {
+    goes: 'GOES 19',
+    rma: (n: string): string => `RMA ${n}`,
+    intaRadars: {
+      PAR: 'INTA Paraná',
+      ANG: 'INTA Anguil',
+      PER: 'INTA Pergamino',
+    },
+  },
   /** Display names of forecast secondary renders, keyed by the render id suffix. */
   forecastRenders: {
     barbs: 'Barbas',
@@ -97,6 +128,9 @@ export const LAYERS_TEXTS = {
     secondsPerImage: 'Segundos por imagen',
   },
   syncGroup: {
+    loadingImages: 'Cargando imágenes…',
+    joinTwoFrames: 'Uní al menos dos cuadros en la línea de tiempo',
+    noCommonTimes: 'Las capas no tienen horarios en común',
     playing: 'Reproduciéndose',
     timeline: 'Línea de tiempo',
     timelineAria: 'Ver y editar la línea de tiempo del grupo',

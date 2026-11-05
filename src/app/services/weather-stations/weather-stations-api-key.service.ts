@@ -13,6 +13,7 @@ import {
 import { LayerControlService } from '../layers/layer-control.service';
 import { buildWeatherStationsTilesetsUrl } from '../../config/backend.config';
 import { LocalStorageService } from '../storage/local-storage.service';
+import { STATIONS_TEXTS } from '../../texts';
 
 interface StoredKeyState {
   key: string;
@@ -93,7 +94,7 @@ export class WeatherStationsApiKeyService {
     if (existing) {
       if (await this.isKeyRejected(existing)) {
         this.removeKeyFromStorage();
-        return this.promptIfAllowed('Tu clave ya no es válida. Ingresá una nueva para continuar.');
+        return this.promptIfAllowed(STATIONS_TEXTS.apiKey.invalidReprompt);
       }
       return existing;
     }
@@ -145,9 +146,7 @@ export class WeatherStationsApiKeyService {
     if (this.dialogInFlight) {
       return this.dialogInFlight;
     }
-    this.dialogInFlight = this.promptForKey(
-      'Tu clave ya no funciona. Pedile una nueva al administrador del sistema y pegala acá.',
-    );
+    this.dialogInFlight = this.promptForKey(STATIONS_TEXTS.apiKey.expiredPrompt);
     try {
       return await this.dialogInFlight;
     } finally {

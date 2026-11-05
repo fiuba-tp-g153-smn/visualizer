@@ -34,6 +34,7 @@ import {
   GifPreviewDialogComponent,
   GifPreviewDialogData,
 } from '../../components/floating/gif-preview-dialog/gif-preview-dialog';
+import { ALERTS_TEXTS } from '../../texts';
 
 /**
  * Renders active and pending alert polygons on the map in dedicated layer
@@ -163,13 +164,13 @@ export class ActiveAlertsMapService {
 
         case 'viewGifArea':
           if (state?.gifAreaUrl) {
-            this.openGif(`Aviso #${action.alertId} — Área`, state.gifAreaUrl);
+            this.openGif(ALERTS_TEXTS.details.areaGifTitle(action.alertId), state.gifAreaUrl);
           }
           break;
 
         case 'viewGifGral':
           if (state?.gifGralUrl) {
-            this.openGif(`Aviso #${action.alertId} — General`, state.gifGralUrl);
+            this.openGif(ALERTS_TEXTS.details.generalGifTitle(action.alertId), state.gifGralUrl);
           }
           break;
       }
@@ -337,5 +338,4 @@ export class ActiveAlertsMapService {
       }
     }
   }
-
 }

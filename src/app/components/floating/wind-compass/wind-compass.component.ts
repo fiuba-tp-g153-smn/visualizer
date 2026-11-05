@@ -16,7 +16,7 @@ export class WindCompassComponent {
   @Input() direction: string | null = null;
 
   get isCalm(): boolean {
-    return this.direction === STATIONS_TEXTS.wind.calm;
+    return this.direction === 'Calma';
   }
 
   get hasDirection(): boolean {

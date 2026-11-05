@@ -297,9 +297,7 @@ export class MapPolygonsService {
       if (this.map && this.map.hasLayer(layer)) {
         this.map.removeLayer(layer);
       }
-      this.notificationService.warning(
-        'El polígono no puede tener intersecciones consigo mismo. Por favor, dibuje un polígono simple.',
-      );
+      this.notificationService.warning(ALERTS_TEXTS.polygons.selfIntersectingDraw);
       return;
     }
 
@@ -652,9 +650,7 @@ export class MapPolygonsService {
           layer.setLatLngs([originalLatLngs]);
         }
 
-        this.notificationService.warning(
-          'El polígono no puede tener intersecciones consigo mismo. Se han restaurado las coordenadas originales.',
-        );
+        this.notificationService.warning(ALERTS_TEXTS.polygons.selfIntersectingEdit);
 
         if (layer.disableEdit) {
           layer.disableEdit();

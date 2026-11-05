@@ -9,6 +9,7 @@ import {
 import { LAYER_DEFINITIONS } from '../../config/layers';
 import { adapterForLayer } from '../../config/layers/forecast-model';
 import { environment } from '../../../environments/environment';
+import { LAYERS_TEXTS } from '../../texts';
 
 // layer.id = `<red>/<radar>/<producto>`, con la red en el primer segmento
 // (`radar-sinarame`, `radar-inta`). El patron anterior exigia el literal
@@ -21,11 +22,7 @@ const RADAR_RMA_PATTERN = /^RMA(\d+)$/;
  * Nombre visible de los radares que no siguen la numeracion RMA (los del INTA,
  * cuyo id es un codigo de tres letras). Sin entrada se muestra el id crudo.
  */
-const RADAR_DISPLAY_NAMES: Readonly<Record<string, string>> = {
-  PAR: 'INTA Paraná',
-  ANG: 'INTA Anguil',
-  PER: 'INTA Pergamino',
-};
+const RADAR_DISPLAY_NAMES: Readonly<Record<string, string>> = LAYERS_TEXTS.displayNames.intaRadars;
 
 /**
  * Service responsible for managing layer definitions and metadata.
@@ -118,7 +115,7 @@ export class LayersService {
           // Build hierarchical name based on group type
           switch (layer.category) {
             case LayerCategory.GOES_19:
-              parts.push('GOES 19');
+              parts.push(LAYERS_TEXTS.displayNames.goes);
               parts.push(subgroup.name); // ABI, GLM
               parts.push(layer.name);
               break;
@@ -130,7 +127,9 @@ export class LayersService {
               const radarId = radarIdMatch ? radarIdMatch[1] : 'RMA';
               const rmaMatch = radarId.match(RADAR_RMA_PATTERN);
               parts.push(
-                rmaMatch ? `RMA ${rmaMatch[1]}` : (RADAR_DISPLAY_NAMES[radarId] ?? radarId),
+                rmaMatch
+                  ? LAYERS_TEXTS.displayNames.rma(rmaMatch[1])
+                  : (RADAR_DISPLAY_NAMES[radarId] ?? radarId),
               );
 
               parts.push(layer.name);

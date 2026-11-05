@@ -9,20 +9,16 @@ import { NotificationService } from '../notifications/notification.service';
 import { PhenomenonSelectionDialogComponent } from '../../components/floating/phenomenon-selection-dialog/phenomenon-selection-dialog';
 import { SidebarMenuService } from '../../components/overlay/main-menu/sidebar-menu.service';
 import { AlertsPanelStateService } from '../../components/overlay/main-menu/alerts-panel/alerts-panel-state.service';
+import { ALERTS_TEXTS } from '../../texts';
 
 const ALERTS_PANEL_ID = 'alerts';
 
-const AREA_TOO_LARGE_MESSAGE =
-  'El área afectada por el polígono es demasiado grande. Reducí el tamaño del ' +
-  'polígono e intentá de nuevo.';
+const AREA_TOO_LARGE_MESSAGE = ALERTS_TEXTS.emission.areaTooLarge;
 // Client gave up waiting; the alert may still be generating in the background.
-const CLIENT_TIMEOUT_MESSAGE =
-  'La generación del aviso está tardando más de lo esperado. Revisá la sección ' +
-  'Pendientes en unos minutos.';
+const CLIENT_TIMEOUT_MESSAGE = ALERTS_TEXTS.emission.clientTimeout;
 // Backend cancelled the job for exceeding its time limit; nothing was produced.
-const BACKEND_TIMEOUT_MESSAGE =
-  'La generación del aviso tardó demasiado y se canceló. Intentá de nuevo.';
-const GENERIC_FAILURE_MESSAGE = 'No se pudo generar el aviso. Intentá de nuevo.';
+const BACKEND_TIMEOUT_MESSAGE = ALERTS_TEXTS.emission.backendTimeout;
+const GENERIC_FAILURE_MESSAGE = ALERTS_TEXTS.emission.genericFailure;
 
 /**
  * Shared emission flow (phenomenon dialog → POST /alerts → background job),

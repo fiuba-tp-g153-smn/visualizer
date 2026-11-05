@@ -5,6 +5,7 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { buildDataServiceHealthUrl } from '../../config';
 import { NotificationType } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
+import { MAP_TEXTS } from '../../texts';
 
 /**
  * Hybrid availability tracker for the data-service.
@@ -29,9 +30,8 @@ export class DataServiceHealthService {
   private static readonly BANNER_ID = 'data-service-unavailable';
   private static readonly PROBE_TIMEOUT_MS = 3_000;
   private static readonly POLL_INTERVAL_MS = 10_000;
-  private static readonly BANNER_MESSAGE =
-    'El Caché y mapas no está disponible. Algunas capas pueden no cargar. Reintentando…';
-  private static readonly RECOVERY_MESSAGE = 'Caché y mapas reconectado.';
+  private static readonly BANNER_MESSAGE = MAP_TEXTS.health.down;
+  private static readonly RECOVERY_MESSAGE = MAP_TEXTS.health.recovered;
 
   private readonly http = inject(HttpClient);
   private readonly notificationService = inject(NotificationService);
@@ -122,5 +122,4 @@ export class DataServiceHealthService {
       this.pollHandle = null;
     }
   }
-
 }

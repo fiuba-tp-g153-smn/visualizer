@@ -3,8 +3,29 @@ export const STATIONS_TEXTS = {
   stationId: 'ID estación:',
   coords: (lat: string, lon: string): string => `Lat ${lat} · Lon ${lon}`,
   defaultName: 'Estación',
+  /** Display names of the observed variables (popup, charts, summary). */
+  variables: {
+    temperature: 'Temperatura',
+    feelsLike: 'Sensación térmica',
+    dewPoint: 'Punto de rocío',
+    humidity: 'Humedad',
+    pressure: 'Presión',
+    visibility: 'Visibilidad',
+    wind: 'Viento',
+  },
+  stats: {
+    max: 'Máxima',
+    min: 'Mínima',
+    avg: 'Promedio',
+  },
+  staleTooltip: 'Sin datos en el período solicitado',
+  apiKey: {
+    invalidReprompt: 'Tu clave ya no es válida. Ingresá una nueva para continuar.',
+    expiredPrompt:
+      'Tu clave ya no funciona. Pedile una nueva al administrador del sistema y pegala acá.',
+    rejected: 'No se pudieron cargar las estaciones meteorológicas: tu clave no es válida.',
+  },
   wind: {
-    calm: 'Calma',
     calmCaption: 'Calma · sin dirección',
     from: (direction: string): string => `desde el ${direction}`,
     noData: 'Sin dato',

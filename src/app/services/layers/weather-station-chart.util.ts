@@ -24,6 +24,7 @@ import {
   type StationSeries,
   type StationSeriesPoint,
 } from '../../models/geo/weather-station-series.model';
+import { STATIONS_TEXTS } from '../../texts';
 
 /** Wundermap-style chart: Temperatura (red) + Punto de rocío (green) overlaid. */
 export interface TempDewChartVm {
@@ -223,14 +224,14 @@ export function buildTempDewChart(
     series,
     [
       {
-        name: 'Temperatura',
+        name: STATIONS_TEXTS.variables.temperature,
         color: TEMP_COLOR,
         sourceUnit: TEMPERATURE_UNITS.CELSIUS,
         decimals: 1,
         accessor: (p) => p.temperature,
       },
       {
-        name: 'Punto de rocío',
+        name: STATIONS_TEXTS.variables.dewPoint,
         color: DEW_COLOR,
         sourceUnit: TEMPERATURE_UNITS.CELSIUS,
         decimals: 1,
@@ -285,8 +286,7 @@ export function buildTabChart(
         accessor: variable.accessor,
         floorAtZero: variable.id === 'visibility',
         minStep:
-          variable.id === 'windSpeed' &&
-          unitsSettings.windSpeedUnit() === WIND_SPEED_UNITS.KNOTS
+          variable.id === 'windSpeed' && unitsSettings.windSpeedUnit() === WIND_SPEED_UNITS.KNOTS
             ? 0.5
             : 1,
       },
@@ -432,7 +432,7 @@ function buildVariableChart(
     series: dewData
       ? [
           { name: variable.label, data },
-          { name: 'Punto de rocío', data: dewData },
+          { name: STATIONS_TEXTS.variables.dewPoint, data: dewData },
         ]
       : [{ name: variable.label, data }],
     chart: {

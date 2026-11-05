@@ -30,6 +30,7 @@ import {
   WeatherStationObservation,
   WeatherStationSnapshot,
 } from '../../models';
+import { LAYERS_TEXTS } from '../../texts';
 
 interface WeatherStationsEndpointConfig {
   tilesetIds: readonly string[];
@@ -116,14 +117,17 @@ export class LayerRefreshService {
   private readonly weatherStationsEndpointConfigSignal =
     signal<WeatherStationsEndpointConfig | null>(null);
   private readonly weatherStationsLoadTickSignal = signal(0);
-  private readonly weatherStationsRegistrySignal = signal<readonly WeatherStationDto[] | null>(null);
+  private readonly weatherStationsRegistrySignal = signal<readonly WeatherStationDto[] | null>(
+    null,
+  );
   private weatherStationsInflight: Promise<WeatherStationSnapshot> | null = null;
   private weatherStationsRegistryInflight: Promise<readonly WeatherStationDto[]> | null = null;
   // `/tilesets` changes ~hourly (a new bucket appears); cache it for a short TTL
   // so animation frames don't each re-fetch it. Aligns with its Cache-Control.
   private readonly WEATHER_STATIONS_TILESETS_TTL_MS = 60_000;
   private weatherStationsEndpointConfigFetchedAt = 0;
-  private weatherStationsEndpointConfigInflight: Promise<WeatherStationsEndpointConfig> | null = null;
+  private weatherStationsEndpointConfigInflight: Promise<WeatherStationsEndpointConfig> | null =
+    null;
 
   readonly weatherStationsLoadTick = this.weatherStationsLoadTickSignal.asReadonly();
   readonly loadingLayerIds = this.loadingLayerIdsSignal.asReadonly();
@@ -274,10 +278,13 @@ export class LayerRefreshService {
     if (after !== before) {
       this.notificationService.show(
         NotificationType.SUCCESS,
-        `${after} períodos disponibles para ${layerName}`,
+        LAYERS_TEXTS.refresh.periodsAvailable(after, layerName),
       );
     } else {
-      this.notificationService.show(NotificationType.INFO, `Sin cambios para ${layerName}`);
+      this.notificationService.show(
+        NotificationType.INFO,
+        LAYERS_TEXTS.refresh.noChanges(layerName),
+      );
     }
   }
 
@@ -631,7 +638,9 @@ export class LayerRefreshService {
     };
   }
 
-  private syncWeatherStationsTemporalControlsWithConfig(config: WeatherStationsEndpointConfig): void {
+  private syncWeatherStationsTemporalControlsWithConfig(
+    config: WeatherStationsEndpointConfig,
+  ): void {
     if (config.tilesetIds.length === 0) {
       this.layerControlService.setWeatherStationsSelectedTilesetId(null);
       return;
@@ -709,7 +718,10 @@ export class LayerRefreshService {
   ): void {
     if (diff.added === 0 && diff.removed === 0) {
       if (showNoChanges) {
-        this.notificationService.show(NotificationType.INFO, `Sin cambios para ${layerName}`);
+        this.notificationService.show(
+          NotificationType.INFO,
+          LAYERS_TEXTS.refresh.noChanges(layerName),
+        );
       }
       return;
     }
@@ -718,22 +730,19 @@ export class LayerRefreshService {
 
     switch (true) {
       case diff.added > 0 && diff.removed === 0: {
-        const plural = diff.added !== 1 ? 's' : '';
-        message = `${diff.added} período${plural} agregado${plural} para ${layerName}`;
+        message = LAYERS_TEXTS.refresh.added(diff.added, layerName);
         break;
       }
       case diff.removed > 0 && diff.added === 0: {
-        const plural = diff.removed !== 1 ? 's' : '';
-        message = `${diff.removed} período${plural} eliminado${plural} para ${layerName}`;
+        message = LAYERS_TEXTS.refresh.removed(diff.removed, layerName);
         break;
       }
       case diff.added === diff.removed: {
-        const plural = diff.added !== 1 ? 's' : '';
-        message = `${diff.added} período${plural} modificado${plural} para ${layerName}`;
+        message = LAYERS_TEXTS.refresh.modified(diff.added, layerName);
         break;
       }
       default: {
-        message = `${diff.added} período${diff.added !== 1 ? 's' : ''} agregado${diff.added !== 1 ? 's' : ''}, ${diff.removed} eliminado${diff.removed !== 1 ? 's' : ''} para ${layerName}`;
+        message = LAYERS_TEXTS.refresh.addedAndRemoved(diff.added, diff.removed, layerName);
         break;
       }
     }

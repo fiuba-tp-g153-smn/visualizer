@@ -1,8 +1,4 @@
-import {
-  HttpErrorResponse,
-  HttpInterceptorFn,
-  HttpRequest,
-} from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { from, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
@@ -10,6 +6,7 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { NotificationType } from '../../models';
 import { NotificationService } from '../notifications/notification.service';
 import { WeatherStationsApiKeyService } from './weather-stations-api-key.service';
+import { STATIONS_TEXTS } from '../../texts';
 
 const WEATHER_STATIONS_PATH_FRAGMENT = '/weather-stations/';
 
@@ -50,11 +47,10 @@ export const weatherStationsHttpInterceptor: HttpInterceptorFn = (req, next) => 
             // Transient toast (auto-dismisses) rather than the persistent
             // `error()` banner — the user has already seen + cancelled the
             // re-prompt, so a lingering banner adds no information.
-            notifications.show(
-              NotificationType.ERROR,
-              'No se pudieron cargar las estaciones meteorológicas: tu clave no es válida.',
-              { autoClose: true, duration: 5000 },
-            );
+            notifications.show(NotificationType.ERROR, STATIONS_TEXTS.apiKey.rejected, {
+              autoClose: true,
+              duration: 5000,
+            });
             return throwError(() => err);
           }
           return next(applyApiKey(req, newKey));
