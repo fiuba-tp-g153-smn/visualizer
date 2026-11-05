@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import type { ApexYAxis } from 'ng-apexcharts';
 
@@ -236,6 +236,8 @@ function yLabels(yaxis: ApexYAxis): string[] {
 
 describe('buildSeriesCharts — round reference labels', () => {
   beforeEach(() => TestBed.configureTestingModule({}));
+  // setWindSpeedUnit persists to localStorage; don't leak it into other specs.
+  afterEach(() => localStorage.clear());
 
   it('renders whole-number humidity references despite the global decimal precision', () => {
     const u = units();
