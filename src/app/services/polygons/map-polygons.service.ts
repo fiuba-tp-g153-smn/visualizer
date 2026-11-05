@@ -30,7 +30,7 @@ import {
   lightenColor,
 } from '../../utils/map-styles.utils';
 import { isSimplePolygon } from '../../utils/polygon-validation.utils';
-import { deletePolygonMessage } from '../../utils/polygon-messages.utils';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../texts';
 import { departmentKey } from '../../utils/department-key.utils';
 import { ACTION_DELAYS } from '../../config/timing.config';
 import { NotificationService } from '../notifications/notification.service';
@@ -599,10 +599,10 @@ export class MapPolygonsService {
       ConfirmDialogComponent,
       {
         data: {
-          title: 'Eliminar polígono',
-          message: deletePolygonMessage(polygon?.name),
-          confirmText: 'Eliminar',
-          cancelText: 'Cancelar',
+          title: ALERTS_TEXTS.polygons.deleteOneTitle,
+          message: ALERTS_TEXTS.polygons.deleteOne(polygon?.name),
+          confirmText: COMMON_TEXTS.actions.delete,
+          cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
         },
       },

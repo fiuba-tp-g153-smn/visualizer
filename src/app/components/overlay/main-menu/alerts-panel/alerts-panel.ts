@@ -29,10 +29,7 @@ import { DetailItemComponent } from '../../../shared/detail-item/detail-item';
 import { DetailChipComponent } from '../../../shared/detail-chip/detail-chip';
 import { DetailRowConfig } from './alert-list-item/alert-list-item';
 import { MapInfoService } from '../../../../services/layers/map-info.service';
-import {
-  deleteAllPolygonsMessage,
-  deletePolygonMessage,
-} from '../../../../utils/polygon-messages.utils';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../../texts';
 
 @Component({
   selector: 'app-alerts-panel',
@@ -108,10 +105,10 @@ export class AlertsPanelComponent implements MenuPanelComponent {
       ConfirmDialogComponent,
       {
         data: {
-          title: 'Eliminar polígono',
-          message: deletePolygonMessage(polygon?.name),
-          confirmText: 'Eliminar',
-          cancelText: 'Cancelar',
+          title: ALERTS_TEXTS.polygons.deleteOneTitle,
+          message: ALERTS_TEXTS.polygons.deleteOne(polygon?.name),
+          confirmText: COMMON_TEXTS.actions.delete,
+          cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
         },
       },
@@ -131,10 +128,10 @@ export class AlertsPanelComponent implements MenuPanelComponent {
       ConfirmDialogComponent,
       {
         data: {
-          title: 'Eliminar todos los polígonos',
-          message: deleteAllPolygonsMessage(count),
-          confirmText: 'Eliminar todos',
-          cancelText: 'Cancelar',
+          title: ALERTS_TEXTS.polygons.deleteAllTitle,
+          message: ALERTS_TEXTS.polygons.deleteAll(count),
+          confirmText: ALERTS_TEXTS.polygons.deleteAllConfirm,
+          cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
         },
       },
