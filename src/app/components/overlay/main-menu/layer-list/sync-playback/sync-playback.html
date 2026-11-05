@@ -2,10 +2,10 @@
   @for (groupId of activeGroupIds(); track groupId) {
     <app-sync-group [groupId]="groupId" />
   } @empty {
-    <div class="empty-state-container">
-      <mat-icon class="empty-icon">sync_disabled</mat-icon>
-      <h3>Sin capas disponibles</h3>
-      <p>Encendé radares, satélites o modelos numéricos para animarlos juntos.</p>
-    </div>
+    <app-empty-state
+      icon="sync_disabled"
+      heading="Nada para sincronizar"
+      hint="Encendé radares, satélites o modelos numéricos para animarlos juntos."
+    />
   }
 </div>

@@ -8,32 +8,3 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
-
-.empty-state-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 2rem 1rem;
-  text-align: center;
-  color: var(--mat-sys-on-surface-variant);
-
-  .empty-icon {
-    font-size: 3rem;
-    width: 3rem;
-    height: 3rem;
-    opacity: 0.5;
-  }
-
-  h3 {
-    font-size: 1rem;
-    font-weight: 500;
-    margin: 0;
-  }
-
-  p {
-    font-size: 0.875rem;
-    margin: 0;
-  }
-}
