@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LoadingSpinnerComponent } from '../../shared/loading-spinner/loading-spinner';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../texts';
 
 export interface GifPreviewDialogData {
   title: string;
@@ -21,6 +22,8 @@ export interface GifPreviewDialogData {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GifPreviewDialogComponent {
+  protected readonly t = ALERTS_TEXTS.gifPreview;
+  protected readonly common = COMMON_TEXTS.actions;
   readonly data = inject<GifPreviewDialogData>(MAT_DIALOG_DATA);
 
   readonly loaded = signal<boolean>(false);

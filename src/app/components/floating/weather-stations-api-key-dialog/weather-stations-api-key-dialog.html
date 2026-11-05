@@ -1,15 +1,15 @@
 <h2 mat-dialog-title class="dialog-title">
   <mat-icon class="dialog-icon">vpn_key</mat-icon>
-  <span>Clave de acceso a las estaciones meteorológicas</span>
+  <span>{{ t.title }}</span>
 </h2>
 
 <mat-dialog-content class="dialog-content">
   <p class="dialog-description">
-    Ingresá la clave de acceso al servicio de estaciones del SMN. Se guarda en el navegador.
+    {{ t.description }}
   </p>
 
   <mat-form-field appearance="outline" subscriptSizing="dynamic" class="key-field">
-    <mat-label>Clave</mat-label>
+    <mat-label>{{ t.keyLabel }}</mat-label>
     <input
       matInput
       type="password"
@@ -32,7 +32,7 @@
 
 <mat-dialog-actions align="end" class="dialog-actions">
   <button mat-stroked-button type="button" [disabled]="isValidating()" (click)="cancel()">
-    Cancelar
+    {{ common.cancel }}
   </button>
   <button
     mat-flat-button
@@ -44,7 +44,7 @@
     @if (isValidating()) {
       <mat-spinner diameter="18" />
     } @else {
-      Guardar
+      {{ common.save }}
     }
   </button>
 </mat-dialog-actions>

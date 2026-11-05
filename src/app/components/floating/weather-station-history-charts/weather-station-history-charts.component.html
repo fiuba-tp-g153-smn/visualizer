@@ -3,14 +3,19 @@
     <div class="ws-history__titles">
       <h2 class="ws-history__title">{{ stationName }}</h2>
       <div class="ws-history__meta">
-        ID estación: <strong>{{ stationId }}</strong> · Lat {{ latText }} · Lon {{ lonText }}
+        {{ t.stationId }} <strong>{{ stationId }}</strong> · {{ t.coords(latText, lonText) }}
       </div>
       @if (province) {
         <div class="ws-history__province">{{ province }}</div>
       }
-      <div class="ws-history__subtitle">Últimas 48 horas</div>
+      <div class="ws-history__subtitle">{{ t.history.subtitle }}</div>
     </div>
-    <button mat-icon-button aria-label="Cerrar" class="ws-history__close" (click)="close()">
+    <button
+      mat-icon-button
+      [attr.aria-label]="common.close"
+      class="ws-history__close"
+      (click)="close()"
+    >
       <mat-icon>close</mat-icon>
     </button>
   </header>
@@ -22,7 +27,7 @@
       [class.ws-history__nav-btn--active]="section() === DetailSection.GRAFICOS"
       (click)="setSection(DetailSection.GRAFICOS)"
     >
-      Gráficos
+      {{ t.history.chartsTab }}
     </button>
     <button
       type="button"
@@ -30,7 +35,7 @@
       [class.ws-history__nav-btn--active]="section() === DetailSection.RESUMEN"
       (click)="setSection(DetailSection.RESUMEN)"
     >
-      Resumen
+      {{ t.history.summaryTab }}
     </button>
     <button
       type="button"
@@ -38,7 +43,7 @@
       [class.ws-history__nav-btn--active]="section() === DetailSection.OBSERVACIONES"
       (click)="setSection(DetailSection.OBSERVACIONES)"
     >
-      Observaciones
+      {{ t.history.observationsTab }}
     </button>
   </nav>
 
@@ -46,12 +51,12 @@
     @if (loading()) {
       <div class="ws-history__state">
         <app-loading-spinner [diameter]="40" />
-        <span>Cargando histórico…</span>
+        <span>{{ t.history.loading }}</span>
       </div>
     } @else if (error()) {
-      <div class="ws-history__state">No se pudo cargar el histórico de la estación.</div>
+      <div class="ws-history__state">{{ t.history.error }}</div>
     } @else if (!hasPoints()) {
-      <div class="ws-history__state">Sin datos en las últimas 48 horas.</div>
+      <div class="ws-history__state">{{ t.history.noData }}</div>
     } @else if (section() === DetailSection.GRAFICOS) {
       <div class="ws-history__charts">
         @for (vm of charts(); track vm.variable.id) {
@@ -77,7 +82,7 @@
                 [markers]="vm.markers"
               ></apx-chart>
             } @else {
-              <div class="ws-history__chart-empty">Sin datos</div>
+              <div class="ws-history__chart-empty">{{ t.history.chartNoData }}</div>
             }
           </article>
         }
@@ -101,15 +106,15 @@
         <table class="ws-history__table">
           <thead>
             <tr>
-              <th>Hora</th>
-              <th>Temp.</th>
-              <th>P. rocío</th>
-              <th>Humedad</th>
-              <th>Viento</th>
-              <th>Velocidad</th>
-              <th>Presión</th>
-              <th>Visib.</th>
-              <th>Condición</th>
+              <th>{{ t.history.columns.time }}</th>
+              <th>{{ t.history.columns.temperature }}</th>
+              <th>{{ t.history.columns.dewPoint }}</th>
+              <th>{{ t.history.columns.humidity }}</th>
+              <th>{{ t.history.columns.windDirection }}</th>
+              <th>{{ t.history.columns.windSpeed }}</th>
+              <th>{{ t.history.columns.pressure }}</th>
+              <th>{{ t.history.columns.visibility }}</th>
+              <th>{{ t.history.columns.condition }}</th>
             </tr>
           </thead>
           <tbody>

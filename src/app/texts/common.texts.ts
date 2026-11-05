@@ -9,6 +9,10 @@ export const COMMON_TEXTS = {
     close: 'Cerrar',
     delete: 'Eliminar',
     retry: 'Reintentar',
+    save: 'Guardar',
+    show: 'Mostrar',
+    hide: 'Ocultar',
+    openInNewTab: 'Abrir en pestaña nueva',
   },
   aria: {
     loading: 'Cargando',

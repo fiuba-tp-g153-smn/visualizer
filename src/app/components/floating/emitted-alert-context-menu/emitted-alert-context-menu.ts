@@ -15,6 +15,7 @@ import {
 import { darkenColor, lightenColor } from '../../../utils/map-styles.utils';
 import { formatDateFull } from '../../../utils/tileset-timestamp';
 import { ContextMenuPositionDirective } from '../../shared/context-menu-position/context-menu-position.directive';
+import { ALERTS_TEXTS, COMMON_TEXTS } from '../../../texts';
 
 /**
  * Right-click menu for emitted (pending/active) alert polygons on the map.
@@ -37,6 +38,9 @@ import { ContextMenuPositionDirective } from '../../shared/context-menu-position
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EmittedAlertContextMenuComponent {
+  protected readonly t = ALERTS_TEXTS.emittedAlertMenu;
+  protected readonly common = COMMON_TEXTS.actions;
+  protected readonly polygonMenu = ALERTS_TEXTS.polygonMenu;
   readonly state = input<EmittedAlertContextMenuState | null>(null);
   readonly action = output<EmittedAlertContextMenuAction>();
   readonly close = output<void>();

@@ -9,6 +9,7 @@ import {
   MapContextMenuState,
 } from '../../../services/map-context-menu/map-context-menu.models';
 import { ContextMenuPositionDirective } from '../../shared/context-menu-position/context-menu-position.directive';
+import { MAP_TEXTS } from '../../../texts';
 
 /**
  * Right-click menu over empty map. Renders the sections features contribute through
@@ -30,6 +31,7 @@ import { ContextMenuPositionDirective } from '../../shared/context-menu-position
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MapContextMenuComponent {
+  protected readonly t = MAP_TEXTS.contextMenu;
   readonly state = input<MapContextMenuState | null>(null);
   readonly select = output<MapContextMenuItem>();
   readonly close = output<void>();

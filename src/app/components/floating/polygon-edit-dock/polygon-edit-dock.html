@@ -1,10 +1,16 @@
 <div class="polygon-edit-dock" data-testid="dock-polygon-edit">
-  <button mat-flat-button color="primary" (click)="onSave()" class="dock-button" data-testid="dock-polygon-save">
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="onSave()"
+    class="dock-button"
+    data-testid="dock-polygon-save"
+  >
     <mat-icon>check</mat-icon>
-    Guardar
+    {{ common.save }}
   </button>
   <button mat-button (click)="onCancel()" class="dock-button" data-testid="dock-polygon-cancel">
     <mat-icon>close</mat-icon>
-    Cancelar
+    {{ common.cancel }}
   </button>
 </div>

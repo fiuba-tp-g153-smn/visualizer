@@ -16,4 +16,36 @@ export const ALERTS_TEXTS = {
       return `¿Eliminar ${subject}? No se puede deshacer.`;
     },
   },
+  polygonMenu: {
+    editGeometry: 'Editar geometría',
+    cutting: 'Recortando...',
+    cutWithArgentina: 'Recortar con Argentina',
+    undoCut: 'Deshacer recorte',
+    loadingDepartments: 'Cargando departamentos...',
+    showDepartments: 'Mostrar departamentos',
+    hideDepartments: 'Ocultar departamentos',
+    tooManyVertices: (max: number): string => `Supera el máximo de ${max} vértices permitidos`,
+    generatingAlert: 'Generando aviso...',
+    generateAlert: 'Generar aviso',
+  },
+  emittedAlertMenu: {
+    title: (alertId: number): string => `Aviso #${alertId}`,
+    pending: 'Pendiente',
+    phenomenon: 'Fenómeno:',
+    issued: 'Emisión:',
+    ends: 'Cese:',
+    viewAreaImage: 'Ver imagen del área',
+    viewGeneralImage: 'Ver imagen general',
+  },
+  gifPreview: {
+    loadError: 'No se pudo cargar la imagen.',
+  },
+  phenomenonDialog: {
+    title: 'Generar aviso',
+    loading: 'Cargando fenómenos meteorológicos...',
+    prompt: 'Seleccione el código de fenómeno meteorológico:',
+    codeLabel: 'Código de fenómeno',
+    usingLocalData: 'Usando datos locales (backend no disponible)',
+    confirm: 'Generar aviso',
+  },
 } as const;

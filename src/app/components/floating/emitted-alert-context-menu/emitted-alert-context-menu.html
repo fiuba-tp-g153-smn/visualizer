@@ -7,9 +7,9 @@
     >
       <div class="emitted-alert-context-menu">
         <div class="menu-header">
-          <span class="menu-title">Aviso #{{ menuState.alertId }}</span>
+          <span class="menu-title">{{ t.title(menuState.alertId) }}</span>
           @if (menuState.kind === 'pending') {
-            <span class="menu-status menu-status--pending">Pendiente</span>
+            <span class="menu-status menu-status--pending">{{ t.pending }}</span>
           } @else {
             <span
               class="menu-status menu-status--active"
@@ -21,15 +21,15 @@
         </div>
 
         <div class="menu-details">
-          <app-detail-item icon="warning" label="Fenómeno:">
+          <app-detail-item icon="warning" [label]="t.phenomenon">
             <span class="detail-value">{{ menuState.phenomenon }}</span>
           </app-detail-item>
 
           @if (menuState.kind === 'active') {
-            <app-detail-item icon="schedule" label="Emisión:">
+            <app-detail-item icon="schedule" [label]="t.issued">
               <span class="detail-value">{{ formatDate(menuState.startDatetime!) }}</span>
             </app-detail-item>
-            <app-detail-item icon="event_busy" label="Cese:">
+            <app-detail-item icon="event_busy" [label]="t.ends">
               <span class="detail-value">{{ formatDate(menuState.endDatetime!) }}</span>
             </app-detail-item>
           }
@@ -42,7 +42,7 @@
             <mat-icon matListItemIcon>{{
               menuState.hidden ? 'visibility' : 'visibility_off'
             }}</mat-icon>
-            <span matListItemTitle>{{ menuState.hidden ? 'Mostrar' : 'Ocultar' }}</span>
+            <span matListItemTitle>{{ menuState.hidden ? common.show : common.hide }}</span>
           </mat-list-item>
 
           <mat-list-item (click)="emit('toggleDepartments')">
@@ -50,7 +50,7 @@
               menuState.departmentsShown ? 'visibility_off' : 'map'
             }}</mat-icon>
             <span matListItemTitle>{{
-              menuState.departmentsShown ? 'Ocultar departamentos' : 'Mostrar departamentos'
+              menuState.departmentsShown ? polygonMenu.hideDepartments : polygonMenu.showDepartments
             }}</span>
           </mat-list-item>
 
@@ -58,11 +58,11 @@
             <mat-divider />
             <mat-list-item (click)="emit('viewGifArea')">
               <mat-icon matListItemIcon>zoom_in</mat-icon>
-              <span matListItemTitle>Ver imagen del área</span>
+              <span matListItemTitle>{{ t.viewAreaImage }}</span>
             </mat-list-item>
             <mat-list-item (click)="emit('viewGifGral')">
               <mat-icon matListItemIcon>public</mat-icon>
-              <span matListItemTitle>Ver imagen general</span>
+              <span matListItemTitle>{{ t.viewGeneralImage }}</span>
             </mat-list-item>
           }
         </mat-nav-list>

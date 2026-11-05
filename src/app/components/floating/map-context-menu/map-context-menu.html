@@ -13,7 +13,7 @@
       (click)="onMenuClick($event)"
       (keydown.escape)="close.emit()"
     >
-      <mat-action-list class="map-context-menu" aria-label="Acciones sobre el mapa">
+      <mat-action-list class="map-context-menu" [attr.aria-label]="t.ariaLabel">
         @for (section of menuState.sections; track $index; let first = $first) {
           @if (!first) {
             <mat-divider />

@@ -1,7 +1,7 @@
 <mat-nav-list class="polygon-context-menu">
   <mat-list-item (click)="!isLoadingAlerts && onEdit()" [class.disabled]="isLoadingAlerts">
     <mat-icon matListItemIcon>edit_location</mat-icon>
-    <span matListItemTitle>Editar geometría</span>
+    <span matListItemTitle>{{ t.editGeometry }}</span>
   </mat-list-item>
 
   @if (!canUndoCut) {
@@ -14,12 +14,12 @@
       } @else {
         <mat-icon matListItemIcon>crop</mat-icon>
       }
-      <span matListItemTitle>{{ isLoadingCut ? 'Recortando...' : 'Recortar con Argentina' }}</span>
+      <span matListItemTitle>{{ isLoadingCut ? t.cutting : t.cutWithArgentina }}</span>
     </mat-list-item>
   } @else {
     <mat-list-item (click)="!isLoadingAlerts && onUndoCut()" [class.disabled]="isLoadingAlerts">
       <mat-icon matListItemIcon>undo</mat-icon>
-      <span matListItemTitle>Deshacer recorte</span>
+      <span matListItemTitle>{{ t.undoCut }}</span>
     </mat-list-item>
   }
 
@@ -27,7 +27,7 @@
 
   <mat-list-item (click)="onToggleVisibility()">
     <mat-icon matListItemIcon>{{ polygonVisible ? 'visibility_off' : 'visibility' }}</mat-icon>
-    <span matListItemTitle>{{ polygonVisible ? 'Ocultar' : 'Mostrar' }}</span>
+    <span matListItemTitle>{{ polygonVisible ? common.hide : common.show }}</span>
   </mat-list-item>
 
   @if (!hasDepartments) {
@@ -41,19 +41,19 @@
         <mat-icon matListItemIcon>map</mat-icon>
       }
       <span matListItemTitle>{{
-        isLoadingDepartments ? 'Cargando departamentos...' : 'Mostrar departamentos'
+        isLoadingDepartments ? t.loadingDepartments : t.showDepartments
       }}</span>
     </mat-list-item>
   } @else {
     @if (departmentsVisible) {
       <mat-list-item (click)="onToggleDepartments()">
         <mat-icon matListItemIcon>visibility_off</mat-icon>
-        <span matListItemTitle>Ocultar departamentos</span>
+        <span matListItemTitle>{{ t.hideDepartments }}</span>
       </mat-list-item>
     } @else {
       <mat-list-item (click)="onToggleDepartments()">
         <mat-icon matListItemIcon>visibility</mat-icon>
-        <span matListItemTitle>Mostrar departamentos</span>
+        <span matListItemTitle>{{ t.showDepartments }}</span>
       </mat-list-item>
     }
   }
@@ -63,7 +63,7 @@
   <mat-list-item
     (click)="!isLoadingAlerts && !exceedsMaxVertices && onGenerateAlert()"
     [class.disabled]="isLoadingAlerts || exceedsMaxVertices"
-    [matTooltip]="'Supera el máximo de ' + maxVertices + ' vértices permitidos'"
+    [matTooltip]="t.tooManyVertices(maxVertices)"
     [matTooltipDisabled]="!exceedsMaxVertices"
   >
     @if (isLoadingAlerts) {
@@ -71,13 +71,13 @@
     } @else {
       <mat-icon matListItemIcon>warning</mat-icon>
     }
-    <span matListItemTitle>{{ isLoadingAlerts ? 'Generando aviso...' : 'Generar aviso' }}</span>
+    <span matListItemTitle>{{ isLoadingAlerts ? t.generatingAlert : t.generateAlert }}</span>
   </mat-list-item>
 
   <mat-divider />
 
   <mat-list-item (click)="!isLoadingAlerts && onDelete()" [class.disabled]="isLoadingAlerts">
     <mat-icon matListItemIcon color="warn">delete</mat-icon>
-    <span matListItemTitle>Eliminar</span>
+    <span matListItemTitle>{{ common.delete }}</span>
   </mat-list-item>
 </mat-nav-list>
