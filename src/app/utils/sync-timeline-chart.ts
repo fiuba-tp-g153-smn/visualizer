@@ -175,6 +175,18 @@ function frameSegments(
   });
 }
 
+/**
+ * Where a frame's line starts: the time of its image on the topmost lane it joins, so its
+ * number sits right above it. Falls back to the frame's time when it joins none.
+ */
+function lineStart(frame: SyncFrame, lanes: readonly SyncChartLane[]): number {
+  for (const lane of lanes) {
+    const member = frame.members.get(lane.id);
+    if (member !== undefined) return lane.timestamps[member];
+  }
+  return frame.time;
+}
+
 /** The day the chart spans, or its first and last when it spans more. */
 function daysLabel(
   lanes: readonly SyncChartLane[],
@@ -234,9 +246,10 @@ export function buildSyncTimelineOption(
       i === selected && invalid ? colors.error : colors.primary,
     ),
   );
-  // Each frame's number above the chart, the playing one stressed; crowded ones hide.
+  // Each frame's number above the chart, over where its line starts at the topmost lane it
+  // joins, the playing one stressed; crowded ones hide.
   const numbers = plan.frames.map((frame, i) => ({
-    value: [frame.time, -0.5],
+    value: [lineStart(frame, lanes), -0.5],
     target: { kind: 'frame', index: i } as const,
     label: {
       show: true,
