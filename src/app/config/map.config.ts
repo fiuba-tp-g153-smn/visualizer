@@ -61,10 +61,12 @@ export const MAP_CONFIG = {
 /**
  * Z-index para elementos del mapa
  *
- * Leaflet panes por defecto:
+ * Panes, los de Leaflet y los propios (*):
  * - tilePane: 200 (tiles del mapa base)
  * - overlayPane: 400 (vectores y overlays por defecto)
+ * - departments*: 450 (ver Z_INDEX en map-polygons.config.ts)
  * - shadowPane: 500 (sombras de markers)
+ * - measurement*: 550 (medición de distancias)
  * - markerPane: 600 (markers)
  * - tooltipPane: 650 (tooltips)
  * - popupPane: 700 (popups)
