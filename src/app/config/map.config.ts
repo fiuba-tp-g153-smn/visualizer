@@ -73,12 +73,9 @@ export const MAP_Z_INDEX = {
   /** Z-index para el mapa base (debe ser el más bajo) */
   BASE_MAP: 0,
 
-  /** Z-index para gratículas (líneas de lat/lon) - por encima de capas de datos */
-  GRATICULE: 650,
-
-  /** Z-index para líneas del cursor (crosshair) */
-  CURSOR_LINES: 650,
-
-  /** Z-index para el marcador de consulta puntual */
-  QUERY_MARKER: 600,
+  /**
+   * Pane de la medición de distancias: por encima de los vectores de `overlayPane`
+   * (gratícula, polígonos), por debajo de `markerPane`, donde viven sus manijas de edición.
+   */
+  MEASUREMENT: 550,
 } as const;

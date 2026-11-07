@@ -222,6 +222,26 @@ describe('DistanceToolService', () => {
     });
   });
 
+  describe('map', () => {
+    it('draws the path in its own pane, above the vectors of the overlay pane', () => {
+      const container = document.createElement('div');
+      document.body.append(container);
+      const leafletMap = map(container).setView([-34, -58], 4);
+      service.initialize(leafletMap);
+
+      measure([-34, -58], [-31, -64]);
+      TestBed.tick();
+
+      const pane = leafletMap.getPane('measurement');
+      expect(pane?.style.zIndex).toBe('550');
+      expect(pane?.querySelectorAll('path').length).toBeGreaterThan(0);
+      expect(leafletMap.getPane('overlayPane')?.querySelectorAll('path')).toHaveLength(0);
+      service.destroy();
+      leafletMap.remove();
+      container.remove();
+    });
+  });
+
   describe('teardown', () => {
     const pressEscape = () =>
       document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));

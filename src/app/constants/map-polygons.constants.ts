@@ -1,5 +1,6 @@
 export const MAP_PANES = {
   DEPARTMENTS: 'departments',
+  MEASUREMENT: 'measurement',
 } as const;
 
 /**
