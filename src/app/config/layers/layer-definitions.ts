@@ -5,6 +5,7 @@ import { ECMWF_SUBGROUP } from './ecmwf/config';
 import { GFS_SUBGROUP } from './gfs/config';
 import { WEATHER_STATIONS_SUBGROUP } from './weather-stations/config';
 import { WRF_SUBGROUP } from './wrf/config';
+import { METAREA_VI_SUBGROUP } from './metarea-vi/config';
 import {
   IGN_WMS_ADMINISTRATIVE_SUBGROUP,
   IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
@@ -72,6 +73,14 @@ export const LAYER_DEFINITIONS: LayerGroup[] = [
       IGN_WMS_DEFENSE_SECURITY_SUBGROUP,
       IGN_WMS_OTHER_SUBGROUP,
     ],
+  },
+  {
+    id: 'metarea-vi',
+    name: LAYER_NAMES.groups.metareaVi.name,
+    description: LAYER_NAMES.groups.metareaVi.description,
+    icon: 'sailing',
+    expanded: false,
+    subgroups: [METAREA_VI_SUBGROUP],
   },
 ];
 

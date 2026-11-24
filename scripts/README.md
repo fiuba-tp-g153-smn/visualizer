@@ -15,7 +15,7 @@ npx tsx scripts/generate-layer-report.ts
 
 | Archivo | Filas | Descripción |
 | --------- | ------- | ------------- |
-| `groups.csv` | 5 | Grupos de capas (Satélite, Radar, Modelos…) |
+| `groups.csv` | 6 | Grupos de capas (Satélite, Radar, Modelos…) |
 | `subgroups.csv` | 30 | Subgrupos con FK → `groupId` |
 | `layers.csv` | ~131 | Capas con FK → `subgroupId` |
 | `scales.csv` | ~27 | Escalas únicas (agrupadas por objeto compartido) con columna `usedBy` |

@@ -24,6 +24,10 @@ export const LAYER_NAMES = {
       name: 'IGN Argentina',
       description: 'Capas WMS del Instituto Geográfico Nacional',
     },
+    metareaVi: {
+      name: 'Metarea VI',
+      description: 'Zonas de pronóstico marítimo del SMN',
+    },
     base: {
       name: 'Capas de datos',
       subtitle: 'Radar, modelos numéricos',
@@ -32,9 +36,9 @@ export const LAYER_NAMES = {
     },
     overlay: {
       name: 'Capas de referencia',
-      subtitle: 'IGN, cartografía',
+      subtitle: 'IGN, Metarea VI',
       description:
-        'Capas de referencia cartográfica del IGN. Siempre se muestran por encima de las capas de datos.',
+        'Capas de referencia cartográfica del IGN y zonas de pronóstico marítimo. Siempre se muestran por encima de las capas de datos.',
     },
     points: {
       name: 'Capas puntuales',
@@ -416,6 +420,18 @@ export const LAYER_NAMES = {
       name: 'Centro de esquí',
       description:
         'Área que dispone de pistas de esquí y medios de elevación. Puede contener hoteles y espacio para usar trineos.',
+    },
+  },
+
+  metareaVi: {
+    metareaViZonas: {
+      name: 'Zonas de pronóstico marítimo',
+      description: 'Zonas costeras y áreas oceánicas de la METAREA VI',
+    },
+    metareaVi: {
+      name: 'Metarea VI',
+      description:
+        'Límites de las zonas costeras y las áreas oceánicas en que el SMN divide el pronóstico marítimo de la METAREA VI.',
     },
   },
 

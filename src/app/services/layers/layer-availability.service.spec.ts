@@ -237,6 +237,23 @@ describe('LayerAvailabilityService — state() truth table', () => {
     expect(service.isUnavailable(wmsLayer())).toBe(false);
   });
 
+  it('never greys the static Metarea VI layer, even when the data-service is down', () => {
+    // A same-origin static file: it does not depend on the data-service at all.
+    const { service } = setup({ isAvailable: signal(false) });
+    const layer = {
+      id: 'metarea-vi',
+      name: 'Metarea VI',
+      type: LayerType.VECTOR,
+      category: LayerCategory.METAREA_VI,
+      zIndexGroup: ActiveLayerGroupId.OVERLAY,
+      dataUrl: '/geo/metarea-vi.json',
+      style: { color: '#000', weight: 1 },
+    } as const satisfies Layer;
+
+    expect(service.state(layer)).toBe('available');
+    expect(service.isUnavailable(layer)).toBe(false);
+  });
+
   it('never greys WMS reference layers even when the data-service is down', () => {
     // WMS/IGN is a separate external server, unaffected by data-service health.
     const { service } = setup({ isAvailable: signal(false) });
