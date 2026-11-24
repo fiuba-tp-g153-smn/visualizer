@@ -31,6 +31,7 @@ import {
   WeatherStationSnapshot,
 } from '../../models';
 import { LAYERS_TEXTS } from '../../texts';
+import { weatherStationsTilesetTime } from '../../utils/weather-stations-tilesets';
 
 interface WeatherStationsEndpointConfig {
   tilesetIds: readonly string[];
@@ -450,7 +451,7 @@ export class LayerRefreshService {
       backendSnapshot = await firstValueFrom(
         this.http.get<BackendSnapshot>(buildWeatherStationsTilesetUrl(tilesetId, gracePeriodHours)),
       );
-      referenceTimestamp = this.fromWeatherStationsTilesetId(tilesetId) ?? new Date();
+      referenceTimestamp = new Date(weatherStationsTilesetTime(tilesetId) ?? Date.now());
       // Warm the browser cache for the rest of the window so playback/scrub is
       // served off-heap from the browser cache rather than re-fetched.
       this.prefetchWeatherStationsWindow(endpointConfig.tilesetIds, gracePeriodHours);
@@ -655,19 +656,6 @@ export class LayerRefreshService {
       return selectedTilesetId;
     }
     return tilesetIds[tilesetIds.length - 1] ?? '';
-  }
-
-  private fromWeatherStationsTilesetId(tilesetId: string): Date | null {
-    // Backend emits `YYYYMMDDTHH00Z` (always hour-bucketed; minutes are 00).
-    const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
-    if (!match) {
-      return null;
-    }
-    const [, year, month, day, hour] = match;
-    const parsed = new Date(
-      Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0),
-    );
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   // ============================================================================
