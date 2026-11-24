@@ -1,0 +1,16 @@
+{"type":"FeatureCollection","features":[
+{"type":"Feature","properties":{"id":"rio-de-la-plata","name":"Río de la Plata"},"geometry":{"type":"LineString","coordinates":[[-53.36941,-33.73437],[-50.0,-35.83333],[-50.0,-36.29279],[-56.77656,-36.29279]]}},
+{"type":"Feature","properties":{"id":"zona-a","name":"Zona A"},"geometry":{"type":"LineString","coordinates":[[-56.77656,-36.29279],[-50.0,-36.29279],[-50.0,-38.5],[-58.3673,-38.5]]}},
+{"type":"Feature","properties":{"id":"zona-b","name":"Zona B"},"geometry":{"type":"LineString","coordinates":[[-58.3673,-38.5],[-50.0,-38.5],[-53.0,-41.0375],[-62.80277,-41.0375]]}},
+{"type":"Feature","properties":{"id":"zona-c","name":"Zona C"},"geometry":{"type":"LineString","coordinates":[[-62.80277,-41.0375],[-53.0,-41.0375],[-60.0,-45.0],[-65.58399,-45.0]]}},
+{"type":"Feature","properties":{"id":"zona-d","name":"Zona D"},"geometry":{"type":"LineString","coordinates":[[-65.58399,-45.0],[-60.0,-45.0],[-60.0,-47.95179],[-65.76866,-47.95179]]}},
+{"type":"Feature","properties":{"id":"zona-e","name":"Zona E"},"geometry":{"type":"LineString","coordinates":[[-65.76866,-47.95179],[-60.0,-47.95179],[-60.0,-50.0],[-62.0,-50.0],[-62.0,-54.0],[-67.37401,-54.0]]}},
+{"type":"Feature","properties":{"id":"zona-f","name":"Zona F"},"geometry":{"type":"LineString","coordinates":[[-67.37401,-54.0],[-60.0,-54.0],[-60.0,-55.0],[-67.26667,-55.0]]}},
+{"type":"Feature","properties":{"id":"zona-malvinas","name":"Zona Malvinas"},"geometry":{"type":"LineString","coordinates":[[-62.0,-50.0],[-56.0,-50.0],[-56.0,-54.0],[-62.0,-54.0],[-62.0,-50.0]]}},
+{"type":"Feature","properties":{"id":"area-norte","name":"Área Norte"},"geometry":{"type":"LineString","coordinates":[[-50.0,-35.83333],[-20.0,-35.83333],[-20.0,-40.0],[-51.7734,-40.0],[-50.0,-38.5],[-50.0,-35.83333]]}},
+{"type":"Feature","properties":{"id":"area-centro-oeste","name":"Área Centro Oeste"},"geometry":{"type":"LineString","coordinates":[[-51.7734,-40.0],[-40.0,-40.0],[-40.0,-50.0],[-60.0,-50.0],[-60.0,-45.0],[-53.0,-41.0375],[-51.7734,-40.0]]}},
+{"type":"Feature","properties":{"id":"area-centro-este","name":"Área Centro Este"},"geometry":{"type":"LineString","coordinates":[[-40.0,-40.0],[-20.0,-40.0],[-20.0,-50.0],[-40.0,-50.0],[-40.0,-40.0]]}},
+{"type":"Feature","properties":{"id":"zona-sudoeste-b","name":"Zona Sudoeste B"},"geometry":{"type":"LineString","coordinates":[[-56.0,-50.0],[-40.0,-50.0],[-40.0,-60.0],[-60.0,-60.0],[-60.0,-54.0],[-56.0,-54.0],[-56.0,-50.0]]}},
+{"type":"Feature","properties":{"id":"area-sudeste","name":"Área Sudeste"},"geometry":{"type":"LineString","coordinates":[[-40.0,-50.0],[-20.0,-50.0],[-20.0,-60.0],[-40.0,-60.0],[-40.0,-50.0]]}},
+{"type":"Feature","properties":{"id":"zona-drake","name":"Zona Drake"},"geometry":{"type":"LineString","coordinates":[[-67.26667,-55.0],[-60.0,-55.0],[-60.0,-60.0],[-67.26667,-60.0],[-67.26667,-55.0]]}}
+]}
