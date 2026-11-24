@@ -128,6 +128,7 @@ export const LAYERS_TEXTS = {
     secondsPerImage: 'Segundos por imagen',
   },
   syncGroup: {
+    needsPeer: 'Encendé otra capa del grupo para animarlas juntas',
     loadingImages: 'Cargando imágenes…',
     joinTwoFrames: 'Uní al menos dos cuadros en la línea de tiempo',
     noCommonTimes: 'Las capas no tienen horarios en común',

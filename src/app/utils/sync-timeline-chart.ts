@@ -62,6 +62,35 @@ export function lanesSpan(lanes: readonly SyncChartLane[]): SyncChartSpan | null
   return known.length > 0 ? { min: Math.min(...known), max: Math.max(...known) } : null;
 }
 
+/** Room left past the first and last image of the frames, as a share of their span. */
+const FRAMES_SPAN_PADDING = 0.04;
+
+/**
+ * The span of the images the frames join, with a little room at each end, or null without
+ * frames. Images of the lanes outside it fall off the chart: they take part in no frame.
+ */
+export function framesSpan(lanes: readonly SyncChartLane[], plan: SyncPlan): SyncChartSpan | null {
+  const times = plan.frames.flatMap((frame) =>
+    lanes.flatMap((lane) => {
+      const index = frame.members.get(lane.id);
+      return index === undefined ? [] : [lane.timestamps[index]];
+    }),
+  );
+  if (times.length === 0) return null;
+  const [min, max] = [Math.min(...times), Math.max(...times)];
+  const pad = (max - min) * FRAMES_SPAN_PADDING;
+  return { min: min - pad, max: max + pad };
+}
+
+/** The span covering both, or whichever there is. */
+export function unionSpan(
+  a: SyncChartSpan | null,
+  b: SyncChartSpan | null,
+): SyncChartSpan | null {
+  if (!a || !b) return a ?? b;
+  return { min: Math.min(a.min, b.min), max: Math.max(a.max, b.max) };
+}
+
 /** Whether two lane lists draw the same chart, so a refresh with the same images is skipped. */
 export function sameLanes(a: readonly SyncChartLane[], b: readonly SyncChartLane[]): boolean {
   return (

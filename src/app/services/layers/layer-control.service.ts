@@ -537,7 +537,8 @@ export class LayerControlService {
   setWeatherStationsImageCount(imageCount: number): void {
     this.weatherStationsSharedState.update((state) => ({
       ...state,
-      imageCount: this.normalizeWeatherStationsImageCount(imageCount),
+      // Any count: the select only offers the allowed sizes, and a sync group sets the exact one.
+      imageCount: Math.max(1, Math.round(imageCount)),
     }));
     this.saveWeatherStationsSharedState();
   }

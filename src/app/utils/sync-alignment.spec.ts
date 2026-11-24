@@ -48,8 +48,13 @@ describe('medianIntervalMs', () => {
 });
 
 describe('pickAnchor', () => {
-  it('picks the sparsest cadence', () => {
-    expect(pickAnchor([timeline('fast', 12, 5), timeline('slow', 6, 10)])?.id).toBe('slow');
+  it('picks the densest cadence', () => {
+    expect(pickAnchor([timeline('slow', 6, 10), timeline('fast', 12, 5)])?.id).toBe('fast');
+  });
+
+  it('picks the one reaching furthest back among the same cadence', () => {
+    // 'late' starts 120' after 'early': same 10' cadence, less history.
+    expect(pickAnchor([timeline('late', 12, 10, 120), timeline('early', 24)])?.id).toBe('early');
   });
 
   it('keeps the first on a tie', () => {
@@ -120,16 +125,31 @@ describe('buildSyncFrames', () => {
     expect(frames.filter((f) => f.members.has('b'))).toHaveLength(1);
   });
 
-  it('follows the sparsest layer when cadences differ', () => {
-    // a every 5', b every 10': frames are b's instants, a picks the matching one.
+  it('follows the densest layer when cadences differ, the sparser one holding in between', () => {
+    // a every 5', b every 10': frames are a's instants, b joins every other one.
     const frames = buildSyncFrames([timeline('a', 24, 5), timeline('b', 12, 10)], 6, TOLERANCE);
 
-    expect(frames.map((f) => minutesOf(f.time))).toEqual([60, 70, 80, 90, 100, 110]);
-    expect(frames[0].indices.get('a')).toBe(12);
+    expect(frames.map((f) => f.members.get('a'))).toEqual([18, 19, 20, 21, 22, 23]);
+    expect(frames.filter((f) => f.members.has('b'))).toHaveLength(3);
+    expect(frames.every((f) => f.indices.has('b'))).toBe(true);
+  });
+
+  it('runs on to a layer newer than the anchor, which holds its last image', () => {
+    // b's two last images are 20' and 30' after a's last: two more frames, a held.
+    const frames = buildSyncFrames([timeline('a', 6), timeline('b', 6, 10, 20)], 6, TOLERANCE);
+
+    expect(frames.map((f) => minutesOf(f.time))).toEqual([20, 30, 40, 50, 60, 70]);
+    expect(frames.at(-1)!.members.has('a')).toBe(false);
+    expect(frames.at(-1)!.indices.get('a')).toBe(5);
   });
 
   it('joins no image of a layer that never meets the anchor', () => {
-    const frames = buildSyncFrames([timeline('a', 6), timeline('b', 6, 10, 300)], 6, TOLERANCE);
+    // Both every 20': b sits 10' off every instant of a, past the tolerance, and ends first.
+    const frames = buildSyncFrames(
+      [timeline('a', 6, 20), timeline('b', 5, 20, 10)],
+      6,
+      TOLERANCE,
+    );
 
     expect(frames.some((f) => f.members.has('b'))).toBe(false);
   });
@@ -159,10 +179,10 @@ describe('buildSyncPlan with frames drawn by hand', () => {
     expect(frames[1].indices.get('b')).toBe(0);
   });
 
-  it('shows the first image of a layer before the frame that first has it', () => {
+  it('shows the latest earlier image of a layer before the frame that first has it', () => {
     const { frames } = plan([{ a: at(0) }, { a: at(10), b: at(20) }]);
 
-    expect(frames[0].indices.get('b')).toBe(2);
+    expect(frames[0].indices.get('b')).toBe(0);
   });
 
   it('plays nothing when every frame was deleted', () => {
@@ -236,8 +256,18 @@ describe('frame edits', () => {
     expect(setFrame([{ a: 0 }], 0, {})).toEqual([]);
   });
 
-  it('finds a frame after it re-sorts, whatever its key order', () => {
+  it('merges a frame sharing an image with the edited one, whose images win', () => {
+    // Frame 1 takes b:0 from frame 0: they merge, frame 1 keeping its own a:1.
+    expect(setFrame([{ a: 0, b: 0 }, { a: 1 }, { a: 2 }], 1, { a: 1, b: 0 })).toEqual([
+      { a: 1, b: 0 },
+      { a: 2 },
+    ]);
+    expect(setFrame([{ a: 0, c: 0 }], null, { a: 0, b: 1 })).toEqual([{ a: 0, b: 1, c: 0 }]);
+  });
+
+  it('finds a frame after it re-sorts or merges, by its images', () => {
     expect(indexOfSpec([{ a: 0 }, { b: 1, a: 1 }], { a: 1, b: 1 })).toBe(1);
+    expect(indexOfSpec([{ a: 0 }, { a: 1, b: 1, c: 1 }], { a: 1 })).toBe(1);
     expect(indexOfSpec([{ a: 0 }], { a: 5 })).toBeNull();
   });
 
