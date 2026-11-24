@@ -268,6 +268,10 @@ export interface WeatherStationLayer extends BaseLayer {
 /**
  * Capa vectorial fija: un FeatureCollection de líneas servido como archivo
  * estático del propio front (`public/`). Sin período ni escala; solo opacidad.
+ *
+ * Las features `Point` con propiedad `label` (string) se dibujan como etiquetas
+ * de texto; con `minZoom` (number) se ocultan por debajo de ese zoom. Los
+ * puntos sin `label` no se dibujan.
  */
 export interface StaticVectorLayer extends BaseLayer {
   type: LayerType.VECTOR;

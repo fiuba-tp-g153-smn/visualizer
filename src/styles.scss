@@ -48,6 +48,35 @@ html {
   -ms-interpolation-mode: bicubic;
 }
 
+/*
+ * Etiquetas de las capas vectoriales estáticas (zonas de la Metarea VI).
+ * Globales porque los divIcon de Leaflet quedan fuera del encapsulado de los
+ * componentes. Texto oscuro con contorno claro: se lee sobre mapas base claros
+ * y oscuros. La opacidad la pone el pane de la capa.
+ */
+html {
+  --static-vector-label-color: #1a1a1a;
+  --static-vector-label-halo: #ffffff;
+}
+
+.static-vector-label__text {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font:
+    700 11px/1 Roboto,
+    'Helvetica Neue',
+    sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--static-vector-label-color);
+  text-shadow:
+    0 0 2px var(--static-vector-label-halo),
+    0 0 2px var(--static-vector-label-halo),
+    0 0 4px var(--static-vector-label-halo);
+  pointer-events: none;
+  user-select: none;
+}
+
 mat-card {
   --mat-card-outline-width: 0;
 }

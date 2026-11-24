@@ -136,5 +136,9 @@ pronóstico marítimo de la METAREA VI: las zonas costeras, del Río de la Plata
 áreas oceánicas, hasta los 20° O y los 60° S. Se dibuja como líneas punteadas, sin relleno, en el
 bloque de referencia.
 
+Cada zona lleva su nombre corto, el mismo del mapa oficial del SHN: NORTE, CENTRO OESTE, DRAKE y
+así con las áreas oceánicas, que se ven siempre. Las zonas costeras (RIO DE LA PLATA y de la A a
+la G) son más angostas: sus nombres aparecen desde el zoom 5, para que no se pisen.
+
 Igual que las del IGN, no se anima ni tiene escala: en su fila sólo está la opacidad. Los límites
 vienen con la aplicación, así que la capa se dibuja aunque el servicio de datos no conteste.
