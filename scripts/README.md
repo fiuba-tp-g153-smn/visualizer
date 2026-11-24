@@ -53,8 +53,14 @@ commitea.
 - Aplica las correcciones de vértices de `CORRECTIONS`, cada una justificada con la definición
   oficial ("Referencias METAREA VI" del boletín SHN/SMN). Si un vértice a corregir no está en la
   fuente, aborta.
+- Agrega un punto de etiqueta por zona (`{ id, label, minZoom }`), con el nombre corto del mapa
+  oficial del SHN. La posición es el centroide de la zona; las zonas costeras, que están abiertas,
+  se cierran con la recta entre sus dos extremos. `LABEL_POSITIONS` corrige los puntos que caen
+  sobre tierra. Si un punto cae fuera de su zona, aborta. `minZoom` es 5 en las zonas costeras y 0
+  en las áreas oceánicas.
 - Valida que todas las coordenadas caigan dentro de la METAREA VI y escribe un FeatureCollection
-  RFC 7946 determinista, con una feature por línea y 5 decimales.
+  RFC 7946 determinista, con una feature por línea y 5 decimales: primero las 14 líneas y después
+  las 14 etiquetas.
 
 Los shapefiles en `source/` no se editan a mano. Las diferencias conocidas con la definición
 oficial que no se corrigen están documentadas en el encabezado del script.

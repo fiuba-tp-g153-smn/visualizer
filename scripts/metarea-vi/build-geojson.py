@@ -3,7 +3,9 @@
 
 The output is the boundary lines of the SMN marine-forecast zones of METAREA VI
 (coastal zones and oceanic areas), one GeoJSON Feature per source shapefile, with
-`{id, name}` properties. It is a committed, same-origin static asset: rerun this
+`{id, name}` properties, followed by one label Point per zone with
+`{id, label, minZoom}`: the short name the SHN map uses, and the zoom from which
+the frontend shows it. It is a committed, same-origin static asset: rerun this
 script only when the sources or the tables below change, and commit the result.
 
 Usage:
@@ -38,6 +40,7 @@ import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SOURCE_DIR = SCRIPT_DIR / "source"
@@ -56,33 +59,50 @@ SHP_NULL = 0
 SHP_POLYLINE = 3
 
 Coord = tuple[float, float]
+ZoneKind = Literal["coastal", "oceanic"]
+
+# Zoom from which each kind of label is shown. Coastal zones are a few degrees
+# tall, so their labels would pile up below zoom 5; oceanic areas fit from the
+# outset. The frontend only reads `minZoom`, so the rule lives here.
+LABEL_MIN_ZOOM: dict[ZoneKind, int] = {"coastal": 5, "oceanic": 0}
 
 
 @dataclass(frozen=True, slots=True)
 class Zone:
     source: str  # shapefile basename, without extension
     id: str
-    name: str
+    name: str  # readable form of the file name
+    label: str  # short name, as on the SHN METAREA VI map (METAREAVI2023.png)
+    kind: ZoneKind  # as classified by the official text: G is a coastal zone, Drake an area
 
 
 # Output order: coastal zones north to south, then the oceanic areas.
-# Names follow the source file names, made readable.
 ZONES: tuple[Zone, ...] = (
-    Zone("RioDeLaPlata", "rio-de-la-plata", "Río de la Plata"),
-    Zone("ZonaA", "zona-a", "Zona A"),
-    Zone("ZonaB", "zona-b", "Zona B"),
-    Zone("ZonaC", "zona-c", "Zona C"),
-    Zone("ZonaD", "zona-d", "Zona D"),
-    Zone("ZonaE", "zona-e", "Zona E"),
-    Zone("ZonaF", "zona-f", "Zona F"),
-    Zone("ZonaMalvinas", "zona-malvinas", "Zona Malvinas"),
-    Zone("AreaNorte", "area-norte", "Área Norte"),
-    Zone("AreaCentroOeste", "area-centro-oeste", "Área Centro Oeste"),
-    Zone("AreaCentroEste", "area-centro-este", "Área Centro Este"),
-    Zone("ZonaSudoesteB", "zona-sudoeste-b", "Zona Sudoeste B"),
-    Zone("AreaSudeste", "area-sudeste", "Área Sudeste"),
-    Zone("ZonaDrake", "zona-drake", "Zona Drake"),
+    Zone("RioDeLaPlata", "rio-de-la-plata", "Río de la Plata", "RIO DE LA PLATA", "coastal"),
+    Zone("ZonaA", "zona-a", "Zona A", "A", "coastal"),
+    Zone("ZonaB", "zona-b", "Zona B", "B", "coastal"),
+    Zone("ZonaC", "zona-c", "Zona C", "C", "coastal"),
+    Zone("ZonaD", "zona-d", "Zona D", "D", "coastal"),
+    Zone("ZonaE", "zona-e", "Zona E", "E", "coastal"),
+    Zone("ZonaF", "zona-f", "Zona F", "F", "coastal"),
+    Zone("ZonaMalvinas", "zona-malvinas", "Zona Malvinas", "G", "coastal"),
+    Zone("AreaNorte", "area-norte", "Área Norte", "NORTE", "oceanic"),
+    Zone("AreaCentroOeste", "area-centro-oeste", "Área Centro Oeste", "CENTRO OESTE", "oceanic"),
+    Zone("AreaCentroEste", "area-centro-este", "Área Centro Este", "CENTRO ESTE", "oceanic"),
+    Zone("ZonaSudoesteB", "zona-sudoeste-b", "Zona Sudoeste B", "SUR OESTE", "oceanic"),
+    Zone("AreaSudeste", "area-sudeste", "Área Sudeste", "SUR ESTE", "oceanic"),
+    Zone("ZonaDrake", "zona-drake", "Zona Drake", "DRAKE", "oceanic"),
 )
+
+# Label anchors that override the computed centroid (see `label_anchor`), where
+# the centroid lands on or against land. Each must still fall inside its zone.
+LABEL_POSITIONS: dict[str, Coord] = {
+    # The centroid (-59, -52) sits on the islands themselves; move it to open
+    # water south of them, still inside the zone.
+    "ZonaMalvinas": (-59.0, -53.2),
+    # The centroid (-63.66, -54.50) is pressed against Isla de los Estados.
+    "ZonaF": (-61.8, -54.5),
+}
 
 # Point on Zona B's eastern edge, (-50, -38.5) -> (-53, -41.0375), at 40°S.
 _ZONA_B_EDGE_AT_40S: Coord = (-50.0 - 3.0 * 1.5 / 2.5375, -40.0)
@@ -212,6 +232,57 @@ def _round(vertex: Coord) -> list[float]:
     return [round(vertex[0], COORDINATE_PRECISION), round(vertex[1], COORDINATE_PRECISION)]
 
 
+def zone_ring(line_feature: dict[str, object]) -> list[Coord]:
+    """The zone as a closed ring.
+
+    Oceanic areas already are closed rings. A coastal zone is an open line from
+    one coast point to another (the coast closes it), so it is closed with the
+    straight chord between its two ends: close enough to the real coastline to
+    place a label and test containment, without needing a coastline.
+    """
+    geometry = line_feature["geometry"]
+    if geometry["type"] != "LineString":  # type: ignore[index]
+        raise BuildError("labels are only supported for single-line zones")
+    ring = [(lon, lat) for lon, lat in geometry["coordinates"]]  # type: ignore[index]
+    return ring if ring[0] == ring[-1] else ring + [ring[0]]
+
+
+def ring_centroid(ring: list[Coord]) -> Coord:
+    """Area centroid of a closed ring (shoelace formula)."""
+    twice_area = cx = cy = 0.0
+    for (x0, y0), (x1, y1) in zip(ring, ring[1:]):
+        cross = x0 * y1 - x1 * y0
+        twice_area += cross
+        cx += (x0 + x1) * cross
+        cy += (y0 + y1) * cross
+    if twice_area == 0:
+        raise BuildError("degenerate zone ring (zero area)")
+    return cx / (3 * twice_area), cy / (3 * twice_area)
+
+
+def ring_contains(ring: list[Coord], point: Coord) -> bool:
+    """Even-odd ray casting; the ring must be closed."""
+    x, y = point
+    inside = False
+    for (x0, y0), (x1, y1) in zip(ring, ring[1:]):
+        if (y0 > y) != (y1 > y) and x < (x1 - x0) * (y - y0) / (y1 - y0) + x0:
+            inside = not inside
+    return inside
+
+
+def build_label_feature(zone: Zone, line_feature: dict[str, object]) -> dict[str, object]:
+    """The zone's label Point: a `LABEL_POSITIONS` override or the ring centroid."""
+    ring = zone_ring(line_feature)
+    anchor = LABEL_POSITIONS.get(zone.source) or ring_centroid(ring)
+    if not ring_contains(ring, anchor):
+        raise BuildError(f"{zone.source}: label anchor {anchor} falls outside the zone")
+    return {
+        "type": "Feature",
+        "properties": {"id": zone.id, "label": zone.label, "minZoom": LABEL_MIN_ZOOM[zone.kind]},
+        "geometry": {"type": "Point", "coordinates": _round(anchor)},
+    }
+
+
 def check_sources_match_zones() -> None:
     """Every shapefile has a `ZONES` entry and vice versa; ids are unique."""
     on_disk = {path.stem for path in SOURCE_DIR.glob("*.shp")}
@@ -223,9 +294,10 @@ def check_sources_match_zones() -> None:
         )
     if len({zone.id for zone in ZONES}) != len(ZONES):
         raise BuildError("duplicate ids in ZONES")
-    unknown = set(CORRECTIONS) - declared
-    if unknown:
-        raise BuildError(f"CORRECTIONS for unknown layers: {sorted(unknown)}")
+    for table_name, table in (("CORRECTIONS", CORRECTIONS), ("LABEL_POSITIONS", LABEL_POSITIONS)):
+        unknown = set(table) - declared
+        if unknown:
+            raise BuildError(f"{table_name} for unknown layers: {sorted(unknown)}")
 
 
 def check_within_bbox(features: list[dict[str, object]]) -> None:
@@ -241,6 +313,8 @@ def check_within_bbox(features: list[dict[str, object]]) -> None:
 def _vertices(feature: dict[str, object]) -> list[list[float]]:
     geometry = feature["geometry"]
     coords = geometry["coordinates"]  # type: ignore[index]
+    if geometry["type"] == "Point":  # type: ignore[index]
+        return [coords]
     if geometry["type"] == "LineString":  # type: ignore[index]
         return coords
     return [vertex for line in coords for vertex in line]
@@ -256,7 +330,9 @@ def render(features: list[dict[str, object]]) -> str:
 def build() -> str:
     """Build the output document from `source/`, or raise `BuildError`."""
     check_sources_match_zones()
-    features = [build_feature(zone) for zone in ZONES]
+    lines = [build_feature(zone) for zone in ZONES]
+    labels = [build_label_feature(zone, line) for zone, line in zip(ZONES, lines)]
+    features = lines + labels
     check_within_bbox(features)
     return render(features)
 
@@ -287,7 +363,8 @@ def main() -> int:
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(output, encoding="utf-8")
-    print(f"wrote {relative} ({len(output.encode('utf-8'))} bytes, {len(ZONES)} features)")
+    size = len(output.encode("utf-8"))
+    print(f"wrote {relative} ({size} bytes, {len(ZONES)} zones, each a line and a label)")
     return 0
 
 

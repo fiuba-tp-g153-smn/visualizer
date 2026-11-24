@@ -12,5 +12,19 @@
 {"type":"Feature","properties":{"id":"area-centro-este","name":"Área Centro Este"},"geometry":{"type":"LineString","coordinates":[[-40.0,-40.0],[-20.0,-40.0],[-20.0,-50.0],[-40.0,-50.0],[-40.0,-40.0]]}},
 {"type":"Feature","properties":{"id":"zona-sudoeste-b","name":"Zona Sudoeste B"},"geometry":{"type":"LineString","coordinates":[[-56.0,-50.0],[-40.0,-50.0],[-40.0,-60.0],[-60.0,-60.0],[-60.0,-54.0],[-56.0,-54.0],[-56.0,-50.0]]}},
 {"type":"Feature","properties":{"id":"area-sudeste","name":"Área Sudeste"},"geometry":{"type":"LineString","coordinates":[[-40.0,-50.0],[-20.0,-50.0],[-20.0,-60.0],[-40.0,-60.0],[-40.0,-50.0]]}},
-{"type":"Feature","properties":{"id":"zona-drake","name":"Zona Drake"},"geometry":{"type":"LineString","coordinates":[[-67.26667,-55.0],[-60.0,-55.0],[-60.0,-60.0],[-67.26667,-60.0],[-67.26667,-55.0]]}}
+{"type":"Feature","properties":{"id":"zona-drake","name":"Zona Drake"},"geometry":{"type":"LineString","coordinates":[[-67.26667,-55.0],[-60.0,-55.0],[-60.0,-60.0],[-67.26667,-60.0],[-67.26667,-55.0]]}},
+{"type":"Feature","properties":{"id":"rio-de-la-plata","label":"RIO DE LA PLATA","minZoom":5},"geometry":{"type":"Point","coordinates":[-53.19682,-35.42743]}},
+{"type":"Feature","properties":{"id":"zona-a","label":"A","minZoom":5},"geometry":{"type":"Point","coordinates":[-53.79989,-37.43504]}},
+{"type":"Feature","properties":{"id":"zona-b","label":"B","minZoom":5},"geometry":{"type":"Point","coordinates":[-56.09147,-39.80216]}},
+{"type":"Feature","properties":{"id":"zona-c","label":"C","minZoom":5},"geometry":{"type":"Point","coordinates":[-60.1232,-42.83768]}},
+{"type":"Feature","properties":{"id":"zona-d","label":"D","minZoom":5},"geometry":{"type":"Point","coordinates":[-62.83841,-46.4839]}},
+{"type":"Feature","properties":{"id":"zona-e","label":"E","minZoom":5},"geometry":{"type":"Point","coordinates":[-63.88214,-50.87197]}},
+{"type":"Feature","properties":{"id":"zona-f","label":"F","minZoom":5},"geometry":{"type":"Point","coordinates":[-61.8,-54.5]}},
+{"type":"Feature","properties":{"id":"zona-malvinas","label":"G","minZoom":5},"geometry":{"type":"Point","coordinates":[-59.0,-53.2]}},
+{"type":"Feature","properties":{"id":"area-norte","label":"NORTE","minZoom":0},"geometry":{"type":"Point","coordinates":[-35.16415,-37.93333]}},
+{"type":"Feature","properties":{"id":"area-centro-oeste","label":"CENTRO OESTE","minZoom":0},"geometry":{"type":"Point","coordinates":[-49.12933,-45.40477]}},
+{"type":"Feature","properties":{"id":"area-centro-este","label":"CENTRO ESTE","minZoom":0},"geometry":{"type":"Point","coordinates":[-30.0,-45.0]}},
+{"type":"Feature","properties":{"id":"zona-sudoeste-b","label":"SUR OESTE","minZoom":0},"geometry":{"type":"Point","coordinates":[-49.30435,-55.26087]}},
+{"type":"Feature","properties":{"id":"area-sudeste","label":"SUR ESTE","minZoom":0},"geometry":{"type":"Point","coordinates":[-30.0,-55.0]}},
+{"type":"Feature","properties":{"id":"zona-drake","label":"DRAKE","minZoom":0},"geometry":{"type":"Point","coordinates":[-63.63333,-57.5]}}
 ]}
