@@ -55,6 +55,7 @@ mismos nombres no tiene efecto en tiempo de ejecución.
 | `DOCS_URL` | `/docs-site` |
 | `APP_HOST_PORT` | `4200` |
 | `SMN_API_PROMPT_FOR_TOKEN`, `IGN_PLACE_SEARCH_URL`, `NOMINATIM_SEARCH_URL` | `true` y dos URL públicas |
+| `EXPERIMENTAL_DISCLAIMER_ENABLED` | `true` |
 
 Tres reservas discrepan del archivo de ejemplo. Una compilación sin variables no apunta a donde
 sugiere `.env.example`. Y `APP_HOST_PORT` no la lee ninguna fuente de la aplicación: sólo la usa

@@ -56,6 +56,7 @@ npm test           # Run unit tests (Vitest)
 | `DATA_SERVICE_BASE_URL`   | Tile and product config API                  | `http://localhost:6006` |
 | `ALERTS_SERVICE_BASE_URL` | Polygon alerts backend                       | `http://localhost:6007` |
 | `SMN_API_PROMPT_FOR_TOKEN` | Prompt for token when enabling SMN stations layer | `true`            |
+| `EXPERIMENTAL_DISCLAIMER_ENABLED` | Experimental, non-public notice (modal + map tag); `false` hides it | `true` |
 | `APP_HOST_PORT`           | Host port for the app in production          | `6010`                  |
 | `DOCS_URL`                | Where the app loads docs from (iframe)       | `/docs-site`            |
 | `METRICS_SERVICE_BASE_URL` | tiles-processor metrics API, read by the status dashboard | `http://localhost:6020` |

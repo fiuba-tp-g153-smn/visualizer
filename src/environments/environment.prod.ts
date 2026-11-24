@@ -15,6 +15,9 @@ export const environment = {
   smnApi: {
     promptForToken: $ENV.SMN_API_PROMPT_FOR_TOKEN !== 'false',
   },
+  experimentalDisclaimer: {
+    enabled: $ENV.EXPERIMENTAL_DISCLAIMER_ENABLED !== 'false',
+  },
   docsUrl: $ENV.DOCS_URL,
   metricsService: {
     baseUrl: $ENV.METRICS_SERVICE_BASE_URL,

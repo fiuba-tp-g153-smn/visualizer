@@ -48,6 +48,7 @@ const GRATICULE_TIERS: ReadonlyArray<GraticuleTier> = ['major', 'minor', 'notabl
 interface MapToolsState {
   showCoordinates: boolean;
   showAttribution: boolean;
+  showExperimentalBadge?: boolean;
   showScale: boolean;
   showZoom: boolean;
   showCursorLines: boolean;
@@ -198,6 +199,7 @@ export class MapInfoService {
   // Tool visibility states
   readonly showCoordinates = signal<boolean>(MAP_CONFIG.defaultShowCoordinates);
   readonly showAttribution = signal<boolean>(MAP_CONFIG.defaultShowAttribution);
+  readonly showExperimentalBadge = signal<boolean>(MAP_CONFIG.defaultShowExperimentalBadge);
   readonly showScale = signal<boolean>(MAP_CONFIG.defaultShowScale);
   readonly showZoom = signal<boolean>(MAP_CONFIG.defaultShowZoom);
 
@@ -288,6 +290,9 @@ export class MapInfoService {
     if (!state) return;
     this.showCoordinates.set(state.showCoordinates ?? MAP_CONFIG.defaultShowCoordinates);
     this.showAttribution.set(state.showAttribution ?? MAP_CONFIG.defaultShowAttribution);
+    this.showExperimentalBadge.set(
+      state.showExperimentalBadge ?? MAP_CONFIG.defaultShowExperimentalBadge,
+    );
     this.showScale.set(state.showScale ?? MAP_CONFIG.defaultShowScale);
     this.showZoom.set(state.showZoom ?? MAP_CONFIG.defaultShowZoom);
     this.showCursorLines.set(state.showCursorLines ?? false);
@@ -299,6 +304,7 @@ export class MapInfoService {
     const state: MapToolsState = {
       showCoordinates: this.showCoordinates(),
       showAttribution: this.showAttribution(),
+      showExperimentalBadge: this.showExperimentalBadge(),
       showScale: this.showScale(),
       showZoom: this.showZoom(),
       showCursorLines: this.showCursorLines(),
@@ -497,6 +503,11 @@ export class MapInfoService {
 
   toggleAttribution(enabled: boolean): void {
     this.showAttribution.set(enabled);
+    this.persistState();
+  }
+
+  toggleExperimentalBadge(enabled: boolean): void {
+    this.showExperimentalBadge.set(enabled);
     this.persistState();
   }
 

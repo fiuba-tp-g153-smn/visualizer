@@ -41,6 +41,18 @@
     >
       {{ t.attribution }}
     </mat-checkbox>
+
+    @if (experimentalDisclaimerEnabled) {
+      <mat-checkbox
+        [checked]="mapInfo.showExperimentalBadge()"
+        (change)="onExperimentalBadgeChange($event.checked)"
+        color="primary"
+        [matTooltip]="t.experimentalBadgeHint"
+        data-testid="tools-toggle-experimental-badge"
+      >
+        {{ t.experimentalBadge }}
+      </mat-checkbox>
+    }
   </section>
 
   <mat-divider />

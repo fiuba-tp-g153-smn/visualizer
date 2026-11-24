@@ -15,6 +15,12 @@ acceso a las capas, las herramientas, los avisos y la configuración.
 En la captura, el número 1 identifica la barra lateral, el 2 los controles de
 zoom y el 3 la atribución del mapa base.
 
+Al entrar, la aplicación muestra un aviso: el visualizador es un desarrollo
+experimental en fase de prueba y no está abierto al público. El aviso se cierra
+con **Entendido** y vuelve a aparecer a los 30 días. La etiqueta **Versión
+experimental · Uso interno**, arriba al centro del mapa, vuelve a abrir el
+aviso; se oculta con su cruz y se vuelve a mostrar desde Herramientas.
+
 ## La barra lateral
 
 Cada icono abre un panel. La aplicación mantiene un solo panel abierto y lo

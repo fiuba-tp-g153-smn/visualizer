@@ -37,6 +37,14 @@ export const COMMON_TEXTS = {
     httpStatus: (status: number): string => `el servicio respondió HTTP ${status}`,
     unknown: 'error desconocido',
   },
+  experimental: {
+    badge: 'Versión experimental · Uso interno',
+    badgeHint: 'Ver el aviso sobre esta versión',
+    title: 'Versión experimental',
+    message:
+      'Este visualizador es un desarrollo experimental en fase de prueba y no está abierto al público. No es un producto oficial del Servicio Meteorológico Nacional ni debe utilizarse para la toma de decisiones.',
+    accept: 'Entendido',
+  },
   aria: {
     loading: 'Cargando',
     closePanel: 'Cerrar panel',

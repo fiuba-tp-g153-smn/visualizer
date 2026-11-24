@@ -198,6 +198,7 @@ de entorno se cambian editando el archivo y reconstruyendo la imagen de producci
 | `METRICS_SERVICE_BASE_URL` | Base de la API de métricas | `http://localhost:6020` |
 | `DOCS_URL` | De dónde carga el marco de documentación | `/docs-site` |
 | `SMN_API_PROMPT_FOR_TOKEN` | Si se pide la clave de estaciones al usuario | `true` |
+| `EXPERIMENTAL_DISCLAIMER_ENABLED` | Si se muestra el aviso de versión experimental (modal y etiqueta) | `true` |
 | `APP_HOST_PORT` | El puerto publicado. Ninguna fuente de la aplicación la lee. | `4200` |
 | `IGN_PLACE_SEARCH_URL`, `NOMINATIM_SEARCH_URL` | Buscadores de lugares | URL públicas |
 

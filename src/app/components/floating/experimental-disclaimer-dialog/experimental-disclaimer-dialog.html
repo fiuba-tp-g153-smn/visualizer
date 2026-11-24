@@ -1,0 +1,9 @@
+<h1 mat-dialog-title [id]="titleId">{{ t.title }}</h1>
+<mat-dialog-content>
+  <p class="dialog-message">{{ t.message }}</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" mat-dialog-close cdkFocusInitial>
+    {{ t.accept }}
+  </button>
+</mat-dialog-actions>
