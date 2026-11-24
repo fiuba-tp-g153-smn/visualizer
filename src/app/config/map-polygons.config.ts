@@ -41,10 +41,11 @@ export const DEPARTMENT_STYLE = {
 } as const;
 
 /**
- * Z-index para diferentes capas
- * Los departamentos son capas de referencia (OVERLAY) que deben mostrarse por encima de los polígonos.
- * Rango OVERLAY: 1001-2000 (según layer-definitions.ts)
+ * Z-index de los panes de polígonos, comparado con los panes de Leaflet (ver MAP_Z_INDEX),
+ * no con los rangos de capas de layer-definitions.ts, que ordenan dentro de `tilePane`.
+ * Los departamentos van por encima de los polígonos (`overlayPane`, 400) y por debajo de la
+ * medición, los marcadores, los tooltips y los popups.
  */
 export const Z_INDEX = {
-  DEPARTMENTS: 1500,
+  DEPARTMENTS: 450,
 } as const;

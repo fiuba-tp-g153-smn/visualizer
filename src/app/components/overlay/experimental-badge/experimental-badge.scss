@@ -1,0 +1,50 @@
+@use '../../../styles/overlay-surface' as overlaySurface;
+
+// Same surface, type and close affordance as the map attribution.
+:host {
+  display: block;
+}
+
+.badge {
+  @include overlaySurface.floating-surface();
+
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--mat-sys-on-surface-variant);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  position: relative;
+}
+
+.badge-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+}
+
+.close-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.close-button:hover {
+  opacity: 1;
+}
+
+.badge:hover .close-button {
+  opacity: 0.7;
+}

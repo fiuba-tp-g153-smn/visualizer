@@ -472,12 +472,10 @@ export const LAYER_NAMES = {
 
   syncGroups: {
     observations: {
-      label: 'Radares y satélites',
-      peerHint: 'Encendé otro radar o satélite para animarlos juntos',
+      label: 'Observaciones',
     },
     models: {
       label: 'Modelos numéricos',
-      peerHint: 'Encendé otro modelo para animarlos juntos',
     },
   },
   /** Base maps with a direct tile source (fallback when the backend list is unavailable). */

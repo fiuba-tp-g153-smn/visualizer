@@ -5,6 +5,10 @@ import { SyncPlaybackService } from './sync-playback.service';
 import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
+import { LayerRefreshService } from './layer-refresh.service';
+import {
+  WeatherStationsTemporalMode,
+} from '../../config/layers/weather-stations/controls.constants';
 import {
   LayerType,
   LayerCategory,
@@ -16,6 +20,7 @@ import {
   LayerControls,
   RadarTileLayer,
   TileLayerControls,
+  WeatherStationLayer,
   WmsLayer,
 } from '../../models';
 
@@ -97,6 +102,16 @@ const wmsLayer: WmsLayer = {
   zIndexGroup: ActiveLayerGroupId.OVERLAY,
 };
 
+const stationsLayer = {
+  id: 'stations-temperature',
+  name: 'Temperatura',
+  description: '',
+  type: LayerType.VECTOR,
+  category: LayerCategory.WEATHER_STATIONS,
+  zIndexGroup: ActiveLayerGroupId.POINTS,
+  variable: 'temperature',
+} as unknown as WeatherStationLayer;
+
 function tileControls(id: string, zIndex: number, imageCount = 6): TileLayerControls {
   return {
     id,
@@ -125,6 +140,21 @@ describe('SyncPlaybackService', () => {
     setTimeIndex: ReturnType<typeof vi.fn>;
     setImageCount: ReturnType<typeof vi.fn>;
     stopPlayback: ReturnType<typeof vi.fn>;
+    getWeatherStationsTemporalMode: () => WeatherStationsTemporalMode;
+    setWeatherStationsTemporalMode: ReturnType<typeof vi.fn>;
+    getWeatherStationsSelectedTilesetId: () => string | null;
+    setWeatherStationsSelectedTilesetId: ReturnType<typeof vi.fn>;
+    isWeatherStationsLayer: (id: string) => boolean;
+    getWeatherStationsImageCount: () => number;
+    setWeatherStationsImageCount: ReturnType<typeof vi.fn>;
+  };
+  let stationsImageCount: number;
+  let stationsMode: WeatherStationsTemporalMode;
+  let stationsTilesetId: string | null;
+  let stationTilesetIds: string[];
+  let refresh: {
+    getWeatherStationsAvailableTilesetIds: () => readonly string[];
+    loadWeatherStationsSnapshot: ReturnType<typeof vi.fn>;
   };
   let engine: {
     register: ReturnType<typeof vi.fn>;
@@ -164,6 +194,31 @@ describe('SyncPlaybackService', () => {
         if (controls) controls.playback.imageCount = count;
       }),
       stopPlayback: vi.fn(),
+      getWeatherStationsTemporalMode: () => stationsMode,
+      setWeatherStationsTemporalMode: vi.fn((mode: WeatherStationsTemporalMode) => {
+        stationsMode = mode;
+      }),
+      getWeatherStationsSelectedTilesetId: () => stationsTilesetId,
+      setWeatherStationsSelectedTilesetId: vi.fn((id: string | null) => {
+        stationsTilesetId = id;
+      }),
+      isWeatherStationsLayer: (id: string) => id === stationsLayer.id,
+      getWeatherStationsImageCount: () => stationsImageCount,
+      setWeatherStationsImageCount: vi.fn((count: number) => {
+        stationsImageCount = count;
+        tilesetsRevision.update((v) => v + 1);
+      }),
+    };
+    stationsImageCount = 6;
+    stationsMode = WeatherStationsTemporalMode.LATEST;
+    stationsTilesetId = null;
+    stationTilesetIds = [];
+    refresh = {
+      getWeatherStationsAvailableTilesetIds: () => {
+        tilesetsRevision();
+        return stationTilesetIds;
+      },
+      loadWeatherStationsSnapshot: vi.fn(() => Promise.resolve()),
     };
     engine = {
       register: vi.fn(),
@@ -188,6 +243,7 @@ describe('SyncPlaybackService', () => {
           },
         },
         { provide: PlaybackEngineService, useValue: engine },
+        { provide: LayerRefreshService, useValue: refresh },
       ],
     });
 
@@ -256,7 +312,7 @@ describe('SyncPlaybackService', () => {
       expect(statusOf('observations', 'radar')).toBe('waiting');
       expect(service.isLayerSelected('radar')).toBe(false);
       expect(service.groupHint('observations')).toBe(
-        'Encendé otro radar o satélite para animarlos juntos',
+        'Encendé otra capa del grupo para animarlas juntas',
       );
       expect(layerControl.setImageCount).not.toHaveBeenCalled();
     });
@@ -269,10 +325,12 @@ describe('SyncPlaybackService', () => {
     });
 
     it('keeps out a layer that matches no instant of the group', () => {
+      // a and b every 20': the window is 80'–180'. c sits 10' off its instants, past the
+      // tolerance, with nothing before or after the window.
       activate(
-        [radarLayer('a'), createTilesets(10)],
-        [goesLayer('b'), createTilesets(10)],
-        [goesLayer('c'), createTilesets(10, 10, 300)],
+        [radarLayer('a'), createTilesets(10, 20)],
+        [goesLayer('b'), createTilesets(10, 20)],
+        [goesLayer('c'), createTilesets(4, 20, 90)],
       );
 
       expect(service.enrolledLayerIds('observations')).toEqual(['a', 'b']);
@@ -281,8 +339,8 @@ describe('SyncPlaybackService', () => {
 
     it('explains when no two layers share an instant', () => {
       activate(
-        [radarLayer('a'), createTilesets(10)],
-        [goesLayer('b'), createTilesets(10, 10, 300)],
+        [radarLayer('a'), createTilesets(10, 20)],
+        [goesLayer('b'), createTilesets(4, 20, 90)],
       );
 
       expect(service.canPlay('observations')).toBe(false);
@@ -298,7 +356,7 @@ describe('SyncPlaybackService', () => {
       expect(service.enrolledLayerIds('observations')).toEqual(['a', 'b']);
     });
 
-    it('combines layers of different cadences at the sparser one', () => {
+    it('combines layers of different cadences at the denser one', () => {
       activate(
         [wrfLayer('wrf'), createTilesets(48, 60)], // hourly
         [wrfLayer('gfs'), createTilesets(16, 180)], // every 3 hours
@@ -306,7 +364,7 @@ describe('SyncPlaybackService', () => {
 
       expect(service.canPlay('models')).toBe(true);
       const times = [0, 1].map((i) => service.frameTime('models', i)!.getTime());
-      expect(times[1] - times[0]).toBe(180 * 60 * 1000);
+      expect(times[1] - times[0]).toBe(60 * 60 * 1000);
     });
 
     it('re-enrolls a previously excluded layer when it is enabled again', () => {
@@ -330,23 +388,23 @@ describe('SyncPlaybackService', () => {
   // ============================================================================
 
   describe('Image count', () => {
-    it('loads the window plus a margin for layers of the same cadence', () => {
+    it('loads just the window for layers of the same cadence', () => {
       activate([radarLayer('a'), createTilesets(10)], [goesLayer('b'), createTilesets(10)]);
 
       expect(service.frameCount('observations')).toBe(6);
-      expect(controlsById.get('a')!.playback.imageCount).toBe(8);
-      expect(controlsById.get('b')!.playback.imageCount).toBe(8);
+      expect(controlsById.get('a')!.playback.imageCount).toBe(6);
+      expect(controlsById.get('b')!.playback.imageCount).toBe(6);
     });
 
-    it('loads more images for a layer that is more frequent than the group', () => {
+    it('loads fewer images for a layer that is less frequent than the group', () => {
       activate(
         [radarLayer('fast'), createTilesets(30, 5)],
-        [goesLayer('slow'), createTilesets(10)],
+        [goesLayer('slow'), createTilesets(15)],
       );
 
-      // 6 frames every 10' span 50': the 5' layer needs 11 images, plus the margin
-      expect(controlsById.get('fast')!.playback.imageCount).toBe(13);
-      expect(controlsById.get('slow')!.playback.imageCount).toBe(8);
+      // The window is 120'–145': the 10' layer loads 120', 130' and 140'.
+      expect(controlsById.get('fast')!.playback.imageCount).toBe(6);
+      expect(controlsById.get('slow')!.playback.imageCount).toBe(3);
     });
 
     it('restores the original count when the user unchecks a layer', () => {
@@ -509,6 +567,119 @@ describe('SyncPlaybackService', () => {
 
       expect(service.groupState('observations').isPlaying).toBe(false);
       expect(layerControl.stopPlayback).not.toHaveBeenCalledWith('c');
+    });
+  });
+
+  // ============================================================================
+  // Weather stations
+  // ============================================================================
+
+  describe('Weather stations', () => {
+    /** Hourly snapshots from 10:00 (as ids) around a satellite every 10' from 10:00. */
+    function activateWithStations(): void {
+      stationTilesetIds = ['20240115T0900Z', '20240115T1000Z', '20240115T1100Z'];
+      activate([goesLayer('goes'), createTilesets(12)], [stationsLayer, undefined]);
+      service.setFrameCount('observations', 12);
+      TestBed.tick();
+    }
+
+    const frameAt = (iso: string): number => {
+      const time = new Date(iso).getTime();
+      const index = service.groupPlan('observations').frames.findIndex((f) => f.time === time);
+      expect(index, `frame at ${iso}`).toBeGreaterThanOrEqual(0);
+      return index;
+    };
+
+    it('sync with a single satellite, which keeps setting the instants', () => {
+      activateWithStations();
+
+      expect(service.enrolledLayerIds('observations')).toEqual(['goes', stationsLayer.id]);
+      expect(service.canPlay('observations')).toBe(true);
+      expect(service.frameTotal('observations')).toBe(12);
+    });
+
+    it('join the frame of each hour and hold it until the next one', () => {
+      activateWithStations();
+
+      const joined = service
+        .groupPlan('observations')
+        .frames.filter((f) => f.members.has(stationsLayer.id));
+      expect(joined.map((f) => new Date(f.time).toISOString())).toEqual([
+        '2024-01-15T10:00:00.000Z',
+        '2024-01-15T11:00:00.000Z',
+      ]);
+
+      service.setFrameIndex('observations', frameAt('2024-01-15T10:50:00Z'));
+      expect(stationsMode).toBe(WeatherStationsTemporalMode.SPECIFIC);
+      expect(stationsTilesetId).toBe('20240115T1000Z');
+
+      service.setFrameIndex('observations', frameAt('2024-01-15T11:00:00Z'));
+      expect(stationsTilesetId).toBe('20240115T1100Z');
+    });
+
+    it('reload only when the hour changes', () => {
+      activateWithStations();
+
+      service.setFrameIndex('observations', frameAt('2024-01-15T10:10:00Z'));
+      service.setFrameIndex('observations', frameAt('2024-01-15T10:20:00Z'));
+
+      expect(refresh.loadWeatherStationsSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    it('reload a newer hour picked while the previous one still loads', async () => {
+      let resolveFirst: () => void = () => undefined;
+      refresh.loadWeatherStationsSnapshot
+        .mockImplementationOnce(() => new Promise<void>((resolve) => (resolveFirst = resolve)))
+        .mockImplementation(() => Promise.resolve());
+      activateWithStations();
+
+      service.setFrameIndex('observations', frameAt('2024-01-15T10:10:00Z'));
+      service.setFrameIndex('observations', frameAt('2024-01-15T11:00:00Z'));
+      expect(refresh.loadWeatherStationsSnapshot).toHaveBeenCalledTimes(1);
+
+      resolveFirst();
+      await new Promise((resolve) => setTimeout(resolve));
+
+      expect(refresh.loadWeatherStationsSnapshot).toHaveBeenCalledTimes(2);
+    });
+
+    it('load back to the hour they show at the window start', () => {
+      stationTilesetIds = Array.from(
+        { length: 12 },
+        (_, h) => `20240115T${String(h).padStart(2, '0')}00Z`,
+      );
+      activate([goesLayer('goes'), createTilesets(12)], [stationsLayer, undefined]);
+
+      // The window is 11:00–11:50: the stations load 11:00, their last hour.
+      expect(stationsImageCount).toBe(1);
+    });
+
+    it('settle on their image count', () => {
+      activateWithStations();
+      const calls = layerControl.setWeatherStationsImageCount.mock.calls.length;
+
+      TestBed.tick();
+      TestBed.tick();
+
+      expect(layerControl.setWeatherStationsImageCount).toHaveBeenCalledTimes(calls);
+    });
+
+    it('get their own image count back when they leave the group', () => {
+      activateWithStations();
+
+      service.setLayerIncluded(stationsLayer.id, false);
+      TestBed.tick();
+
+      expect(layerControl.setWeatherStationsImageCount).toHaveBeenLastCalledWith(6);
+    });
+
+    it('opt out like any layer', () => {
+      activateWithStations();
+
+      service.setLayerIncluded(stationsLayer.id, false);
+
+      expect(statusOf('observations', stationsLayer.id)).toBe('excluded');
+      expect(service.canPlay('observations')).toBe(false);
     });
   });
 });

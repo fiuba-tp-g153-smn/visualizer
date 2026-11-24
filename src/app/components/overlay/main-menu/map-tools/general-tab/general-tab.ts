@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { GraticulePart, MapInfoService } from '../../../../../services/layers/map-info.service';
 import { DistanceToolService } from '../../../../../services/tools/distance-tool.service';
+import { ExperimentalDisclaimerService } from '../../../../../services/disclaimer/experimental-disclaimer.service';
 import { formatDistance } from '../../../../../utils/distance.utils';
 import { MAP_TEXTS } from '../../../../../texts';
 
@@ -36,6 +37,7 @@ export class GeneralTabComponent {
   protected readonly t = MAP_TEXTS.tools;
   readonly mapInfo = inject(MapInfoService);
   private readonly distanceTool = inject(DistanceToolService);
+  protected readonly experimentalDisclaimerEnabled = inject(ExperimentalDisclaimerService).enabled;
 
   readonly graticuleParts = GRATICULE_PART_OPTIONS;
 
@@ -66,6 +68,10 @@ export class GeneralTabComponent {
 
   onAttributionChange(enabled: boolean): void {
     this.mapInfo.toggleAttribution(enabled);
+  }
+
+  onExperimentalBadgeChange(enabled: boolean): void {
+    this.mapInfo.toggleExperimentalBadge(enabled);
   }
 
   onCursorLinesChange(enabled: boolean): void {

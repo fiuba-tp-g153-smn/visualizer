@@ -64,6 +64,16 @@ app-map-zoom-controls {
   pointer-events: auto;
 }
 
+// Top-centre counterpart of the edit dock, on the same layer.
+app-experimental-badge {
+  position: absolute;
+  top: $edge;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  z-index: layerOrder.$z-main-menu;
+}
+
 app-polygon-edit-dock {
   position: fixed;
   left: 50%;

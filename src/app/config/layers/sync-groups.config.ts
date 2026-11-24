@@ -14,11 +14,9 @@ export interface SyncGroupDefinition {
    * Observations publish every few minutes; model steps are whole hours.
    */
   readonly toleranceMs: number;
-  /** Window sizes offered, in frames of the group's sparsest layer. */
+  /** Window sizes offered, in frames of the group's densest layer. */
   readonly frameCounts: readonly number[];
   readonly defaultFrameCount: number;
-  /** Shown while only one layer of the group is on: what to turn on to sync it. */
-  readonly peerHint: string;
 }
 
 /** Display order of the groups in the Sincronización tab. */
@@ -27,11 +25,10 @@ export const SYNC_GROUPS: readonly SyncGroupDefinition[] = [
     id: 'observations',
     label: LAYER_NAMES.syncGroups.observations.label,
     icon: 'satellite_alt',
-    categories: [LayerCategory.RADAR, LayerCategory.GOES_19],
+    categories: [LayerCategory.RADAR, LayerCategory.GOES_19, LayerCategory.WEATHER_STATIONS],
     toleranceMs: 5 * MINUTE_MS,
     frameCounts: [6, 12, 24],
     defaultFrameCount: 6,
-    peerHint: LAYER_NAMES.syncGroups.observations.peerHint,
   },
   {
     id: 'models',
@@ -41,7 +38,6 @@ export const SYNC_GROUPS: readonly SyncGroupDefinition[] = [
     toleranceMs: 30 * MINUTE_MS,
     frameCounts: [6, 12, 24, 48],
     defaultFrameCount: 12,
-    peerHint: LAYER_NAMES.syncGroups.models.peerHint,
   },
 ] as const;
 

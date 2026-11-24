@@ -10,6 +10,7 @@ import {
 import { PointQueryViewerService } from './point-query-viewer.service';
 import { LayerControlService } from '../layers/layer-control.service';
 import { LayerConfigService } from '../layers/layer-config.service';
+import { LayerRefreshService } from '../layers/layer-refresh.service';
 import { LayersService } from '../layers/layers.service';
 import { MapInfoService } from '../layers/map-info.service';
 import { LocalStorageService } from '../storage/local-storage.service';
@@ -136,6 +137,11 @@ describe('PointQueryViewerService', () => {
           useValue: { getJson: () => null, setJson: () => undefined, remove: () => undefined },
         },
         { provide: TimezoneSettingsService, useValue: { mode: signal('hoa') } },
+        // Reached through SyncPlaybackService (weather stations); unused by these tests.
+        {
+          provide: LayerRefreshService,
+          useValue: { getWeatherStationsAvailableTilesetIds: () => [] },
+        },
       ],
     });
 

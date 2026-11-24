@@ -20,7 +20,8 @@ import {
   MapContextMenuItem,
   MapContextMenuSection,
 } from '../map-context-menu/map-context-menu.models';
-import { CSS_VARIABLES } from '../../constants/map-polygons.constants';
+import { CSS_VARIABLES, MAP_PANES } from '../../constants/map-polygons.constants';
+import { MAP_Z_INDEX } from '../../config/map.config';
 import { ensureEditTools } from '../../utils/leaflet-edit-tools';
 import { GeoPoint, formatDistance, pathSegmentsMeters } from '../../utils/distance.utils';
 import { MAP_TEXTS } from '../../texts';
@@ -39,6 +40,7 @@ const PATH_STYLE: PolylineOptions = {
   weight: 3,
   dashArray: '6, 6',
   interactive: false,
+  pane: MAP_PANES.MEASUREMENT,
 };
 
 const VERTEX_STYLE: CircleMarkerOptions = {
@@ -48,6 +50,7 @@ const VERTEX_STYLE: CircleMarkerOptions = {
   fillColor: 'var(--mat-sys-primary)',
   fillOpacity: 1,
   interactive: false,
+  pane: MAP_PANES.MEASUREMENT,
 };
 
 /** Edit handles take the path's color through the variable the polygon styles read. */
@@ -123,6 +126,12 @@ export class DistanceToolService {
 
   initialize(map: LeafletMap): void {
     this.map = map;
+    // Its own pane, so the path never hides under the graticule or polygons drawn after it.
+    if (!map.getPane(MAP_PANES.MEASUREMENT)) {
+      const pane = map.createPane(MAP_PANES.MEASUREMENT);
+      pane.style.zIndex = String(MAP_Z_INDEX.MEASUREMENT);
+      pane.style.pointerEvents = 'none';
+    }
     this.overlay.addTo(map);
     DomEvent.on(document.body, 'keydown', this.escapeHandler);
     this.render(this.modeState(), this.pointsState());

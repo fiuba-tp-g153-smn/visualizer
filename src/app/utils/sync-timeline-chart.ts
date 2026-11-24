@@ -62,6 +62,35 @@ export function lanesSpan(lanes: readonly SyncChartLane[]): SyncChartSpan | null
   return known.length > 0 ? { min: Math.min(...known), max: Math.max(...known) } : null;
 }
 
+/** Room left past the first and last image of the frames, as a share of their span. */
+const FRAMES_SPAN_PADDING = 0.04;
+
+/**
+ * The span of the images the frames join, with a little room at each end, or null without
+ * frames. Images of the lanes outside it fall off the chart: they take part in no frame.
+ */
+export function framesSpan(lanes: readonly SyncChartLane[], plan: SyncPlan): SyncChartSpan | null {
+  const times = plan.frames.flatMap((frame) =>
+    lanes.flatMap((lane) => {
+      const index = frame.members.get(lane.id);
+      return index === undefined ? [] : [lane.timestamps[index]];
+    }),
+  );
+  if (times.length === 0) return null;
+  const [min, max] = [Math.min(...times), Math.max(...times)];
+  const pad = (max - min) * FRAMES_SPAN_PADDING;
+  return { min: min - pad, max: max + pad };
+}
+
+/** The span covering both, or whichever there is. */
+export function unionSpan(
+  a: SyncChartSpan | null,
+  b: SyncChartSpan | null,
+): SyncChartSpan | null {
+  if (!a || !b) return a ?? b;
+  return { min: Math.min(a.min, b.min), max: Math.max(a.max, b.max) };
+}
+
 /** Whether two lane lists draw the same chart, so a refresh with the same images is skipped. */
 export function sameLanes(a: readonly SyncChartLane[], b: readonly SyncChartLane[]): boolean {
   return (
@@ -175,6 +204,18 @@ function frameSegments(
   });
 }
 
+/**
+ * Where a frame's line starts: the time of its image on the topmost lane it joins, so its
+ * number sits right above it. Falls back to the frame's time when it joins none.
+ */
+function lineStart(frame: SyncFrame, lanes: readonly SyncChartLane[]): number {
+  for (const lane of lanes) {
+    const member = frame.members.get(lane.id);
+    if (member !== undefined) return lane.timestamps[member];
+  }
+  return frame.time;
+}
+
 /** The day the chart spans, or its first and last when it spans more. */
 function daysLabel(
   lanes: readonly SyncChartLane[],
@@ -234,9 +275,10 @@ export function buildSyncTimelineOption(
       i === selected && invalid ? colors.error : colors.primary,
     ),
   );
-  // Each frame's number above the chart, the playing one stressed; crowded ones hide.
+  // Each frame's number above the chart, over where its line starts at the topmost lane it
+  // joins, the playing one stressed; crowded ones hide.
   const numbers = plan.frames.map((frame, i) => ({
-    value: [frame.time, -0.5],
+    value: [lineStart(frame, lanes), -0.5],
     target: { kind: 'frame', index: i } as const,
     label: {
       show: true,

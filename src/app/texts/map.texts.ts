@@ -15,6 +15,8 @@ export const MAP_TEXTS = {
     coordinatesHint: 'Mostrar coordenadas del cursor en el mapa',
     attribution: 'Atribución',
     attributionHint: 'Mostrar atribución de fuentes de datos en el mapa',
+    experimentalBadge: 'Aviso de versión experimental',
+    experimentalBadgeHint: 'Mostrar en el mapa que esta es una versión experimental',
     guides: 'Guías',
     cursorLines: 'Líneas de cursor',
     cursorLinesHint: 'Mostrar líneas de latitud y longitud que siguen al cursor',
@@ -65,6 +67,7 @@ export const MAP_TEXTS = {
   },
   widgets: {
     closeAttribution: 'Cerrar atribución',
+    closeExperimentalBadge: 'Cerrar aviso de versión experimental',
     closeCoordinates: 'Cerrar coordenadas',
     closeScale: 'Cerrar escala',
     closePointValue: 'Cerrar panel de valor del punto',
@@ -89,10 +92,12 @@ export const MAP_TEXTS = {
     drawPolygon: 'Dibujar polígono',
     playAll: 'Reproducir todas las capas',
     pauseAll: 'Pausar todas las capas',
-    clearAll: 'Desactivar todas las capas',
+    clearAll: 'Desactivar capas de datos',
     copyCoordinates: 'Copiar coordenadas',
     clearAllConfirm: (count: number): string =>
-      count === 1 ? '¿Desactivar la capa activa?' : `¿Desactivar las ${count} capas activas?`,
+      count === 1
+        ? '¿Desactivar la capa de datos activa?'
+        : `¿Desactivar las ${count} capas de datos activas?`,
     deactivate: 'Desactivar',
     copied: 'Coordenadas copiadas al portapapeles',
     copyFailed: 'No se pudieron copiar las coordenadas',

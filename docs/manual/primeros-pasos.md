@@ -13,7 +13,14 @@ acceso a las capas, las herramientas, los avisos y la configuración.
 ![La ventana al abrir la aplicación por primera vez](../imgs/manual/02-ventana.png){ .doc-figure loading=lazy }
 
 En la captura, el número 1 identifica la barra lateral, el 2 los controles de
-zoom y el 3 la atribución del mapa base.
+zoom, el 3 la atribución del mapa base y el 4 la etiqueta de versión
+experimental.
+
+Al entrar, la aplicación muestra un aviso: el visualizador es un desarrollo
+experimental en fase de prueba y no está abierto al público. El aviso se cierra
+con **Entendido** y vuelve a aparecer a los 30 días. La etiqueta **Versión
+experimental · Uso interno**, arriba al centro del mapa, vuelve a abrir el
+aviso; se oculta con su cruz y se vuelve a mostrar desde Herramientas.
 
 ## La barra lateral
 
@@ -127,8 +134,9 @@ sigue abriendo el menú propio de cada uno.
 - **Reproducir todas las capas** y **Pausar todas las capas** inician o frenan
   la animación de las capas activas a la vez. Las capas sincronizadas avanzan
   juntas; las demás, cada una a su ritmo.
-- **Desactivar todas las capas** apaga las capas activas, después de pedir
-  confirmación.
+- **Desactivar capas de datos** apaga las capas de satélite, radar, modelos y
+  estaciones, después de pedir confirmación. Las capas de referencia (límites,
+  zonas marítimas) quedan encendidas.
 - **Copiar coordenadas** copia la latitud y la longitud del punto, en grados
   decimales, listas para pegar en otra herramienta.
 

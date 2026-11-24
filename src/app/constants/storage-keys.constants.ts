@@ -22,4 +22,5 @@ export const STORAGE_KEYS = {
   PLACE_SEARCH_CONFIG: buildStorageKey('place-search-config'),
   EMITTED_ALERTS_SECTIONS: buildStorageKey('emitted-alerts-sections'),
   ALERTS_VISIBILITY: buildStorageKey('alerts-visibility'),
+  EXPERIMENTAL_DISCLAIMER: buildStorageKey('experimental-disclaimer'),
 } as const;

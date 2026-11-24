@@ -51,14 +51,18 @@ No hace falta elegir las capas. La pestaña las reparte en grupos de capas con h
 cada grupo tiene su propia barra, cantidad de imágenes, velocidad y botón de reproducción, así que
 podés animar los dos a la vez:
 
-- **Radares y satélites**: las capas de radar y GOES-19. Una imagen acompaña al instante si está a
-  menos de cinco minutos.
+- **Observaciones**: las capas de radar y GOES-19, y las estaciones meteorológicas. Una imagen
+  acompaña al instante si está a menos de cinco minutos.
 - **Modelos numéricos**: WRF, GFS y ECMWF. Una imagen acompaña al instante si está a menos de
   media hora.
 
-Las estaciones meteorológicas no participan: se animan desde su propia capa.
+La capa más frecuente del grupo marca los instantes, así la animación avanza al paso más fino.
+Las demás acompañan los instantes cercanos a sus imágenes y, entre uno y otro, mantienen la última.
+Por ejemplo, las estaciones informan una vez por hora: con un satélite cada diez minutos, cambian
+cada seis cuadros. Una capa que todavía no tiene imagen en los primeros cuadros aparece recién en
+el primero que la incluye.
 
-![La pestaña Sincronización, con dos capas en el grupo de radares y satélites](../imgs/manual/05-sincronizacion.png){ .doc-figure loading=lazy }
+![La pestaña Sincronización, con dos capas en el grupo de observaciones](../imgs/manual/05-sincronizacion.png){ .doc-figure loading=lazy }
 
 Toda capa que encendés entra sola en su grupo y aparece marcada. Cuando el grupo ya tiene otra capa
 compatible, el grupo queda listo para reproducirlas; si no, la pestaña indica qué encender. Con una

@@ -25,6 +25,7 @@ interface Series {
     target?: { kind: string; index?: number; time?: number; layerId?: string };
     itemStyle?: { color: string; opacity?: number; borderColor?: string };
     lineStyle?: { color: string; width: number; opacity?: number; type?: string };
+    value?: [number, number];
     label?: { formatter: string; fontWeight: string };
     coords?: [number, number][];
   }[];
@@ -68,6 +69,16 @@ describe('buildSyncTimelineOption', () => {
 
     expect(numbers.data.map((d) => d.label?.formatter)).toEqual(['1', '2']);
     expect(numbers.data.map((d) => d.label?.fontWeight)).toEqual(['normal', 'bold']);
+  });
+
+  it('puts each number above the chart, over the image of the topmost lane its frame joins', () => {
+    const lanes = [lane('a', [0, 20]), lane('b', [4, 24]), lane('c', [8])];
+    const { numbers } = render(lanes, [{ a: 0, b: 4 * MIN, c: 8 * MIN }, { b: 24 * MIN }]);
+
+    expect(numbers.data.map((d) => d.value)).toEqual([
+      [0, -0.5],
+      [24 * MIN, -0.5],
+    ]);
   });
 
   it('greys out a layer left out of the timeline, its images not clickable', () => {

@@ -11,7 +11,7 @@ import { LayerConfigService } from '../layers/layer-config.service';
 import { SyncPlaybackService } from '../layers/sync-playback.service';
 import { PolygonDrawingService, DrawingMode } from '../polygons/polygon-drawing.service';
 import { NotificationService } from '../notifications/notification.service';
-import { ActiveLayerEntry, LayerType, SyncGroupId } from '../../models';
+import { ActiveLayerEntry, ActiveLayerGroupId, LayerType, SyncGroupId } from '../../models';
 
 function contextMenuEvent(lat = -34.6037, lng = -58.3816): LeafletMouseEvent {
   return {
@@ -22,7 +22,16 @@ function contextMenuEvent(lat = -34.6037, lng = -58.3816): LeafletMouseEvent {
 }
 
 const tileLayer = (id: string): ActiveLayerEntry =>
-  ({ layer: { id, type: LayerType.TILE }, controls: { id } }) as unknown as ActiveLayerEntry;
+  ({
+    layer: { id, type: LayerType.TILE, zIndexGroup: ActiveLayerGroupId.BASE },
+    controls: { id },
+  }) as unknown as ActiveLayerEntry;
+
+const referenceLayer = (id: string): ActiveLayerEntry =>
+  ({
+    layer: { id, type: LayerType.WMS, zIndexGroup: ActiveLayerGroupId.OVERLAY },
+    controls: { id },
+  }) as unknown as ActiveLayerEntry;
 
 describe('MapContextMenuSectionsService', () => {
   let menu: MapContextMenuService;
@@ -172,12 +181,30 @@ describe('MapContextMenuSectionsService', () => {
       expect(layerControl.stopPlayback).toHaveBeenCalledWith('a');
     });
 
-    it('removes every active layer after confirming', () => {
+    it('removes every active data layer after confirming', () => {
       choose('layers-clear');
 
       expect(dialog.open).toHaveBeenCalled();
       expect(layerControl.deactivateLayer).toHaveBeenCalledWith('a');
       expect(layerControl.deactivateLayer).toHaveBeenCalledWith('b');
+    });
+
+    it('keeps reference layers on when clearing', () => {
+      activeLayers.set([tileLayer('a'), referenceLayer('limits')]);
+
+      choose('layers-clear');
+
+      expect(dialog.open.mock.calls[0][1].data.message).toBe(
+        '¿Desactivar la capa de datos activa?',
+      );
+      expect(layerControl.deactivateLayer).toHaveBeenCalledWith('a');
+      expect(layerControl.deactivateLayer).not.toHaveBeenCalledWith('limits');
+    });
+
+    it('does not offer clearing when only reference layers are on', () => {
+      activeLayers.set([referenceLayer('limits')]);
+
+      expect(open()).toEqual(['alert-draw', 'copy-coordinates']);
     });
 
     it('keeps the layers when the confirmation is cancelled', () => {

@@ -54,6 +54,7 @@ import {
   formatDateTimeOnly,
   parseEcmwfTimestamp,
 } from '../../../../../utils/tileset-timestamp';
+import { weatherStationsTilesetTime } from '../../../../../utils/weather-stations-tilesets';
 import { adapterForLayer, hasRasterPyramid } from '../../../../../config/layers/forecast-model';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
@@ -501,6 +502,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         untracked(() => this.stopWeatherStationsPlayback());
       }
     });
+
+    // Stations following a playing sync group take its frames instead of their own timer.
+    effect(() => {
+      if (this.isSynced()) {
+        untracked(() => this.stopWeatherStationsPlayback());
+      }
+    });
   }
 
   ngOnInit(): void {}
@@ -518,14 +526,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       const entries: TilesetEntry[] = [];
 
       for (const tilesetId of this.weatherStationsTilesetIds()) {
-        const tilesetTime = this.weatherStationsTilesetIdToDate(tilesetId);
-        if (!tilesetTime) {
+        const tilesetTime = weatherStationsTilesetTime(tilesetId);
+        if (tilesetTime === null) {
           continue;
         }
 
         entries.push({
           id: tilesetId,
-          time: tilesetTime,
+          time: new Date(tilesetTime),
         });
       }
 
@@ -769,6 +777,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   onTimeIndexChange(timeIndex: number): void {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
+      this.detachIfSynced();
       this.stopWeatherStationsPlayback();
       const tilesetId = this.weatherStationsTilesetIds()[timeIndex];
       if (!tilesetId) {
@@ -1111,6 +1120,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   togglePlayback(): void {
     if (this.isWeatherStationsLayer()) {
+      // Synced, the button reads "desincronizar"; paused, playing alone would fight the group.
+      this.syncService.detachLayer(this.layer.id);
       if (this.isPlaying()) {
         this.stopWeatherStationsPlayback();
       } else {
@@ -1312,6 +1323,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   onWeatherStationsTemporalModeChange(mode: WeatherStationsTemporalMode): void {
+    this.detachIfSynced();
     this.controlService.setWeatherStationsTemporalMode(mode);
     if (mode === WeatherStationsTemporalMode.LATEST) {
       this.stopWeatherStationsPlayback();
@@ -1397,20 +1409,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   private clampPlaybackSpeed(speed: number): number {
     return Math.max(PLAYBACK_SPEED_LIMITS.MIN, Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed));
-  }
-
-  private weatherStationsTilesetIdToDate(tilesetId: string): Date | null {
-    const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
-    if (!match) {
-      return null;
-    }
-
-    const [, year, month, day, hour] = match;
-    const parsed = new Date(
-      Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0),
-    );
-
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   private captureCurrentWeatherStationsSharedState(): void {
