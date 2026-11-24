@@ -54,6 +54,7 @@ import {
   formatDateTimeOnly,
   parseEcmwfTimestamp,
 } from '../../../../../utils/tileset-timestamp';
+import { weatherStationsTilesetTime } from '../../../../../utils/weather-stations-tilesets';
 import { adapterForLayer, hasRasterPyramid } from '../../../../../config/layers/forecast-model';
 import { buildEcmwfTpFrameOptions, computeWindowStart } from '../../../../../utils/playback-window';
 import { ScaleToolsService } from '../../../../../services/tools/scale-tools.service';
@@ -518,14 +519,14 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
       const entries: TilesetEntry[] = [];
 
       for (const tilesetId of this.weatherStationsTilesetIds()) {
-        const tilesetTime = this.weatherStationsTilesetIdToDate(tilesetId);
-        if (!tilesetTime) {
+        const tilesetTime = weatherStationsTilesetTime(tilesetId);
+        if (tilesetTime === null) {
           continue;
         }
 
         entries.push({
           id: tilesetId,
-          time: tilesetTime,
+          time: new Date(tilesetTime),
         });
       }
 
@@ -1397,20 +1398,6 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   private clampPlaybackSpeed(speed: number): number {
     return Math.max(PLAYBACK_SPEED_LIMITS.MIN, Math.min(PLAYBACK_SPEED_LIMITS.MAX, speed));
-  }
-
-  private weatherStationsTilesetIdToDate(tilesetId: string): Date | null {
-    const match = tilesetId.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})00Z$/);
-    if (!match) {
-      return null;
-    }
-
-    const [, year, month, day, hour] = match;
-    const parsed = new Date(
-      Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), 0, 0),
-    );
-
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   private captureCurrentWeatherStationsSharedState(): void {
