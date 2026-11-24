@@ -89,10 +89,12 @@ export const MAP_TEXTS = {
     drawPolygon: 'Dibujar polígono',
     playAll: 'Reproducir todas las capas',
     pauseAll: 'Pausar todas las capas',
-    clearAll: 'Desactivar todas las capas',
+    clearAll: 'Desactivar capas de datos',
     copyCoordinates: 'Copiar coordenadas',
     clearAllConfirm: (count: number): string =>
-      count === 1 ? '¿Desactivar la capa activa?' : `¿Desactivar las ${count} capas activas?`,
+      count === 1
+        ? '¿Desactivar la capa de datos activa?'
+        : `¿Desactivar las ${count} capas de datos activas?`,
     deactivate: 'Desactivar',
     copied: 'Coordenadas copiadas al portapapeles',
     copyFailed: 'No se pudieron copiar las coordenadas',

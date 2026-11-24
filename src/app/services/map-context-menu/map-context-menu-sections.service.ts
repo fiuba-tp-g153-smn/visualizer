@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { LayerType, SyncGroupId } from '../../models';
+import { ActiveLayerGroupId, Layer, LayerType, SyncGroupId } from '../../models';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
@@ -24,6 +24,9 @@ export const MAP_CONTEXT_MENU_ORDER = {
   LAYERS: 20,
   COORDINATES: 100,
 } as const;
+
+/** Reference layers (limits, zones) are the map's backdrop, not data to clear. */
+const isDataLayer = (layer: Layer): boolean => layer.zIndexGroup !== ActiveLayerGroupId.OVERLAY;
 
 /** Decimal places for copied coordinates (~1 m). */
 const COORDINATE_DECIMALS = 5;
@@ -100,13 +103,19 @@ export class MapContextMenuSectionsService {
         run: () => this.pauseAll(playable),
       });
     }
-    items.push({
-      id: 'layers-clear',
-      icon: 'layers_clear',
-      label: MAP_TEXTS.sections.clearAll,
-      run: () => this.confirmClearLayers(active.length),
-    });
-    return { items };
+    const dataLayerIds = active
+      .map(({ layer }) => layer)
+      .filter(isDataLayer)
+      .map(({ id }) => id);
+    if (dataLayerIds.length > 0) {
+      items.push({
+        id: 'layers-clear',
+        icon: 'layers_clear',
+        label: MAP_TEXTS.sections.clearAll,
+        run: () => this.confirmClearLayers(dataLayerIds),
+      });
+    }
+    return items.length > 0 ? { items } : null;
   }
 
   private coordinatesSection({ lat, lng }: MapContextMenuContext): MapContextMenuSection {
@@ -147,13 +156,13 @@ export class MapContextMenuSectionsService {
     playable.forEach((id) => this.layerControlService.stopPlayback(id));
   }
 
-  private confirmClearLayers(count: number): void {
+  private confirmClearLayers(layerIds: readonly string[]): void {
     const dialogRef = this.dialog.open<ConfirmDialogComponent, ConfirmDialogData, boolean>(
       ConfirmDialogComponent,
       {
         data: {
           title: MAP_TEXTS.sections.clearAll,
-          message: MAP_TEXTS.sections.clearAllConfirm(count),
+          message: MAP_TEXTS.sections.clearAllConfirm(layerIds.length),
           confirmText: MAP_TEXTS.sections.deactivate,
           cancelText: COMMON_TEXTS.actions.cancel,
           confirmColor: 'warn',
@@ -163,9 +172,7 @@ export class MapContextMenuSectionsService {
 
     dialogRef.afterClosed().subscribe((confirmed) => {
       if (!confirmed) return;
-      this.layerControlService
-        .activeLayers()
-        .forEach(({ layer }) => this.layerControlService.deactivateLayer(layer.id));
+      layerIds.forEach((id) => this.layerControlService.deactivateLayer(id));
     });
   }
 

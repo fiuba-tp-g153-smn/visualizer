@@ -127,8 +127,9 @@ sigue abriendo el menú propio de cada uno.
 - **Reproducir todas las capas** y **Pausar todas las capas** inician o frenan
   la animación de las capas activas a la vez. Las capas sincronizadas avanzan
   juntas; las demás, cada una a su ritmo.
-- **Desactivar todas las capas** apaga las capas activas, después de pedir
-  confirmación.
+- **Desactivar capas de datos** apaga las capas de satélite, radar, modelos y
+  estaciones, después de pedir confirmación. Las capas de referencia (límites,
+  zonas marítimas) quedan encendidas.
 - **Copiar coordenadas** copia la latitud y la longitud del punto, en grados
   decimales, listas para pegar en otra herramienta.
 
