@@ -42,21 +42,90 @@ export function medianIntervalMs(timestamps: readonly number[]): number | null {
   return gaps[Math.floor(gaps.length / 2)];
 }
 
+/** Cadences this close (as a share of the densest) count as the same one. */
+const SAME_CADENCE = 0.1;
+
 /**
- * The layer that sets the group's automatic frames: the one with the sparsest cadence, so
- * every frame is an instant the slowest layer actually has. Ties keep the earliest (topmost).
+ * The layer that sets the group's automatic frames: the one with the densest cadence, so the
+ * animation keeps the finest steps; sparser layers join the instants near their images and
+ * hold them in between. Among layers of the same cadence, the one reaching furthest from the
+ * window's edge (back for observations, ahead for forecasts), so the window can be as long as
+ * asked; on a tie, the earliest (topmost) one.
  */
 export function pickAnchor(timelines: readonly SyncTimeline[]): SyncTimeline | null {
+  const intervals = timelines.map((t) => medianIntervalMs(t.timestamps) ?? Infinity);
+  const densest = Math.min(...intervals);
+  const peers = timelines.filter((_, i) => intervals[i] <= densest * (1 + SAME_CADENCE));
   let anchor: SyncTimeline | null = null;
-  let anchorInterval = -1;
-  for (const timeline of timelines) {
-    const interval = medianIntervalMs(timeline.timestamps) ?? 0;
-    if (interval > anchorInterval) {
-      anchor = timeline;
-      anchorInterval = interval;
-    }
+  for (const timeline of peers) {
+    if (anchor === null || reach(timeline) > reach(anchor)) anchor = timeline;
   }
   return anchor;
+}
+
+/** How far a layer reaches from the window's edge: back to its first image, or on to its last. */
+function reach({ timestamps, isForecast }: SyncTimeline): number {
+  if (timestamps.length === 0) return -Infinity;
+  return isForecast ? timestamps[timestamps.length - 1] : -timestamps[0];
+}
+
+/** The instants a group's window shows, set by its anchor. */
+export interface SyncWindow {
+  readonly anchor: SyncTimeline;
+  readonly instants: readonly number[];
+}
+
+/**
+ * The window's instants: the anchor's last `frameCount` images (first, for forecasts). An
+ * observation window runs on to the newest image of any layer: images later than the anchor's
+ * last (beyond `toleranceMs`) add instants of their own, and the oldest ones drop out so the
+ * window keeps `frameCount` frames. Null without layers.
+ */
+export function syncWindow(
+  timelines: readonly SyncTimeline[],
+  frameCount: number,
+  toleranceMs: number,
+): SyncWindow | null {
+  const anchor = pickAnchor(timelines);
+  if (!anchor) return null;
+  const times = anchor.isForecast
+    ? anchor.timestamps
+    : [...anchor.timestamps, ...newerInstants(timelines, anchor, toleranceMs)];
+  const start = computeWindowStart(times.length, frameCount, anchor.isForecast);
+  return { anchor, instants: times.slice(start, start + frameCount) };
+}
+
+/** Instants for the images later than the anchor's last, one per `toleranceMs` at most. */
+function newerInstants(
+  timelines: readonly SyncTimeline[],
+  anchor: SyncTimeline,
+  toleranceMs: number,
+): number[] {
+  const last = anchor.timestamps[anchor.timestamps.length - 1];
+  const later = timelines
+    .flatMap(({ timestamps }) => timestamps)
+    .filter((time) => time > last + toleranceMs)
+    .sort((a, b) => a - b);
+  const instants: number[] = [];
+  for (const time of later) {
+    if (instants.length === 0 || time - instants[instants.length - 1] > toleranceMs) {
+      instants.push(time);
+    }
+  }
+  return instants;
+}
+
+/**
+ * How many images a layer must load (its last ones, or first for forecasts) to cover the
+ * window: back to the image it shows at the window's start, or on to the one at its end.
+ */
+export function imagesCovering(timestamps: readonly number[], window: SyncWindow): number {
+  if (timestamps.length === 0) return window.instants.length;
+  if (window.anchor.isForecast) {
+    const end = timestamps.findIndex((t) => t >= window.instants[window.instants.length - 1]);
+    return (end < 0 ? timestamps.length - 1 : end) + 1;
+  }
+  return timestamps.length - (latestUpTo(timestamps, window.instants[0]) ?? 0);
 }
 
 /** The average time of a frame's images. */
@@ -95,24 +164,23 @@ function nearestIndex(
  * of images (its last `frameCount`, or first for forecasts), each joined with every other
  * layer's nearest image within `toleranceMs` after the one it took for the previous instant
  * (so no layer goes back in time, and each image is used once). A layer with no image
- * near an instant sits that frame out and holds its image, as in a frame drawn by hand.
+ * near an instant sits that frame out and holds its image, as in a frame drawn by hand. The
+ * first frame joins every layer: with no image near it, the latest one before, which it shows.
  */
 export function autoSpecs(
   layers: readonly SyncTimeline[],
   frameCount: number,
   toleranceMs: number,
 ): SyncFrameSpec[] {
-  const anchor = pickAnchor(layers);
-  if (!anchor) return [];
-  const start = computeWindowStart(anchor.timestamps.length, frameCount, anchor.isForecast);
-  const instants = anchor.timestamps.slice(start, start + frameCount);
-  const specs = instants.map((time): Record<string, number> => ({ [anchor.id]: time }));
+  const window = syncWindow(layers, frameCount, toleranceMs);
+  if (!window) return [];
+  const specs = window.instants.map((): Record<string, number> => ({}));
   for (const layer of layers) {
-    if (layer === anchor) continue;
     let last = -1;
-    instants.forEach((time, k) => {
-      const index = nearestIndex(layer.timestamps, time, toleranceMs, last);
-      if (index < 0) return;
+    window.instants.forEach((time, k) => {
+      const near = nearestIndex(layer.timestamps, time, toleranceMs, last);
+      const index = near < 0 && k === 0 ? latestUpTo(layer.timestamps, time) : near;
+      if (index === null || index < 0) return;
       last = index;
       specs[k][layer.id] = layer.timestamps[index];
     });
@@ -122,7 +190,8 @@ export function autoSpecs(
 
 /**
  * The frames of a list of specs, in time order. A layer a frame leaves out holds its image from
- * the previous frame that has it (before its first one, it shows that first one).
+ * the previous frame that has it. Before its first one, it shows its latest image up to the
+ * frame's time; with none so early, the frame gives it no image and it isn't shown.
  */
 function resolveFrames(
   layers: readonly SyncLaneImages[],
@@ -141,16 +210,25 @@ function resolveFrames(
 
   return resolved.map((frame, k) => {
     const indices = new Map<string, number>();
-    for (const { id } of layers) {
-      const held =
-        resolved
-          .slice(0, k + 1)
-          .reverse()
-          .find((f) => f.members.has(id)) ?? resolved.slice(k + 1).find((f) => f.members.has(id));
-      if (held) indices.set(id, held.members.get(id)!);
+    for (const { id, timestamps } of layers) {
+      const held = resolved
+        .slice(0, k + 1)
+        .reverse()
+        .find((f) => f.members.has(id));
+      const index = held ? held.members.get(id)! : latestUpTo(timestamps, frame.time);
+      if (index !== null) indices.set(id, index);
     }
     return { ...frame, indices };
   });
+}
+
+/** Index of the latest of ascending `timestamps` at or before `time`, or null if all are later. */
+export function latestUpTo(timestamps: readonly number[], time: number): number | null {
+  let index: number | null = null;
+  timestamps.forEach((t, i) => {
+    if (t <= time) index = i;
+  });
+  return index;
 }
 
 /** Builds a group's frames: the automatic ones, or the ones the user drew. */
@@ -249,24 +327,37 @@ export function toggleImage(spec: SyncFrameSpec, image: SyncImage): SyncFrameSpe
   return { ...spec, [image.layerId]: image.time };
 }
 
-/** Replaces the frame at `index` (appends it when null); a frame left empty is deleted. */
+/**
+ * Replaces the frame at `index` (appends it when null); a frame left empty is deleted. An image
+ * belongs to one frame at most: a frame sharing an image with `spec` merges into it, `spec`'s
+ * own images winning where both have one of the same layer.
+ */
 export function setFrame(
   specs: readonly SyncFrameSpec[],
   index: number | null,
   spec: SyncFrameSpec,
 ): SyncFrameSpec[] {
-  const empty = Object.keys(spec).length === 0;
-  if (index === null) return empty ? [...specs] : [...specs, spec];
-  return specs.flatMap((s, i) => (i !== index ? [s] : empty ? [] : [spec]));
+  const shares = (s: SyncFrameSpec): boolean =>
+    Object.entries(s).some(([id, time]) => spec[id] === time);
+  const merged = specs.reduce<SyncFrameSpec>(
+    (acc, s, i) => (i !== index && shares(s) ? { ...s, ...acc } : acc),
+    spec,
+  );
+  const kept = specs.flatMap((s, i) => (i === index ? [merged] : shares(s) ? [] : [s]));
+  const all = index === null ? [...kept, merged] : kept;
+  return all.filter((s) => Object.keys(s).length > 0);
 }
 
 export function removeFrame(specs: readonly SyncFrameSpec[], index: number): SyncFrameSpec[] {
   return specs.filter((_, i) => i !== index);
 }
 
-/** Where a frame ended up after an edit (frames re-sort by time), or null. */
+/**
+ * Where a frame ended up after an edit, or null: the frame holding its images, since frames
+ * re-sort by time and may merge, and an image belongs to one frame at most.
+ */
 export function indexOfSpec(specs: readonly SyncFrameSpec[], spec: SyncFrameSpec): number | null {
-  const key = (s: SyncFrameSpec) => JSON.stringify(Object.entries(s).sort());
-  const index = specs.findIndex((s) => key(s) === key(spec));
+  const images = Object.entries(spec);
+  const index = specs.findIndex((s) => images.some(([id, time]) => s[id] === time));
   return index >= 0 ? index : null;
 }

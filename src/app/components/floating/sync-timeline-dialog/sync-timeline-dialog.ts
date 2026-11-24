@@ -44,11 +44,11 @@ import {
 import {
   SyncChartLane,
   SyncChartTarget,
-  SyncChartSpan,
   SYNC_CHART_GRID,
   buildSyncTimelineOption,
   cssVar,
-  lanesSpan,
+  framesSpan,
+  unionSpan,
   sameLanes,
 } from '../../../utils/sync-timeline-chart';
 import { COMMON_TEXTS, MAP_TEXTS } from '../../../texts';
@@ -241,11 +241,6 @@ export class SyncTimelineDialogComponent {
       : this.t.frame(line! + 1, formatDateFull(new Date(frame.time)));
   });
 
-  /**
-   * The time axis only grows while the dialog is open: an image dropping off a layer's
-   * list must not shift every dot under the pointer.
-   */
-  private span: SyncChartSpan | null = null;
 
   constructor() {
     afterNextRender(() => {
@@ -408,12 +403,12 @@ export class SyncTimelineDialogComponent {
       current: this.current(),
     };
     if (!this.chart) return;
-    const span = lanesSpan(lanes);
-    if (span) {
-      this.span = this.span
-        ? { min: Math.min(this.span.min, span.min), max: Math.max(this.span.max, span.max) }
-        : span;
-    }
+    // The group's window sets the axis, so syncing a layer or not, or editing a draft, never
+    // shifts the dots; frames drawn by hand outside it widen it to fit them.
+    const span = unionSpan(
+      this.syncService.windowSpan(this.groupId),
+      this.isCustomized() ? framesSpan(lanes, this.saved()) : null,
+    );
     const option = buildSyncTimelineOption(
       lanes,
       plan,
@@ -431,7 +426,7 @@ export class SyncTimelineDialogComponent {
         full: (time) => formatDateFull(new Date(time)),
       },
       selection,
-      this.span,
+      span,
     );
     this.chart.setOption(option as Parameters<echarts.ECharts['setOption']>[0], true);
   }

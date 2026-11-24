@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import {
   Layer,
+  LayerCategory,
   LayerType,
   PLAYBACK_SPEED_LIMITS,
   SyncGroupId,
@@ -10,6 +11,7 @@ import {
   SyncCustomization,
   SyncFrameSpec,
   DEFAULT_SYNC_CUSTOMIZATION,
+  WeatherStationLayer,
 } from '../../models';
 import {
   SYNC_GROUPS,
@@ -19,12 +21,19 @@ import {
 import { LayerControlService } from './layer-control.service';
 import { LayerConfigService } from './layer-config.service';
 import { PlaybackEngineService } from './playback-engine.service';
+import { LayerRefreshService } from './layer-refresh.service';
+import {
+  WeatherStationsTemporalMode,
+} from '../../config/layers/weather-stations/controls.constants';
+import { weatherStationsTilesetTime } from '../../utils/weather-stations-tilesets';
 import {
   buildSyncPlan,
   framesJoining,
   frameSpecs,
+  imagesCovering,
+  latestUpTo,
   medianIntervalMs,
-  pickAnchor,
+  syncWindow,
   SyncPlan,
   SyncTimeline,
 } from '../../utils/sync-alignment';
@@ -32,9 +41,18 @@ import { LAYERS_TEXTS } from '../../texts';
 
 type SyncTileLayer = Extract<Layer, { type: LayerType.TILE }>;
 
+/** A layer a group can sync: a tile layer, or the weather stations (hourly snapshots). */
+type SyncLayer = SyncTileLayer | WeatherStationLayer;
+
+const isStationLayer = (layer: Layer): layer is WeatherStationLayer =>
+  layer.category === LayerCategory.WEATHER_STATIONS;
+
+const isSyncLayer = (layer: Layer): layer is SyncLayer =>
+  layer.type === LayerType.TILE || isStationLayer(layer);
+
 /** A layer of a sync group and whether it follows the group's timeline. */
 export interface SyncGroupLayer {
-  readonly layer: SyncTileLayer;
+  readonly layer: SyncLayer;
   readonly status: SyncLayerStatus;
 }
 
@@ -51,11 +69,9 @@ const EMPTY_PLAN: SyncPlan = { frames: [] };
 /** A group only takes over its layers' timelines once it can actually sync two of them. */
 const MIN_SYNC_LAYERS = 2;
 
-/** Frames a layer must join to be part of a group: fewer and it would barely animate. */
-const MIN_JOINED_FRAMES = 2;
+/** Frames a layer must join to be part of a group. */
+const MIN_JOINED_FRAMES = 1;
 
-/** Extra images per layer beyond the window, so an offset layer still covers its ends. */
-const EXTRA_IMAGES = 2;
 
 const engineId = (groupId: SyncGroupId): string => `sync:${groupId}`;
 
@@ -75,11 +91,14 @@ const sameIds = (a: readonly { id: string }[], b: readonly { id: string }[]): bo
  * Synchronized playback, one independent timeline per sync group (see SYNC_GROUPS), each
  * with its own window, speed and engine session.
  *
- * Enrollment is opt-out: every active tile layer of a group follows its timeline unless the
+ * Enrollment is opt-out: every active layer of a group follows its timeline unless the
  * user unchecks it in the Sincronización tab or detaches it from the layer's own controls.
- * The group's sparsest layer sets the instants; every other layer shows its nearest image
- * within the group's tolerance, and an instant some layer can't match is skipped. A layer
- * that matches no instant at all stays out. A group takes over only with MIN_SYNC_LAYERS.
+ * The group's densest layer sets the instants; every other layer joins the instants near its
+ * images (within the group's tolerance) and holds its image in between. A layer that matches
+ * no instant at all stays out. A group takes over only with MIN_SYNC_LAYERS.
+ *
+ * Weather stations take part like any layer, from their hourly snapshots: showing a frame
+ * selects the snapshot's hour instead of a tileset index.
  *
  * Each enrolled layer loads enough images to cover the window at its own cadence; its own
  * image count is restored when it leaves. A layer that joins a group while it plays is
@@ -90,8 +109,11 @@ export class SyncPlaybackService {
   private readonly layerControlService = inject(LayerControlService);
   private readonly layerConfigService = inject(LayerConfigService);
   private readonly engineService = inject(PlaybackEngineService);
+  private readonly layerRefreshService = inject(LayerRefreshService);
 
   private readonly originalImageCount = new Map<string, number>();
+  private stationsLoading = false;
+  private stationsReloadPending = false;
 
   private readonly state = signal<SyncState>({
     observations: initialGroupState(),
@@ -109,13 +131,13 @@ export class SyncPlaybackService {
    * updates (timeIndex) don't recompute the groups.
    */
   private readonly candidates = computed(
-    (): Readonly<Record<SyncGroupId, readonly SyncTileLayer[]>> => {
-      const byGroup: Record<SyncGroupId, SyncTileLayer[]> = { observations: [], models: [] };
+    (): Readonly<Record<SyncGroupId, readonly SyncLayer[]>> => {
+      const byGroup: Record<SyncGroupId, SyncLayer[]> = { observations: [], models: [] };
       const sorted = [...this.layerControlService.activeLayers()].sort(
         (a, b) => (b.controls.zIndex ?? 0) - (a.controls.zIndex ?? 0),
       );
       for (const { layer } of sorted) {
-        if (layer.type !== LayerType.TILE) continue;
+        if (!isSyncLayer(layer)) continue;
         const groupId = syncGroupForCategory(layer.category);
         if (groupId) byGroup[groupId].push(layer);
       }
@@ -218,6 +240,50 @@ export class SyncPlaybackService {
     return this.enrollment[groupId]().layers;
   }
 
+  /**
+   * The span of the group's window, half a step past each end and back to the image each layer
+   * shows at its start. Taken from every layer, synced or not, so it holds still as they change.
+   */
+  windowSpan(groupId: SyncGroupId): { readonly min: number; readonly max: number } | null {
+    const timelines = this.candidates()[groupId]
+      .map((layer) => this.timeline(layer))
+      .filter((timeline): timeline is SyncTimeline => timeline !== null);
+    const { toleranceMs } = syncGroupDefinition(groupId);
+    const window = syncWindow(timelines, this.frameCount(groupId), toleranceMs);
+    if (!window) return null;
+    const { anchor, instants } = window;
+    const halfStep = (medianIntervalMs(anchor.timestamps) ?? 0) / 2;
+    const held = timelines.flatMap(({ timestamps }) => {
+      const index = latestUpTo(timestamps, instants[0]);
+      return index === null ? [] : [timestamps[index]];
+    });
+    return {
+      min: Math.min(instants[0], ...held) - halfStep,
+      max: instants[instants.length - 1] + halfStep,
+    };
+  }
+
+  /**
+   * Synced layers with no image yet in their playing group's current frame: they only had
+   * later images, so the map hides them until their first frame comes.
+   */
+  readonly hiddenLayerIds = computed(
+    (): ReadonlySet<string> => {
+      const hidden = new Set<string>();
+      for (const { id } of SYNC_GROUPS) {
+        const { isPlaying, frameIndex } = this.state()[id];
+        const frame = this.enrollment[id]().plan.frames[frameIndex];
+        if (!isPlaying || !frame) continue;
+        this.enrollment[id]()
+          .enrolledIds.filter((layerId) => !frame.indices.has(layerId))
+          .forEach((layerId) => hidden.add(layerId));
+      }
+      return hidden;
+    },
+    // Recomputed every frame; only a change of members may re-render the map.
+    { equal: (a, b) => a.size === b.size && [...a].every((id) => b.has(id)) },
+  );
+
   /** Images of the group's layers left out of its timeline, with why, to show them apart. */
   groupOtherTimelines(
     groupId: SyncGroupId,
@@ -274,7 +340,7 @@ export class SyncPlaybackService {
   groupHint(groupId: SyncGroupId): string | null {
     if (this.canPlay(groupId)) return null;
     const included = this.includedLayers(groupId);
-    if (included.length < MIN_SYNC_LAYERS) return syncGroupDefinition(groupId).peerHint;
+    if (included.length < MIN_SYNC_LAYERS) return LAYERS_TEXTS.syncGroup.needsPeer;
     if (included.some((layer) => !this.timeline(layer)))
       return LAYERS_TEXTS.syncGroup.loadingImages;
     if (this.isCustomized(groupId)) return LAYERS_TEXTS.syncGroup.joinTwoFrames;
@@ -432,12 +498,16 @@ export class SyncPlaybackService {
     );
   }
 
-  private includedLayers(groupId: SyncGroupId): readonly SyncTileLayer[] {
+  private includedLayers(groupId: SyncGroupId): readonly SyncLayer[] {
     const excluded = new Set(this.settings[groupId]().excludedLayerIds);
     return this.candidates()[groupId].filter((layer) => !excluded.has(layer.id));
   }
 
-  private timeline(layer: SyncTileLayer): SyncTimeline | null {
+  private timeline(layer: SyncLayer): SyncTimeline | null {
+    if (isStationLayer(layer)) {
+      const timestamps = this.stationTilesets().map(({ time }) => time);
+      return timestamps.length > 0 ? { id: layer.id, timestamps, isForecast: false } : null;
+    }
     const tilesets = this.layerConfigService.getAvailableTilesets(layer.id);
     if (!tilesets?.length) return null;
     return {
@@ -449,9 +519,9 @@ export class SyncPlaybackService {
 
   /**
    * Adds layers in priority order (topmost first), each only if, with it, every layer joins
-   * at least MIN_JOINED_FRAMES automatic frames (so each of them actually animates).
-   * Hand-drawn frames don't take part, so deleting them never drops a layer from the group. Fewer than MIN_SYNC_LAYERS enrolled means the group is
-   * not syncing yet and its layers keep their own controls.
+   * at least MIN_JOINED_FRAMES automatic frames. Hand-drawn frames don't take part, so deleting
+   * them never drops a layer from the group. Fewer than MIN_SYNC_LAYERS enrolled means the
+   * group is not syncing yet and its layers keep their own controls.
    */
   private computeEnrollment(groupId: SyncGroupId): GroupEnrollment {
     const { toleranceMs } = syncGroupDefinition(groupId);
@@ -506,37 +576,82 @@ export class SyncPlaybackService {
     }));
   }
 
-  /**
-   * Images each included layer should load so the window covers the same span at its own
-   * cadence: a layer twice as frequent as the group's sparsest needs twice the images.
-   */
+  /** Images each included layer loads so it covers the group's window. */
   private imageCountTargets(groupId: SyncGroupId): ReadonlyMap<string, number> {
     const layers = this.includedLayers(groupId);
     if (layers.length < MIN_SYNC_LAYERS) return new Map();
-
-    const frameCount = this.frameCount(groupId);
     const timelines = layers.map((layer) => this.timeline(layer));
-    const anchor = pickAnchor(timelines.filter((t): t is SyncTimeline => t !== null));
-    const anchorInterval = anchor ? medianIntervalMs(anchor.timestamps) : null;
-
+    const window = syncWindow(
+      timelines.filter((t): t is SyncTimeline => t !== null),
+      this.frameCount(groupId),
+      syncGroupDefinition(groupId).toleranceMs,
+    );
+    if (!window) return new Map();
     return new Map(
-      layers.map((layer, i) => {
-        const ownInterval = timelines[i] ? medianIntervalMs(timelines[i]!.timestamps) : null;
-        const frames =
-          anchorInterval && ownInterval
-            ? Math.ceil(((frameCount - 1) * anchorInterval) / ownInterval) + 1
-            : frameCount;
-        return [layer.id, frames + EXTRA_IMAGES];
-      }),
+      layers.map((layer, i) => [layer.id, imagesCovering(timelines[i]?.timestamps ?? [], window)]),
     );
   }
 
   /** Sets each enrolled layer's timeIndex to the tileset the group's frame assigns it. */
   private updateLayersForFrame(groupId: SyncGroupId, frameIndex: number): void {
     const frame = this.enrollment[groupId]().plan.frames[frameIndex];
-    frame?.indices.forEach((index, layerId) =>
-      this.layerControlService.setTimeIndex(layerId, index),
-    );
+    frame?.indices.forEach((index, layerId) => {
+      const layer = this.candidates()[groupId].find(({ id }) => id === layerId);
+      if (layer && isStationLayer(layer)) {
+        this.showStationsTileset(index);
+      } else {
+        this.layerControlService.setTimeIndex(layerId, index);
+      }
+    });
+  }
+
+  /** The weather stations' available hourly snapshots, oldest first, like a tile layer's. */
+  private stationTilesets(): readonly { readonly id: string; readonly time: number }[] {
+    return this.layerRefreshService
+      .getWeatherStationsAvailableTilesetIds()
+      .flatMap((id) => {
+        const time = weatherStationsTilesetTime(id);
+        return time === null ? [] : [{ id, time }];
+      })
+      .sort((a, b) => a.time - b.time);
+  }
+
+  /** Shows the stations' snapshot at `index` of their timeline; nothing to do if it already is. */
+  private showStationsTileset(index: number): void {
+    const tilesetId = this.stationTilesets()[index]?.id;
+    if (!tilesetId) return;
+    const control = this.layerControlService;
+    if (
+      control.getWeatherStationsTemporalMode() === WeatherStationsTemporalMode.SPECIFIC &&
+      control.getWeatherStationsSelectedTilesetId() === tilesetId
+    ) {
+      return;
+    }
+    control.setWeatherStationsTemporalMode(WeatherStationsTemporalMode.SPECIFIC);
+    control.setWeatherStationsSelectedTilesetId(tilesetId);
+    this.reloadStations();
+  }
+
+  /**
+   * Reloads the stations' snapshot for the selected hour. A load already in flight would hand
+   * back the previous hour, so a newer selection waits for it and loads again.
+   */
+  private reloadStations(): void {
+    if (this.stationsLoading) {
+      this.stationsReloadPending = true;
+      return;
+    }
+    this.stationsLoading = true;
+    this.layerRefreshService
+      .loadWeatherStationsSnapshot(true)
+      .catch(() => undefined)
+      .finally(() => {
+        this.stationsLoading = false;
+        if (this.stationsReloadPending) {
+          this.stationsReloadPending = false;
+          this.reloadStations();
+        }
+      });
   }
 
   /** Stops the enrolled layers' own playback and puts them on a playing group's frame. */
@@ -551,19 +666,32 @@ export class SyncPlaybackService {
 
   private applyImageCounts(targets: ReadonlyMap<string, number>): void {
     for (const [layerId, count] of targets) {
-      const controls = this.layerControlService.getControls(layerId);
-      if (controls?.type !== LayerType.TILE) continue;
-      if (!this.originalImageCount.has(layerId)) {
-        this.originalImageCount.set(layerId, controls.playback.imageCount);
-      }
-      if (controls.playback.imageCount !== count) {
-        this.layerControlService.setImageCount(layerId, count);
-      }
+      const current = this.imageCount(layerId);
+      if (current === null) continue;
+      if (!this.originalImageCount.has(layerId)) this.originalImageCount.set(layerId, current);
+      if (current !== count) this.setImageCount(layerId, count);
     }
     for (const [layerId, original] of [...this.originalImageCount]) {
       if (targets.has(layerId)) continue;
       this.originalImageCount.delete(layerId);
-      this.layerControlService.setImageCount(layerId, original);
+      this.setImageCount(layerId, original);
+    }
+  }
+
+  /** How many images a layer loads: a tile layer's own count, or the stations' shared one. */
+  private imageCount(layerId: string): number | null {
+    if (this.layerControlService.isWeatherStationsLayer(layerId)) {
+      return this.layerControlService.getWeatherStationsImageCount();
+    }
+    const controls = this.layerControlService.getControls(layerId);
+    return controls?.type === LayerType.TILE ? controls.playback.imageCount : null;
+  }
+
+  private setImageCount(layerId: string, count: number): void {
+    if (this.layerControlService.isWeatherStationsLayer(layerId)) {
+      this.layerControlService.setWeatherStationsImageCount(count);
+    } else {
+      this.layerControlService.setImageCount(layerId, count);
     }
   }
 

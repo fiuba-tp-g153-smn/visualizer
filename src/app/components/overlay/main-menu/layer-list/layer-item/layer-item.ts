@@ -502,6 +502,13 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
         untracked(() => this.stopWeatherStationsPlayback());
       }
     });
+
+    // Stations following a playing sync group take its frames instead of their own timer.
+    effect(() => {
+      if (this.isSynced()) {
+        untracked(() => this.stopWeatherStationsPlayback());
+      }
+    });
   }
 
   ngOnInit(): void {}
@@ -770,6 +777,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   onTimeIndexChange(timeIndex: number): void {
     if (this.layer.category === LayerCategory.WEATHER_STATIONS) {
+      this.detachIfSynced();
       this.stopWeatherStationsPlayback();
       const tilesetId = this.weatherStationsTilesetIds()[timeIndex];
       if (!tilesetId) {
@@ -1112,6 +1120,8 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
 
   togglePlayback(): void {
     if (this.isWeatherStationsLayer()) {
+      // Synced, the button reads "desincronizar"; paused, playing alone would fight the group.
+      this.syncService.detachLayer(this.layer.id);
       if (this.isPlaying()) {
         this.stopWeatherStationsPlayback();
       } else {
@@ -1313,6 +1323,7 @@ export class LayerItemComponent implements OnInit, OnDestroy, OnChanges {
   });
 
   onWeatherStationsTemporalModeChange(mode: WeatherStationsTemporalMode): void {
+    this.detachIfSynced();
     this.controlService.setWeatherStationsTemporalMode(mode);
     if (mode === WeatherStationsTemporalMode.LATEST) {
       this.stopWeatherStationsPlayback();

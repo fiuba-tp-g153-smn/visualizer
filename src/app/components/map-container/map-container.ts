@@ -28,6 +28,7 @@ import { MapPolygonsService } from '../../services/polygons/map-polygons.service
 import { ActiveAlertsMapService } from '../../services/active-alerts/active-alerts-map.service';
 import { VectorOverlayService } from '../../services/layers/vector-overlay.service';
 import { LayerRefreshService } from '../../services/layers/layer-refresh.service';
+import { SyncPlaybackService } from '../../services/layers/sync-playback.service';
 import { UnitsSettingsService } from '../../services/settings/units-settings.service';
 
 /**
@@ -55,6 +56,7 @@ export class MapContainer implements OnInit, OnDestroy {
 
   // Services
   private layersService = inject(MapLayersService);
+  private syncService = inject(SyncPlaybackService);
   private polygonsService = inject(MapPolygonsService);
   private activeAlertsMapService = inject(ActiveAlertsMapService);
   private vectorOverlayService = inject(VectorOverlayService);
@@ -83,7 +85,9 @@ export class MapContainer implements OnInit, OnDestroy {
 
       effect(() => {
         const layers = this.controlService.activeLayers();
-        const layerIds = layers.map((item) => item.layer.id);
+        // A synced layer with no image yet in the playing frame waits off the map.
+        const hidden = this.syncService.hiddenLayerIds();
+        const layerIds = layers.map((item) => item.layer.id).filter((id) => !hidden.has(id));
 
         // Also track config signal to re-trigger when configs are loaded
         this.layerConfigService.configs();
