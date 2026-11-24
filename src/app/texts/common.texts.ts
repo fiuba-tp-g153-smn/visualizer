@@ -17,9 +17,9 @@ export const COMMON_TEXTS = {
   seo: {
     siteName: 'Visualizador SMN',
     default: {
-      title: 'Visualizador SMN — Mapa meteorológico interactivo',
+      title: 'Visualizador SMN (versión experimental) — Mapa meteorológico interactivo',
       description:
-        'Visualizador interactivo del Servicio Meteorológico Nacional: imágenes satelitales GOES-19, radar meteorológico, modelos de pronóstico y estaciones en Argentina.',
+        'Versión experimental en fase de prueba, no abierta al público. Visualizador del SMN: satélite GOES-19, radar, modelos de pronóstico y estaciones en Argentina.',
     },
     status: {
       title: 'Estado del sistema — Visualizador SMN',
