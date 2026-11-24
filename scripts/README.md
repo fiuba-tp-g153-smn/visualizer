@@ -15,7 +15,7 @@ npx tsx scripts/generate-layer-report.ts
 
 | Archivo | Filas | Descripción |
 | --------- | ------- | ------------- |
-| `groups.csv` | 5 | Grupos de capas (Satélite, Radar, Modelos…) |
+| `groups.csv` | 6 | Grupos de capas (Satélite, Radar, Modelos…) |
 | `subgroups.csv` | 30 | Subgrupos con FK → `groupId` |
 | `layers.csv` | ~131 | Capas con FK → `subgroupId` |
 | `scales.csv` | ~27 | Escalas únicas (agrupadas por objeto compartido) con columna `usedBy` |
@@ -28,3 +28,39 @@ npx tsx scripts/generate-layer-report.ts
 Las claves foráneas son `groupId` en `subgroups.csv`, `subgroupId` en `layers.csv` y `layerId`
 en `secondary-renders.csv`; `scales.csv` lista sus capas en `usedBy`. El directorio
 `layer-report/` está en `.gitignore`.
+
+## metarea-vi/build-geojson.py
+
+Genera `public/geo/metarea-vi.json` con los límites de las zonas de pronóstico marítimo de la
+METAREA VI (zonas costeras y áreas oceánicas), a partir de los shapefiles del SMN que están en
+`metarea-vi/source/`. Solo usa la biblioteca estándar de Python: no requiere GDAL.
+
+### Uso
+
+```bash
+python3 scripts/metarea-vi/build-geojson.py           # regenera el archivo
+python3 scripts/metarea-vi/build-geojson.py --check   # falla si el archivo commiteado no coincide con una generación nueva
+```
+
+Solo hace falta correrlo si cambian los shapefiles o las tablas del script. El resultado se
+commitea.
+
+### Qué hace
+
+- Lee los shapefiles de líneas y valida que estén en WGS84.
+- Asigna `id` y `name` desde la tabla `ZONES`. Si hay un shapefile que no está en la tabla, o al
+  revés, aborta.
+- Aplica las correcciones de vértices de `CORRECTIONS`, cada una justificada con la definición
+  oficial ("Referencias METAREA VI" del boletín SHN/SMN). Si un vértice a corregir no está en la
+  fuente, aborta.
+- Agrega un punto de etiqueta por zona (`{ id, label, minZoom }`), con el nombre corto del mapa
+  oficial del SHN. La posición es el centroide de la zona; las zonas costeras, que están abiertas,
+  se cierran con la recta entre sus dos extremos. `LABEL_POSITIONS` corrige los puntos que caen
+  sobre tierra. Si un punto cae fuera de su zona, aborta. `minZoom` es 5 en las zonas costeras y 0
+  en las áreas oceánicas.
+- Valida que todas las coordenadas caigan dentro de la METAREA VI y escribe un FeatureCollection
+  RFC 7946 determinista, con una feature por línea y 5 decimales: primero las 14 líneas y después
+  las 14 etiquetas.
+
+Los shapefiles en `source/` no se editan a mano. Las diferencias conocidas con la definición
+oficial que no se corrigen están documentadas en el encabezado del script.

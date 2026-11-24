@@ -17,6 +17,7 @@ export enum LayerCategory {
   ECMWF_TP = 'ecmwf_tp',
   WEATHER_STATIONS = 'weather_stations',
   WRF = 'wrf',
+  METAREA_VI = 'metarea_vi',
 }
 
 // [[lat_sur, lon_oeste], [lat_norte, lon_este]] — compatible con L.LatLngBoundsExpression
@@ -77,6 +78,7 @@ export type Layer =
   | WmsLayer
   | EcmwfTpTileLayer
   | WeatherStationLayer
+  | StaticVectorLayer
   | ForecastModelTileLayer;
 
 export interface TileLayer extends BaseLayer {
@@ -261,6 +263,23 @@ export interface WeatherStationLayer extends BaseLayer {
   category: LayerCategory.WEATHER_STATIONS;
   variable: WeatherStationVariable;
   scale: NonNullable<LayerScale>;
+}
+
+/**
+ * Capa vectorial fija: un FeatureCollection de líneas servido como archivo
+ * estático del propio front (`public/`). Sin período ni escala; solo opacidad.
+ *
+ * Las features `Point` con propiedad `label` (string) se dibujan como etiquetas
+ * de texto; con `minZoom` (number) se ocultan por debajo de ese zoom. Los
+ * puntos sin `label` no se dibujan.
+ */
+export interface StaticVectorLayer extends BaseLayer {
+  type: LayerType.VECTOR;
+  category: LayerCategory.METAREA_VI;
+  /** URL del FeatureCollection, del mismo origen (e.g. `/geo/metarea-vi.json`). */
+  dataUrl: string;
+  /** Estilo de todas las líneas. La opacidad de la capa no va acá: se aplica al pane. */
+  style: VectorLineStyle;
 }
 
 export enum WeatherStationVariable {

@@ -23,7 +23,7 @@ Capa
 :   Cada cosa que se dibuja sobre el mapa. Se enciende con una casilla en Disponibles.
 
 Grupo y subgrupo
-:   Los dos niveles del catálogo. Cinco grupos, 31 subgrupos, 153 capas.
+:   Los dos niveles del catálogo. Seis grupos, 36 subgrupos, 175 capas.
 
 Capa activa
 :   Una capa encendida. Aparece en la pestaña Activas, dentro de su bloque.
@@ -118,3 +118,7 @@ Superposición
 
 Estación convencional
 :   El subgrupo de Estaciones meteorológicas. Una variable por vez, con ficha por clic derecho.
+
+Metarea VI
+:   La región marítima del Atlántico Sudoccidental en la que el SMN emite el pronóstico para la
+    navegación. La capa del mismo nombre dibuja los límites de sus zonas costeras y áreas oceánicas.

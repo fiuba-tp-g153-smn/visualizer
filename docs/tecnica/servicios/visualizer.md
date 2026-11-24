@@ -97,9 +97,10 @@ clave reinicia todas las preferencias de todos los usuarios.
 
 Sólo lo que cambia una decisión operativa:
 
-- El catálogo tiene 153 capas en cinco grupos: satélite 6, radar 108 (18 radares por 6
-  productos), modelos 14, estaciones 7 y referencia del IGN 18. Cuáles tienen datos lo decide el
-  procesador, no el catálogo.
+- El catálogo tiene 175 capas en seis grupos: satélite 6, radar 129 (19 radares RMA con 6
+  productos y 3 del INTA con 5), modelos 14, estaciones 7, referencia del IGN 18 y Metarea VI 1. Cuáles tienen datos
+  lo decide el procesador, no el catálogo. Metarea VI es la excepción: es un archivo estático del
+  propio front (`public/geo/metarea-vi.json`), no pasa por el servicio de datos.
 - Tres bandas de dibujado: datos de 1 a 1000, referencia de 1001 a 2000, puntos de 2001 a 3000.
   Una capa sólo se reordena dentro de su banda.
 - Las capas activas se refrescan cada 10 s contra el servicio de datos. Con muchas capas

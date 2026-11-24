@@ -19,7 +19,7 @@ cuántas capas participan en cada caso.
 ## Disponibles: elegir qué ver
 
 Arriba hay un buscador (1) que filtra el catálogo completo por nombre, desde dos letras.
-Debajo, los cinco grupos, empezando por Satélite (2):
+Debajo, los seis grupos, empezando por Satélite (2):
 
 | Grupo | Qué contiene |
 |---|---|
@@ -28,6 +28,7 @@ Debajo, los cinco grupos, empezando por Satélite (2):
 | Modelos | ECMWF, WRF y GFS. |
 | Estaciones meteorológicas | Las siete variables de las estaciones del SMN. |
 | IGN Argentina | Dieciocho capas de referencia geográfica. |
+| Metarea VI | Los límites de las zonas de pronóstico marítimo. |
 
 Cada grupo se abre en subgrupos, y cada subgrupo lista sus capas. Encender una capa es marcar su
 casilla. Podés encender varias del mismo subgrupo. Las estaciones son la excepción: usan
@@ -60,7 +61,7 @@ quién tapa a quién.
 | Bloque | Qué contiene | Dónde se dibuja |
 |---|---|---|
 | Capas puntuales | Estaciones | Arriba de todo |
-| Capas de referencia (1) | IGN | En el medio |
+| Capas de referencia (1) | IGN y Metarea VI | En el medio |
 | Capas de datos (2) | Satélite, radar y modelos | Abajo |
 
 Podés arrastrar una capa para reordenarla dentro de su bloque. No se puede pasar una capa de un
@@ -127,3 +128,17 @@ hace.
 
 !!! note "Las capas del IGN no tienen período"
     No se animan y no tienen escala. En su fila sólo vas a encontrar la opacidad.
+
+## La capa Metarea VI
+
+El grupo Metarea VI tiene una sola capa, con los límites de las zonas en que el SMN divide el
+pronóstico marítimo de la METAREA VI: las zonas costeras, del Río de la Plata a la Zona F, y las
+áreas oceánicas, hasta los 20° O y los 60° S. Se dibuja como líneas punteadas, sin relleno, en el
+bloque de referencia.
+
+Cada zona lleva su nombre corto, el mismo del mapa oficial del SHN: NORTE, CENTRO OESTE, DRAKE y
+así con las áreas oceánicas, que se ven siempre. Las zonas costeras (RIO DE LA PLATA y de la A a
+la G) son más angostas: sus nombres aparecen desde el zoom 5, para que no se pisen.
+
+Igual que las del IGN, no se anima ni tiene escala: en su fila sólo está la opacidad. Los límites
+vienen con la aplicación, así que la capa se dibuja aunque el servicio de datos no conteste.

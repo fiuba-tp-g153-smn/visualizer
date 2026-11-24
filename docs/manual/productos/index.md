@@ -18,7 +18,8 @@ viendo. La interpretación meteorológica queda fuera del alcance del manual.
 | Estaciones de superficie | 7 | [4.4 Estaciones de superficie](estaciones.md) |
 
 Las dieciocho capas del IGN no son datos meteorológicos. Están en el
-[capítulo 3](../capas.md#las-capas-de-referencia-del-ign).
+[capítulo 3](../capas.md#las-capas-de-referencia-del-ign), junto con la de las zonas de
+pronóstico marítimo, en [La capa Metarea VI](../capas.md#la-capa-metarea-vi).
 
 ![Los cinco grupos del catálogo](../../imgs/manual/02-panel-capas.png){ .doc-figure loading=lazy }
 
