@@ -5,6 +5,7 @@ import { LayerRenderService } from './layer-render.service';
 import { LayerConfigService } from './layer-config.service';
 import { LayersService } from './layers.service';
 import { VectorOverlayService } from './vector-overlay.service';
+import { StaticVectorLayerService } from './static-vector-layer.service';
 import { BarbGridLayer } from './barb-grid-layer';
 import {
   BarbTileRender,
@@ -16,6 +17,7 @@ import {
   LayerType,
   RadarLayerControls,
   SecondaryVectorRender,
+  StaticVectorLayer,
   WrfLayerControls,
   WrfTileLayer,
   WrfTileLayerConfig,
@@ -29,6 +31,7 @@ import {
   adapterForLayer,
   isForecastModelLayer,
 } from '../../config/layers/forecast-model';
+import { ensureTilePaneChild } from '../../utils/leaflet-pane.utils';
 
 /**
  * Service responsible for synchronizing and rendering satellite/radar tile layers on the map
@@ -81,6 +84,7 @@ export class MapLayersService {
   private layerConfigService = inject(LayerConfigService);
   private layerRenderService = inject(LayerRenderService);
   private vectorOverlay = inject(VectorOverlayService);
+  private staticVectorLayers = inject(StaticVectorLayerService);
 
   private map: LeafletMap | null = null;
   private onMapLayers = new Map<string, Layer>();
@@ -236,17 +240,25 @@ export class MapLayersService {
           }
           break;
 
-        case LayerType.VECTOR: {
-          const stationLayer = this.layerRenderService.createWeatherStationsLayer(
-            layerId,
-            controls.opacity,
-            Math.round(this.map.getZoom()),
-            this.map!,
-            actualZIndex,
-          );
-          desiredLayersOnMap.set(layerId, stationLayer);
+        case LayerType.VECTOR:
+          switch (layer.category) {
+            case LayerCategory.WEATHER_STATIONS: {
+              const stationLayer = this.layerRenderService.createWeatherStationsLayer(
+                layerId,
+                controls.opacity,
+                Math.round(this.map.getZoom()),
+                this.map!,
+                actualZIndex,
+              );
+              desiredLayersOnMap.set(layerId, stationLayer);
+              break;
+            }
+
+            case LayerCategory.METAREA_VI:
+              this.addStaticVectorLayer(layer, controls.opacity, actualZIndex, desiredLayersOnMap);
+              break;
+          }
           break;
-        }
 
         case LayerType.WMS: {
           const tileLayer = this.layerRenderService.createTileLayer(layerId, controls);
@@ -287,6 +299,17 @@ export class MapLayersService {
 
     // Sync vector overlays (e.g. MSLP isobars over TP raster).
     this.syncVectorOverlays(sortedLayerIds, layerActualZIndexes);
+  }
+
+  /** Adds a static vector layer once its data is loaded (a load re-triggers the sync). */
+  private addStaticVectorLayer(
+    layer: StaticVectorLayer,
+    opacity: number,
+    zIndex: number,
+    desired: Map<string, Layer>,
+  ): void {
+    const staticLayer = this.staticVectorLayers.render(layer, this.map!, opacity, zIndex);
+    if (staticLayer) desired.set(layer.id, staticLayer);
   }
 
   private isWeatherStationLayerId(layerId: string): boolean {
@@ -382,13 +405,7 @@ export class MapLayersService {
    */
   private ensureVectorOverlayPane(name: string, zIndex: number): void {
     if (!this.map) return;
-    let pane = this.map.getPane(name);
-    if (!pane) {
-      const tilePane = this.map.getPane(LEAFLET_TILE_PANE);
-      pane = tilePane ? this.map.createPane(name, tilePane) : this.map.createPane(name);
-      pane.style.pointerEvents = 'none';
-    }
-    pane.style.zIndex = String(zIndex);
+    ensureTilePaneChild(this.map, name, zIndex);
   }
 
   /**

@@ -166,6 +166,10 @@ export class LayersService {
               parts.push(layer.name);
               break;
 
+            case LayerCategory.METAREA_VI:
+              parts.push(layer.name);
+              break;
+
             default:
               throw new Error(`Unknown layer category`);
           }
