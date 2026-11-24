@@ -13,7 +13,8 @@ acceso a las capas, las herramientas, los avisos y la configuración.
 ![La ventana al abrir la aplicación por primera vez](../imgs/manual/02-ventana.png){ .doc-figure loading=lazy }
 
 En la captura, el número 1 identifica la barra lateral, el 2 los controles de
-zoom y el 3 la atribución del mapa base.
+zoom, el 3 la atribución del mapa base y el 4 la etiqueta de versión
+experimental.
 
 Al entrar, la aplicación muestra un aviso: el visualizador es un desarrollo
 experimental en fase de prueba y no está abierto al público. El aviso se cierra

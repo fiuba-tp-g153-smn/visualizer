@@ -65,6 +65,8 @@ const CH13 = 'goes19/abi/c13';
 const GLM_FED = 'goes19/glm/fed';
 const ECMWF_TP = 'ecmwf-ifs/total-precipitation';
 const GFS_MSLP = 'gfs/mean-sea-level-pressure';
+const RMA1_ZH = 'radar-sinarame/RMA1/dbzh';
+const STATIONS_TEMPERATURE = 'weather-stations/temperature';
 const PROVINCIA = 'ign-provincia';
 const DEPARTAMENTOS = 'ign-limite-interdepartamental-o-de-partido';
 
@@ -74,6 +76,17 @@ const goes = (id: string, zIndex: number, imageCount = 12, opacity = 1) => ({
   availablePeriods: [6, 12, 24],
   playback: { isPlaying: false, speed: 1, imageCount },
 });
+const radar = (id: string, zIndex: number, imageCount = 12) => ({
+  id, visible: true, opacity: 1, zIndex, type: 'tile', category: 'radar',
+  availablePeriods: [6, 12],
+  playback: { isPlaying: false, speed: 1, imageCount },
+  elevation: { selectedElevationIds: ['elev0'], elevationOpacity: {} },
+});
+const stations = (id: string, zIndex: number) => ({ id, visible: true, opacity: 1, zIndex, type: 'vector' });
+
+/** A real SMN key, when given, lets the station layers load; otherwise they stay empty. */
+const STATIONS_KEY = process.env['DOCS_MEDIA_STATIONS_KEY'];
+
 const ecmwf = (zIndex: number) => ({
   id: ECMWF_TP, visible: true, opacity: 0.85, zIndex, type: 'tile', category: 'ecmwf_tp',
   availablePeriods: [8, 16, 32, 48],
@@ -85,14 +98,18 @@ const ecmwf = (zIndex: number) => ({
   },
 });
 
-/** State every shot starts from: defaults as shipped, plus a placeholder station key so the prompt never opens. */
+/**
+ * State every shot starts from: defaults as shipped, the experimental notice already accepted,
+ * and a station key (a placeholder without DOCS_MEDIA_STATIONS_KEY) so the prompt never opens.
+ */
 const BASE: Record<string, unknown> = {
   'base-map': 'argenmap',
   'active-layers': [wms(PROVINCIA, 1)],
   'map-tools': { showCoordinates: false, showAttribution: true, showScale: false, showZoom: true, showCursorLines: false, showGraticule: false },
   'units-settings': { temperatureUnit: '°C', windSpeedUnit: 'kt', decimalPrecision: 2 },
   'timezone-settings': { mode: 'hoa' },
-  'weather-stations-api-key': { key: 'docs-capture-placeholder' },
+  'weather-stations-api-key': { key: STATIONS_KEY ?? 'docs-capture-placeholder' },
+  'experimental-disclaimer': Date.now(),
   'polygon-detail-level': '3',
   // Emitted alerts drawn by the local alerts-service would otherwise leak into
   // every shot; chapter 6 turns them back on where it needs them.
@@ -116,6 +133,14 @@ const CLIP = { width: 1280, height: 800 };
 const PANEL = '[data-testid="menu-panel"]';
 const MAP_CENTER_CLICK = { x: 900, y: 450 };
 
+/** Satellite and radar every 10', plus hourly stations when there is a key to load them. */
+const SYNC_LAYERS = [
+  wms(PROVINCIA, 1),
+  goes(CH13, 1, 12),
+  radar(RMA1_ZH, 2, 12),
+  ...(STATIONS_KEY ? [stations(STATIONS_TEMPERATURE, 1)] : []),
+];
+
 const openPanel = (id: string): Step[] => [
   { do: 'click', target: `[data-testid="sidebar-panel-${id}"]`, pauseMs: 500 },
   // Park the cursor on the panel title: the sidebar tooltip would otherwise stay
@@ -130,7 +155,7 @@ export const SHOTS: Shot[] = [
   // 2. Primeros pasos
   {
     id: '02-ventana', kind: 'shot', output: 'docs/imgs/manual/02-ventana.png', viewport: SHOT, route: '/',
-    seed: seed(), annotate: ['mat-card.button-bar', '[data-testid="map-zoom-controls"]', '[data-testid="map-attribution"]'],
+    seed: seed(), annotate: ['mat-card.button-bar', '[data-testid="map-zoom-controls"]', '[data-testid="map-attribution"]', '[data-testid="map-experimental-badge"]'],
   },
   {
     id: '02-panel-capas', kind: 'shot', output: 'docs/imgs/manual/02-panel-capas.png', viewport: SHOT, route: '/',
@@ -325,20 +350,20 @@ export const SHOTS: Shot[] = [
   },
   {
     id: '05-sincronizacion', kind: 'shot', output: 'docs/imgs/manual/05-sincronizacion.png', viewport: SHOT, route: '/',
-    seed: seed({ 'active-layers': [wms(PROVINCIA, 1), goes(CH13, 1, 12), goes(GLM_FED, 2, 12, 0.9)] }),
+    seed: seed({ 'active-layers': SYNC_LAYERS }),
     steps: [
       ...openPanel('layers'),
-      // Both GOES layers join the observations group on their own; nothing to pick.
+      // Satellite, radar and stations join the observations group on their own.
       { do: 'click', target: '[data-testid="layers-tab-sync"]', pauseMs: 1500 },
     ],
     waitFor: '[data-testid="layers-tab-sync"]', clip: PANEL,
   },
   {
     id: '05-sincronizacion-linea', kind: 'shot', output: 'docs/imgs/manual/05-sincronizacion-linea.png', viewport: SHOT, route: '/',
-    seed: seed({ 'active-layers': [wms(PROVINCIA, 1), goes(CH13, 1, 12), goes(GLM_FED, 2, 12, 0.9)] }),
+    seed: seed({ 'active-layers': SYNC_LAYERS }),
     steps: [
       ...openPanel('layers'),
-      // Both GOES layers join the observations group on their own; nothing to pick.
+      // Satellite, radar and stations join the observations group on their own.
       { do: 'click', target: '[data-testid="layers-tab-sync"]', pauseMs: 1500 },
       { do: 'click', target: '[data-testid="layers-sync-timeline"]', pauseMs: 2000 },
     ],
