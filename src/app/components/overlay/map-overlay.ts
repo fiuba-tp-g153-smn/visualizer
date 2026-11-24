@@ -27,6 +27,8 @@ import { MapPointValuesComponent, PointValuesLayoutMode } from './point-values/p
 import { MapScaleToolsComponent } from './scale-tools/scale-tools';
 import { MapZoomControlsComponent } from './zoom-controls/zoom-controls';
 import { MapAttributionComponent } from './map-attribution/map-attribution';
+import { ExperimentalBadgeComponent } from './experimental-badge/experimental-badge';
+import { ExperimentalDisclaimerService } from '../../services/disclaimer/experimental-disclaimer.service';
 import { MapScaleComponent } from './map-scale/map-scale';
 import { MapCoordinatesComponent } from './map-coordinates/map-coordinates';
 import { GraticuleLabelsComponent } from './graticule-labels/graticule-labels';
@@ -46,6 +48,7 @@ import { GraticuleLabelsComponent } from './graticule-labels/graticule-labels';
     MapScaleToolsComponent,
     MapZoomControlsComponent,
     MapAttributionComponent,
+    ExperimentalBadgeComponent,
     MapScaleComponent,
     MapCoordinatesComponent,
     GraticuleLabelsComponent,
@@ -61,6 +64,7 @@ export class MapOverlayComponent {
   private polygonDrawingService = inject(PolygonDrawingService);
   private polygonsService = inject(MapPolygonsService);
   private activeAlertsMapService = inject(ActiveAlertsMapService);
+  private disclaimerService = inject(ExperimentalDisclaimerService);
   private mapInfoService = inject(MapInfoService);
   private distanceToolService = inject(DistanceToolService);
   private mapContextMenuService = inject(MapContextMenuService);
@@ -120,6 +124,9 @@ export class MapOverlayComponent {
   readonly mouseLongitude = this.mapInfoService.mouseLongitude;
 
   readonly showAttribution = this.mapInfoService.showAttribution;
+  readonly showExperimentalBadge = computed(
+    () => this.disclaimerService.enabled && this.mapInfoService.showExperimentalBadge(),
+  );
 
   readonly hasBottomControls = computed(
     () => this.showZoom() || this.showScale() || this.showCoordinates() || this.showAttribution(),
@@ -157,6 +164,14 @@ export class MapOverlayComponent {
 
   closeAttribution(): void {
     this.mapInfoService.toggleAttribution(false);
+  }
+
+  closeExperimentalBadge(): void {
+    this.mapInfoService.toggleExperimentalBadge(false);
+  }
+
+  openExperimentalNotice(): void {
+    this.disclaimerService.open();
   }
 
   closeScaleTool(layerId: string): void {

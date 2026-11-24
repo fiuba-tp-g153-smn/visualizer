@@ -54,6 +54,7 @@ export const MAP_CONFIG = {
   // Default tool visibility
   defaultShowCoordinates: false,
   defaultShowAttribution: true,
+  defaultShowExperimentalBadge: true,
   defaultShowScale: false,
   defaultShowZoom: true,
 } as const;

@@ -1,0 +1,10 @@
+<p class="badge" data-testid="map-experimental-badge">
+  <app-panel-close-button
+    class="close-button"
+    [ariaLabel]="widgets.closeExperimentalBadge"
+    (pressed)="close.emit()"
+  />
+  <button type="button" class="badge-link" [matTooltip]="t.badgeHint" (click)="open.emit()">
+    {{ t.badge }}
+  </button>
+</p>

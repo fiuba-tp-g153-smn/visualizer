@@ -8,6 +8,7 @@ const envFallback = {
   DATA_SERVICE_BASE_URL: 'https://data.mapasmn.com',
   ALERTS_SERVICE_BASE_URL: 'http://localhost:8080',
   SMN_API_PROMPT_FOR_TOKEN: 'true',
+  EXPERIMENTAL_DISCLAIMER_ENABLED: 'true',
   DOCS_URL: '/docs-site',
   METRICS_SERVICE_BASE_URL: 'http://localhost:6020',
   IGN_PLACE_SEARCH_URL: 'https://api.ign.gob.ar/buscador/search',
@@ -33,6 +34,11 @@ export const environment = {
     promptForToken: envDefined
       ? $ENV.SMN_API_PROMPT_FOR_TOKEN !== 'false'
       : envFallback.SMN_API_PROMPT_FOR_TOKEN !== 'false',
+  },
+  experimentalDisclaimer: {
+    enabled: envDefined
+      ? $ENV.EXPERIMENTAL_DISCLAIMER_ENABLED !== 'false'
+      : envFallback.EXPERIMENTAL_DISCLAIMER_ENABLED !== 'false',
   },
   docsUrl: envDefined ? $ENV.DOCS_URL || envFallback.DOCS_URL : envFallback.DOCS_URL,
   metricsService: {
