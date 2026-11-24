@@ -49,12 +49,14 @@ el servidor de desarrollo con estas variables (cambiables por entorno):
 | `DATA_SERVICE_BASE_URL` | `https://data.mapasmn.com` | Imágenes reales sin levantar el stack completo |
 | `ALERTS_SERVICE_BASE_URL` | `http://localhost:6007` | **Generar un aviso escribe en MySQL.** El clip que lo hace se salta solo si esta URL no es local |
 | `METRICS_SERVICE_BASE_URL` | `http://localhost:6020` | La pestaña Procesamiento del panel de estado |
+| `DOCS_MEDIA_STATIONS_KEY` | (sin definir) | Clave real de estaciones del SMN; sin ella las capas de estaciones no cargan |
 
 Registro de qué usó cada corrida versionada:
 
 | Fecha | data-service | alerts-service | metrics-api | Notas |
 |---|---|---|---|---|
 | 2026-09-08 | `https://data.mapasmn.com` | `http://localhost:6007` (stack local, `make up` en alerts-service) | `http://localhost:6020` (stack local) | Radar y WRF sin datos en ningún backend; estaciones sin clave real del SMN; ver los `blocked` del manifiesto |
+| 2026-11-24 | `https://data.mapasmn.com` | — | — | Sólo `02-ventana` y `05-sincronizacion*`, contra el servidor de desarrollo (`DOCS_MEDIA_BASE_URL`); RMA1 ya publica; estaciones sin `DOCS_MEDIA_STATIONS_KEY` |
 
 ## Cuando una captura se rompe
 
